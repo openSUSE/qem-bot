@@ -38,7 +38,7 @@ class OpenQABot:
             self.post += worker(self.incidents, self.token)
 
         logger.info("Posting %s jobs" % len(self.post))
-		if not self.dry:
+        if not self.dry:
             for job in self.post:
                 self.post_openqa(job["openqa"])
                 self.post_qem(job["qem"], job["api"])
