@@ -23,8 +23,14 @@ def load_metadata(path: Path, aggregate: bool) -> List[Union[Aggregate, Incident
         except Exception as e:
             logger.exception(e)
             continue
+        
+        try:
+            settings = data.get("settings")
+        except AttributeError:
+            # not valid yaml for bot settings
+            continue
 
-        settings = data.get("settings")
+
         if settings:
             for key in data:
                 if key == "incidents":

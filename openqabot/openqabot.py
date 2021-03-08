@@ -40,6 +40,7 @@ class OpenQABot:
         logger.info("Posting %s jobs" % len(self.post))
         if not self.dry:
             for job in self.post:
+                logger.debug("Posting %s" % str(job))
                 self.post_openqa(job["openqa"])
                 self.post_qem(job["qem"], job["api"])
 
