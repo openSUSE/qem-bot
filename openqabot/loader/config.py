@@ -2,7 +2,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import List, Union
 
-from ruamel.yaml import YAML # type: ignore
+from ruamel.yaml import YAML  # type: ignore
 
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
@@ -23,13 +23,12 @@ def load_metadata(path: Path, aggregate: bool) -> List[Union[Aggregate, Incident
         except Exception as e:
             logger.exception(e)
             continue
-        
+
         try:
             settings = data.get("settings")
         except AttributeError:
             # not valid yaml for bot settings
             continue
-
 
         if settings:
             for key in data:
