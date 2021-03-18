@@ -30,6 +30,10 @@ def load_metadata(path: Path, aggregate: bool) -> List[Union[Aggregate, Incident
             # not valid yaml for bot settings
             continue
 
+        if "product" not in data:
+            logger.error("Missing product in %s" % p)
+            continue
+
         if settings:
             for key in data:
                 if key == "incidents":
