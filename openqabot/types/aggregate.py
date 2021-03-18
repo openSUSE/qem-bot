@@ -9,6 +9,7 @@ import requests
 from . import ProdVer, Repos
 from ..errors import SameBuildExists
 from ..loader.repohash import merge_repohash
+from ..pc_helper import apply_publiccloud_pint_image, apply_publiccloud_regex
 from .baseconf import BaseConf
 
 logger = getLogger("bot.types.aggregate")
@@ -19,6 +20,7 @@ class Aggregate(BaseConf):
         super().__init__(product, settings, config)
         self.flavor = config["FLAVOR"]
         self.archs = config["archs"]
+        self.onetime = config.get("onetime", False)
         self.test_issues = self.normalize_repos(config)
 
     @staticmethod
@@ -64,13 +66,14 @@ class Aggregate(BaseConf):
                 for inc in (i for i in incidents if (not i.livepatch or not i.staging)):
                     if Repos(template.product, template.version, arch) in inc.channels:
                         test_incidents[issue].append(inc)
-            
+
             full_post["openqa"]["REPOHASH"] = merge_repohash(
-                sorted(set(
-                    str(inc)
-                    for inc in chain.from_iterable(test_incidents.values())
+                sorted(
+                    set(
+                        str(inc) for inc in chain.from_iterable(test_incidents.values())
+                    )
                 )
-            ))
+            )
 
             try:
                 old_jobs = requests.get(
@@ -81,6 +84,7 @@ class Aggregate(BaseConf):
             except Exception as e:
                 # TODO: valid exceptions ...
                 logger.exception(e)
+                old_jobs = None
 
             old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
             old_build = old_jobs[0].get("build", "") if old_jobs else ""
@@ -96,11 +100,34 @@ class Aggregate(BaseConf):
                 )
                 continue
 
+            if self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1":
+                continue
+
+            settings = self.settings.copy() 
+            # parse Public-Cloud image REGEX if present
+            if "PUBLIC_CLOUD_IMAGE_REGEX" in self.settings:
+                settings = apply_publiccloud_regex(self.settings)
+                if settings["PUBLIC_CLOUD_IMAGE_LOCATION"] is None:
+                    logger.error(
+                        "No publiccloud image found for %s"
+                        % settings["PUBLIC_CLOUD_IMAGE_REGEX"]
+                    )
+                    continue
+            # parse Public-Cloud pint query if present
+            if "PUBLICCLOUD_PINT_QUERY" in self.settings:
+                settings = apply_publiccloud_pint_image(self.settings)
+                if settings["PUBLIC_CLOUD_IMAGE_ID"] is None:
+                    logger.error(
+                        "No publiccloud image fetched from pint for for %s"
+                        % settings["PUBLICCLOUD_PINT_QUERY"]
+                    )
+                    continue
+
+            full_post["openqa"].update(settings)
             full_post["openqa"]["FLAVOR"] = self.flavor
             full_post["openqa"]["ARCH"] = arch
             full_post["openqa"]["_OBSOLETE"] = 1
-            full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-            full_post["openqa"]["VESION"] = self.settings["VERSION"]
+
             for template, issues in test_incidents.items():
                 full_post["openqa"][template] = ",".join(str(x) for x in issues)
             for issues in test_incidents.values():
