@@ -10,7 +10,7 @@ from ..types.incidents import Incidents
 logger = getLogger("bot.loader.config")
 
 
-def load_metadata(path: Path, aggregate: bool) -> List[Union[Aggregate, Incidents]]:
+def load_metadata(path: Path, aggregate: bool, incidents: bool) -> List[Union[Aggregate, Incidents]]:
 
     ret = []
 
@@ -36,7 +36,7 @@ def load_metadata(path: Path, aggregate: bool) -> List[Union[Aggregate, Incident
 
         if settings:
             for key in data:
-                if key == "incidents":
+                if key == "incidents" and not incidents:
                     ret.append(Incidents(data["product"], settings, data[key]))
                 elif key == "aggregate" and not aggregate:
                     ret.append(Aggregate(data["product"], settings, data[key]))

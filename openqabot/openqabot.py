@@ -16,7 +16,9 @@ class OpenQABot:
         self.token = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(self.token)
         logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
-        self.workers = load_metadata(args.configs, args.disable_aggregates)
+        self.workers = load_metadata(
+            args.configs, args.disable_aggregates, args.disable_incients
+        )
         self.post = []
 
     def post_qem(self, data, api):

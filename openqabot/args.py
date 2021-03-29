@@ -18,6 +18,9 @@ def get_parser():
         "--disable-aggregates", action="store_true", help="Dont shedule aggregates"
     )
     parser.add_argument(
+        "--disable-incidents", action="store_true", help="Dont shedule incidents"
+    )
+    parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable debug output"
     )
     parser.add_argument(
