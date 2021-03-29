@@ -146,7 +146,7 @@ class Incidents(BaseConf):
                     )
                     full_post["openqa"]["INCIDENT_REPO"] = ",".join(repos)
 
-                    full_post["openqa"]["AGGREGATE_NEEDED"] = 1
+                    full_post["qem"]["withAggregate"] = True
                     aggregate_job = data.get("aggregate_job", True)
 
                     if not aggregate_job:
@@ -154,13 +154,13 @@ class Incidents(BaseConf):
                         neg = set(data.get("aggregate_check_false", []))
 
                         if pos and not pos.isdisjoint(full_post["openqa"].keys()):
-                            full_post["openqa"]["AGGREGATE_NEEDED"] = 0
+                            full_post["qem"]["withAggregate"] = False
                             logger.info("Aggregate not needed for incident %s" % inc.id)
                         if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                            full_post["openqa"]["AGGREGATE_NEEDED"] = 0
+                            full_post["qem"]["withAggregate"] = False 
                             logger.info("Aggregate not needed for incident %s" % inc.id)
                         if not (neg and pos):
-                            full_post["openqa"]["AGGREGATE_NEEDED"] = 0
+                            full_post["qem"]["withAggregate"] = False 
 
                     delta_prio = data.get("override_priority", 0)
 
