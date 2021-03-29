@@ -93,7 +93,7 @@ def get_incident(smelt: str, incident: int):
         print(e)
         print(inc_result)
         raise e
-        
+
     return inc_result
 
 
@@ -138,17 +138,18 @@ def rra(rr_number):
     else:
         return False
 
+
 def rrqam(rr_number):
     if rr_number["reviewSet"]:
-        rr = (r for r in  rr_number["reviewSet"] if r['assignedByGroup'])
-        review = [r for r in rr if r['assignedByGroup']['name'] == 'qam-openqa']
-        if review and review[0] == 'review':
+        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+        if review and review[0]["status"]["name"] in ("review", "new"):
             return True
     return False
 
 
 def create_record(inc):
-    
+
     incident = {}
     incident["isActive"] = True
     rr_number = rr(inc["requestSet"])
@@ -173,7 +174,7 @@ def create_record(inc):
     incident["inReview"] = inReview
     incident["approved"] = approved
     incident["rr_number"] = rr_number
-    incident["inReviewQAM"] = inReviewQAM 
+    incident["inReviewQAM"] = inReviewQAM
     return incident
 
 
@@ -188,7 +189,7 @@ if __name__ == "__main__":
 
     parsed = parser.parse_args(sys.argv[1:])
     TOKEN = {"Authorization": f"Token {parsed.token}"}
-    
+
     a = get_incidents(SMELT)
     data = create_list(a)
     incidents = "%s/incidents"
