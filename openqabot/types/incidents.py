@@ -74,6 +74,7 @@ class Incidents(BaseConf):
                     full_post["api"] = "/api/incident_settings"
                     full_post["qem"] = {}
                     full_post["openqa"] = {}
+                    full_post["openqa"].update(self.settings)
                     full_post["qem"]["incident"] = inc.id
                     full_post["openqa"]["ARCH"] = arch
                     full_post["qem"]["arch"] = arch
