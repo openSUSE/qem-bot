@@ -17,7 +17,7 @@ class OpenQABot:
         self.incidents = get_incidents(self.token)
         logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
         self.workers = load_metadata(
-            args.configs, args.disable_aggregates, args.disable_incients
+            args.configs, args.disable_aggregates, args.disable_incidents
         )
         self.post = []
 
