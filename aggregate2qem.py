@@ -176,6 +176,7 @@ if __name__ == "__main__":
                 continue
             if v["group"].startswith("Test") or v["group"].startswith("Devel"):
                 print("Development group -- %s" % v["id"])
+                continue
             try:
                 r = normalize_data(key, v)
             except KeyError:
