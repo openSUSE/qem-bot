@@ -115,7 +115,7 @@ def rr(requestSet):
     if not requestSet:
         return None
     else:
-        rr = sorted(requestSet, key=itemgetter("requestId"))[0]
+        rr = sorted(requestSet, key=itemgetter("requestId"), reverse=True)[0]
         if rr["status"]["name"] in ("new", "review", "accepted"):
             return rr
         else:
