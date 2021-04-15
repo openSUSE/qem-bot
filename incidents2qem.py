@@ -6,10 +6,10 @@ from openqa_client.client import OpenQA_Client as OC
 import requests as R
 
 
-API_INCIDENTS = "http://qam2.suse.de:4000/api/incidents"
-API_SETTINGS = "http://qam2.suse.de:4000/api/incident_settings/"
+API_INCIDENTS = "http://dashboard.qam.suse.de/api/incidents"
+API_SETTINGS = "http://dashboard.qam.suse.de/api/incident_settings/"
 
-API_PUT = "http://qam2.suse.de:4000/api/jobs"
+API_PUT = "http://dashboard.qam.suse.de/api/jobs"
 
 oqa = OC(server="openqa.suse.de", scheme="https")
 

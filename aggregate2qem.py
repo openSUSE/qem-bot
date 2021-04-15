@@ -13,8 +13,8 @@ from ruamel.yaml import YAML  # type: ignore
 
 oqa = O(server="openqa.suse.de")
 
-API = "http://qam2.suse.de:4000/api/update_settings"
-API2 = "http://qam2.suse.de:4000/api/jobs"
+API = "http://dashboard.qam.suse.de/api/update_settings"
+API2 = "http://dashboard.qam.suse.de/api/jobs"
 
 
 class Data(NamedTuple):

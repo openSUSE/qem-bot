@@ -22,7 +22,7 @@ class OpenQABot:
         self.post = []
 
     def post_qem(self, data, api):
-        url = "http://qam2.suse.de:4000" + api
+        url = "http://dashboard.qam.suse.de" + api
         try:
             res = requests.put(url, headers=self.token, json=data)
         # TODO: exceptions handling

@@ -12,7 +12,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 SMELT = "https://smelt.suse.de/graphql"
-QEM_DASHBOARD = "http://qam2.suse.de:4000/api"
+QEM_DASHBOARD = "http://dashboard.qam.suse.de/api"
 
 
 ACTIVE_FST = '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo \

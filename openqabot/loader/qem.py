@@ -11,7 +11,7 @@ logger = getLogger("bot.loader.qem")
 
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
     incidents = requests.get(
-        "http://qam2.suse.de:4000/api/incidents", headers=token
+        "http://dashboard.qam.suse.de/api/incidents", headers=token
     ).json()
 
     xs = []

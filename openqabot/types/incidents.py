@@ -41,7 +41,7 @@ class Incidents(BaseConf):
     def _is_sheduled_job(token: str, inc: Incident, arch: str, flavor: str) -> bool:
         try:
             jobs = requests.get(
-                f"http://qam2.suse.de:4000/api/incident_settings/{inc.id}",
+                f"http://dashboard.qam.suse.de/api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
         except Exception as e:

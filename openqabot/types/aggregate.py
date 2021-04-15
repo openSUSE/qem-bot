@@ -77,7 +77,7 @@ class Aggregate(BaseConf):
 
             try:
                 old_jobs = requests.get(
-                    "http://qam2.suse.de:4000/api/update_settings",
+                    "http://dashboard.qam.suse.de/api/update_settings",
                     params={"product": self.product, "arch": arch},
                     headers=token,
                 ).json()
