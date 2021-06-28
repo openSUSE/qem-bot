@@ -20,7 +20,7 @@ class Incident:
             for p, v, a in (
                 r.split(":")[2:]
                 for r in incident["channels"]
-                if r.startswith("SUSE:Updates")
+                if r.startswith("SUSE:Updates") and not "openSUSE-SLE" in r
             )
             if p != "SLE-Module-Development-Tools-OBS"
         ]
