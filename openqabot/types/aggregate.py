@@ -113,6 +113,7 @@ class Aggregate(BaseConf):
                         % settings["PUBLIC_CLOUD_IMAGE_REGEX"]
                     )
                     continue
+
             # parse Public-Cloud pint query if present
             if "PUBLICCLOUD_PINT_QUERY" in self.settings:
                 settings = apply_publiccloud_pint_image(self.settings)

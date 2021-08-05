@@ -15,6 +15,7 @@ class Incident:
         self.id = incident["number"]
         self.rrid = f"{self.project}:{self.rr}" if self.rr else None
         self.staging = not bool(self.rr)
+
         self.channels = [
             Repos(p, v, a)
             for p, v, a in (
@@ -26,6 +27,7 @@ class Incident:
         ]
         if not self.channels:
             raise EmptyChannels(self.project)
+
         self.packages = sorted(incident["packages"], key=len)
         self.emu = incident["emu"]
         self.revisions = self._rev(self.channels, self.project)

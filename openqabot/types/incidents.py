@@ -3,7 +3,6 @@ from typing import List
 
 import requests
 
-from openqabot.pc_helper import request_get
 
 from . import ProdVer, Repos
 from ..errors import SameBuildExists
@@ -108,8 +107,7 @@ class Incidents(BaseConf):
                         continue
 
                     # TODO: Public Cloud settings...
-                    #
-                    #
+                    # Not needed now, PubCloud uses aggregates jobs only now
 
                     channels_set = set()
                     issue_dict = {}
