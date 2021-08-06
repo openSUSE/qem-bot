@@ -86,8 +86,10 @@ def read_configs(configs: Path) -> List[Data]:
             distri = data["settings"]["DISTRI"]
             version = data["settings"]["VERSION"]
             product = data["product"]
-        except Exception:
-            import pdb; pdb.set_trace()
+        except Exception as e:
+            print(e)
+            continue
+
         for arch in data["aggregate"]["archs"]:
 
             ret.append(Data(product, distri, flavor, version, arch))
