@@ -134,14 +134,17 @@ if __name__ == "__main__":
                 "Accepting review for SUSE:Maintenace:%s:%s"
                 % (str(rq.inc), str(rq.req))
             )
-
-            osc.core.change_request_state(
-                apiurl="https://api.suse.de",
-                reqid=rq.req,
-                newstate="accepted",
-                by_group="qam-openqa",
-                message=msg
-            )
+            try:
+                osc.core.change_request_state(
+                    apiurl="https://api.suse.de",
+                    reqid=rq.req,
+                    newstate="accepted",
+                    by_group="qam-openqa",
+                    message=msg
+                )
+            except Exception as e:
+                print(e)
+                continue
     else:
         print("Incidents to approve:")
         print(incidents_to_approve)
