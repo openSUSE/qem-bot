@@ -3,7 +3,7 @@ from typing import Dict, List
 
 import requests
 
-from ..errors import NoRepoFoundError, EmptyChannels
+from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..types.incident import Incident
 
 logger = getLogger("bot.loader.qem")
@@ -24,5 +24,7 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             )
         except EmptyChannels as e:
             logger.info("Project %s has empty channels" % i["project"])
+        except EmptyPackagesError as e:
+            logger.info("Project %s has empty packages" % i["project"])
 
     return xs

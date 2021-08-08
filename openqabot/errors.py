@@ -9,6 +9,8 @@ class NoRepoFoundError(Error):
 class EmptyChannels(Error):
     pass
 
+class EmptyPackagesError(Error):
+    pass
 
 class SameBuildExists(Error):
     pass

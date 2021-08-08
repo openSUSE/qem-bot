@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import Dict, List, Tuple
 
-from ..errors import EmptyChannels, NoRepoFoundError
+from ..errors import EmptyChannels, NoRepoFoundError, EmptyPackagesError
 from ..loader.repohash import get_max_revision
 from . import Repos
 
@@ -29,6 +29,9 @@ class Incident:
             raise EmptyChannels(self.project)
 
         self.packages = sorted(incident["packages"], key=len)
+        if not self.packages:
+            raise EmptyPackagesError(self.project)
+
         self.emu = incident["emu"]
         self.revisions = self._rev(self.channels, self.project)
         self.livepatch: bool = self._is_livepatch(self.packages)

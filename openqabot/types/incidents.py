@@ -38,6 +38,7 @@ class Incidents(BaseConf):
 
     @staticmethod
     def _is_sheduled_job(token: str, inc: Incident, arch: str, flavor: str) -> bool:
+        jobs = {}
         try:
             jobs = requests.get(
                 f"http://dashboard.qam.suse.de/api/incident_settings/{inc.id}",
