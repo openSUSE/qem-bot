@@ -1,8 +1,7 @@
 from logging import getLogger
-from typing import List
+from typing import Any, Dict, List
 
 import requests
-
 
 from . import ProdVer, Repos
 from ..errors import SameBuildExists
@@ -37,7 +36,7 @@ class Incidents(BaseConf):
         return ret
 
     @staticmethod
-    def _is_sheduled_job(token: str, inc: Incident, arch: str, flavor: str) -> bool:
+    def _is_sheduled_job(token: Dict[str,str], inc: Incident, arch: str, flavor: str) -> bool:
         jobs = {}
         try:
             jobs = requests.get(
@@ -61,7 +60,9 @@ class Incidents(BaseConf):
 
         return False
 
-    def __call__(self, incidents: List[Incident], token):
+    def __call__(
+        self, incidents: List[Incident], token: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
 
         DOWNLOAD_BASE = "https://download.suse.de/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
@@ -70,7 +71,7 @@ class Incidents(BaseConf):
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
                 for inc in incidents:
-                    full_post = {}
+                    full_post: Dict[str, Any] = {}
                     full_post["api"] = "/api/incident_settings"
                     full_post["qem"] = {}
                     full_post["openqa"] = {}
@@ -156,10 +157,10 @@ class Incidents(BaseConf):
                             full_post["qem"]["withAggregate"] = False
                             logger.info("Aggregate not needed for incident %s" % inc.id)
                         if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                            full_post["qem"]["withAggregate"] = False 
+                            full_post["qem"]["withAggregate"] = False
                             logger.info("Aggregate not needed for incident %s" % inc.id)
                         if not (neg and pos):
-                            full_post["qem"]["withAggregate"] = False 
+                            full_post["qem"]["withAggregate"] = False
 
                     delta_prio = data.get("override_priority", 0)
 

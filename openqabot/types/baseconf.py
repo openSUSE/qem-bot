@@ -1,6 +1,7 @@
-from abc import abstractmethod, abstractstaticmethod
-from abc import ABCMeta
-from typing import List
+from abc import ABCMeta, abstractmethod, abstractstaticmethod
+from typing import Any, Dict, List
+
+from .incident import Incident
 
 
 class BaseConf(metaclass=ABCMeta):
@@ -9,10 +10,11 @@ class BaseConf(metaclass=ABCMeta):
         self.settings = settings
 
     @abstractmethod
-    def __call__(self, *args, **kwargs):
+    def __call__(
+        self, incidents: List[Incident], token: Dict[str, str]
+    ) -> List[Dict[str, Any]]:
         pass
 
     @abstractstaticmethod
     def normalize_repos(config):
         pass
-

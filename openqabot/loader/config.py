@@ -10,9 +10,11 @@ from ..types.incidents import Incidents
 logger = getLogger("bot.loader.config")
 
 
-def load_metadata(path: Path, aggregate: bool, incidents: bool) -> List[Union[Aggregate, Incidents]]:
+def load_metadata(
+    path: Path, aggregate: bool, incidents: bool
+) -> List[Union[Aggregate, Incidents]]:
 
-    ret = []
+    ret: List[Union[Aggregate, Incidents]] = []
 
     loader = YAML(typ="safe")
 
