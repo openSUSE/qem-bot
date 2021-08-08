@@ -45,7 +45,7 @@ def walk(inc):
 
 
 def get_active_incidents(smelt: str) -> Set[int]:
-    """ Get active incidents from SMELT GraphQL api"""
+    """Get active incidents from SMELT GraphQL api"""
 
     active: Set[int] = set()
 
@@ -133,7 +133,10 @@ def rrv(rr_number):
 
 
 def rra(rr_number):
-    if rr_number["status"]["name"] == "accepted":
+    if (
+        rr_number["status"]["name"] == "accepted"
+        or rr_number["status"]["name"] == "new"
+    ):
         return True
     else:
         return False
