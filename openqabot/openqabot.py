@@ -4,7 +4,7 @@ import requests
 
 from .loader.config import load_metadata
 from .loader.qem import get_incidents
-
+from .openqa import openQAInterface
 
 logger = getLogger("bot.openqabot")
 
@@ -20,6 +20,7 @@ class OpenQABot:
             args.configs, args.disable_aggregates, args.disable_incidents
         )
         self.post = []
+        self.openqa = openQAInterface()
 
     def post_qem(self, data, api):
         url = "http://dashboard.qam.suse.de" + api
@@ -31,7 +32,7 @@ class OpenQABot:
             raise e
 
     def post_openqa(self, data):
-        pass
+        self.openqa.post_job(data)
 
     def __call__(self):
         logger.info("Starting bot mainloop")
