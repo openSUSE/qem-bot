@@ -36,7 +36,9 @@ class Incidents(BaseConf):
         return ret
 
     @staticmethod
-    def _is_sheduled_job(token: Dict[str,str], inc: Incident, arch: str, flavor: str) -> bool:
+    def _is_sheduled_job(
+        token: Dict[str, str], inc: Incident, arch: str, flavor: str
+    ) -> bool:
         jobs = {}
         try:
             jobs = requests.get(
@@ -86,6 +88,7 @@ class Incidents(BaseConf):
                     full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
                     full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
                     full_post["openqa"]["_OBSOLETE"] = "1"
+                    full_post["openqa"]["INCIDENT_ID"] = inc.project.replace(":", "_")
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
