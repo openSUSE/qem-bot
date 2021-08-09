@@ -1,8 +1,6 @@
-from collections import Sequence
 from hashlib import md5
-import json
 from logging import getLogger
-from typing import Generator, List, Tuple, Union, Set
+from typing import List, Tuple
 from xml.etree import ElementTree as ET
 
 import requests
@@ -17,15 +15,19 @@ def get_max_revision(
     arch: str,
     project: str,
 ) -> int:
+
     max_rev = 0
 
     url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
 
     for repo in repos:
         # workaround for manager server 4.1
-        if arch == "aarch64" and repo[0] == "SLE-Module-SUSE-Manager-Server" and repo[1] == "4.1":
+        if (
+            arch == "aarch64"
+            and repo[0] == "SLE-Module-SUSE-Manager-Server"
+            and repo[1] == "4.1"
+        ):
             continue
-
         url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
         try:
             root = ET.fromstring(requests.get(url).text)
