@@ -9,7 +9,11 @@ import requests
 from . import ProdVer, Repos
 from ..errors import SameBuildExists
 from ..loader.repohash import merge_repohash
-from ..pc_helper import apply_publiccloud_pint_image, apply_publiccloud_regex
+from ..pc_helper import (
+    apply_pc_tools_image,
+    apply_publiccloud_pint_image,
+    apply_publiccloud_regex,
+)
 from .baseconf import BaseConf
 
 logger = getLogger("bot.types.aggregate")
@@ -48,7 +52,7 @@ class Aggregate(BaseConf):
 
         return f"{build}-{counter}"
 
-    def __call__(self, incidents, token):
+    def __call__(self, incidents, token, ignore_onetime=False):
         ret = []
 
         for arch in self.archs:
@@ -100,27 +104,37 @@ class Aggregate(BaseConf):
                 )
                 continue
 
-            if self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1":
+            if not ignore_onetime and (
+                self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1"
+            ):
                 continue
 
-            settings = self.settings.copy() 
-            # parse Public-Cloud image REGEX if present
-            if "PUBLIC_CLOUD_IMAGE_REGEX" in self.settings:
-                settings = apply_publiccloud_regex(self.settings)
-                if settings["PUBLIC_CLOUD_IMAGE_LOCATION"] is None:
+            settings = self.settings.copy()
+
+            # if set, we use this query to detect latest public cloud tools image which used for running
+            # all public cloud related tests in openQA
+            if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
+                settings = apply_pc_tools_image(settings)
+                if settings["PC_TOOLS_IMAGE_BASE"] is None:
                     logger.error(
-                        "No publiccloud image found for %s"
-                        % settings["PUBLIC_CLOUD_IMAGE_REGEX"]
+                        f"Failed to query latest publiccloud tools image using {settings['PUBLICCLOUD_TOOLS_IMAGE_QUERY']}"
                     )
                     continue
 
+            # parse Public-Cloud image REGEX if present
+            if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
+                settings = apply_publiccloud_regex(settings)
+                if settings["PUBLIC_CLOUD_IMAGE_LOCATION"] is None:
+                    logger.error(
+                        f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
+                    )
+                    continue
             # parse Public-Cloud pint query if present
-            if "PUBLICCLOUD_PINT_QUERY" in self.settings:
-                settings = apply_publiccloud_pint_image(self.settings)
+            if "PUBLICCLOUD_PINT_QUERY" in settings:
+                settings = apply_publiccloud_pint_image(settings)
                 if settings["PUBLIC_CLOUD_IMAGE_ID"] is None:
                     logger.error(
-                        "No publiccloud image fetched from pint for for %s"
-                        % settings["PUBLICCLOUD_PINT_QUERY"]
+                        f"No publiccloud image fetched from pint for for {settings['PUBLICCLOUD_PINT_QUERY']}"
                     )
                     continue
 
