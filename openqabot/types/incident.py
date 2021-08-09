@@ -43,7 +43,7 @@ class Incident:
         tmpdict: Dict[str, List[Tuple[str, str]]] = {}
 
         for repo in channels:
-            if repo.arch in rev:
+            if repo.arch in tmpdict:
                 tmpdict[repo.arch].append((repo.product, repo.version))
             else:
                 tmpdict[repo.arch] = [(repo.product, repo.version)]
