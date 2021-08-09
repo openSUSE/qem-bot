@@ -11,7 +11,7 @@ class BaseConf(metaclass=ABCMeta):
 
     @abstractmethod
     def __call__(
-        self, incidents: List[Incident], token: Dict[str, str]
+        self, incidents: List[Incident], token: Dict[str, str], ignore_onetime: bool
     ) -> List[Dict[str, Any]]:
         pass
 

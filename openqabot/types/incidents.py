@@ -63,7 +63,7 @@ class Incidents(BaseConf):
         return False
 
     def __call__(
-        self, incidents: List[Incident], token: Dict[str, str]
+        self, incidents: List[Incident], token: Dict[str, str], ignore_onetime: bool
     ) -> List[Dict[str, Any]]:
 
         DOWNLOAD_BASE = "https://download.suse.de/ibs/SUSE:/Maintenance:/"

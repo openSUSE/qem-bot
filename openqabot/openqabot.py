@@ -13,6 +13,7 @@ class OpenQABot:
     def __init__(self, args):
         logger.debug("Bot initialization with %s" % args)
         self.dry = args.dry
+        self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(self.token)
         logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
@@ -38,10 +39,15 @@ class OpenQABot:
 
         post = []
         for worker in self.workers:
-            post += worker(self.incidents, self.token)
+            post += worker(self.incidents, self.token, self.ignore_onetime)
 
-        logger.info("Posting %s jobs" % len(post))
-        if not self.dry:
+        if self.dry:
+            logger.info("Would post %s jobs" % len(post))
+            for job in post:
+                logger.debug(job)
+
+        else:
+            logger.info("Posting %s jobs" % len(post))
             for job in post:
                 logger.debug("Posting %s" % str(job))
                 self.post_openqa(job["openqa"])

@@ -52,7 +52,7 @@ class Aggregate(BaseConf):
 
         return f"{build}-{counter}"
 
-    def __call__(self, incidents, token):
+    def __call__(self, incidents, token, ignore_onetime=False):
         ret = []
 
         for arch in self.archs:
@@ -104,7 +104,9 @@ class Aggregate(BaseConf):
                 )
                 continue
 
-            if self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1":
+            if not ignore_onetime and (
+                self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1"
+            ):
                 continue
 
             settings = self.settings.copy()
