@@ -134,9 +134,9 @@ class Incidents(BaseConf):
                             continue
 
                     if self._is_sheduled_job(token, inc, arch, flavor):
-                        logger.debug(
-                            "NOT SHEDULE: Flavor: %s , incident %s , arch %s  - exists in openQA "
-                            % (flavor, inc.id, arch)
+                        logger.info(
+                            "NOT SHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
+                            % (flavor, self.settings["VERSION"], inc.id, arch)
                         )
                         continue
 
@@ -184,7 +184,6 @@ class Incidents(BaseConf):
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
-                    full_post["qem"]["settings"] = full_post["openqa"]
-
+                    full_post["qem"]["settings"] = full_post["openqa"].copy()
                     ret.append(full_post)
         return ret
