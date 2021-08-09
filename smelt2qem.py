@@ -132,6 +132,16 @@ def rrv(rr_number):
         return False
 
 
+def rr_revoked(rr_number):
+    if rr_number["reviewSet"]:
+        if rr_number["status"]["name"] == "revoked":
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 def rra(rr_number):
     if (
         rr_number["status"]["name"] == "accepted"
@@ -160,13 +170,15 @@ def create_record(inc):
         inReview = rrv(rr_number)
         approved = rra(rr_number)
         inReviewQAM = rrqam(rr_number)
+        revoked = rr_revoked(rr_number)
         rr_number = rr_number["requestId"]
     else:
         inReview = False
         approved = False
         inReviewQAM = False
+        revoked = False
 
-    if approved:
+    if approved or revoked:
         incident["isActive"] = False
 
     incident["project"] = inc["project"]
