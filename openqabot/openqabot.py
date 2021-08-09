@@ -19,7 +19,6 @@ class OpenQABot:
         self.workers = load_metadata(
             args.configs, args.disable_aggregates, args.disable_incidents
         )
-        self.post = []
         self.openqa = openQAInterface()
 
     def post_qem(self, data, api):
@@ -37,12 +36,13 @@ class OpenQABot:
     def __call__(self):
         logger.info("Starting bot mainloop")
 
+        post = []
         for worker in self.workers:
-            self.post += worker(self.incidents, self.token)
+            post += worker(self.incidents, self.token)
 
-        logger.info("Posting %s jobs" % len(self.post))
+        logger.info("Posting %s jobs" % len(post))
         if not self.dry:
-            for job in self.post:
+            for job in post:
                 logger.debug("Posting %s" % str(job))
                 self.post_openqa(job["openqa"])
                 self.post_qem(job["qem"], job["api"])
