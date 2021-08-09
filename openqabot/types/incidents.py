@@ -88,7 +88,7 @@ class Incidents(BaseConf):
                     full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
                     full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
                     full_post["openqa"]["_OBSOLETE"] = "1"
-                    full_post["openqa"]["INCIDENT_ID"] = inc.project.replace(":", "_")
+                    full_post["openqa"]["INCIDENT_ID"] = inc.id
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
