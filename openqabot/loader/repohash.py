@@ -28,7 +28,12 @@ def get_max_revision(
             and repo[1] == "4.1"
         ):
             continue
-        url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
+
+        if repo[0] == "openSUSE-SLE":
+            url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
+        else:
+            url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
+
         try:
             root = ET.fromstring(requests.get(url).text)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")

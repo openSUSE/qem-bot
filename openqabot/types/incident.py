@@ -21,9 +21,23 @@ class Incident:
             for p, v, a in (
                 r.split(":")[2:]
                 for r in incident["channels"]
-                if r.startswith("SUSE:Updates") and not "openSUSE-SLE" in r
+                if r.startswith("SUSE:Updates") and "openSUSE-SLE" not in r
             )
             if p != "SLE-Module-Development-Tools-OBS"
+        ]
+
+        # set openSUSE-SLE arch as x86_64 by default
+        # for now is simplification as we now test only on x86_64
+        self.channels += [
+            Repos(p, v, "x86_64")
+            for p, v in (
+                r.split(":")[2:]
+                for r in (
+                    i
+                    for i in incident["channels"]
+                    if i.startswith("SUSE:Updates") and "openSUSE-SLE" in i
+                )
+            )
         ]
         if not self.channels:
             raise EmptyChannels(self.project)
@@ -92,7 +106,7 @@ class Incident:
 
     @staticmethod
     def _is_azure(packages):
-        """ return True if package is kernel for MS AZURE """
+        """return True if package is kernel for MS AZURE"""
         for package in packages:
             if package.startswith("kernel-azure"):
                 return True

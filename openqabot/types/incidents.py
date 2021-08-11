@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Union
 
 import requests
 
@@ -34,6 +34,12 @@ class Incidents(BaseConf):
                     ret[flavor][key] = value
 
         return ret
+
+    @staticmethod
+    def _repo_osuse(chan: Repos) -> Union[Repos, Tuple[str, str]]:
+        if chan.product == "openSUSE-SLE":
+            return chan.product, chan.version
+        return chan
 
     @staticmethod
     def _is_sheduled_job(
@@ -144,7 +150,7 @@ class Incidents(BaseConf):
                         full_post["openqa"][key] = str(value.id)
 
                     repos = (
-                        f"{DOWNLOAD_BASE}{inc.id}/SUSE_Updates_{'_'.join(chan)}"
+                        f"{DOWNLOAD_BASE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
                         for chan in channels_set
                     )
                     full_post["openqa"]["INCIDENT_REPO"] = ",".join(repos)
