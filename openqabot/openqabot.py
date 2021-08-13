@@ -11,7 +11,7 @@ logger = getLogger("bot.openqabot")
 
 class OpenQABot:
     def __init__(self, args):
-        logger.debug("Bot initialization with %s" % args)
+        logger.info("Bot shedule starts now")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
