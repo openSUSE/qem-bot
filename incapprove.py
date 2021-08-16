@@ -57,11 +57,11 @@ def get_aggeregate_settings(inc: int) -> List[JobAggr]:
     return [JobAggr(i["id"], True, False) for i in settings if i["build"] == last_build]
 
 
-def get_incident_result(jobs: List[JobAggr]) -> bool:
+def get_incident_result(jobs: List[JobAggr], api:str) -> bool:
     res = False
     for job in jobs:
         try:
-            res = get_job(job)
+            res = get_jobs(job, api)
         except EmptyError as e:
             continue
         if not res:
@@ -70,13 +70,13 @@ def get_incident_result(jobs: List[JobAggr]) -> bool:
 
 
 @lru_cache(maxsize=128)
-def get_job(job: JobAggr) -> bool:
-    result = R.get(QEM_DASHBOARD + "jobs/" + str(job.job_id), headers=TOKEN).json()
-    if result.get("error", False):
+def get_jobs(job: JobAggr, api:str) -> bool:
+    results = R.get(QEM_DASHBOARD + api + str(job.job_id), headers=TOKEN).json()
+
+    if not results:
         raise EmptyError("Job %s not found " % str(job.job_id))
-    if result["status"] != "passed":
-        return False
-    return True
+    
+    return any(r["status"] == "passed" for r in results)
 
 
 if __name__ == "__main__":
@@ -116,11 +116,11 @@ if __name__ == "__main__":
                 continue
             u_jobs = []
 
-        if not get_incident_result(i_jobs):
+        if not get_incident_result(i_jobs, "jobs/incident/"):
             print("Inc %s has failed job in incidents" % str(inc.inc))
             continue
         if any(i.withAggregate for i in i_jobs):
-            if not get_incident_result(u_jobs):
+            if not get_incident_result(u_jobs, "jobs/update/"):
                 print("Inc %s has failed job in aggregates" % str(inc.inc))
                 continue
 
@@ -129,15 +129,18 @@ if __name__ == "__main__":
 
     msg = "Request accepted for 'qam-openqa' by qam-dashboard"
     if not parsed.dry:
+
+        osc.conf.get_config(override_apiurl="https://api.suse.de")
+
         for rq in incidents_to_approve:
             print(
                 "Accepting review for SUSE:Maintenace:%s:%s"
                 % (str(rq.inc), str(rq.req))
             )
             try:
-                osc.core.change_request_state(
+                osc.core.change_review_state(
                     apiurl="https://api.suse.de",
-                    reqid=rq.req,
+                    reqid=str(rq.req),
                     newstate="accepted",
                     by_group="qam-openqa",
                     message=msg
