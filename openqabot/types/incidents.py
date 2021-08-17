@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Tuple, Union
 import requests
 
 from . import ProdVer, Repos
-from ..errors import SameBuildExists
+from .. import QEM_DASHBOARD
 from .baseconf import BaseConf
 from .incident import Incident
 
@@ -48,7 +48,7 @@ class Incidents(BaseConf):
         jobs = {}
         try:
             jobs = requests.get(
-                f"http://dashboard.qam.suse.de/api/incident_settings/{inc.id}",
+                f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
         except Exception as e:
@@ -80,7 +80,7 @@ class Incidents(BaseConf):
             for arch in data["archs"]:
                 for inc in incidents:
                     full_post: Dict[str, Any] = {}
-                    full_post["api"] = "/api/incident_settings"
+                    full_post["api"] = "api/incident_settings"
                     full_post["qem"] = {}
                     full_post["openqa"] = {}
                     full_post["openqa"].update(self.settings)

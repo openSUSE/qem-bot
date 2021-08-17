@@ -2,6 +2,7 @@ from logging import getLogger
 
 import requests
 
+from . import QEM_DASHBOARD
 from .loader.config import load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
@@ -23,7 +24,7 @@ class OpenQABot:
         self.openqa = openQAInterface()
 
     def post_qem(self, data, api):
-        url = "http://dashboard.qam.suse.de" + api
+        url = QEM_DASHBOARD + api
         try:
             res = requests.put(url, headers=self.token, json=data)
         # TODO: exceptions handling

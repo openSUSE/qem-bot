@@ -3,6 +3,7 @@ from typing import Dict, List
 
 import requests
 
+from .. import QEM_DASHBOARD
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..types.incident import Incident
 
@@ -10,9 +11,7 @@ logger = getLogger("bot.loader.qem")
 
 
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
-    incidents = requests.get(
-        "http://dashboard.qam.suse.de/api/incidents", headers=token
-    ).json()
+    incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
 
     xs = []
     for i in incidents:

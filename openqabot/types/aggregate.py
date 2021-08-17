@@ -7,6 +7,7 @@ from typing import Dict
 import requests
 
 from . import ProdVer, Repos
+from .. import QEM_DASHBOARD
 from ..errors import SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import (
@@ -61,7 +62,7 @@ class Aggregate(BaseConf):
             full_post["qem"] = {}
             full_post["qem"]["incidents"] = []
             full_post["qem"]["settings"] = {}
-            full_post["api"] = "/api/update_settings"
+            full_post["api"] = "api/update_settings"
 
             test_incidents = defaultdict(list)
 
@@ -84,7 +85,7 @@ class Aggregate(BaseConf):
 
             try:
                 old_jobs = requests.get(
-                    "http://dashboard.qam.suse.de/api/update_settings",
+                    QEM_DASHBOARD + "api/update_settings",
                     params={"product": self.product, "arch": arch},
                     headers=token,
                 ).json()
