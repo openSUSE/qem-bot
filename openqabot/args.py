@@ -2,8 +2,40 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 
+def do_full_shedule(args):
+    from .openqabot import OpenQABot
+
+    setattr(args, "disable_incidents", False)
+    setattr(args, "disable_aggregates", False)
+
+    bot = OpenQABot(args)
+    return bot()
+
+
+def do_incident_shedule(args):
+    from .openqabot import OpenQABot
+
+    setattr(args, "disable_incidents", False)
+    setattr(args, "disable_aggregates", True)
+
+    bot = OpenQABot(args)
+    return bot()
+
+
+def do_aggregate_shedule(args):
+    from .openqabot import OpenQABot
+
+    setattr(args, "disable_aggregates", False)
+    setattr(args, "disable_incidents", True)
+
+    bot = OpenQABot(args)
+    return bot()
+
+
 def get_parser():
-    parser = ArgumentParser()
+
+    parser = ArgumentParser(description="QEM-Dashboard, SMELT and openQA connector", prog="bot-ng")
+
     parser.add_argument(
         "-c",
         "--configs",
@@ -11,16 +43,25 @@ def get_parser():
         default=Path("/etc/openqabot"),
         help="Directory with openqabot configuration metadata",
     )
+
     parser.add_argument(
         "--dry", action="store_true", help="Dry run, dont post any data"
     )
+
     parser.add_argument(
-        "--disable-aggregates", action="store_true", help="Don't schedule aggregates"
+        "-d", "--debug", action="store_true", help="Enable debug output"
     )
+
     parser.add_argument(
-        "--disable-incidents", action="store_true", help="Don't schedule incidents"
+        "-t", "--token", required=True, type=str, help="Token for qem dashboard api"
     )
-    parser.add_argument(
+
+    commands = parser.add_subparsers()
+
+    cmdfull = commands.add_parser(
+        "full-run", help="Full shedule for Maintenance Incidents in openqa"
+    )
+    cmdfull.add_argument(
         "-i",
         "--ignore-onetime",
         action="store_true",
@@ -28,10 +69,33 @@ def get_parser():
         default=False,
         dest="ignore_onetime",
     )
-    parser.add_argument(
-        "-d", "--debug", action="store_true", help="Enable debug output"
+    cmdfull.set_defaults(func=do_full_shedule)
+
+    cmdinc = commands.add_parser(
+        "incidents-run",
+        help="Incidents only shedule for Maintenance Incidents in openqa",
     )
-    parser.add_argument(
-        "-t", "--token", required=True, type=str, help="Token for qem dashboard api"
+    cmdinc.add_argument(
+        "-i",
+        "--ignore-onetime",
+        action="store_true",
+        help="Ignore onetime and schedule those test runs",
+        default=False,
+        dest="ignore_onetime",
     )
+    cmdinc.set_defaults(func=do_incident_shedule)
+
+    cmdupd = commands.add_parser(
+        "updates-run", help="updates only shedule for Maintenance Incidents in openqa"
+    )
+    cmdupd.add_argument(
+        "-i",
+        "--ignore-onetime",
+        action="store_true",
+        help="Ignore onetime and schedule those test runs",
+        default=False,
+        dest="ignore_onetime",
+    )
+    cmdupd.set_defaults(func=do_aggregate_shedule)
+
     return parser
