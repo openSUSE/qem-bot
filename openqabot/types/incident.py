@@ -14,7 +14,7 @@ class Incident:
         self.project = incident["project"]
         self.id = incident["number"]
         self.rrid = f"{self.project}:{self.rr}" if self.rr else None
-        self.staging = not incident["inReview"] 
+        self.staging = not incident["inReview"]
 
         self.channels = [
             Repos(p, v, a)

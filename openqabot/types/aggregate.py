@@ -18,6 +18,7 @@ from .baseconf import BaseConf
 
 logger = getLogger("bot.types.aggregate")
 
+
 class Aggregate(BaseConf):
     def __init__(self, product: str, settings, config) -> None:
         super().__init__(product, settings, config)
@@ -63,9 +64,11 @@ class Aggregate(BaseConf):
             full_post["api"] = "/api/update_settings"
 
             test_incidents = defaultdict(list)
-            
+
             # only testing queue and not livepatch
-            valid_incidents = [i for i in incidents if not any((i.livepatch, i.staging))]
+            valid_incidents = [
+                i for i in incidents if not any((i.livepatch, i.staging))
+            ]
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
                     if Repos(template.product, template.version, arch) in inc.channels:
