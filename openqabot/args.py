@@ -32,9 +32,18 @@ def do_aggregate_shedule(args):
     return bot()
 
 
+def do_sync_smelt(args):
+    from .smeltsync import SMELTSync
+
+    syncer = SMELTSync(args)
+    return syncer()
+
+
 def get_parser():
 
-    parser = ArgumentParser(description="QEM-Dashboard, SMELT and openQA connector", prog="bot-ng")
+    parser = ArgumentParser(
+        description="QEM-Dashboard, SMELT and openQA connector", prog="bot-ng"
+    )
 
     parser.add_argument(
         "-c",
@@ -97,5 +106,10 @@ def get_parser():
         dest="ignore_onetime",
     )
     cmdupd.set_defaults(func=do_aggregate_shedule)
+
+    cmdsync = commands.add_parser(
+        "smelt-sync", help="Sync data from SMELT into QEM Dashboard"
+    )
+    cmdsync.set_defaults(func=do_sync_smelt)
 
     return parser
