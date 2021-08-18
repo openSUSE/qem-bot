@@ -1,3 +1,4 @@
+from argparse import Namespace
 from logging import getLogger
 
 import requests
@@ -11,7 +12,7 @@ logger = getLogger("bot.openqabot")
 
 
 class OpenQABot:
-    def __init__(self, args):
+    def __init__(self, args: Namespace) -> None:
         logger.info("Bot shedule starts now")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
