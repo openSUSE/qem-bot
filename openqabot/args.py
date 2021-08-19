@@ -39,6 +39,13 @@ def do_sync_smelt(args):
     return syncer()
 
 
+def do_approve(args):
+    from .approver import Approver
+
+    approve = Approver(args)
+    return approve()
+
+
 def get_parser():
 
     parser = ArgumentParser(
@@ -111,5 +118,10 @@ def get_parser():
         "smelt-sync", help="Sync data from SMELT into QEM Dashboard"
     )
     cmdsync.set_defaults(func=do_sync_smelt)
+
+    cmdappr = commands.add_parser(
+        "inc-approve", help="Aprove incidents which passed tests"
+    )
+    cmdappr.set_defaults(func=do_approve)
 
     return parser
