@@ -1,11 +1,12 @@
 from logging import getLogger
 from operator import itemgetter
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Sequence
 
 import requests
 
 from .. import QEM_DASHBOARD
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
+from ..types import Data
 from ..types.incident import Incident
 
 logger = getLogger("bot.loader.qem")
@@ -41,6 +42,15 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
     return xs
 
 
+def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
+    try:
+        data = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+    return list(set([i["number"] for i in data]))
+
+
 def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
     # TODO: Error handling
     incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
@@ -57,6 +67,35 @@ def get_incident_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     return [JobAggr(i["id"], False, i["withAggregate"]) for i in settings]
 
 
+def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
+    url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
+    logger.info("Getting settings for %s" % number)
+    try:
+        data = requests.get(url, headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+
+    if "error" in data:
+        raise ValueError
+
+    ret = []
+    for d in data:
+        ret.append(
+            Data(
+                number,
+                d["id"],
+                d["flavor"],
+                d["arch"],
+                d["settings"]["DISTRI"],
+                d["version"],
+                d["settings"]["BUILD"],
+            )
+        )
+
+    return ret
+
+
 def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # TODO: Error handling
     settings = requests.get(
@@ -68,3 +107,14 @@ def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     settings = sorted(settings, key=itemgetter("build"))
     last_build = settings[0]["build"]
     return [JobAggr(i["id"], True, False) for i in settings if i["build"] == last_build]
+
+
+def post_job(token: Dict[str, str], data) -> None:
+    try:
+        result = requests.put(QEM_DASHBOARD+ "api/jobs", headers=token, json = data)
+        if result.status_code != 200:
+            logger.error(result.text)
+
+    # TODO: proper error handling .. 
+    except Exception as e:
+        logger.exception(e)

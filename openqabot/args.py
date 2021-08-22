@@ -46,6 +46,13 @@ def do_approve(args):
     return approve()
 
 
+def do_sync_inc_results(args):
+    from .incsyncres import IncResultsSync
+
+    syncer = IncResultsSync(args)
+    return syncer()
+
+
 def get_parser():
 
     parser = ArgumentParser(
@@ -123,5 +130,10 @@ def get_parser():
         "inc-approve", help="Aprove incidents which passed tests"
     )
     cmdappr.set_defaults(func=do_approve)
+
+    cmdincsync = commands.add_parser(
+        "inc-sync-results", help="Sync results of openQA jobs to Dashboard"
+    )
+    cmdincsync.set_defaults(func=do_sync_inc_results)
 
     return parser
