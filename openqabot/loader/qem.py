@@ -1,18 +1,31 @@
 from logging import getLogger
-from typing import Dict, List
+from operator import itemgetter
+from pprint import pformat
+from typing import Dict, List, NamedTuple, Sequence
 
 import requests
 
-from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from .. import QEM_DASHBOARD
+from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
+from ..types import Data
 from ..types.incident import Incident
 
 logger = getLogger("bot.loader.qem")
 
 
+class IncReq(NamedTuple):
+    inc: int
+    req: int
+
+
+class JobAggr(NamedTuple):
+    job_id: int
+    aggregate: bool
+    withAggregate: bool
+
+
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
-    incidents = requests.get(
-        "http://dashboard.qam.suse.de/api/incidents", headers=token
-    ).json()
+    incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
 
     xs = []
     for i in incidents:
@@ -28,3 +41,118 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             logger.info("Project %s has empty packages" % i["project"])
 
     return xs
+
+
+def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
+    try:
+        data = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+    return list(set([i["number"] for i in data]))
+
+
+def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
+    # TODO: Error handling
+    incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+    return [IncReq(i["number"], i["rr_number"]) for i in incidents if i["inReviewQAM"]]
+
+
+def get_incident_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
+    # TODO: Error handling.
+    settings = requests.get(
+        QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
+    ).json()
+    if not settings:
+        raise NoResultsError("Inc %s hasn't any job_settings" % str(inc))
+    return [JobAggr(i["id"], False, i["withAggregate"]) for i in settings]
+
+
+def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
+    url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
+    logger.info("Getting settings for %s" % number)
+    try:
+        data = requests.get(url, headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+
+    if "error" in data:
+        raise ValueError
+
+    ret = []
+    for d in data:
+        ret.append(
+            Data(
+                number,
+                d["id"],
+                d["flavor"],
+                d["arch"],
+                d["settings"]["DISTRI"],
+                d["version"],
+                d["settings"]["BUILD"],
+                "",
+            )
+        )
+
+    return ret
+
+
+def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
+    # TODO: Error handling
+    settings = requests.get(
+        QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
+    ).json()
+    if not settings:
+        raise NoResultsError("Inc %s hasn't any aggregate__settings" % str(inc))
+
+    settings = sorted(settings, key=itemgetter("build"))
+    last_build = settings[0]["build"]
+    return [JobAggr(i["id"], True, False) for i in settings if i["build"] == last_build]
+
+
+def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
+    url = (
+        QEM_DASHBOARD
+        + "api/update_settings"
+        + f"?product={data.product}&arch={data.arch}"
+    )
+    try:
+        settings = requests.get(url, headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+
+    ret = []
+    if not settings:
+        raise KeyError
+
+    logger.debug("Getting id for %s" % pformat(data))
+
+    # use last three shedule
+    for s in settings[:3]:
+        ret.append(
+            Data(
+                0,
+                s["id"],
+                data.flavor,
+                data.arch,
+                data.distri,
+                data.version,
+                s["build"],
+                data.product,
+            )
+        )
+
+    return ret
+
+
+def post_job(token: Dict[str, str], data) -> None:
+    try:
+        result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
+        if result.status_code != 200:
+            logger.error(result.text)
+
+    # TODO: proper error handling ..
+    except Exception as e:
+        logger.exception(e)

@@ -14,3 +14,7 @@ class EmptyPackagesError(Error):
 
 class SameBuildExists(Error):
     pass
+
+
+class NoResultsError(Error):
+    pass

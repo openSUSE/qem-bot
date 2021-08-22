@@ -17,15 +17,24 @@ def create_logger():
 
 def main():
     logger = create_logger()
-    args = get_parser().parse_args(sys.argv[1:])
+    parser = get_parser()
 
-    if not args.configs.exists() and not args.configs.is_dir():
-        print(f"Path {args.configs} isn't valid directory with config files")
+    if len(sys.argv) < 1:
+        parser.print_help()
+        sys.exit(0)
+
+    cfg = parser.parse_args(sys.argv[1:])
+
+    if not cfg.configs.exists() and not cfg.configs.is_dir():
+        print(f"Path {cfg.configs} isn't valid directory with config files")
         sys.exit(1)
 
-    if args.debug:
+    if not hasattr(cfg, "func"):
+        print("Command is required")
+        parser.print_help()
+        sys.exit(1)
+
+    if cfg.debug:
         logger.setLevel(logging.DEBUG)
 
-    bot = OpenQABot(args)
-
-    sys.exit(bot())
+    sys.exit(cfg.func(cfg))
