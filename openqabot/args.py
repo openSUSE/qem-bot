@@ -53,6 +53,13 @@ def do_sync_inc_results(args):
     return syncer()
 
 
+def do_sync_aggregate_results(args):
+    from .aggrsync import AggregateResultsSync
+
+    syncer = AggregateResultsSync(args)
+    return syncer()
+
+
 def get_parser():
 
     parser = ArgumentParser(
@@ -132,8 +139,13 @@ def get_parser():
     cmdappr.set_defaults(func=do_approve)
 
     cmdincsync = commands.add_parser(
-        "inc-sync-results", help="Sync results of openQA jobs to Dashboard"
+        "inc-sync-results", help="Sync results of openQA incidents jobs to Dashboard"
     )
     cmdincsync.set_defaults(func=do_sync_inc_results)
+
+    cmdaggrsync = commands.add_parser(
+        "aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard"
+    )
+    cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
 
     return parser

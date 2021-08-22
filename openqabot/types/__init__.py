@@ -20,3 +20,4 @@ class Data(NamedTuple):
     distri: str
     version: str
     build: str
+    product: str

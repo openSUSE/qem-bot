@@ -4,6 +4,7 @@ from typing import List, Union
 
 from ruamel.yaml import YAML  # type: ignore
 
+from ..types import Data
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
 
@@ -44,4 +45,33 @@ def load_metadata(
                     ret.append(Aggregate(data["product"], settings, data[key]))
                 else:
                     continue
+    return ret
+
+
+def read_products(path: Path) -> List[Data]:
+    loader = YAML(typ="safe")
+    ret = []
+
+    for p in path.glob("*.yml"):
+        data = loader.load(p)
+        if not data:
+            logger.error("something wrong with %s" % str(p))
+            continue
+        try:
+            flavor = data["aggregate"]["FLAVOR"]
+        except KeyError:
+            logger.info("file %s dont have aggregate" % str(p))
+            continue
+
+        try:
+            distri = data["settings"]["DISTRI"]
+            version = data["settings"]["VERSION"]
+            product = data["product"]
+        except Exception as e:
+            logger.exception(e)
+            continue
+
+        for arch in data["aggregate"]["archs"]:
+            ret.append(Data(0, 0, flavor, arch, distri, version, "", product))
+
     return ret

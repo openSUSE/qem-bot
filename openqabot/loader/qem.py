@@ -1,5 +1,6 @@
 from logging import getLogger
 from operator import itemgetter
+from pprint import pformat
 from typing import Dict, List, NamedTuple, Sequence
 
 import requests
@@ -90,6 +91,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
                 d["settings"]["DISTRI"],
                 d["version"],
                 d["settings"]["BUILD"],
+                "",
             )
         )
 
@@ -109,12 +111,48 @@ def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     return [JobAggr(i["id"], True, False) for i in settings if i["build"] == last_build]
 
 
+def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
+    url = (
+        QEM_DASHBOARD
+        + "api/update_settings"
+        + f"?product={data.product}&arch={data.arch}"
+    )
+    try:
+        settings = requests.get(url, headers=token).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+
+    ret = []
+    if not settings:
+        raise KeyError
+
+    logger.debug("Getting id for %s" % pformat(data))
+
+    # use last three shedule
+    for s in settings[:3]:
+        ret.append(
+            Data(
+                0,
+                s["id"],
+                data.flavor,
+                data.arch,
+                data.distri,
+                data.version,
+                s["build"],
+                data.product,
+            )
+        )
+
+    return ret
+
+
 def post_job(token: Dict[str, str], data) -> None:
     try:
-        result = requests.put(QEM_DASHBOARD+ "api/jobs", headers=token, json = data)
+        result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
         if result.status_code != 200:
             logger.error(result.text)
 
-    # TODO: proper error handling .. 
+    # TODO: proper error handling ..
     except Exception as e:
         logger.exception(e)
