@@ -1,0 +1,96 @@
+workflow:
+  rules:
+    # Run the pipeline for schedules and web triggers
+    - if: $CI_PIPELINE_SOURCE =~ "/schedule|web/"
+
+stages:
+  - schedule
+  # merge synchronize stages after deployment of Gitlab 14.2
+  - synchronize_1
+  - synchronize_2
+  - evaluate
+
+default:
+  image: registry.suse.de/qa/maintenance/containers/qam-ci-leap:latest
+
+variables:
+  OSC_REPO: openSUSE_Leap_15.2
+  BOT_CMD:
+    value: ''
+    description: 'Command to run: full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results'
+  BOT_PARAMS:
+    value: '--dry --debug'
+    description: 'Additional bot parameters'
+
+.bot:
+  before_script:
+    - zypper ar http://download.suse.de/ibs/QA:/Maintenance/$OSC_REPO/QA:Maintenance.repo
+    - zypper --gpg-auto-import-keys ref
+    - >
+      zypper in --no-confirm
+      qam-metadata-openqabot
+    - mkdir -p ~/.config/osc /etc/openqa
+    - ln -s $OSC_RC_OPENQA ~/.config/osc/oscrc
+    - ln -s $OPENQA /etc/openqa/client.conf
+  script:
+    - echo "Running bot with cmd $BOT_CMD"
+    - ./bot-ng.py -c /etc/openqabot --token $BOT_TOKEN $BOT_PARAMS $BOT_CMD 2>&1 | tee bot_$BOT_CMD.log
+  artifacts:
+    when: always
+    paths:
+      - bot_*.log
+    expire_in: 1 week
+
+run bot:
+  extends: .bot
+  stage: evaluate
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /web/
+
+schedule incidents:
+  extends: .bot
+  stage: schedule
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_CMD =~ /.*-run/ && $CI_PIPELINE_SOURCE =~ /schedule/
+
+sync smelt:
+  extends: .bot
+  variables:
+    BOT_CMD: smelt-sync
+  stage: synchronize_1
+  needs: []
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+
+sync aggregates:
+  extends: .bot
+  variables:
+    BOT_CMD: aggr-sync-results
+  stage: synchronize_2
+  needs:
+    - sync smelt
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+
+sync incidents:
+  extends: .bot
+  variables:
+    BOT_CMD: inc-sync-results
+  stage: synchronize_2
+  needs:
+    - sync smelt
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+
+approve incidents:
+  extends: .bot
+  variables:
+    BOT_CMD: inc-approve
+  stage: evaluate
+  needs:
+    - sync smelt
+    - sync aggregates
+    - sync incidents
+  rules:
+    - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+      when: always
