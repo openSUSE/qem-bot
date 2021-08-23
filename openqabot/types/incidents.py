@@ -42,7 +42,7 @@ class Incidents(BaseConf):
         return chan
 
     @staticmethod
-    def _is_sheduled_job(
+    def _is_scheduled_job(
         token: Dict[str, str], inc: Incident, arch: str, flavor: str
     ) -> bool:
         jobs = {}
@@ -139,7 +139,7 @@ class Incidents(BaseConf):
                         if set(issue_dict.keys()).isdisjoint(data["required_issues"]):
                             continue
 
-                    if self._is_sheduled_job(token, inc, arch, flavor):
+                    if self._is_scheduled_job(token, inc, arch, flavor):
                         logger.info(
                             "NOT SHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
                             % (flavor, self.settings["VERSION"], inc.id, arch)

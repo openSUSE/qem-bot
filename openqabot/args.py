@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 
-def do_full_shedule(args):
+def do_full_schedule(args):
     from .openqabot import OpenQABot
 
     setattr(args, "disable_incidents", False)
@@ -12,7 +12,7 @@ def do_full_shedule(args):
     return bot()
 
 
-def do_incident_shedule(args):
+def do_incident_schedule(args):
     from .openqabot import OpenQABot
 
     setattr(args, "disable_incidents", False)
@@ -22,7 +22,7 @@ def do_incident_shedule(args):
     return bot()
 
 
-def do_aggregate_shedule(args):
+def do_aggregate_schedule(args):
     from .openqabot import OpenQABot
 
     setattr(args, "disable_aggregates", False)
@@ -89,7 +89,7 @@ def get_parser():
     commands = parser.add_subparsers()
 
     cmdfull = commands.add_parser(
-        "full-run", help="Full shedule for Maintenance Incidents in openqa"
+        "full-run", help="Full schedule for Maintenance Incidents in openqa"
     )
     cmdfull.add_argument(
         "-i",
@@ -99,11 +99,11 @@ def get_parser():
         default=False,
         dest="ignore_onetime",
     )
-    cmdfull.set_defaults(func=do_full_shedule)
+    cmdfull.set_defaults(func=do_full_schedule)
 
     cmdinc = commands.add_parser(
         "incidents-run",
-        help="Incidents only shedule for Maintenance Incidents in openqa",
+        help="Incidents only schedule for Maintenance Incidents in openqa",
     )
     cmdinc.add_argument(
         "-i",
@@ -113,10 +113,10 @@ def get_parser():
         default=False,
         dest="ignore_onetime",
     )
-    cmdinc.set_defaults(func=do_incident_shedule)
+    cmdinc.set_defaults(func=do_incident_schedule)
 
     cmdupd = commands.add_parser(
-        "updates-run", help="updates only shedule for Maintenance Incidents in openqa"
+        "updates-run", help="updates only schedule for Maintenance Incidents in openqa"
     )
     cmdupd.add_argument(
         "-i",
@@ -126,7 +126,7 @@ def get_parser():
         default=False,
         dest="ignore_onetime",
     )
-    cmdupd.set_defaults(func=do_aggregate_shedule)
+    cmdupd.set_defaults(func=do_aggregate_schedule)
 
     cmdsync = commands.add_parser(
         "smelt-sync", help="Sync data from SMELT into QEM Dashboard"
