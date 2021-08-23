@@ -1,6 +1,6 @@
 # bot-ng
 
-tool for shedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
+tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
 
 ## Usage:
 
@@ -14,10 +14,10 @@ tool for shedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
     
     positional arguments:
       {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
-        full-run            Full shedule for Maintenance Incidents in openqa
-        incidents-run       Incidents only shedule for Maintenance Incidents in
+        full-run            Full schedule for Maintenance Incidents in openqa
+        incidents-run       Incidents only schedule for Maintenance Incidents in
                             openqa
-        updates-run         updates only shedule for Maintenance Incidents in
+        updates-run         updates only schedule for Maintenance Incidents in
                             openqa
         smelt-sync          Sync data from SMELT into QEM Dashboard
         inc-approve         Aprove incidents which passed tests

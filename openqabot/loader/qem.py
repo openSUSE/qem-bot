@@ -129,7 +129,7 @@ def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
 
     logger.debug("Getting id for %s" % pformat(data))
 
-    # use last three shedule
+    # use last three schedule
     for s in settings[:3]:
         ret.append(
             Data(
