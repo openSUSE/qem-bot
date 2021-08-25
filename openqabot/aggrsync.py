@@ -4,6 +4,7 @@ from logging import getLogger
 from pprint import pformat
 from typing import Dict
 
+from .errors import EmptySettings
 from .loader.config import read_products
 from .loader.qem import get_aggeregate_settings_data, post_job
 from .openqa import openQAInterface
@@ -23,7 +24,11 @@ class AggregateResultsSync:
 
         update_setting = []
         for product in self.product:
-            update_setting += get_aggeregate_settings_data(self.token, product)
+            try:
+                update_setting += get_aggeregate_settings_data(self.token, product)
+            except EmptySettings as e:
+                logger.info(e)
+                continue
 
         client = openQAInterface()
 

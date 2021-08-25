@@ -18,3 +18,6 @@ class SameBuildExists(Error):
 
 class NoResultsError(Error):
     pass
+
+class EmptySettings(Error):
+    pass
