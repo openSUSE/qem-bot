@@ -36,6 +36,8 @@ class SMELTSync:
             rt = 0
             if not self.dry and ret.status_code == 200:
                 logger.info("Smelt Incidents updated")
+            elif self.dry:
+                logger.info("Dry run .. nothing synced")
             else:
                 logger.error("Smelt Incidents wern't synced to dashboard")
                 rt = 1
