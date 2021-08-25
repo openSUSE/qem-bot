@@ -6,7 +6,13 @@ from typing import Dict, List, NamedTuple, Sequence
 import requests
 
 from .. import QEM_DASHBOARD
-from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
+from ..errors import (
+    EmptyChannels,
+    EmptyPackagesError,
+    EmptySettings,
+    NoRepoFoundError,
+    NoResultsError,
+)
 from ..types import Data
 from ..types.incident import Incident
 
@@ -125,7 +131,9 @@ def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
 
     ret = []
     if not settings:
-        raise KeyError
+        raise EmptySettings(
+            f"Product: {data.product} on arch: {data.arch} hasn't any settings"
+        )
 
     logger.debug("Getting id for %s" % pformat(data))
 
