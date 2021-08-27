@@ -46,7 +46,11 @@ class AggregateResultsSync:
                 if v["clone_id"]:
                     logger.info("Clone job %s" % v["clone_id"])
                     continue
-                if v["group"].startswith("Test") or v["group"].startswith("Devel"):
+                if (
+                    v["group"].startswith("Test")
+                    or v["group"].startswith("Devel")
+                    or "Development" in ["group"]
+                ):
                     logger.info("Development group -- %s" % v["id"])
                     continue
                 try:
