@@ -35,6 +35,7 @@ variables:
   script:
     - echo "Running bot with cmd $BOT_CMD"
     - ./bot-ng.py -c /etc/openqabot --token $BOT_TOKEN $BOT_PARAMS $BOT_CMD 2>&1 | tee bot_$BOT_CMD.log
+  allow_failure: true
   artifacts:
     when: always
     paths:
@@ -71,6 +72,7 @@ sync aggregates:
     - sync smelt
   rules:
     - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+      when: always
 
 sync incidents:
   extends: .bot
@@ -81,6 +83,7 @@ sync incidents:
     - sync smelt
   rules:
     - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
+      when: always
 
 approve incidents:
   extends: .bot
