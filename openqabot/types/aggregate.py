@@ -120,7 +120,7 @@ class Aggregate(BaseConf):
             if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
                 query = settings['PUBLICCLOUD_TOOLS_IMAGE_QUERY']
                 settings = apply_pc_tools_image(settings)
-                if settings.get("PC_TOOLS_IMAGE_BASE", False):
+                if not settings.get("PC_TOOLS_IMAGE_BASE", False):
                     logger.error(
                         f"Failed to query latest publiccloud tools image using {query}"
                     )
@@ -129,7 +129,7 @@ class Aggregate(BaseConf):
             # parse Public-Cloud image REGEX if present
             if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
                 settings = apply_publiccloud_regex(settings)
-                if settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
+                if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
                     logger.error(
                         f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
                     )
@@ -137,7 +137,7 @@ class Aggregate(BaseConf):
             # parse Public-Cloud pint query if present
             if "PUBLICCLOUD_PINT_QUERY" in settings:
                 settings = apply_publiccloud_pint_image(settings)
-                if settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+                if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
                     logger.error(
                         f"No publiccloud image fetched from pint for for {settings['PUBLICCLOUD_PINT_QUERY']}"
                     )
