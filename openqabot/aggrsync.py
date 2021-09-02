@@ -51,6 +51,10 @@ class AggregateResultsSync:
                     logger.info("Devel job %s in group %s" % (v["id"], v["group"]))
                     continue
 
+                if  "Timo" in v["group"]:
+                    logger.info("Devel job %s in group %s -- thx. Timo" % (v["id"], v["group"]))
+                    continue
+
                 try:
                     r = self.normalize_data(key, v)
                 except KeyError:
