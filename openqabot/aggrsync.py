@@ -47,12 +47,21 @@ class AggregateResultsSync:
                     logger.info("Clone job %s" % v["clone_id"])
                     continue
 
-                if  "Devel" in v["group"] or "Test" in v["group"]:
+                if "Devel" in v["group"] or "Test" in v["group"]:
                     logger.info("Devel job %s in group %s" % (v["id"], v["group"]))
                     continue
 
-                if  "Timo" in v["group"]:
-                    logger.info("Devel job %s in group %s -- thx. Timo" % (v["id"], v["group"]))
+                if "Timo" in v["group"]:
+                    logger.info(
+                        "Devel job %s in group %s -- thx. Timo" % (v["id"], v["group"])
+                    )
+                    continue
+
+                if "Leap" in v["group"]:
+                    logger.info(
+                        "Devel job %s in group %s -- Leap jobs arent in good state"
+                        % (v["id"], v["group"])
+                    )
                     continue
 
                 try:
