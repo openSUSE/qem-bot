@@ -77,7 +77,7 @@ def apply_publiccloud_regex(settings):
 
 def apply_pc_tools_image(settings):
     try:
-        settings["PC_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
+        settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
             settings["PUBLICCLOUD_TOOLS_IMAGE_QUERY"]
         )
         if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
@@ -89,7 +89,7 @@ def apply_pc_tools_image(settings):
         ValueError,
         re.error,
     ) as e:
-        logger.warning(f"PC_TOOLS_IMAGE_BASE handling failed: {e}")
+        logger.warning(f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed: {e}")
         return settings
 
 

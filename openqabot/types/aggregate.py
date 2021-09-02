@@ -120,7 +120,7 @@ class Aggregate(BaseConf):
             if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
                 query = settings['PUBLICCLOUD_TOOLS_IMAGE_QUERY']
                 settings = apply_pc_tools_image(settings)
-                if not settings.get("PC_TOOLS_IMAGE_BASE", False):
+                if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
                     logger.error(
                         f"Failed to query latest publiccloud tools image using {query}"
                     )
