@@ -117,8 +117,8 @@ class Aggregate(BaseConf):
 
             # if set, we use this query to detect latest public cloud tools image which used for running
             # all public cloud related tests in openQA
-            if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
-                query = settings['PUBLICCLOUD_TOOLS_IMAGE_QUERY']
+            if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+                query = settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']
                 settings = apply_pc_tools_image(settings)
                 if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
                     logger.error(
@@ -135,11 +135,11 @@ class Aggregate(BaseConf):
                     )
                     continue
             # parse Public-Cloud pint query if present
-            if "PUBLICCLOUD_PINT_QUERY" in settings:
+            if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                 settings = apply_publiccloud_pint_image(settings)
                 if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
                     logger.error(
-                        f"No publiccloud image fetched from pint for for {settings['PUBLICCLOUD_PINT_QUERY']}"
+                        f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
                     )
                     continue
 
