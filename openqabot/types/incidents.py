@@ -7,6 +7,11 @@ from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
 from .baseconf import BaseConf
 from .incident import Incident
+from ..pc_helper import (
+    apply_pc_tools_image,
+    apply_publiccloud_pint_image,
+    apply_publiccloud_regex,
+)
 
 logger = getLogger("bot.types.incidents")
 
@@ -139,9 +144,11 @@ class Incidents(BaseConf):
                         if set(issue_dict.keys()).isdisjoint(data["required_issues"]):
                             continue
 
-                    if self._is_scheduled_job(token, inc, arch, flavor):
+                    if not ignore_onetime and self._is_scheduled_job(
+                        token, inc, arch, flavor
+                    ):
                         logger.info(
-                            "NOT SHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
+                            "NOT SCHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
                             % (flavor, self.settings["VERSION"], inc.id, arch)
                         )
                         continue
@@ -190,6 +197,37 @@ class Incidents(BaseConf):
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
-                    full_post["qem"]["settings"] = full_post["openqa"].copy()
+                    settings = full_post["openqa"].copy()
+
+                    # if set, we use this query to detect latest public cloud tools image which used for running
+                    # all public cloud related tests in openQA
+                    if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+                        query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+                        settings = apply_pc_tools_image(settings)
+                        if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+                            logger.error(
+                                f"Failed to query latest publiccloud tools image using {query}"
+                            )
+                            continue
+
+                    # parse Public-Cloud image REGEX if present
+                    if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
+                        settings = apply_publiccloud_regex(settings)
+                        if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
+                            logger.error(
+                                f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
+                            )
+                            continue
+                    # parse Public-Cloud pint query if present
+                    if "PUBLIC_CLOUD_PINT_QUERY" in settings:
+                        settings = apply_publiccloud_pint_image(settings)
+                        if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+                            logger.error(
+                                f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
+                            )
+                            continue
+
+                    full_post["openqa"] = settings
+                    full_post["qem"]["settings"] = settings
                     ret.append(full_post)
         return ret
