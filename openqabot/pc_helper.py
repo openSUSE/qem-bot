@@ -78,10 +78,10 @@ def apply_publiccloud_regex(settings):
 def apply_pc_tools_image(settings):
     try:
         settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-            settings["PUBLICCLOUD_TOOLS_IMAGE_QUERY"]
+            settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         )
-        if "PUBLICCLOUD_TOOLS_IMAGE_QUERY" in settings:
-            del settings["PUBLICCLOUD_TOOLS_IMAGE_QUERY"]
+        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+            del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         return settings
     except (
         requests.exceptions.ConnectionError,
@@ -102,10 +102,10 @@ def pint_query(query):
 # Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
 def apply_publiccloud_pint_image(settings):
     try:
-        images = pint_query(settings["PUBLICCLOUD_PINT_QUERY"])["images"]
+        images = pint_query(settings["PUBLIC_CLOUD_PINT_QUERY"])["images"]
         region = (
-            settings["PUBLICCLOUD_PINT_REGION"]
-            if "PUBLICCLOUD_PINT_REGION" in settings
+            settings["PUBLIC_CLOUD_PINT_REGION"]
+            if "PUBLIC_CLOUD_PINT_REGION" in settings
             else None
         )
         # We need to include active and inactive images. Active images have precedence
@@ -114,26 +114,26 @@ def apply_publiccloud_pint_image(settings):
         image = None
         for state in ["active", "inactive", "deprecated"]:
             image = get_recent_pint_image(
-                images, settings["PUBLICCLOUD_PINT_NAME"], region, state=state
+                images, settings["PUBLIC_CLOUD_PINT_NAME"], region, state=state
             )
             if image is not None:
                 break
         if image is None:
             raise ValueError("Cannot find matching image in pint")
-        settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLICCLOUD_PINT_FIELD"]]
+        settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
         # Remove pint query settings. They are not required in the scheduled job
-        if "PUBLICCLOUD_PINT_QUERY" in settings:
-            del settings["PUBLICCLOUD_PINT_QUERY"]
-        if "PUBLICCLOUD_PINT_NAME" in settings:
-            del settings["PUBLICCLOUD_PINT_NAME"]
-        if "PUBLICCLOUD_PINT_REGION" in settings:
+        if "PUBLIC_CLOUD_PINT_QUERY" in settings:
+            del settings["PUBLIC_CLOUD_PINT_QUERY"]
+        if "PUBLIC_CLOUD_PINT_NAME" in settings:
+            del settings["PUBLIC_CLOUD_PINT_NAME"]
+        if "PUBLIC_CLOUD_PINT_REGION" in settings:
             # If we define a region for the pint query, propagate this value
-            settings["PUBLIC_CLOUD_REGION"] = settings["PUBLICCLOUD_PINT_REGION"]
-            del settings["PUBLICCLOUD_PINT_REGION"]
-        if "PUBLICCLOUD_PINT_FIELD" in settings:
-            del settings["PUBLICCLOUD_PINT_FIELD"]
+            settings["PUBLIC_CLOUD_REGION"] = settings["PUBLIC_CLOUD_PINT_REGION"]
+            del settings["PUBLIC_CLOUD_PINT_REGION"]
+        if "PUBLIC_CLOUD_PINT_FIELD" in settings:
+            del settings["PUBLIC_CLOUD_PINT_FIELD"]
         return settings
     except (
         requests.exceptions.ConnectionError,
@@ -142,7 +142,7 @@ def apply_publiccloud_pint_image(settings):
         re.error,
     ) as e:
         logger.warning(
-            f"PUBLICCLOUD_PINT_QUERY handling failed for {settings['PUBLICCLOUD_PINT_NAME']}: {e}"
+            f"PUBLIC_CLOUD_PINT_QUERY handling failed for {settings['PUBLIC_CLOUD_PINT_NAME']}: {e}"
         )
         settings["PUBLIC_CLOUD_IMAGE_ID"] = None
         return settings
