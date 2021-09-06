@@ -7,6 +7,11 @@ from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
 from .baseconf import BaseConf
 from .incident import Incident
+from ..pc_helper import (
+    apply_pc_tools_image,
+    apply_publiccloud_pint_image,
+    apply_publiccloud_regex,
+)
 
 logger = getLogger("bot.types.incidents")
 
@@ -139,9 +144,11 @@ class Incidents(BaseConf):
                         if set(issue_dict.keys()).isdisjoint(data["required_issues"]):
                             continue
 
-                    if self._is_scheduled_job(token, inc, arch, flavor):
+                    if not ignore_onetime and self._is_scheduled_job(
+                        token, inc, arch, flavor
+                    ):
                         logger.info(
-                            "NOT SHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
+                            "NOT SCHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
                             % (flavor, self.settings["VERSION"], inc.id, arch)
                         )
                         continue
