@@ -197,6 +197,37 @@ class Incidents(BaseConf):
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
-                    full_post["qem"]["settings"] = full_post["openqa"].copy()
+                    settings = full_post["openqa"].copy()
+
+                    # if set, we use this query to detect latest public cloud tools image which used for running
+                    # all public cloud related tests in openQA
+                    if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+                        query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+                        settings = apply_pc_tools_image(settings)
+                        if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+                            logger.error(
+                                f"Failed to query latest publiccloud tools image using {query}"
+                            )
+                            continue
+
+                    # parse Public-Cloud image REGEX if present
+                    if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
+                        settings = apply_publiccloud_regex(settings)
+                        if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
+                            logger.error(
+                                f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
+                            )
+                            continue
+                    # parse Public-Cloud pint query if present
+                    if "PUBLIC_CLOUD_PINT_QUERY" in settings:
+                        settings = apply_publiccloud_pint_image(settings)
+                        if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+                            logger.error(
+                                f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
+                            )
+                            continue
+
+                    full_post["openqa"] = settings
+                    full_post["qem"]["settings"] = settings
                     ret.append(full_post)
         return ret
