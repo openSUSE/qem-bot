@@ -86,6 +86,14 @@ def get_parser():
         "-t", "--token", required=True, type=str, help="Token for qem dashboard api"
     )
 
+    parser.add_argument(
+        "-o",
+        "--openqa-instace",
+        type=str,
+        default="https://openqa.suse.de",
+        help="OpenQA instace to use\n Other instances than OSD didn't update dashboard database",
+    )
+
     commands = parser.add_subparsers()
 
     cmdfull = commands.add_parser(

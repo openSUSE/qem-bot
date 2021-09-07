@@ -3,10 +3,10 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any, Dict, Sequence
 
+from .loader.qem import get_active_incidents, get_incident_settings_data, post_job
 from .openqa import openQAInterface
 from .types import Data
 from .utils import normalize_results
-from .loader.qem import get_active_incidents, get_incident_settings_data, post_job
 
 logger = getLogger("bot.incsyncres")
 
@@ -16,10 +16,9 @@ class IncResultsSync:
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
         self.active = get_active_incidents(self.token)
+        self.client = openQAInterface(args.openqa_instance)
 
     def __call__(self) -> int:
-
-        openqa = openQAInterface()
 
         incidents: Sequence[Data] = []
 
@@ -32,7 +31,7 @@ class IncResultsSync:
         full = {}
 
         for d in incidents:
-            full[d] = openqa.get_jobs(d)
+            full[d] = self.client.get_jobs(d)
 
         results = []
         for key, value in full.items():
@@ -70,8 +69,10 @@ class IncResultsSync:
 
         for r in results:
             logger.info("Posting jobs: %s" % pformat(r))
-            if not self.dry:
+            if not self.dry and self.client:
                 post_job(self.token, r)
+            else:
+                logger.info("Dry run -- data in dashboard untouched")
 
         return 0
 

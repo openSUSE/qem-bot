@@ -19,6 +19,7 @@ class AggregateResultsSync:
         self.dry: bool = args.dry
         self.token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
         self.product = read_products(args.configs)
+        self.client = openQAInterface(args.openqa_instance)
 
     def __call__(self) -> int:
 
@@ -30,11 +31,10 @@ class AggregateResultsSync:
                 logger.info(e)
                 continue
 
-        client = openQAInterface()
 
         job_results = {}
         with ThreadPoolExecutor() as executor:
-            future_j = {executor.submit(client.get_jobs, f): f for f in update_setting}
+            future_j = {executor.submit(self.client.get_jobs, f): f for f in update_setting}
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
 
@@ -74,8 +74,10 @@ class AggregateResultsSync:
         for r in results:
             logger.debug("Updating aggregate job results: %s" % pformat(r))
 
-            if not self.dry:
+            if not self.dry and self.client:
                 post_job(self.token, r)
+            else:
+                logger.info("Dry run -- data not updated in dashboard")
 
         return 0
 

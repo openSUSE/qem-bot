@@ -22,9 +22,15 @@ class OpenQABot:
         self.workers = load_metadata(
             args.configs, args.disable_aggregates, args.disable_incidents
         )
-        self.openqa = openQAInterface()
+        self.openqa = openQAInterface(args.openqa_instance)
 
-    def post_qem(self, data, api):
+    def post_qem(self, data, api) -> None:
+        if not self.openqa:
+            logger.warning(
+                "Another instance of openqa : %s not posted to dashboard" % data
+            )
+            return
+
         url = QEM_DASHBOARD + api
         try:
             res = requests.put(url, headers=self.token, json=data)
@@ -33,7 +39,7 @@ class OpenQABot:
             logger.exception(e)
             raise e
 
-    def post_openqa(self, data):
+    def post_openqa(self, data) -> None:
         self.openqa.post_job(data)
 
     def __call__(self):
