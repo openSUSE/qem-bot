@@ -118,7 +118,7 @@ class Aggregate(BaseConf):
             # if set, we use this query to detect latest public cloud tools image which used for running
             # all public cloud related tests in openQA
             if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-                query = settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']
+                query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
                 settings = apply_pc_tools_image(settings)
                 if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
                     logger.error(

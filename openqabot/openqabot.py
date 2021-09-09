@@ -4,7 +4,7 @@ from logging import getLogger
 import requests
 
 from . import QEM_DASHBOARD
-from .loader.config import load_metadata
+from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
 
@@ -19,9 +19,14 @@ class OpenQABot:
         self.token = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(self.token)
         logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
+
+
+        extrasettings = get_onearch(args.singlearch)
+
         self.workers = load_metadata(
-            args.configs, args.disable_aggregates, args.disable_incidents
+            args.configs, args.disable_aggregates, args.disable_incidents, extrasettings
         )
+
         self.openqa = openQAInterface(args.openqa_instance)
 
     def post_qem(self, data, api) -> None:
