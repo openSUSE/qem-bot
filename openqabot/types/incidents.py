@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import requests
 
@@ -17,9 +17,10 @@ logger = getLogger("bot.types.incidents")
 
 
 class Incidents(BaseConf):
-    def __init__(self, product: str, settings, config) -> None:
+    def __init__(self, product: str, settings, config, extrasettings: Set[str]) -> None:
         super().__init__(product, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
+        self.singlearch = extrasettings
 
     def __repr__(self):
         return f"<Incidents product: {self.product}>"
@@ -177,6 +178,10 @@ class Incidents(BaseConf):
                             logger.info("Aggregate not needed for incident %s" % inc.id)
                         if not (neg and pos):
                             full_post["qem"]["withAggregate"] = False
+
+                    # some arch specific packages doesn't have aggregate tests
+                    if not self.singlearch.isdisjoint(set(inc.packages)):
+                        full_post["qem"]["withAggregate"] = False
 
                     delta_prio = data.get("override_priority", 0)
 

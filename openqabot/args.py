@@ -93,6 +93,13 @@ def get_parser():
         default="https://openqa.suse.de",
         help="OpenQA instance to use\n Other instances than OSD do not update dashboard database",
     )
+    parser.add_argument(
+        "-s",
+        "--singlearch",
+        type=Path,
+        default=Path("./singlearch.yml"),
+        help="Yaml config with list of singlearch packages for incidents run",
+    )
 
     commands = parser.add_subparsers()
 
