@@ -111,8 +111,6 @@ def get_parser():
         "--ignore-onetime",
         action="store_true",
         help="Ignore onetime and schedule those test runs",
-        default=False,
-        dest="ignore_onetime",
     )
     cmdfull.set_defaults(func=do_full_schedule)
 
@@ -125,8 +123,6 @@ def get_parser():
         "--ignore-onetime",
         action="store_true",
         help="Ignore onetime and schedule those test runs",
-        default=False,
-        dest="ignore_onetime",
     )
     cmdinc.set_defaults(func=do_incident_schedule)
 
@@ -138,8 +134,6 @@ def get_parser():
         "--ignore-onetime",
         action="store_true",
         help="Ignore onetime and schedule those test runs",
-        default=False,
-        dest="ignore_onetime",
     )
     cmdupd.set_defaults(func=do_aggregate_schedule)
 
