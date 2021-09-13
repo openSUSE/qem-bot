@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 import requests
 
-from . import QEM_DASHBOARD
+from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
 
 logger = getLogger("bot.smeltsync")
@@ -17,34 +17,20 @@ class SMELTSync:
         self.dry: bool = args.dry
         self.token: Dict[str, str] = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(get_active_incidents())
+        self.retry = args.retry
 
     def __call__(self) -> int:
         logger.info("Start syncing incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
         logger.info("Updating info about %s incidents" % str(len(data)))
-
-        try:
-            if not self.dry:
-                ret = requests.patch(
-                    QEM_DASHBOARD + "api/incidents", headers=self.token, json=data
-                )
-        except Exception as e:
-            logger.exception(e)
-            return 1
-        else:
-            rt = 0
-            if not self.dry and ret.status_code == 200:
-                logger.info("Smelt Incidents updated")
-            elif self.dry:
-                logger.info("Dry run .. nothing synced")
-            else:
-                logger.error("Smelt Incidents wern't synced to dashboard")
-                rt = 1
-
         logger.debug("Data: %s" % pformat(data))
 
-        return rt
+        if not self.dry:
+            return update_incidents(self.token, data, retry=self.retry)
+
+        logger.info("Dry run, nothing synced")
+        return 0
 
     @staticmethod
     def _review_rrequest(requestSet):

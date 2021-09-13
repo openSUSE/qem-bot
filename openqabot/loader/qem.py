@@ -155,6 +155,30 @@ def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
     return ret
 
 
+def update_incidents(token: Dict[str, str], data, **kwargs) -> None:
+    retry = kwargs["retry"] or 0
+    while retry >= 0:
+        retry -= 1
+        try:
+            ret = requests.patch(
+                QEM_DASHBOARD + "api/incidents", headers=token, json=data
+            )
+        except Exception as e:
+            logger.exception(e)
+            return 1
+        else:
+            if ret.status_code == 200:
+                logger.info("Smelt Incidents updated")
+            else:
+                logger.error(
+                    "Smelt Incidents were not synced to dashboard: error %s"
+                    % ret.status_code
+                )
+                continue
+        return 0
+    return 2
+
+
 def post_job(token: Dict[str, str], data) -> None:
     try:
         result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
