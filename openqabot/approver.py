@@ -80,7 +80,7 @@ class Approver:
         if not results:
             raise NoResultsError("Job %s not found " % str(job.job_id))
 
-        return any(r["status"] == "passed" for r in results)
+        return all(r["status"] == "passed" for r in results)
 
     def get_incident_result(self, jobs: List[JobAggr], api: str) -> bool:
         res = False
@@ -91,6 +91,8 @@ class Approver:
             except NoResultsError as e:
                 logger.error(e)
                 continue
+            if not res:
+                return False
 
         return res
 
