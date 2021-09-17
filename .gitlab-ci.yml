@@ -5,9 +5,7 @@ workflow:
 
 stages:
   - schedule
-  # merge synchronize stages after deployment of Gitlab 14.2
-  - synchronize_1
-  - synchronize_2
+  - synchronize
   - evaluate
 
 default:
@@ -58,7 +56,7 @@ sync smelt:
   extends: .bot
   variables:
     BOT_CMD: smelt-sync
-  stage: synchronize_1
+  stage: synchronize
   needs: []
   rules:
     - if: $CI_COMMIT_REF_PROTECTED && $BOT_TOKEN && $BOT_MODE == 'sync' && $CI_PIPELINE_SOURCE =~ /schedule/
@@ -67,7 +65,7 @@ sync aggregates:
   extends: .bot
   variables:
     BOT_CMD: aggr-sync-results
-  stage: synchronize_2
+  stage: synchronize
   needs:
     - sync smelt
   rules:
@@ -78,7 +76,7 @@ sync incidents:
   extends: .bot
   variables:
     BOT_CMD: inc-sync-results
-  stage: synchronize_2
+  stage: synchronize
   needs:
     - sync smelt
   rules:
