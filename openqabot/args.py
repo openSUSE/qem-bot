@@ -75,7 +75,7 @@ def get_parser():
     )
 
     parser.add_argument(
-        "--dry", action="store_true", help="Dry run, dont post any data"
+        "--dry", action="store_true", help="Dry run, do not post any data"
     )
 
     parser.add_argument(
@@ -93,12 +93,17 @@ def get_parser():
         default="https://openqa.suse.de",
         help="OpenQA instance to use\n Other instances than OSD do not update dashboard database",
     )
+
     parser.add_argument(
         "-s",
         "--singlearch",
         type=Path,
         default=Path("./singlearch.yml"),
         help="Yaml config with list of singlearch packages for incidents run",
+    )
+
+    parser.add_argument(
+        "-r", "--retry", type=int, default=2, help="Number of retries"
     )
 
     commands = parser.add_subparsers()
