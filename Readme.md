@@ -43,6 +43,6 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
 
 ## Misc
 
-**Token** is required but if isn't used https://openqa.suse.de or is inoked with
+**Token** is required but if isn't used https://openqa.suse.de or is invoked with
 `--dry` argument any string is sufficient -> see [qem-dashboard](https://gitlab.suse.de/opensuse/qem-dashboard/-/issues/15)
 
