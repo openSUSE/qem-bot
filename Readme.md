@@ -5,8 +5,8 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
 ## Usage:
 
     >>> bot-ng.py --help
-    
-    Usage: bot-ng [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN 
+    Usage: bot-ng [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN [-i OPENQA_INSTANCE]
+                  [-s SINGLEARCH] [-r RETRY]
                   {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
                   ...
     
@@ -28,8 +28,21 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
       -h, --help            show this help message and exit
       -c CONFIGS, --configs CONFIGS
                             Directory with openqabot configuration metadata
-      --dry                 Dry run, dont post any data
+      --dry                 Dry run, do not post any data
       -d, --debug           Enable debug output
       -t TOKEN, --token TOKEN
                             Token for qem dashboard api
-    
+      -i OPENQA_INSTANCE, --openqa-instance OPENQA_INSTANCE
+                            OpenQA instance to use Other instances than OSD do not
+                            update dashboard database
+      -s SINGLEARCH, --singlearch SINGLEARCH
+                            Yaml config with list of singlearch packages for
+                            incidents run
+      -r RETRY, --retry RETRY
+                            Number of retries
+
+## Misc
+
+**Token** is required but if isn't used https://openqa.suse.de or is inoked with
+`--dry` argument any string is sufficient -> see [qem-dashboard](https://gitlab.suse.de/opensuse/qem-dashboard/-/issues/15)
+
