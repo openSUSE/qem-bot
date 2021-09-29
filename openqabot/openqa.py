@@ -1,7 +1,6 @@
 import logging
 from pprint import pformat
-from urllib.parse import urlparse
-
+from urllib.parse import ParseResult
 from openqa_client.client import OpenQA_Client
 
 from .types import Data
@@ -10,8 +9,8 @@ logger = logging.getLogger("bot.openqa")
 
 
 class openQAInterface:
-    def __init__(self, instance: str) -> None:
-        self.url = urlparse(instance)
+    def __init__(self, instance: ParseResult) -> None:
+        self.url = instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
 
     def __bool__(self) -> bool:

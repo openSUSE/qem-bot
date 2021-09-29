@@ -118,7 +118,7 @@ def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # which causes need to use data from both runs
     last_build = settings[0]["build"][:-2]
     return [
-        JobAggr(i["id"], True, False) for i in settings if last_build in i["build]"]
+        JobAggr(i["id"], True, False) for i in settings if last_build in i["build"]
     ]
 
 

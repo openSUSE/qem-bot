@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def do_full_schedule(args):
@@ -89,8 +90,8 @@ def get_parser():
     parser.add_argument(
         "-i",
         "--openqa-instance",
-        type=str,
-        default="https://openqa.suse.de",
+        type=urlparse,
+        default=urlparse("https://openqa.suse.de"),
         help="OpenQA instance to use\n Other instances than OSD do not update dashboard database",
     )
 
@@ -102,9 +103,7 @@ def get_parser():
         help="Yaml config with list of singlearch packages for incidents run",
     )
 
-    parser.add_argument(
-        "-r", "--retry", type=int, default=2, help="Number of retries"
-    )
+    parser.add_argument("-r", "--retry", type=int, default=2, help="Number of retries")
 
     commands = parser.add_subparsers()
 
