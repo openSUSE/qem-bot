@@ -12,7 +12,7 @@ default:
   image: registry.suse.de/qa/maintenance/containers/qam-ci-leap:latest
 
 variables:
-  OSC_REPO: openSUSE_Leap_15.2
+  OSC_REPO: openSUSE_Leap_15.3
   BOT_CMD:
     value: ''
     description: 'Command to run: full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results'
