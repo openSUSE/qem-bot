@@ -12,7 +12,6 @@ default:
   image: registry.suse.de/qa/maintenance/containers/qam-ci-leap:latest
 
 variables:
-  OSC_REPO: openSUSE_Leap_15.3
   BOT_CMD:
     value: ''
     description: 'Command to run: full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results'
@@ -22,16 +21,12 @@ variables:
 
 .bot:
   before_script:
-    - zypper ar http://download.suse.de/ibs/QA:/Maintenance/$OSC_REPO/QA:Maintenance.repo
-    - zypper --gpg-auto-import-keys ref
-    - >
-      zypper in --no-confirm
-      qam-metadata-openqabot
     - mkdir -p ~/.config/osc /etc/openqa
     - ln -s $OSC_RC_OPENQA ~/.config/osc/oscrc
     - ln -s $OPENQA /etc/openqa/client.conf
+    - rpm --query qam-metadata-openqabot
+    - set -x
   script:
-    - echo "Running bot with cmd $BOT_CMD"
     - ./bot-ng.py -c /etc/openqabot --token $BOT_TOKEN $BOT_PARAMS $BOT_CMD 2>&1 | tee bot_$BOT_CMD.log
   allow_failure: true
   artifacts:
