@@ -20,7 +20,6 @@ class OpenQABot:
         self.incidents = get_incidents(self.token)
         logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
 
-
         extrasettings = get_onearch(args.singlearch)
 
         self.workers = load_metadata(
@@ -49,7 +48,6 @@ class OpenQABot:
 
     def __call__(self):
         logger.info("Starting bot mainloop")
-
         post = []
         for worker in self.workers:
             post += worker(self.incidents, self.token, self.ignore_onetime)

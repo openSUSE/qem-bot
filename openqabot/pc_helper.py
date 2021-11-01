@@ -52,9 +52,11 @@ def get_latest_pc_image(image):
 
 def get_latest_tools_image(query):
     # 'publiccloud_tools_<BUILD NUM>.qcow2' is generic name for image used by Public Cloud tests to run
-    # in openQA. query suppose to look like this "https://openqa.suse.de/group_overview/276.json" to get 
+    # in openQA. query suppose to look like this "https://openqa.suse.de/group_overview/276.json" to get
     # value for <BUILD NUM>
-    return "publiccloud_tools_{}.qcow2".format(request_get(query).json()['build_results'][0]['build'])
+    return "publiccloud_tools_{}.qcow2".format(
+        request_get(query).json()["build_results"][0]["build"]
+    )
 
 
 # Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX

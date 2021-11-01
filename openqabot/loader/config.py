@@ -12,7 +12,7 @@ logger = getLogger("bot.loader.config")
 
 
 def load_metadata(
-        path: Path, aggregate: bool, incidents: bool, extrasettings: Set[str]
+    path: Path, aggregate: bool, incidents: bool, extrasettings: Set[str]
 ) -> List[Union[Aggregate, Incidents]]:
 
     ret: List[Union[Aggregate, Incidents]] = []
@@ -40,7 +40,9 @@ def load_metadata(
         if settings:
             for key in data:
                 if key == "incidents" and not incidents:
-                    ret.append(Incidents(data["product"], settings, data[key], extrasettings))
+                    ret.append(
+                        Incidents(data["product"], settings, data[key], extrasettings)
+                    )
                 elif key == "aggregate" and not aggregate:
                     ret.append(Aggregate(data["product"], settings, data[key]))
                 else:
@@ -78,12 +80,12 @@ def read_products(path: Path) -> List[Data]:
 
 
 def get_onearch(pth: Path) -> Set[str]:
-    loader = YAML(typ='safe')
+    loader = YAML(typ="safe")
 
     try:
         data = loader.load(pth)
     except Exception as e:
         logger.exception(e)
         return set()
-   
+
     return set(data)

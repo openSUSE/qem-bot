@@ -9,8 +9,10 @@ class NoRepoFoundError(Error):
 class EmptyChannels(Error):
     pass
 
+
 class EmptyPackagesError(Error):
     pass
+
 
 class SameBuildExists(Error):
     pass
@@ -18,6 +20,7 @@ class SameBuildExists(Error):
 
 class NoResultsError(Error):
     pass
+
 
 class EmptySettings(Error):
     pass

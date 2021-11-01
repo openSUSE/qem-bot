@@ -31,10 +31,11 @@ class AggregateResultsSync:
                 logger.info(e)
                 continue
 
-
         job_results = {}
         with ThreadPoolExecutor() as executor:
-            future_j = {executor.submit(self.client.get_jobs, f): f for f in update_setting}
+            future_j = {
+                executor.submit(self.client.get_jobs, f): f for f in update_setting
+            }
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
 
