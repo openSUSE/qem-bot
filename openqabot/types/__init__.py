@@ -21,3 +21,8 @@ class Data(NamedTuple):
     version: str
     build: str
     product: str
+
+
+class ArchVer(NamedTuple):
+    arch: str
+    version: str

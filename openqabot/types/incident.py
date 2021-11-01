@@ -1,9 +1,9 @@
 from logging import getLogger
 from typing import Dict, List, Tuple
 
-from ..errors import EmptyChannels, NoRepoFoundError, EmptyPackagesError
+from . import ArchVer, Repos
+from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
-from . import Repos
 
 logger = getLogger("bot.types.incident")
 
@@ -52,20 +52,24 @@ class Incident:
         self.azure: bool = self._is_azure(self.packages)
 
     @staticmethod
-    def _rev(channels: List[Repos], project: str) -> Dict[str, int]:
-        rev: Dict[str, int] = {}
-        tmpdict: Dict[str, List[Tuple[str, str]]] = {}
+    def _rev(channels: List[Repos], project: str) -> Dict[ArchVer, int]:
+        rev: Dict[ArchVer, int] = {}
+        tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
 
         for repo in channels:
-            if repo.arch in tmpdict:
-                tmpdict[repo.arch].append((repo.product, repo.version))
+            if ArchVer(repo.arch, repo.version) in tmpdict:
+                tmpdict[ArchVer(repo.arch, repo.version)].append(
+                    (repo.product, repo.version)
+                )
             else:
-                tmpdict[repo.arch] = [(repo.product, repo.version)]
+                tmpdict[ArchVer(repo.arch, repo.version)] = [
+                    (repo.product, repo.version)
+                ]
 
         if tmpdict:
-            for arch, lrepos in tmpdict.items():
+            for archver, lrepos in tmpdict.items():
                 try:
-                    rev[arch] = get_max_revision(lrepos, arch, project)
+                    rev[archver] = get_max_revision(lrepos, archver.arch, project)
                 except NoRepoFoundError as e:
                     raise e
 

@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Set, Tuple, Union
 
 import requests
 
-from . import ProdVer, Repos
+from . import ProdVer, Repos, ArchVer
 from .. import QEM_DASHBOARD
 from .baseconf import BaseConf
 from .incident import Incident
@@ -49,7 +49,7 @@ class Incidents(BaseConf):
 
     @staticmethod
     def _is_scheduled_job(
-        token: Dict[str, str], inc: Incident, arch: str, flavor: str
+        token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str
     ) -> bool:
         jobs = {}
         try:
@@ -68,7 +68,7 @@ class Incidents(BaseConf):
             if (
                 job["flavor"] == flavor
                 and job["arch"] == arch
-                and job["settings"]["REPOHASH"] == inc.revisions[arch]
+                and job["settings"]["REPOHASH"] == inc.revisions[ArchVer(arch, ver)]
             ):
                 return True
 
@@ -118,7 +118,9 @@ class Incidents(BaseConf):
                     full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
                     # old bot used variable "REPO_ID"
                     try:
-                        full_post["openqa"]["REPOHASH"] = inc.revisions[arch]
+                        full_post["openqa"]["REPOHASH"] = inc.revisions[
+                            ArchVer(arch, self.settings["VERSION"])
+                        ]
                     except KeyError:
                         logger.debug("Incident %s dont have % arch" % (inc.id, arch))
                         continue
@@ -146,7 +148,7 @@ class Incidents(BaseConf):
                             continue
 
                     if not ignore_onetime and self._is_scheduled_job(
-                        token, inc, arch, flavor
+                        token, inc, arch, self.settings["VERSION"], flavor
                     ):
                         logger.info(
                             "NOT SCHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
