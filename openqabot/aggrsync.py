@@ -6,7 +6,7 @@ from typing import Dict
 
 from .errors import EmptySettings
 from .loader.config import read_products
-from .loader.qem import get_aggeregate_settings_data, post_job
+from .loader.qem import get_aggregate_settings_data, post_job
 from .openqa import openQAInterface
 from .types import Data
 from .utils import normalize_results
@@ -26,7 +26,7 @@ class AggregateResultsSync:
         update_setting = []
         for product in self.product:
             try:
-                update_setting += get_aggeregate_settings_data(self.token, product)
+                update_setting += get_aggregate_settings_data(self.token, product)
             except EmptySettings as e:
                 logger.info(e)
                 continue

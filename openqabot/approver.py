@@ -14,7 +14,7 @@ from .loader.qem import (
     JobAggr,
     get_incidents_approver,
     get_incident_settings,
-    get_aggeregate_settings,
+    get_aggregate_settings,
 )
 
 logger = getLogger("bot.approver")
@@ -39,7 +39,7 @@ class Approver:
                 logger.info(e)
                 continue
             try:
-                u_jobs = get_aggeregate_settings(inc.inc, self.token)
+                u_jobs = get_aggregate_settings(inc.inc, self.token)
             except NoResultsError as e:
                 logger.info(e)
 

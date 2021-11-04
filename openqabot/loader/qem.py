@@ -104,7 +104,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     return ret
 
 
-def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
+def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # TODO: Error handling
     settings = requests.get(
         QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
@@ -120,7 +120,7 @@ def get_aggeregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     return [JobAggr(i["id"], True, False) for i in settings if last_build in i["build"]]
 
 
-def get_aggeregate_settings_data(token: Dict[str, str], data: Data):
+def get_aggregate_settings_data(token: Dict[str, str], data: Data):
     url = (
         QEM_DASHBOARD
         + "api/update_settings"
