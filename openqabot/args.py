@@ -47,6 +47,13 @@ def do_approve(args):
     return approve()
 
 
+def do_comment(args):
+    from .commenter import Commenter
+
+    comment = Commenter(args)
+    return comment()
+
+
 def do_sync_inc_results(args):
     from .incsyncres import IncResultsSync
 
@@ -150,6 +157,11 @@ def get_parser():
         "inc-approve", help="Aprove incidents which passed tests"
     )
     cmdappr.set_defaults(func=do_approve)
+
+    cmdcomment = commands.add_parser(
+        "inc-comment", help="Comment incidents in BuildService"
+    )
+    cmdcomment.set_defaults(func=do_comment)
 
     cmdincsync = commands.add_parser(
         "inc-sync-results", help="Sync results of openQA incidents jobs to Dashboard"

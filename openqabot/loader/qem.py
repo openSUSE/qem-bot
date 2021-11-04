@@ -104,6 +104,28 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     return ret
 
 
+def get_incident_results(inc: int, token: Dict[str, str]):
+    try:
+        settings = get_incident_settings(inc, token)
+    except NoResultsError as e:
+        raise e
+
+    ret = []
+    for job in settings:
+        try:
+            data = requests.get(
+                QEM_DASHBOARD + "api/jobs/incident/" + f"{job.job_id}", headers=token
+            ).json()
+            ret += data
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        if "error" in data:
+            raise ValueError(data["error"])
+
+    return ret
+
+
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # TODO: Error handling
     settings = requests.get(
@@ -154,6 +176,28 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
                 data.product,
             )
         )
+
+    return ret
+
+
+def get_aggregate_results(inc: int, token: Dict[str, str]):
+    try:
+        settings = get_aggregate_settings(inc, token)
+    except NoResultsError as e:
+        raise e
+
+    ret = []
+    for job in settings:
+        try:
+            data = requests.get(
+                QEM_DASHBOARD + "api/jobs/update/" + f"{job.job_id}", headers=token
+            ).json()
+            ret += data
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        if "error" in data:
+            raise ValueError(data["error"])
 
     return ret
 
