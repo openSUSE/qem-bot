@@ -99,7 +99,7 @@ def get_parser():
         "-s",
         "--singlearch",
         type=Path,
-        default=Path("./singlearch.yml"),
+        default=Path("/etc/openqabot/singlearch.yml"),
         help="Yaml config with list of singlearch packages for incidents run",
     )
 
