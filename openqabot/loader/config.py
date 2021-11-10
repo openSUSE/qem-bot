@@ -56,9 +56,14 @@ def read_products(path: Path) -> List[Data]:
 
     for p in path.glob("*.yml"):
         data = loader.load(p)
+
         if not data:
             logger.error("something wrong with %s" % str(p))
             continue
+        if not isinstance(data, dict):
+            logger.error("something wrong with %s" % str(p))
+            continue
+
         try:
             flavor = data["aggregate"]["FLAVOR"]
         except KeyError:
