@@ -1,3 +1,4 @@
+import re
 from logging import getLogger
 from typing import Dict, List, Tuple
 
@@ -6,6 +7,7 @@ from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
 
 logger = getLogger("bot.types.incident")
+version_pattern = re.compile("(\d+(?:[.-](?:SP)?\d+)?)")
 
 
 class Incident:
@@ -57,14 +59,17 @@ class Incident:
         tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
 
         for repo in channels:
-            if ArchVer(repo.arch, repo.version) in tmpdict:
-                tmpdict[ArchVer(repo.arch, repo.version)].append(
+            version = repo.version
+            v = re.match(version_pattern, repo.version)
+            if v:
+                version = v.group(0)
+
+            if ArchVer(repo.arch, version) in tmpdict:
+                tmpdict[ArchVer(repo.arch, version)].append(
                     (repo.product, repo.version)
                 )
             else:
-                tmpdict[ArchVer(repo.arch, repo.version)] = [
-                    (repo.product, repo.version)
-                ]
+                tmpdict[ArchVer(repo.arch, version)] = [(repo.product, repo.version)]
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
