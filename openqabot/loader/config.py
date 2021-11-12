@@ -84,11 +84,11 @@ def read_products(path: Path) -> List[Data]:
     return ret
 
 
-def get_onearch(pth: Path) -> Set[str]:
+def get_onearch(path: Path) -> Set[str]:
     loader = YAML(typ="safe")
 
     try:
-        data = loader.load(pth)
+        data = loader.load(path)
     except Exception as e:
         logger.exception(e)
         return set()
