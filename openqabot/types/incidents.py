@@ -122,7 +122,10 @@ class Incidents(BaseConf):
                             ArchVer(arch, self.settings["VERSION"])
                         ]
                     except KeyError:
-                        logger.debug("Incident %s dont have % arch" % (inc.id, arch))
+                        logger.debug(
+                            "Incident %s does not have %s arch in %s"
+                            % (inc.id, arch, self.settings["VERSION"])
+                        )
                         continue
 
                     # TODO: Public Cloud settings...
