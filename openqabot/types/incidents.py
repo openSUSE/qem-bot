@@ -64,6 +64,9 @@ class Incidents(BaseConf):
         if not jobs:
             return False
 
+        if isinstance(jobs, dict) and "error" in jobs:
+            return False
+
         for job in jobs:
             if (
                 job["flavor"] == flavor
