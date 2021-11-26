@@ -40,7 +40,10 @@ def get_max_revision(
         try:
             root = ET.fromstring(requests.get(url).text)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
-        except ET.ParseError as e:  # for now, use logger.exception to determine possible exceptions in this code :D
+        except (
+            ET.ParseError,
+            requests.ConnectionError,
+        ):  # for now, use logger.exception to determine possible exceptions in this code :D
             logger.error("%s not found -- skip incident" % url)
             raise NoRepoFoundError
         # TODO: fix handling of requests errors
