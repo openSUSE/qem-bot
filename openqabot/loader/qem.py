@@ -202,8 +202,10 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
     return ret
 
 
-def update_incidents(token: Dict[str, str], data, **kwargs) -> None:
-    retry = kwargs["retry"] or 0
+def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
+
+    retry = kwargs.get("retry", 0)
+
     while retry >= 0:
         retry -= 1
         try:
