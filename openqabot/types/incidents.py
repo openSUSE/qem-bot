@@ -169,7 +169,7 @@ class Incidents(BaseConf):
                         f"{DOWNLOAD_BASE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
                         for chan in channels_set
                     )
-                    full_post["openqa"]["INCIDENT_REPO"] = ",".join(repos)
+                    full_post["openqa"]["INCIDENT_REPO"] = ",".join(sorted(repos)) # sorted for testability
 
                     full_post["qem"]["withAggregate"] = True
                     aggregate_job = data.get("aggregate_job", True)
