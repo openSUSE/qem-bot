@@ -192,12 +192,13 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
             data = requests.get(
                 QEM_DASHBOARD + "api/jobs/update/" + f"{job.job_id}", headers=token
             ).json()
-            ret += data
         except Exception as e:
             logger.exception(e)
             raise e
         if "error" in data:
             raise ValueError(data["error"])
+
+        ret += data
 
     return ret
 
