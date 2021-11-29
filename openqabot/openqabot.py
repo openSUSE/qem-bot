@@ -61,7 +61,7 @@ class OpenQABot:
             logger.info("Posting %s jobs" % len(post))
             for job in post:
                 logger.debug("Posting %s" % str(job))
-                self.post_openqa(job["openqa"])
                 self.post_qem(job["qem"], job["api"])
+                self.post_openqa(job["openqa"])
 
         return 0
