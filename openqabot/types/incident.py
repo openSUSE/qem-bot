@@ -74,7 +74,9 @@ class Incident:
         if tmpdict:
             for archver, lrepos in tmpdict.items():
                 try:
-                    rev[archver] = get_max_revision(lrepos, archver.arch, project)
+                    max_rev = get_max_revision(lrepos, archver.arch, project)
+                    if max_rev > 0:
+                        rev[archver] = max_rev
                 except NoRepoFoundError as e:
                     raise e
 

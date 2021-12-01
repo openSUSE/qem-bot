@@ -52,6 +52,7 @@ def get_max_revision(
             raise e
 
         if cs is None:
+            logger.error("%s's revision is None" % url)
             raise NoRepoFoundError
 
         rev = int(cs.text)
@@ -59,8 +60,6 @@ def get_max_revision(
         if rev > max_rev:
             max_rev = rev
     
-    if max_rev == 0:
-        raise NoRepoFoundError
     return max_rev
 
 
