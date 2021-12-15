@@ -80,3 +80,23 @@ An example of such comment:
  __Group [Maintenance: SLE 15 SP3 Updates@Server-DVD-Updates](https://openqa.suse.de/tests/overview?version=15-SP3&groupid=366&flavor=Server-DVD-Updates&distri=sle&build=20211115-1)__
  (147 tests passed)
 ```
+
+## Manual triggering of openQA jobs
+
+bot-ng outputs in info log messages the openqa-cli commands that can be called
+to manually replicate the openQA job triggering. For example log output
+message might look like:
+
+```
+INFO: openqa-cli --host https://openqa.suse.de api -X post isos ARCH=s390x BASE_TEST_ISSUES=20937,21863 FLAVOR=Server-DVD-Updates BUILD=20211215-1
+```
+
+The same command can be called manually to re-schedule all tests for this
+build or settings can be tweaked accordingly, e.g. a new build value could
+be selected so that the command to call would look like this:
+
+```
+openqa-cli --host https://openqa.suse.de api -X post isos ARCH=s390x BASE_TEST_ISSUES=20937,21863 FLAVOR=Server-DVD-Updates BUILD=20211215-2
+```
+
+Apply caution to keep all the other parameters in place.

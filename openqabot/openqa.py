@@ -18,7 +18,7 @@ class openQAInterface:
         return self.url.netloc == "openqa.suse.de"
 
     def post_job(self, settings) -> None:
-        logger.info("Openqa isos POST {}".format(pformat(settings)))
+        logger.info("openqa-cli api --host %s -X post isos %s" % (self.url.geturl(), ' '.join(['%s=%s' % (k, v) for k,v in settings.items()])))
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=3)
         except Exception as e:
