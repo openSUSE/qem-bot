@@ -30,6 +30,7 @@ class Aggregate(BaseConf):
 
     @staticmethod
     def normalize_repos(config) -> Dict[str, ProdVer]:
+        assert 'test_issues' in config, "Missing entry 'test_issues' in config, check the metadata configuration"
         return {
             key: ProdVer(value.split(":")[0], value.split(":")[1])
             for key, value in config["test_issues"].items()
