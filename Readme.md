@@ -81,7 +81,20 @@ An example of such comment:
  (147 tests passed)
 ```
 
-## Manual triggering of openQA jobs
+## Manual triggering of actions
+
+### Manual execution of pre-defined actions
+
+All pre-defined actions are executed based on gitlab CI definitions based on
+pipeline schedules. If needed for special circumstances one can also manually
+run any of the predefined schedules from
+https://gitlab.suse.de/qa-maintenance/bot-ng/-/pipeline_schedules at any time
+with a click of a button.
+To manually customize the parameters
+https://gitlab.suse.de/qa-maintenance/bot-ng/-/pipelines/new
+can be used.
+
+### Manual triggering of openQA jobs
 
 bot-ng outputs in info log messages the openqa-cli commands that can be called
 to manually replicate the openQA job triggering. For example log output
