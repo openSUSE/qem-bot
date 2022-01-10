@@ -8,7 +8,7 @@ import requests
 
 from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
-from ..errors import SameBuildExists
+from ..errors import SameBuildExists, NoTestIssues
 from ..loader.repohash import merge_repohash
 from ..pc_helper import (
     apply_pc_tools_image,
@@ -30,11 +30,15 @@ class Aggregate(BaseConf):
 
     @staticmethod
     def normalize_repos(config) -> Dict[str, ProdVer]:
-        assert 'test_issues' in config, "Missing entry 'test_issues' in config, check the metadata configuration"
-        return {
-            key: ProdVer(value.split(":")[0], value.split(":")[1])
-            for key, value in config["test_issues"].items()
-        }
+        try:
+            repos = {
+                key: ProdVer(value.split(":")[0], value.split(":")[1])
+                for key, value in config["test_issues"].items()
+            }
+        except KeyError:
+            raise NoTestIssues
+
+        return repos
 
     def __repr__(self):
         return f"<Aggregate product: {self.product}>"

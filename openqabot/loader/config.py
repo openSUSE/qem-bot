@@ -4,6 +4,7 @@ from typing import List, Set, Union
 
 from ruamel.yaml import YAML  # type: ignore
 
+from ..errors import NoTestIssues
 from ..types import Data
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
@@ -44,7 +45,12 @@ def load_metadata(
                         Incidents(data["product"], settings, data[key], extrasettings)
                     )
                 elif key == "aggregate" and not aggregate:
-                    ret.append(Aggregate(data["product"], settings, data[key]))
+                    try:
+                        ret.append(Aggregate(data["product"], settings, data[key]))
+                    except NoTestIssues:
+                        logger.warning(
+                            "No 'test_issues' in %s config" % data["product"]
+                        )
                 else:
                     continue
     return ret

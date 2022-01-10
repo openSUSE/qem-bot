@@ -6,6 +6,10 @@ class NoRepoFoundError(Error):
     pass
 
 
+class NoTestIssues(Error):
+    pass
+
+
 class EmptyChannels(Error):
     pass
 
