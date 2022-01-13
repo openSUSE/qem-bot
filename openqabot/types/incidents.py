@@ -119,6 +119,10 @@ class Incidents(BaseConf):
                         full_post["openqa"]["AZURE"] = "1"
 
                     full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
+
+                    if inc.rrid:
+                        full_post["openqa"]["RRID"] = inc.rrid
+
                     # old bot used variable "REPO_ID"
                     try:
                         full_post["openqa"]["REPOHASH"] = inc.revisions[
@@ -169,7 +173,9 @@ class Incidents(BaseConf):
                         f"{DOWNLOAD_BASE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
                         for chan in channels_set
                     )
-                    full_post["openqa"]["INCIDENT_REPO"] = ",".join(sorted(repos)) # sorted for testability
+                    full_post["openqa"]["INCIDENT_REPO"] = ",".join(
+                        sorted(repos)
+                    )  # sorted for testability
 
                     full_post["qem"]["withAggregate"] = True
                     aggregate_job = data.get("aggregate_job", True)
