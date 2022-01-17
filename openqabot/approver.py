@@ -24,6 +24,7 @@ class Approver:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
         self.token = {"Authorization": "Token {}".format(args.token)}
+        self.all_incidents = args.all_incidents
 
     def __call__(self) -> int:
         logger.info("Start approving incidents in IBS")
@@ -34,7 +35,7 @@ class Approver:
 
         for inc in increqs:
             try:
-                i_jobs = get_incident_settings(inc.inc, self.token)
+                i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
             except NoResultsError as e:
                 logger.info(e)
                 continue

@@ -156,6 +156,11 @@ def get_parser():
     cmdappr = commands.add_parser(
         "inc-approve", help="Aprove incidents which passed tests"
     )
+    cmdappr.add_argument(
+        "--all-incidents",
+        action="store_true",
+        help="use all incidents whithout care about rrid",
+    )
     cmdappr.set_defaults(func=do_approve)
 
     cmdcomment = commands.add_parser(
