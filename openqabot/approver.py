@@ -100,7 +100,7 @@ class Approver:
     @staticmethod
     def osc_approve(inc: IncReq) -> None:
 
-        msg = "Request accepted for 'qam-openqa' based on data in" + QEM_DASHBOARD
+        msg = "Request accepted for 'qam-openqa' based on data in " + QEM_DASHBOARD
         logger.info(
             "Accepting review for SUSE:Maintenace:%s:%s" % (str(inc.inc), str(inc.req))
         )
