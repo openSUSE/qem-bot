@@ -1,6 +1,6 @@
 # bot-ng
 
-tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
+tool for schedule maintenance jobs + sync SMELT/OpenQA to [QEM-Dashboard](https://github.com/openSUSE/qem-dashboard)
 
 ## Usage:
 
