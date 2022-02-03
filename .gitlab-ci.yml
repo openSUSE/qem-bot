@@ -30,8 +30,8 @@ variables:
     - rpm --query qam-metadata-openqabot
     - set -x
   script:
-    - git clone --depth 1 https://github.com/openSUSE/qem-bot.git .
-    - ./bot-ng.py -c /etc/openqabot --token $BOT_TOKEN $BOT_PARAMS $BOT_CMD 2>&1 | tee bot_$BOT_CMD.log
+    - git clone --depth 1 https://github.com/openSUSE/qem-bot.git
+    - ./qem-bot/bot-ng.py -c /etc/openqabot --token $BOT_TOKEN $BOT_PARAMS $BOT_CMD 2>&1 | tee bot_$BOT_CMD.log
   allow_failure: true
   artifacts:
     when: always
