@@ -54,9 +54,13 @@ def get_latest_tools_image(query):
     # 'publiccloud_tools_<BUILD NUM>.qcow2' is generic name for image used by Public Cloud tests to run
     # in openQA. query suppose to look like this "https://openqa.suse.de/group_overview/276.json" to get
     # value for <BUILD NUM>
-    return "publiccloud_tools_{}.qcow2".format(
-        request_get(query).json()["build_results"][0]["build"]
-    )
+
+    ## Get the first not-failing item
+    build_results = request_get(query).json()["build_results"]
+    for build in build_results:
+        if build["failed"] == 0:
+            return build["build"]
+    return None
 
 
 # Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
@@ -79,10 +83,10 @@ def apply_publiccloud_regex(settings):
 
 def apply_pc_tools_image(settings):
     try:
-        settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-            settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
-        )
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+            settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
+                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+            )
             del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         return settings
     except (
