@@ -59,7 +59,7 @@ def get_latest_tools_image(query):
     build_results = request_get(query).json()["build_results"]
     for build in build_results:
         if build["failed"] == 0:
-            return build["build"]
+            return "publiccloud_tools_{}.qcow2".format(build["build"])
     return None
 
 
