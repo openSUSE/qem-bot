@@ -35,7 +35,7 @@ def load_metadata(
             continue
 
         if "product" not in data:
-            logger.error("Missing product in %s" % p)
+            logger.warning("Missing product in %s" % p)
             continue
 
         if settings:
@@ -64,10 +64,10 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            logger.error("something wrong with %s" % str(p))
+            logger.warning("something wrong with %s" % str(p))
             continue
         if not isinstance(data, dict):
-            logger.error("something wrong with %s" % str(p))
+            logger.warning("something wrong with %s" % str(p))
             continue
 
         try:
