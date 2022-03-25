@@ -168,9 +168,18 @@ class Incidents(BaseConf):
 
                     if "Kernel" in flavor and not inc.livepatch:
                         if set(issue_dict.keys()).isdisjoint(
-                            set(["OS_TEST_ISSUES", "LTSS_TEST_ISSUES"])
+                            set(
+                                [
+                                    "OS_TEST_ISSUES",
+                                    "LTSS_TEST_ISSUES",
+                                    "BASE_TEST_ISSUES",
+                                ]
+                            )
                         ):
-                            logger.warning("Kernel incident %s doesn't have product repository" % str(inc))
+                            logger.warning(
+                                "Kernel incident %s doesn't have product repository"
+                                % str(inc)
+                            )
                             continue
 
                     for key, value in issue_dict.items():
