@@ -173,6 +173,7 @@ class Incidents(BaseConf):
                                     "OS_TEST_ISSUES",
                                     "LTSS_TEST_ISSUES",
                                     "BASE_TEST_ISSUES",
+                                    "RT_TEST_ISSUES"
                                 ]
                             )
                         ):
