@@ -166,14 +166,14 @@ class Incidents(BaseConf):
                         )
                         continue
 
-                    if "Kernel" in flavor and not inc.livepatch:
+                    if "Kernel" in flavor and not inc.livepatch and not inc.azure:
                         if set(issue_dict.keys()).isdisjoint(
                             set(
                                 [
-                                    "OS_TEST_ISSUES",
-                                    "LTSS_TEST_ISSUES",
-                                    "BASE_TEST_ISSUES",
-                                    "RT_TEST_ISSUES"
+                                    "OS_TEST_ISSUES",  # standard product dir
+                                    "LTSS_TEST_ISSUES",  # LTSS product dir
+                                    "BASE_TEST_ISSUES",  # GA product dir SLE15+
+                                    "RT_TEST_ISSUES",  # realtime kernel
                                 ]
                             )
                         ):
