@@ -64,4 +64,6 @@ class OpenQABot:
                 self.post_qem(job["qem"], job["api"])
                 self.post_openqa(job["openqa"])
 
+        logger.info("End of bot run")
+
         return 0

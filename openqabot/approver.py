@@ -71,6 +71,8 @@ class Approver:
             for inc in incidents_to_approve:
                 logger.info("SUSE:Maintenance:%s:%s" % (str(inc.inc), str(inc.req)))
 
+        logger.info("End of bot run")
+
         return 0 if overall_result else 1
 
     @lru_cache(maxsize=128)
