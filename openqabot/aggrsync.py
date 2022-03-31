@@ -80,6 +80,8 @@ class AggregateResultsSync:
             else:
                 logger.info("Dry run -- data not updated in dashboard")
 
+        logger.info("End of bot run")
+
         return 0
 
     @staticmethod

@@ -74,6 +74,8 @@ class IncResultsSync:
             else:
                 logger.info("Dry run -- data in dashboard untouched")
 
+        logger.info("End of bot run")
+
         return 0
 
     @staticmethod
