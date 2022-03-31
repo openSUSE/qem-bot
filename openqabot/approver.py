@@ -31,6 +31,7 @@ class Approver:
 
         increqs = get_incidents_approver(self.token)
 
+        overall_result = True
         incidents_to_approve = []
 
         for inc in increqs:
@@ -64,13 +65,13 @@ class Approver:
         if not self.dry:
             osc.conf.get_config(override_apiurl="https://api.suse.de")
             for inc in incidents_to_approve:
-                self.osc_approve(inc)
+                overall_result &= self.osc_approve(inc)
         else:
             logger.info("Incidents to approve:")
             for inc in incidents_to_approve:
                 logger.info("SUSE:Maintenance:%s:%s" % (str(inc.inc), str(inc.req)))
 
-        return 0
+        return 0 if overall_result else 1
 
     @lru_cache(maxsize=128)
     def get_jobs(self, job: JobAggr, api: str) -> bool:
@@ -98,7 +99,7 @@ class Approver:
         return res
 
     @staticmethod
-    def osc_approve(inc: IncReq) -> None:
+    def osc_approve(inc: IncReq) -> bool:
 
         msg = "Request accepted for 'qam-openqa' based on data in " + QEM_DASHBOARD
         logger.info(
@@ -115,3 +116,6 @@ class Approver:
             )
         except Exception as e:
             logger.exception(e)
+            return False
+
+        return True
