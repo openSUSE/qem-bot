@@ -1,5 +1,6 @@
 from argparse import Namespace
 from logging import getLogger
+from os import environ
 
 import requests
 
@@ -27,6 +28,7 @@ class OpenQABot:
         )
 
         self.openqa = openQAInterface(args.openqa_instance)
+        self.ci = environ.get("CI_JOB_URL")
 
     def post_qem(self, data, api) -> None:
         if not self.openqa:
@@ -50,7 +52,7 @@ class OpenQABot:
         logger.info("Starting bot mainloop")
         post = []
         for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ignore_onetime)
+            post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
         if self.dry:
             logger.info("Would post %s jobs" % len(post))

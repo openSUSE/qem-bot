@@ -2,13 +2,13 @@ from collections import defaultdict
 from datetime import date
 from itertools import chain
 from logging import getLogger
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 import requests
 
 from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
-from ..errors import SameBuildExists, NoTestIssues
+from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import (
     apply_pc_tools_image,
@@ -16,6 +16,7 @@ from ..pc_helper import (
     apply_publiccloud_regex,
 )
 from .baseconf import BaseConf
+from .incident import Incident
 
 logger = getLogger("bot.types.aggregate")
 
@@ -58,7 +59,13 @@ class Aggregate(BaseConf):
 
         return f"{build}-{counter}"
 
-    def __call__(self, incidents, token, ignore_onetime=False):
+    def __call__(
+        self,
+        incidents: List[Incident],
+        token: Dict[str, str],
+        ci_url: Optional[str],
+        ignore_onetime: bool = False,
+    ) -> List[Dict[str, Any]]:
         ret = []
 
         for arch in self.archs:
@@ -68,6 +75,8 @@ class Aggregate(BaseConf):
             full_post["qem"]["incidents"] = []
             full_post["qem"]["settings"] = {}
             full_post["api"] = "api/update_settings"
+            if ci_url:
+                full_post["openqa"]["__CI_JOB_URL"] = ci_url
 
             test_incidents = defaultdict(list)
 
@@ -161,8 +170,16 @@ class Aggregate(BaseConf):
             full_post["qem"]["incidents"] = [
                 str(inc) for inc in set(full_post["qem"]["incidents"])
             ]
+
             if not full_post["qem"]["incidents"]:
                 continue
+
+            full_post["openqa"][
+                "__SMELT_INCIDENT_URL"
+            ] = f"https://smelt.suse.de/incident/{inc.id}"
+            full_post["openqa"][
+                "__DASHBOARD_INCIDENT_URL"
+            ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
 
             full_post["qem"]["settings"] = full_post["openqa"]
             full_post["qem"]["repohash"] = full_post["openqa"]["REPOHASH"]
