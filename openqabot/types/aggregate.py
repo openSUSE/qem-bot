@@ -174,12 +174,14 @@ class Aggregate(BaseConf):
             if not full_post["qem"]["incidents"]:
                 continue
 
-            full_post["openqa"][
-                "__SMELT_INCIDENT_URL"
-            ] = f"https://smelt.suse.de/incident/{inc.id}"
-            full_post["openqa"][
-                "__DASHBOARD_INCIDENT_URL"
-            ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
+            full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
+                f"https://dashboard.qam.suse.de/incident/{inc}"
+                for inc in set(full_post["qem"]["incidents"])
+            )
+            full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
+                f"https://smelt.suse.de/incident/{inc}"
+                for inc in set(full_post["qem"]["incidents"])
+            )
 
             full_post["qem"]["settings"] = full_post["openqa"]
             full_post["qem"]["repohash"] = full_post["openqa"]["REPOHASH"]
