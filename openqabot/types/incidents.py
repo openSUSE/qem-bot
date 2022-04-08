@@ -1,17 +1,17 @@
 from logging import getLogger
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import requests
 
-from . import ProdVer, Repos, ArchVer
+from . import ArchVer, ProdVer, Repos
 from .. import QEM_DASHBOARD
-from .baseconf import BaseConf
-from .incident import Incident
 from ..pc_helper import (
     apply_pc_tools_image,
     apply_publiccloud_pint_image,
     apply_publiccloud_regex,
 )
+from .baseconf import BaseConf
+from .incident import Incident
 
 logger = getLogger("bot.types.incidents")
 
@@ -78,7 +78,11 @@ class Incidents(BaseConf):
         return False
 
     def __call__(
-        self, incidents: List[Incident], token: Dict[str, str], ignore_onetime: bool
+        self,
+        incidents: List[Incident],
+        token: Dict[str, str],
+        ci_url: Optional[str],
+        ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
 
         DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
@@ -104,6 +108,8 @@ class Incidents(BaseConf):
                     full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
                     full_post["openqa"]["_OBSOLETE"] = "1"
                     full_post["openqa"]["INCIDENT_ID"] = inc.id
+                    if ci_url:
+                        full_post["openqa"]["__CI_JOB_URL"] = ci_url
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
@@ -262,6 +268,13 @@ class Incidents(BaseConf):
                                 f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
                             )
                             continue
+
+                    full_post["openqa"][
+                        "__SMELT_INCIDENT_URL"
+                    ] = f"https://smelt.suse.de/incident/{inc.id}"
+                    full_post["openqa"][
+                        "__DASHBOARD_INCIDENT_URL"
+                    ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
 
                     full_post["openqa"] = settings
                     full_post["qem"]["settings"] = settings
