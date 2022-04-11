@@ -239,6 +239,13 @@ class Incidents(BaseConf):
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
+                    full_post["openqa"][
+                        "__SMELT_INCIDENT_URL"
+                    ] = f"https://smelt.suse.de/incident/{inc.id}"
+                    full_post["openqa"][
+                        "__DASHBOARD_INCIDENT_URL"
+                    ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
+
                     settings = full_post["openqa"].copy()
 
                     # if set, we use this query to detect latest public cloud tools image which used for running
@@ -268,13 +275,6 @@ class Incidents(BaseConf):
                                 f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
                             )
                             continue
-
-                    full_post["openqa"][
-                        "__SMELT_INCIDENT_URL"
-                    ] = f"https://smelt.suse.de/incident/{inc.id}"
-                    full_post["openqa"][
-                        "__DASHBOARD_INCIDENT_URL"
-                    ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
 
                     full_post["openqa"] = settings
                     full_post["qem"]["settings"] = settings
