@@ -64,7 +64,9 @@ def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
     return [IncReq(i["number"], i["rr_number"]) for i in incidents if i["inReviewQAM"]]
 
 
-def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool = False) -> List[JobAggr]:
+def get_incident_settings(
+    inc: int, token: Dict[str, str], all_incidents: bool = False
+) -> List[JobAggr]:
     # TODO: Error handling.
     settings = requests.get(
         QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
@@ -72,13 +74,12 @@ def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool =
     if not settings:
         raise NoResultsError("Inc %s hasn't any job_settings" % str(inc))
 
-
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
         rrid = sorted([r for r in rrids if r])
         if rrid:
             rrid = rrid[-1]
-            settings = [s for s in settings if s["settings"].get("RRID",0) == rrid]
+            settings = [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
 
     return [JobAggr(i["id"], False, i["withAggregate"]) for i in settings]
 
