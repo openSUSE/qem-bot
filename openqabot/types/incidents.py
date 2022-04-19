@@ -157,7 +157,8 @@ class Incidents(BaseConf):
 
                     if not issue_dict:
                         logger.debug(
-                            "No channels in %s for %s on %s" % (inc.id, flavor, arch)
+                            "No channels in %s for %s on %s"
+                            % (inc.id, flavor, arch)
                         )
                         continue
 
@@ -169,7 +170,7 @@ class Incidents(BaseConf):
                         token, inc, arch, self.settings["VERSION"], flavor
                     ):
                         logger.info(
-                            "NOT SCHEDULE: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
+                            "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
                             % (flavor, self.settings["VERSION"], inc.id, arch)
                         )
                         continue

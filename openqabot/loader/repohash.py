@@ -4,6 +4,7 @@ from hashlib import md5
 from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
+from datetime import datetime 
 
 import requests
 
@@ -46,7 +47,7 @@ def get_max_revision(
             ET.ParseError,
             requests.ConnectionError,
         ):  # for now, use logger.exception to determine possible exceptions in this code :D
-            logger.error("%s not found -- skip incident" % url)
+            logger.info("%s: %s not found -- skip incident" % (datetime.now(),url))
             raise NoRepoFoundError
         # TODO: fix handling of requests errors
         except Exception as e:

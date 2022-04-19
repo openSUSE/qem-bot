@@ -6,8 +6,6 @@ from operator import itemgetter
 from pprint import pformat
 from typing import Any, Dict, List
 
-import requests
-
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
 
@@ -26,13 +24,15 @@ class SMELTSync:
 
         data = self._create_list(self.incidents)
         logger.info("Updating info about %s incidents" % str(len(data)))
-        logger.debug("Data: %s" % pformat(data))
+        logger.info("Data: %s" % pformat(data))
 
         if not self.dry:
-            return update_incidents(self.token, data, retry=self.retry)
+            ret = update_incidents(self.token, data, retry=self.retry)
+        else:
+            logger.info("Dry run, nothing synced")
+            ret = 0
 
-        logger.info("Dry run, nothing synced")
-        return 0
+        return ret
 
     @staticmethod
     def _review_rrequest(requestSet):

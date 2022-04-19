@@ -4,6 +4,7 @@ import logging
 from pprint import pformat
 from urllib.parse import ParseResult
 from openqa_client.client import OpenQA_Client
+from openqa_client.exceptions import RequestError
 
 from .types import Data
 
@@ -20,15 +21,24 @@ class openQAInterface:
         return self.url.netloc == "openqa.suse.de"
 
     def post_job(self, settings) -> None:
-        logger.info("openqa-cli api --host %s -X post isos %s" % (self.url.geturl(), ' '.join(['%s=%s' % (k, v) for k,v in settings.items()])))
+        logger.info(
+            "openqa-cli api --host %s -X post isos %s"
+            % (
+                self.url.geturl(),
+                " ".join(["%s=%s" % (k, v) for k, v in settings.items()]),
+            )
+        )
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=3)
+        except RequestError as e:
+            logger.error("openQA returned %s" % e[-1])
+            logger.error("Post failed with {}".format(pformat(settings)))
         except Exception as e:
             logger.exception(e)
             logger.error("Post failed with {}".format(pformat(settings)))
 
     def get_jobs(self, data: Data):
-        logger.debug("getting openqa for %s" % pformat(data))
+        logger.info("Getting openQA tests results for %s" % pformat(data))
         param = {}
         param["scope"] = "relevant"
         param["latest"] = "1"

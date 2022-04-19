@@ -57,14 +57,14 @@ class OpenQABot:
             post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
         if self.dry:
-            logger.info("Would post %s jobs" % len(post))
+            logger.info("Would trigger %s products in openqa" % len(post))
             for job in post:
-                logger.debug(job)
+                logger.info(job)
 
         else:
-            logger.info("Posting %s jobs" % len(post))
+            logger.info("Triggering %s products in openqa" % len(post))
             for job in post:
-                logger.debug("Posting %s" % str(job))
+                logger.info("Triggering %s" % str(job))
                 self.post_qem(job["qem"], job["api"])
                 self.post_openqa(job["openqa"])
 

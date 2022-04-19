@@ -44,9 +44,13 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
                 "Project %s can't calculate repohash %s .. skipping" % (i["project"], e)
             )
         except EmptyChannels as e:
-            logger.info("Project %s has empty channels" % i["project"])
+            logger.info(
+                "Project %s has empty channels - check incident in SMELT" % i["project"]
+            )
         except EmptyPackagesError as e:
-            logger.info("Project %s has empty packages" % i["project"])
+            logger.info(
+                "Project %s has empty packages - check incident in SMELT" % i["project"]
+            )
 
     return xs
 
@@ -144,7 +148,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
         QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError("Inc %s hasn't any aggregate__settings" % str(inc))
+        raise NoResultsError("Inc %s hasn't any aggregates settings" % str(inc))
 
     # is string comparsion ... so we need reversed sort
     settings = sorted(settings, key=itemgetter("build"), reverse=True)

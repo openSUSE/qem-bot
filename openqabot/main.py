@@ -4,7 +4,6 @@ import logging
 import sys
 
 from .args import get_parser
-from .openqabot import OpenQABot
 
 
 def create_logger():
@@ -28,11 +27,11 @@ def main():
     cfg = parser.parse_args(sys.argv[1:])
 
     if not cfg.configs.exists() and not cfg.configs.is_dir():
-        print(f"Path {cfg.configs} isn't valid directory with config files")
+        logger.error(f"Path {cfg.configs} isn't valid directory with config files")
         sys.exit(1)
 
     if not hasattr(cfg, "func"):
-        print("Command is required")
+        logger.error("Command is required")
         parser.print_help()
         sys.exit(1)
 

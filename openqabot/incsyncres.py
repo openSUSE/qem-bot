@@ -51,7 +51,7 @@ class IncResultsSync:
 
                 if "Timo" in v["group"]:
                     logger.info(
-                        "Devel job %s in group %s -- thx. Timo" % (v["id"], v["group"])
+                        "Devel job %s in group %s" % (v["id"], v["group"])
                     )
                     continue
 
@@ -70,7 +70,7 @@ class IncResultsSync:
                 results.append(r)
 
         for r in results:
-            logger.info("Posting jobs: %s" % pformat(r))
+            logger.info("Posting job results to dashboard: %s" % pformat(r))
             if not self.dry and self.client:
                 post_job(self.token, r)
             else:
