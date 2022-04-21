@@ -1,0 +1,5 @@
+osc
+openqa-client
+requests
+ruamel.yaml
+beautifulsoup4
