@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from logging import getLogger
 from pathlib import Path
 from typing import List, Set, Union

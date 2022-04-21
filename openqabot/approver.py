@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from argparse import Namespace
 from functools import lru_cache
 from logging import getLogger
