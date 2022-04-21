@@ -1,0 +1,15 @@
+---
+name: ci
+# yamllint disable-line rule:truthy
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.6'
+          cache: 'pip'
+      - run: pip install pytest
+      - run: make test
