@@ -113,3 +113,36 @@ openqa-cli --host https://openqa.suse.de api -X post isos ARCH=s390x BASE_TEST_I
 ```
 
 Apply caution to keep all the other parameters in place.
+
+## Contribute
+
+This project lives in https://github.com/openSUSE/qem-bot
+
+Feel free to add issues in github or send pull requests.
+
+### Rules for commits
+
+* For git commit messages use the rules stated on
+  [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/) as
+  a reference
+
+If this is too much hassle for you feel free to provide incomplete pull
+requests for consideration or create an issue with a code change proposal.
+
+### Local testing
+
+There are currently no automatic tests available. The most simple way for at
+least syntax correctness checks is to just call `./bot-ng.py --help` to show
+the help text if the source can be correctly parsed. The next recommended way
+for testing is to call `bot-ng.py` with the `--dry` command line parameter in
+different modes. This might need additional data, e.g. "metadata" from
+https://gitlab.suse.de/qa-maintenance/metadata/ . For example with cloning
+this metadata as well as specifying a fake token value that is enough for
+testing:
+
+```
+git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
+./bot-ng.py --configs metadata -t 1234 --dry inc-approve
+```
+
+This should walk over the list of current incidents pending approval.
