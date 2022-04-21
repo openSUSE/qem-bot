@@ -8,6 +8,7 @@ from typing import List
 import osc.conf
 import osc.core
 import requests
+from urllib.error import HTTPError
 from openqabot.errors import NoResultsError
 
 from . import QEM_DASHBOARD
@@ -118,6 +119,13 @@ class Approver:
                 by_group="qam-openqa",
                 message=msg,
             )
+        except HTTPError as e:
+            if e.code == 403:
+                logger.debug("Received '%s'. Request likely already approved, ignoring" % e.reason)
+                return True
+            else:
+                logger.exception(e)
+                return False
         except Exception as e:
             logger.exception(e)
             return False
