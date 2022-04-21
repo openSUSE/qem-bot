@@ -146,3 +146,7 @@ git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
 ```
 
 This should walk over the list of current incidents pending approval.
+
+## License
+
+This project is licensed under the MIT license, see LICENSE file for details.
