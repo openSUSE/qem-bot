@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger

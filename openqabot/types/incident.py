@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
 from typing import Dict, List, Tuple

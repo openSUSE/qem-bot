@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 import logging
 import sys
 

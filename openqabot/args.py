@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse

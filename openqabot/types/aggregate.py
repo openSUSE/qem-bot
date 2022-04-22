@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from collections import defaultdict
 from datetime import date
 from itertools import chain

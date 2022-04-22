@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
 from typing import Any, List, Set
