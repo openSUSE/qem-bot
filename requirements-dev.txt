@@ -1,0 +1,7 @@
+pytest
+responses
+requests
+osc
+openqa-client
+ruamel.yaml
+beautifulsoup4
