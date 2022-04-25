@@ -9,7 +9,7 @@ from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
 
 logger = getLogger("bot.types.incident")
-version_pattern = re.compile("(\d+(?:[.-](?:SP)?\d+)?)")
+version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 
 class Incident:
@@ -118,7 +118,7 @@ class Incident:
         return False
 
     @staticmethod
-    def _is_azure(packages):
+    def _is_azure(packages) -> bool:
         """return True if package is kernel for MS AZURE"""
         for package in packages:
             if package.startswith("kernel-azure"):

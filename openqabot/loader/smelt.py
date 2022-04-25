@@ -44,7 +44,7 @@ def get_active_incidents() -> Set[int]:
         try:
             ndata = requests.get(SMELT, params={"query": query}, verify=False).json()
         except Exception as e:
-            print(e)
+            logger.exception(e)
             raise e
 
         active.update(
@@ -62,7 +62,7 @@ def get_active_incidents() -> Set[int]:
 def get_incident(incident: int):
     query = INCIDENT % {"incident": incident}
 
-    logger.info("getting info about incident %s" % incident)
+    logger.info("Getting info about incident %s from SMELT" % incident)
 
     try:
         inc_result = requests.get(SMELT, params={"query": query}, verify=False).json()
@@ -74,9 +74,9 @@ def get_incident(incident: int):
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
     # TODO: concrete exceptions
     except Exception as e:
-        logger.error(incident)
+        logger.error("Incident %s without valid data from SMELT" % incident)
         logger.exception(e)
-        raise e
+        return None 
 
     return inc_result
 
@@ -91,4 +91,5 @@ def get_incidents(active: Set[int]) -> List[Any]:
         for future in CT.as_completed(future_inc):
             incidents.append(future.result())
 
+    incidents = [inc for inc in incidents if inc]
     return incidents

@@ -32,7 +32,7 @@ class Aggregate(BaseConf):
         self.test_issues = self.normalize_repos(config)
 
     @staticmethod
-    def normalize_repos(config) -> Dict[str, ProdVer]:
+    def normalize_repos(config):
         try:
             repos = {
                 key: ProdVer(value.split(":")[0], value.split(":")[1])
@@ -71,7 +71,7 @@ class Aggregate(BaseConf):
         ret = []
 
         for arch in self.archs:
-            full_post = {}
+            full_post: Dict["str", Any] = {}
             full_post["openqa"] = {}
             full_post["qem"] = {}
             full_post["qem"]["incidents"] = []

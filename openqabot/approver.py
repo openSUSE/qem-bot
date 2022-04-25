@@ -49,7 +49,7 @@ class Approver:
                 logger.info(e)
 
                 if any(i.withAggregate for i in i_jobs):
-                    logger.info("Aggregate for %s needed" % str(inc.inc))
+                    logger.info("Aggregate missing for %s" % str(inc.inc))
                     continue
 
                 u_jobs = []
@@ -57,6 +57,7 @@ class Approver:
             if not self.get_incident_result(i_jobs, "api/jobs/incident/"):
                 logger.info("Inc %s has failed job in incidents" % str(inc.inc))
                 continue
+
             if any(i.withAggregate for i in i_jobs):
                 if not self.get_incident_result(u_jobs, "api/jobs/update/"):
                     logger.info("Inc %s has failed job in aggregates" % str(inc.inc))
@@ -67,6 +68,7 @@ class Approver:
 
         if not self.dry:
             osc.conf.get_config(override_apiurl="https://api.suse.de")
+
             for inc in incidents_to_approve:
                 overall_result &= self.osc_approve(inc)
         else:

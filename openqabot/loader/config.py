@@ -37,7 +37,7 @@ def load_metadata(
             continue
 
         if "product" not in data:
-            logger.warning("Missing product in %s" % p)
+            logger.debug("Skipping invalid config %s" % p)
             continue
 
         if settings:
@@ -66,16 +66,16 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            logger.warning("something wrong with %s" % str(p))
+            logger.info("Skipping invalid config %s - empty config" % str(p))
             continue
         if not isinstance(data, dict):
-            logger.warning("something wrong with %s" % str(p))
+            logger.info("Skipping invalid config %s - invalid format" % str(p))
             continue
 
         try:
             flavor = data["aggregate"]["FLAVOR"]
         except KeyError:
-            logger.info("file %s dont have aggregate" % str(p))
+            logger.info("Config %s does not have aggregate" % str(p))
             continue
 
         try:
