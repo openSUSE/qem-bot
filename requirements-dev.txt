@@ -7,3 +7,4 @@ osc
 openqa-client
 ruamel.yaml
 beautifulsoup4
+black

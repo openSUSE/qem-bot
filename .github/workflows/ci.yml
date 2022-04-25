@@ -15,6 +15,8 @@ jobs:
         run: pip install -r requirements-dev.txt 
       - name: Run tests + cov report
         run: python3 -m pytest -v --cov=./openqabot --cov-report=xml --cov-report=term
+      - name: Check style
+        run: black --check ./
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v2
         with:
