@@ -76,7 +76,7 @@ def get_incident(incident: int):
     except Exception as e:
         logger.error("Incident %s without valid data from SMELT" % incident)
         logger.exception(e)
-        return None 
+        return None
 
     return inc_result
 
