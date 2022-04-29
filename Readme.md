@@ -1,4 +1,4 @@
-![https://github.com/openSUSE/qem-bot/actions](https://github.com/openSUSE/qem-bot/actions/workflows/ci/badge.svg)
+[![ci](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml)
 # bot-ng
 
 tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
