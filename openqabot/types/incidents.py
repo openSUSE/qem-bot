@@ -157,8 +157,7 @@ class Incidents(BaseConf):
 
                     if not issue_dict:
                         logger.debug(
-                            "No channels in %s for %s on %s"
-                            % (inc.id, flavor, arch)
+                            "No channels in %s for %s on %s" % (inc.id, flavor, arch)
                         )
                         continue
 

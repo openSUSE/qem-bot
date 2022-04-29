@@ -50,9 +50,7 @@ class IncResultsSync:
                     continue
 
                 if "Timo" in v["group"]:
-                    logger.info(
-                        "Devel job %s in group %s" % (v["id"], v["group"])
-                    )
+                    logger.info("Devel job %s in group %s" % (v["id"], v["group"]))
                     continue
 
                 if "Leap" in v["group"]:

@@ -123,7 +123,10 @@ class Approver:
             )
         except HTTPError as e:
             if e.code == 403:
-                logger.debug("Received '%s'. Request likely already approved, ignoring" % e.reason)
+                logger.debug(
+                    "Received '%s'. Request likely already approved, ignoring"
+                    % e.reason
+                )
                 return True
             else:
                 logger.exception(e)
