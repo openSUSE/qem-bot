@@ -43,15 +43,21 @@ def test_get_max_revison_opensuse():
     repos = [("openSUSE-SLE", "4.1")]
     project = "SUSE:Maintenance:12345"
     arch = "aarch64"
+    opensuse = BASE_XML % "256"
 
-    with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, project)
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml",
+        body=opensuse,
+    )
+    ret = rp.get_max_revision(repos, arch, project)
+    assert ret == 256
 
 
 @responses.activate
 def test_get_max_revison_3():
 
-    repos = [("openSUSE-SLE", "4.1"), ("SLES", "15SP3"), ("SLED", "15SP3")]
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
     project = "SUSE:Maintenance:12345"
     arch = "x86_64"
 
@@ -78,7 +84,7 @@ def test_get_max_revison_connectionerror(caplog, mock_datetime):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
-    repos = [("openSUSE-SLE", "4.1"), ("SLES", "15SP3"), ("SLED", "15SP3")]
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
     project = "SUSE:Maintenance:12345"
     arch = "x86_64"
 
@@ -108,7 +114,7 @@ def test_get_max_revison_xmlerror(caplog, mock_datetime):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
-    repos = [("openSUSE-SLE", "4.1"), ("SLES", "15SP3"), ("SLED", "15SP3")]
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
     project = "SUSE:Maintenance:12345"
     arch = "x86_64"
 
@@ -138,7 +144,7 @@ def test_get_max_revison_empty_xml(caplog):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
-    repos = [("openSUSE-SLE", "4.1"), ("SLES", "15SP3"), ("SLED", "15SP3")]
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
     project = "SUSE:Maintenance:12345"
     arch = "x86_64"
 
@@ -163,7 +169,7 @@ def test_get_max_revison_exception(caplog):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
-    repos = [("openSUSE-SLE", "4.1"), ("SLES", "15SP3"), ("SLED", "15SP3")]
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
     project = "SUSE:Maintenance:12345"
     arch = "x86_64"
 
