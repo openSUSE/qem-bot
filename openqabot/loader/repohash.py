@@ -34,11 +34,9 @@ def get_max_revision(
 
         # don't use openSUSE-SLE
         if repo[0] == "openSUSE-SLE":
-            continue
-
-        # openSUSE-SLE mask
-        #    url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
-        url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
+            url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
+        else:
+            url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
             root = ET.fromstring(requests.get(url).text)
