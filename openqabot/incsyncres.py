@@ -68,7 +68,11 @@ class IncResultsSync:
                 results.append(r)
 
         for r in results:
-            logger.info("Posting job results to dashboard: %s" % pformat(r))
+            logger.info(
+                "Posting results of incident job %s with status %"
+                % (r["job_id"], r["status"])
+            )
+            logger.debug("Full post data: %s" % pformat(r))
             if not self.dry and self.client:
                 post_job(self.token, r)
             else:
