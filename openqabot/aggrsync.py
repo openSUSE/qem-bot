@@ -76,7 +76,7 @@ class AggregateResultsSync:
 
         for r in results:
             logger.info(
-                "Posting results of aggregate job %s with status %"
+                "Posting results of aggregate job %s with status %s"
                 % (r["job_id"], r["status"])
             )
             logger.debug("Full aggregate job result to dashboard: %s" % pformat(r))

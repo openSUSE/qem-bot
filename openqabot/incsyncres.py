@@ -69,7 +69,7 @@ class IncResultsSync:
 
         for r in results:
             logger.info(
-                "Posting results of incident job %s with status %"
+                "Posting results of incident job %s with status %s"
                 % (r["job_id"], r["status"])
             )
             logger.debug("Full post data: %s" % pformat(r))
