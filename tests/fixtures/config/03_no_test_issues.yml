@@ -1,0 +1,9 @@
+product: BAD15SP3
+settings:
+  VARIABLE: foo
+aggregate:
+  FLAVOR: Server-DVD-Updates
+  archs:
+    - x86_64
+    - s390x
+    - aarch64

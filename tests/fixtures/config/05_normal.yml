@@ -1,0 +1,41 @@
+product: SOME15SP3
+settings:
+  VARIABLE: foo
+  VERSION: 15-SP3
+  DISTRI: bar
+aggregate:
+  FLAVOR: Server-DVD-Updates
+  archs:
+    - x86_64
+    - aarch64
+  test_issues:
+    BASE_TEST_ISSUES: Module:15-SP3
+    OS_TEST_ISSUES: Product:15-SP3
+    PYTHON2_TEST_ISSUES: Python2:15-SP3
+incidents:
+  FLAVOR:
+    Server-DVD-Incidents:
+      archs:
+        - x86_64
+      issues:
+        BASE_TEST_ISSUES: Module:15-SP3
+        OS_TEST_ISSUES: Product:15-SP3
+        PYTHON2_TEST_ISSUES: Python2:15-SP3
+    Server-DVD-Incidents-Kernel:
+      aggregate_check_true:
+        - KGRAFT
+        - AZURE
+      aggregate_job: false
+      archs:
+        - x86_64
+        - s390x
+      issues:
+        BASE_TEST_ISSUES: Module:15-SP3
+        OS_TEST_ISSUES: Product:15-SP3
+        PYTHON2_TEST_ISSUES: Python2:15-SP3
+      packages:
+        - kernel-source
+        - kernel-livepatch
+        - kernel-azure  
+empty_key:
+  - empty
