@@ -75,7 +75,11 @@ class AggregateResultsSync:
                 results.append(r)
 
         for r in results:
-            logger.info("Posting aggregate job result to dashboard: %s" % pformat(r))
+            logger.info(
+                "Posting results of aggregate job %s with status %"
+                % (r["job_id"], r["status"])
+            )
+            logger.debug("Full aggregate job result to dashboard: %s" % pformat(r))
 
             if not self.dry and self.client:
                 post_job(self.token, r)
