@@ -31,7 +31,7 @@ class openQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=3)
         except RequestError as e:
-            logger.error("openQA returned %s" % e[-1])
+            logger.error("openQA returned %s" % e.args[-1])
             logger.error("Post failed with {}".format(pformat(settings)))
         except Exception as e:
             logger.exception(e)
