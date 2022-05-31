@@ -1,8 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from functools import lru_cache
 import logging
 from pprint import pformat
 from urllib.parse import ParseResult
+
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
@@ -56,3 +58,16 @@ class openQAInterface:
             logger.exception(e)
             raise e
         return ret
+
+    @lru_cache(maxsize=256)
+    def is_devel_group(self, groupid: int) -> bool:
+        ret = None
+
+        try:
+            ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
+        except Exception as e:
+            logger.exception(e)
+            raise e
+
+        # return True as safe option if ret = None
+        return ret[0]["name"] == "Development" if ret else True
