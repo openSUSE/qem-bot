@@ -110,7 +110,7 @@ class Approver:
 
         msg = "Request accepted for 'qam-openqa' based on data in " + QEM_DASHBOARD
         logger.info(
-            "Accepting review for SUSE:Maintenace:%s:%s" % (str(inc.inc), str(inc.req))
+            "Accepting review for SUSE:Maintenance:%s:%s" % (str(inc.inc), str(inc.req))
         )
 
         try:
