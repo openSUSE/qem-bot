@@ -185,13 +185,13 @@ def test_403_response(fake_qem, f_osconf, caplog, monkeypatch):
     assert messages == [
         "Start approving incidents in IBS",
         "Accepting review for SUSE:Maintenace:1:100",
-        "Received 'Not allowed'. Request likely already approved, ignoring",
+        "Received 'Not allowed'. Request 100 likely already approved, ignoring",
         "Accepting review for SUSE:Maintenace:2:200",
-        "Received 'Not allowed'. Request likely already approved, ignoring",
+        "Received 'Not allowed'. Request 200 likely already approved, ignoring",
         "Accepting review for SUSE:Maintenace:3:300",
-        "Received 'Not allowed'. Request likely already approved, ignoring",
+        "Received 'Not allowed'. Request 300 likely already approved, ignoring",
         "Accepting review for SUSE:Maintenace:4:400",
-        "Received 'Not allowed'. Request likely already approved, ignoring",
+        "Received 'Not allowed'. Request 400 likely already approved, ignoring",
         "End of bot run",
     ]
 
@@ -219,13 +219,47 @@ def test_404_response(fake_qem, f_osconf, caplog, monkeypatch):
     assert messages == [
         "Start approving incidents in IBS",
         "Accepting review for SUSE:Maintenace:1:100",
-        "HTTP Error 404: Not allowed",
+        "Received 'Not allowed'. Request 100 removed or problem on OBS side, ignoring",
         "Accepting review for SUSE:Maintenace:2:200",
-        "HTTP Error 404: Not allowed",
+        "Received 'Not allowed'. Request 200 removed or problem on OBS side, ignoring",
         "Accepting review for SUSE:Maintenace:3:300",
-        "HTTP Error 404: Not allowed",
+        "Received 'Not allowed'. Request 300 removed or problem on OBS side, ignoring",
         "Accepting review for SUSE:Maintenace:4:400",
-        "HTTP Error 404: Not allowed",
+        "Received 'Not allowed'. Request 400 removed or problem on OBS side, ignoring",
+        "End of bot run",
+    ]
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+def test_500_response(fake_qem, f_osconf, caplog, monkeypatch):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def f_osc_core(*args, **kwds):
+        raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
+
+    monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
+
+    responses.add(
+        responses.GET,
+        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
+        json=[{"status": "passed"}, {"status": "passed"}],
+    )
+    args = _namespace(False, "123", False)
+
+    approver = Approver(args)
+    assert approver() == 1
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert messages == [
+        "Start approving incidents in IBS",
+        "Accepting review for SUSE:Maintenace:1:100",
+        "Recived error 500, reason: 'Not allowed' for Request 100 - problem on OBS side",
+        "Accepting review for SUSE:Maintenace:2:200",
+        "Recived error 500, reason: 'Not allowed' for Request 200 - problem on OBS side",
+        "Accepting review for SUSE:Maintenace:3:300",
+        "Recived error 500, reason: 'Not allowed' for Request 300 - problem on OBS side",
+        "Accepting review for SUSE:Maintenace:4:400",
+        "Recived error 500, reason: 'Not allowed' for Request 400 - problem on OBS side",
         "End of bot run",
     ]
 

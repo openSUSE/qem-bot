@@ -123,13 +123,22 @@ class Approver:
             )
         except HTTPError as e:
             if e.code == 403:
-                logger.debug(
-                    "Received '%s'. Request likely already approved, ignoring"
-                    % e.reason
+                logger.info(
+                    "Received '%s'. Request %s likely already approved, ignoring"
+                    % (e.reason, inc.req)
                 )
                 return True
+            elif e.code == 404:
+                logger.info(
+                    "Received '%s'. Request %s removed or problem on OBS side, ignoring"
+                    % (e.reason, inc.req)
+                )
+                return False
             else:
-                logger.exception(e)
+                logger.error(
+                    "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
+                    % (e.code, e.reason, inc.req)
+                )
                 return False
         except Exception as e:
             logger.exception(e)
