@@ -78,7 +78,7 @@ def get_incident_settings(
         QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError("Inc %s hasn't any job_settings" % str(inc))
+        raise NoResultsError("Inc %s does not have any job_settings" % str(inc))
 
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
@@ -148,7 +148,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
         QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError("Inc %s hasn't any aggregates settings" % str(inc))
+        raise NoResultsError("Inc %s does not have any aggregates settings" % str(inc))
 
     # is string comparsion ... so we need reversed sort
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
@@ -173,7 +173,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
     ret = []
     if not settings:
         raise EmptySettings(
-            f"Product: {data.product} on arch: {data.arch} hasn't any settings"
+            f"Product: {data.product} on arch: {data.arch} does not have any settings"
         )
 
     logger.debug("Getting id for %s" % pformat(data))
