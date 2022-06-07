@@ -80,6 +80,11 @@ def get_incident_settings(
     if not settings:
         raise NoResultsError("Inc %s hasn't any job_settings" % str(inc))
 
+    # temporary workaround, remove wheen jobs are fixed
+    for s in settings:
+        if s["settings"]["VERSION"] == "15-SP4":
+            raise NoResultsError("In %s has 15-SP4 schedule" % str(inc))
+
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
         rrid = sorted([r for r in rrids if r])
