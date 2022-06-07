@@ -12,11 +12,11 @@ jobs:
           python-version: '3.8'
           cache: 'pip'
       - name: Setup enviroment
-        run: pip install -r requirements-dev.txt 
+        run: pip install -r requirements-dev.txt
       - name: Run tests + cov report
-        run: make test-with-coverage 
+        run: make test-with-coverage
       - name: Check style
-        run: make checkstyle 
+        run: make checkstyle
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v2
         with:
