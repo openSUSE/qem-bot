@@ -60,7 +60,6 @@ class Incidents(BaseConf):
                 headers=token,
             ).json()
         except Exception as e:
-            # TODO: ....
             logger.exception(e)
 
         if not jobs:
@@ -142,9 +141,6 @@ class Incidents(BaseConf):
                             % (inc.id, arch, self.settings["VERSION"])
                         )
                         continue
-
-                    # TODO: Public Cloud settings...
-                    # Not needed now, PubCloud uses aggregates jobs only now
 
                     channels_set = set()
                     issue_dict = {}

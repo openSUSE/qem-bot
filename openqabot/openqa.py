@@ -53,7 +53,6 @@ class openQAInterface:
         ret = None
         try:
             ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
-        # TODO: correct handling
         except Exception as e:
             logger.exception(e)
             raise e

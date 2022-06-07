@@ -47,7 +47,6 @@ def get_max_revision(
         ):  # for now, use logger.exception to determine possible exceptions in this code :D
             logger.info("%s: %s not found -- skip incident" % (datetime.now(), url))
             raise NoRepoFoundError
-        # TODO: fix handling of requests errors
         except Exception as e:
             logger.exception(e)
             raise e

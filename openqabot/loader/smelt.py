@@ -66,13 +66,11 @@ def get_incident(incident: int):
 
     try:
         inc_result = requests.get(SMELT, params={"query": query}, verify=False).json()
-    # TODO: concrete exceptions
     except Exception as e:
         logger.exception(e)
         raise e
     try:
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
-    # TODO: concrete exceptions
     except Exception as e:
         logger.error("Incident %s without valid data from SMELT" % incident)
         logger.exception(e)

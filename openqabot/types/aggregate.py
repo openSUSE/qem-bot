@@ -106,7 +106,6 @@ class Aggregate(BaseConf):
                     headers=token,
                 ).json()
             except Exception as e:
-                # TODO: valid exceptions ...
                 logger.exception(e)
                 old_jobs = None
 
