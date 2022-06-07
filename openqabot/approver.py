@@ -98,7 +98,7 @@ class Approver:
             try:
                 res = self.get_jobs(job, api)
             except NoResultsError as e:
-                logger.error(e)
+                logger.info(e)
                 continue
             if not res:
                 return False
