@@ -7,3 +7,4 @@ OBS_URL = "https://api.suse.de"
 OBS_MAINT_PRJ = "SUSE:Maintenance"
 OBS_GROUP = "qam-openqa"
 OPENQA_URL = "openqa.suse.de"
+DEVELOPMENT_PARENT_GROUP_ID = 9
