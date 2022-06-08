@@ -8,6 +8,7 @@ from urllib.parse import ParseResult
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
+from . import OPENQA_URL
 from .types import Data
 
 logger = logging.getLogger("bot.openqa")
@@ -19,8 +20,8 @@ class openQAInterface:
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
 
     def __bool__(self) -> bool:
-        """True only for OSD, used for decide to update dashboard database or not"""
-        return self.url.netloc == "openqa.suse.de"
+        """True only for the configured openQA instance, used for decide to update dashboard database or not"""
+        return self.url.netloc == OPENQA_URL
 
     def post_job(self, settings) -> None:
         logger.info(

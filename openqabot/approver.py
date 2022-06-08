@@ -11,7 +11,7 @@ import requests
 from urllib.error import HTTPError
 from openqabot.errors import NoResultsError
 
-from . import QEM_DASHBOARD
+from . import QEM_DASHBOARD, OBS_GROUP, OBS_MAINT_PRJ, OBS_URL
 from .loader.qem import (
     IncReq,
     JobAggr,
@@ -67,14 +67,14 @@ class Approver:
             incidents_to_approve.append(inc)
 
         if not self.dry:
-            osc.conf.get_config(override_apiurl="https://api.suse.de")
+            osc.conf.get_config(override_apiurl=OBS_URL)
 
             for inc in incidents_to_approve:
                 overall_result &= self.osc_approve(inc)
         else:
             logger.info("Incidents to approve:")
             for inc in incidents_to_approve:
-                logger.info("SUSE:Maintenance:%s:%s" % (str(inc.inc), str(inc.req)))
+                logger.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
 
         logger.info("End of bot run")
 
@@ -108,17 +108,21 @@ class Approver:
     @staticmethod
     def osc_approve(inc: IncReq) -> bool:
 
-        msg = "Request accepted for 'qam-openqa' based on data in " + QEM_DASHBOARD
+        msg = (
+            "Request accepted for '" + OBS_GROUP + "' based on data in " + QEM_DASHBOARD
+        )
         logger.info(
-            "Accepting review for SUSE:Maintenance:%s:%s" % (str(inc.inc), str(inc.req))
+            "Accepting review for "
+            + OBS_MAINT_PRJ
+            + ":%s:%s" % (str(inc.inc), str(inc.req))
         )
 
         try:
             osc.core.change_review_state(
-                apiurl="https://api.suse.de",
+                apiurl=OBS_URL,
                 reqid=str(inc.req),
                 newstate="accepted",
-                by_group="qam-openqa",
+                by_group=OBS_GROUP,
                 message=msg,
             )
         except HTTPError as e:
