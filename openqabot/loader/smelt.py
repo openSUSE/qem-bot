@@ -36,10 +36,7 @@ def get_active_incidents() -> Set[int]:
     cursor = None
 
     while has_next:
-        if cursor:
-            query = ACTIVE_NEXT % {"cursor": cursor}
-        else:
-            query = ACTIVE_FST
+        query = ACTIVE_NEXT % {"cursor": cursor} if cursor else ACTIVE_FST
 
         try:
             ndata = requests.get(SMELT, params={"query": query}, verify=False).json()
@@ -47,12 +44,11 @@ def get_active_incidents() -> Set[int]:
             logger.exception(e)
             raise e
 
-        active.update(
-            x["node"]["incidentId"] for x in ndata["data"]["incidents"]["edges"]
-        )
-        has_next = ndata["data"]["incidents"]["pageInfo"]["hasNextPage"]
+        incidents = ndata["data"]["incidents"]
+        active.update(x["node"]["incidentId"] for x in incidents["edges"])
+        has_next = incidents["pageInfo"]["hasNextPage"]
         if has_next:
-            cursor = ndata["data"]["incidents"]["pageInfo"]["endCursor"]
+            cursor = incidents["pageInfo"]["endCursor"]
 
     logger.info("Loaded %s active incidents" % len(active))
 
