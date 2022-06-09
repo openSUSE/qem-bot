@@ -42,7 +42,6 @@ class OpenQABot:
         url = QEM_DASHBOARD + api
         try:
             res = requests.put(url, headers=self.token, json=data)
-        # TODO: exceptions handling
         except Exception as e:
             logger.exception(e)
             raise e

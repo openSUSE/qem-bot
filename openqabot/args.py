@@ -73,7 +73,7 @@ def do_sync_aggregate_results(args):
 def get_parser():
 
     parser = ArgumentParser(
-        description="QEM-Dashboard, SMELT and openQA connector", prog="bot-ng"
+        description="QEM-Dashboard, SMELT and openQA connector", prog="qem-bot"
     )
 
     parser.add_argument(
