@@ -8,7 +8,7 @@ from urllib.parse import ParseResult
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
-from . import OPENQA_URL
+from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
 from .types import Data
 
 logger = logging.getLogger("bot.openqa")
@@ -70,4 +70,6 @@ class openQAInterface:
             raise e
 
         # return True as safe option if ret = None
-        return ret[0]["name"] == "Development" if ret else True
+        return (
+            ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True
+        )  # ID of Development Group

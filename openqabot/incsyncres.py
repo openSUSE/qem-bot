@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+import concurrent.futures as CT
 from logging import getLogger
 from typing import Sequence
 
@@ -30,8 +31,12 @@ class IncResultsSync(SyncRes):
 
         full = {}
 
-        for d in incidents:
-            full[d] = self.client.get_jobs(d)
+        with CT.ThreadPoolExecutor() as executor:
+            future_result = {
+                executor.submit(self.client.get_jobs, f): f for f in incidents
+            }
+            for future in CT.as_completed(future_result):
+                full[future_result[future]] = future.result()
 
         results = []
         for key, value in full.items():
