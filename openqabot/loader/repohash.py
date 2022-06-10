@@ -24,13 +24,6 @@ def get_max_revision(
     url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
 
     for repo in repos:
-        # workaround for manager server 4.1
-        if (
-            arch == "aarch64"
-            and repo[0] == "SLE-Module-SUSE-Manager-Server"
-            and repo[1] == "4.1"
-        ):
-            continue
 
         # don't use openSUSE-SLE
         if repo[0] == "openSUSE-SLE":
