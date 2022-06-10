@@ -43,6 +43,17 @@ class Incident:
                 )
             )
         ]
+
+        # remove Manager-Server on aarch64 from channels
+        self.channels = [
+            chan
+            for chan in self.channels
+            if (
+                chan.product != "SLE-Module-SUSE-Manager-Server"
+                and chan.arch != "aarch64"
+            )
+        ]
+
         if not self.channels:
             raise EmptyChannels(self.project)
 
