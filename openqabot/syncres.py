@@ -69,7 +69,7 @@ class SyncRes:
         return True
 
     def post_result(self, result):
-        logger.info(
+        logger.debug(
             "Posting results of %s job %s with status %s"
             % (self.operation, result["job_id"], result["status"])
         )
