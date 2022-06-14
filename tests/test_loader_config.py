@@ -1,0 +1,90 @@
+from pathlib import Path
+import logging
+
+from openqabot.loader.config import *
+from openqabot.types import Data
+
+__root__ = Path(__file__).parent / "fixtures/config"
+
+
+def test_singlearch():
+    result = get_onearch(__root__ / "01_single.yml")
+    assert result == {"package_one", "package_three", "package_two"}
+
+
+def test_singlearch_error():
+    result = get_onearch(__root__ / "single_non_exist.yml")
+    assert result == set()
+
+
+def test_load_metadata_aggregate(caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.loader.config")
+    result = load_metadata(__root__, False, True, set())
+
+    assert "<Aggregate product: SOME15SP3>" == str(result[0])
+
+    messages = [m[-1] for m in caplog.record_tuples]
+    assert "Skipping invalid config" in messages[0]
+    assert "No 'test_issues' in BAD15SP3 config" in messages
+
+
+def test_load_metadata_incdents(caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.loader.config")
+
+    result = load_metadata(__root__, True, False, set())
+
+    assert "<Incidents product: SOME15SP3>" == str(result[0])
+
+    messages = [m[-1] for m in caplog.record_tuples]
+    assert "Skipping invalid config" in messages[0]
+
+
+def test_load_metadata_all(caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.loader.config")
+
+    result = load_metadata(__root__, False, False, set())
+
+    assert len(result) == 2
+    assert "<Aggregate product: SOME15SP3>" == str(result[0])
+    assert "<Incidents product: SOME15SP3>" == str(result[1])
+
+    messages = [m[-1] for m in caplog.record_tuples]
+    assert "Skipping invalid config" in messages[0]
+    assert "No 'test_issues' in BAD15SP3 config" in messages
+
+
+def test_read_products(caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.loader.config")
+
+    result = read_products(__root__)
+
+    assert len(result) == 2
+    assert (
+        Data(
+            incident=0,
+            settings_id=0,
+            flavor="Server-DVD-Updates",
+            arch="x86_64",
+            distri="bar",
+            version="15-SP3",
+            build="",
+            product="SOME15SP3",
+        )
+        in result
+    )
+    assert Data(
+        incident=0,
+        settings_id=0,
+        flavor="Server-DVD-Updates",
+        arch="aarch64",
+        distri="bar",
+        version="15-SP3",
+        build="",
+        product="SOME15SP3",
+    )
+
+    messages = [m[-1] for m in caplog.record_tuples]
+    assert any(x.endswith("invalid format") for x in messages)
+    assert any(x.endswith("empty config") for x in messages)
+    assert any(x.endswith("does not have aggregate") for x in messages)
+    assert "'DISTRI'" in messages
