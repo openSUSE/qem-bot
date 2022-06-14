@@ -24,9 +24,8 @@ def get_max_revision(
     url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
 
     for repo in repos:
-
-        # don't use openSUSE-SLE
-        if repo[0] == "openSUSE-SLE":
+        # openSUSE and SLE incidents have different handling of architecture
+        if repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
         else:
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"

@@ -23,9 +23,13 @@ class Incident:
         self.channels = [
             Repos(p, v, a)
             for p, v, a in (
-                r.split(":")[2:]
-                for r in incident["channels"]
-                if r.startswith("SUSE:Updates") and "openSUSE-SLE" not in r
+                val
+                for val in (
+                    r.split(":")[2:]
+                    for r in incident["channels"]
+                    if r.startswith("SUSE:Updates")
+                )
+                if len(val) == 3
             )
             if p != "SLE-Module-Development-Tools-OBS"
         ]
@@ -35,12 +39,14 @@ class Incident:
         self.channels += [
             Repos(p, v, "x86_64")
             for p, v in (
-                r.split(":")[2:]
-                for r in (
-                    i
-                    for i in incident["channels"]
-                    if i.startswith("SUSE:Updates") and "openSUSE-SLE" in i
+                val
+                for val in (
+                    r.split(":")[2:]
+                    for r in (
+                        i for i in incident["channels"] if i.startswith("SUSE:Updates")
+                    )
                 )
+                if len(val) == 2
             )
         ]
 
