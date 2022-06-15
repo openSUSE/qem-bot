@@ -2,24 +2,27 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from logging import getLogger
+from pprint import pformat
+from typing import Optional
 
 import osc.conf
 import osc.core
 import requests
-from openqabot.errors import NoResultsError
-from pprint import pformat
 
+from openqabot.errors import NoResultsError
+
+from . import OBS_URL
 from . import QEM_DASHBOARD
 from .loader.qem import (
     IncReq,
     JobAggr,
-    get_incidents,
-    get_incident_results,
     get_aggregate_results,
+    get_incident_results,
+    get_incidents,
 )
-from .types.incident import Incident
-from .osclib.comments import CommentAPI
 from .openqa import openQAInterface
+from .osclib.comments import CommentAPI
+from .types.incident import Incident
 
 logger = getLogger("bot.commenter")
 
@@ -30,9 +33,8 @@ class Commenter:
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args.openqa_instance)
         self.incidents = get_incidents(self.token)
-        self.apiurl = "https://api.suse.de"
-        osc.conf.get_config(override_apiurl=self.apiurl)
-        self.commentapi = CommentAPI(self.apiurl)
+        osc.conf.get_config(override_apiurl=OBS_URL)
+        self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
 
@@ -177,7 +179,7 @@ class Commenter:
     def emd(string: str) -> str:
         return string.replace("_", r"\_")
 
-    def __summarize_one_openqa_job(self, job) -> str:
+    def __summarize_one_openqa_job(self, job) -> Optional[str]:
         testurl = osc.core.makeurl(
             self.client.openqa.baseurl, ["tests", str(job["job_id"])]
         )

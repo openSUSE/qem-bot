@@ -6,7 +6,7 @@ import sys
 from .args import get_parser
 
 
-def create_logger():
+def create_logger() -> logging.Logger:
     logger = logging.getLogger("bot")
     handler = logging.StreamHandler()
     formatter = logging.Formatter("%(levelname)-2s: %(message)s")
@@ -16,7 +16,7 @@ def create_logger():
     return logger
 
 
-def main():
+def main() -> None:
     logger = create_logger()
     parser = get_parser()
 
