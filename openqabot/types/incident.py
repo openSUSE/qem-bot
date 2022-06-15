@@ -33,7 +33,6 @@ class Incident:
             )
             if p != "SLE-Module-Development-Tools-OBS"
         ]
-
         # set openSUSE-SLE arch as x86_64 by default
         # for now is simplification as we now test only on x86_64
         self.channels += [
@@ -54,9 +53,9 @@ class Incident:
         self.channels = [
             chan
             for chan in self.channels
-            if (
-                chan.product != "SLE-Module-SUSE-Manager-Server"
-                and chan.arch != "aarch64"
+            if not (
+                chan.product == "SLE-Module-SUSE-Manager-Server"
+                and chan.arch == "aarch64"
             )
         ]
 
