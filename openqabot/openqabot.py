@@ -7,6 +7,7 @@ from os import environ
 import requests
 
 from . import QEM_DASHBOARD
+from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
@@ -64,8 +65,13 @@ class OpenQABot:
             logger.info("Triggering %s products in openqa" % len(post))
             for job in post:
                 logger.info("Triggering %s" % str(job))
-                self.post_qem(job["qem"], job["api"])
-                self.post_openqa(job["openqa"])
+                try:
+                    self.post_openqa(job["openqa"])
+                except PostOpenQAError:
+                    logger.info("POST failed, not updating dashboard")
+                    pass
+                else:
+                    self.post_qem(job["qem"], job["api"])
 
         logger.info("End of bot run")
 

@@ -9,6 +9,7 @@ from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
 from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+from .errors import PostOpenQAError
 from .types import Data
 
 logger = logging.getLogger("bot.openqa")
@@ -36,9 +37,11 @@ class openQAInterface:
         except RequestError as e:
             logger.error("openQA returned %s" % e.args[-1])
             logger.error("Post failed with {}".format(pformat(settings)))
+            raise PostOpenQAError
         except Exception as e:
             logger.exception(e)
             logger.error("Post failed with {}".format(pformat(settings)))
+            raise PostOpenQAError
 
     def get_jobs(self, data: Data):
         logger.info("Getting openQA tests results for %s" % pformat(data))

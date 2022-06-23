@@ -23,8 +23,8 @@ def test_load_metadata_aggregate(caplog):
 
     assert "<Aggregate product: SOME15SP3>" == str(result[0])
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert "Skipping invalid config" in messages[0]
+    messages = sorted([m[-1] for m in caplog.record_tuples])
+    assert "Skipping invalid config" in messages[1]
     assert "No 'test_issues' in BAD15SP3 config" in messages
 
 
@@ -48,8 +48,8 @@ def test_load_metadata_all(caplog):
     assert "<Aggregate product: SOME15SP3>" == str(result[0])
     assert "<Incidents product: SOME15SP3>" == str(result[1])
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert "Skipping invalid config" in messages[0]
+    messages = sorted([m[-1] for m in caplog.record_tuples])
+    assert "Skipping invalid config" in messages[1]
     assert "No 'test_issues' in BAD15SP3 config" in messages
 
 

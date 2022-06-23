@@ -30,3 +30,7 @@ class NoResultsError(Error):
 
 class EmptySettings(Error):
     pass
+
+
+class PostOpenQAError(Error):
+    pass
