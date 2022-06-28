@@ -44,6 +44,13 @@ class SyncRes:
 
         return ret
 
+    def _is_in_devel_group(self, data: Data) -> bool:
+        return (
+            "Devel" in data["group"]
+            or "Test" in data["group"]
+            or self.client.is_devel_group(data["group_id"])
+        )
+
     def filter_jobs(self, data) -> bool:
         """Filter out invalid/development jobs from results"""
 
@@ -51,11 +58,14 @@ class SyncRes:
             return False
 
         if data["clone_id"]:
-            logger.info("Clone job %s" % data["clone_id"])
+            logger.info("Job '%s' already has a clone, ignoring" % data["clone_id"])
             return False
 
-        if "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"]):
-            logger.info("Devel job %s in group %s" % (data["id"], data["group"]))
+        if self._is_in_devel_group(data):
+            logger.info(
+                "Ignoring job '%s' in development group '%s'"
+                % (data["id"], data["group"])
+            )
             return False
 
         return True
