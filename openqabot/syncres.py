@@ -58,10 +58,6 @@ class SyncRes:
             logger.info("Devel job %s in group %s" % (data["id"], data["group"]))
             return False
 
-        if "Timo" in data["group"]:
-            logger.info("Devel job %s in group %s" % (data["id"], data["group"]))
-            return False
-
         if self.client.is_devel_group(data["group_id"]):
             logger.info("Devel job %s in group %s" % (data["id"], data["group"]))
             return False
