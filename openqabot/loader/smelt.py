@@ -4,11 +4,11 @@ import concurrent.futures as CT
 from logging import getLogger
 from typing import Any, List, Set
 
-import requests
 import urllib3
 
 from .. import SMELT
 from ..utils import walk
+from ..requests import requests
 
 logger = getLogger("bot.loader.smelt")
 

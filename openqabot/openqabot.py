@@ -3,14 +3,15 @@
 from argparse import Namespace
 from logging import getLogger
 from os import environ
+import requests as req
 
-import requests
 
 from . import QEM_DASHBOARD
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
+from .requests import requests
 
 logger = getLogger("bot.openqabot")
 
@@ -42,7 +43,7 @@ class OpenQABot:
 
         url = QEM_DASHBOARD + api
         try:
-            res = requests.put(url, headers=self.token, json=data)
+            res = req.put(url, headers=self.token, json=data)
         except Exception as e:
             logger.exception(e)
             raise e

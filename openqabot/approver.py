@@ -7,7 +7,6 @@ from typing import List
 
 import osc.conf
 import osc.core
-import requests
 from urllib.error import HTTPError
 from openqabot.errors import NoResultsError
 
@@ -19,6 +18,7 @@ from .loader.qem import (
     get_incident_settings,
     get_aggregate_settings,
 )
+from .requests import requests
 
 logger = getLogger("bot.approver")
 

@@ -5,10 +5,10 @@ from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
 from datetime import datetime
-
-import requests
+from requests import ConnectionError
 
 from ..errors import NoRepoFoundError
+from ..requests import requests
 
 logger = getLogger("bot.loader.repohash")
 
@@ -35,7 +35,7 @@ def get_max_revision(
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
             ET.ParseError,
-            requests.ConnectionError,
+            ConnectionError,
         ):  # for now, use logger.exception to determine possible exceptions in this code :D
             logger.info("%s: %s not found -- skip incident" % (datetime.now(), url))
             raise NoRepoFoundError

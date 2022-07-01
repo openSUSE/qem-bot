@@ -4,8 +4,9 @@ import bs4
 import logging
 import re
 from functools import lru_cache
+from requests.exceptions import ConnectionError, Timeout
 
-import requests
+from .requests import requests
 
 logger = logging.getLogger("bot.openqabot.pc_helper")
 
@@ -31,8 +32,8 @@ def fetch_matching_link(url, regex):
         req = requests.get(url + "/?C=M;O=A")
         text = req.text
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
     ) as err:
         logger.error("error fetching '%s': %s" % (url, err))
@@ -73,8 +74,8 @@ def apply_publiccloud_regex(settings):
         )
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:
@@ -92,8 +93,8 @@ def apply_pc_tools_image(settings):
             del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:
@@ -144,8 +145,8 @@ def apply_publiccloud_pint_image(settings):
             del settings["PUBLIC_CLOUD_PINT_FIELD"]
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:

@@ -71,7 +71,7 @@ def test_clone_dry(get_a_i, caplog):
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
         "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
         "build='123', product='')",
-        "Clone job 1234",
+        "Job '1234' already has a clone, ignoring",
         "End of bot run",
     ] == messages
 
@@ -187,7 +187,7 @@ def test_devel_fast_dry(get_a_i, caplog):
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
         "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
         "build='123', product='')",
-        "Devel job 1234 in group Devel FakeGroup",
+        "Ignoring job '1234' in development group 'Devel FakeGroup'",
         "End of bot run",
     ] == messages
 
@@ -252,7 +252,7 @@ def test_devel_dry(get_a_i, caplog):
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
         "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
         "build='123', product='')",
-        "Devel job 1234 in group FakeGroup",
+        "Ignoring job '1234' in development group 'FakeGroup'",
         "End of bot run",
     ] == messages
 
