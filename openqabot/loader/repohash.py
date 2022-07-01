@@ -5,7 +5,7 @@ from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
 from datetime import datetime
-from requests import ConnectionError
+from requests import ConnectionError, HTTPError
 
 from ..errors import NoRepoFoundError
 from ..requests import requests
@@ -36,6 +36,7 @@ def get_max_revision(
         except (
             ET.ParseError,
             ConnectionError,
+            HTTPError,
         ):  # for now, use logger.exception to determine possible exceptions in this code :D
             logger.info("%s: %s not found -- skip incident" % (datetime.now(), url))
             raise NoRepoFoundError

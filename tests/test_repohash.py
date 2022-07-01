@@ -5,7 +5,7 @@ import openqabot.loader.repohash
 import pytest
 import responses
 from openqabot.errors import NoRepoFoundError
-from requests import ConnectionError
+from requests import ConnectionError, HTTPError
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 
@@ -98,6 +98,36 @@ def test_get_max_revison_connectionerror(caplog, mock_datetime):
         responses.GET,
         url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
         body=ConnectionError("Failed"),
+    )
+
+    with pytest.raises(NoRepoFoundError):
+        rp.get_max_revision(repos, arch, project)
+
+    assert (
+        caplog.records[0].msg
+        == "FakeDateTime: http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+    )
+
+
+@responses.activate
+def test_get_max_revison_httperror(caplog, mock_datetime):
+
+    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body=HTTPError("Failed"),
     )
 
     with pytest.raises(NoRepoFoundError):
