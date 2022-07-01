@@ -4,11 +4,11 @@ import concurrent.futures as CT
 from logging import getLogger
 from typing import Any, List, Set
 
-import requests
 import urllib3
 
 from .. import SMELT
 from ..utils import walk
+from ..requests import requests
 
 logger = getLogger("bot.loader.smelt")
 
@@ -27,6 +27,14 @@ repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
 status { name } } } } } } } packages { edges { node { name } } } } } } }'
 
 
+def get_json(query: dict, host: str = SMELT) -> dict:
+    try:
+        return requests.get(SMELT, params={"query": query}, verify=False).json()
+    except Exception as e:
+        logger.exception(e)
+        raise e
+
+
 def get_active_incidents() -> Set[int]:
     """Get active incidents from SMELT GraphQL api"""
 
@@ -37,13 +45,7 @@ def get_active_incidents() -> Set[int]:
 
     while has_next:
         query = ACTIVE_NEXT % {"cursor": cursor} if cursor else ACTIVE_FST
-
-        try:
-            ndata = requests.get(SMELT, params={"query": query}, verify=False).json()
-        except Exception as e:
-            logger.exception(e)
-            raise e
-
+        ndata = get_json(query)
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
         has_next = incidents["pageInfo"]["hasNextPage"]
@@ -59,12 +61,7 @@ def get_incident(incident: int):
     query = INCIDENT % {"incident": incident}
 
     logger.info("Getting info about incident %s from SMELT" % incident)
-
-    try:
-        inc_result = requests.get(SMELT, params={"query": query}, verify=False).json()
-    except Exception as e:
-        logger.exception(e)
-        raise e
+    inc_result = get_json(query)
     try:
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
     except Exception as e:

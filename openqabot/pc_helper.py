@@ -4,21 +4,11 @@ import bs4
 import logging
 import re
 from functools import lru_cache
+from requests.exceptions import ConnectionError, Timeout
 
-import requests
+from .requests import requests
 
 logger = logging.getLogger("bot.openqabot.pc_helper")
-
-
-def request_get(url):
-    """
-    Do a HTTP get request. Return the request object for further processing
-    Raises a ValueError when the request fails
-    """
-    req = requests.get(url)
-    if req.status_code != 200:
-        raise ValueError("http status code %d" % (req.status_code))
-    return req
 
 
 def fetch_matching_link(url, regex):
@@ -31,8 +21,8 @@ def fetch_matching_link(url, regex):
         req = requests.get(url + "/?C=M;O=A")
         text = req.text
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
     ) as err:
         logger.error("error fetching '%s': %s" % (url, err))
@@ -58,7 +48,7 @@ def get_latest_tools_image(query):
     # value for <BUILD NUM>
 
     ## Get the first not-failing item
-    build_results = request_get(query).json()["build_results"]
+    build_results = requests.get(query).json()["build_results"]
     for build in build_results:
         if build["failed"] == 0:
             return "publiccloud_tools_{}.qcow2".format(build["build"])
@@ -73,8 +63,8 @@ def apply_publiccloud_regex(settings):
         )
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:
@@ -92,8 +82,8 @@ def apply_pc_tools_image(settings):
             del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:
@@ -104,7 +94,7 @@ def apply_pc_tools_image(settings):
 # Perform a pint query. Sucessive queries are cached
 @lru_cache(maxsize=32)
 def pint_query(query):
-    return request_get(query).json()
+    return requests.get(query).json()
 
 
 # Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
@@ -144,8 +134,8 @@ def apply_publiccloud_pint_image(settings):
             del settings["PUBLIC_CLOUD_PINT_FIELD"]
         return settings
     except (
-        requests.exceptions.ConnectionError,
-        requests.exceptions.Timeout,
+        ConnectionError,
+        Timeout,
         ValueError,
         re.error,
     ) as e:

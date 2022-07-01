@@ -6,8 +6,6 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional
 
-import requests
-
 from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
 from ..errors import NoTestIssues, SameBuildExists
@@ -19,6 +17,8 @@ from ..pc_helper import (
 )
 from .baseconf import BaseConf
 from .incident import Incident
+from ..requests import requests
+
 
 logger = getLogger("bot.types.aggregate")
 

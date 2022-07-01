@@ -3,7 +3,6 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import requests
 
 from . import ArchVer, ProdVer, Repos
 from .. import QEM_DASHBOARD
@@ -14,6 +13,7 @@ from ..pc_helper import (
 )
 from .baseconf import BaseConf
 from .incident import Incident
+from ..requests import requests
 
 logger = getLogger("bot.types.incidents")
 
