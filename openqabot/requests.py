@@ -12,7 +12,8 @@ class requests:
             lambda response, *args, **kwargs: response.raise_for_status()
         )
         s.hooks["response"] = [assert_status_hook]
-        a = HTTPAdapter(max_retries=Retry(total=3, backoff_factor=5))
+        # retry more often for unavailable other services, e.g. smelt, see https://progress.opensuse.org/issues/113087
+        a = HTTPAdapter(max_retries=Retry(total=20, backoff_factor=5))
         s.mount("http://", a)
         s.mount("https://", a)
         return s.get(url, **kwargs)
