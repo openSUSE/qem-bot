@@ -116,6 +116,14 @@ openqa-cli --host https://openqa.suse.de api -X post isos ARCH=s390x BASE_TEST_I
 
 Apply caution to keep all the other parameters in place.
 
+## Requirements
+
+In openSUSE you can install the requirements by running:
+
+```
+sudo zypper in python3-beautifulsoup4 python3-openqa_client python3-requests python3-ruamel.yaml
+```
+
 ## Contribute
 
 This project lives in https://github.com/openSUSE/qem-bot
