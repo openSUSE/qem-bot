@@ -124,6 +124,8 @@ class Incidents(BaseConf):
 
                     if inc.azure:
                         full_post["openqa"]["AZURE"] = "1"
+                        if flavor == "Server-DVD-Incidents-Kernel":
+                            full_post["openqa"]["QEMUVGA"] = "virtio"
 
                     full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
 
