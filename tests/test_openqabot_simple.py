@@ -97,7 +97,7 @@ def test_passed(mock_runtime, mock_openqa_passed, caplog):
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 6
+    assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
     assert "Triggering 1 products in openqa" in messages
 

@@ -44,6 +44,7 @@ class OpenQABot:
         url = QEM_DASHBOARD + api
         try:
             res = req.put(url, headers=self.token, json=data)
+            logger.info("Put to dashboard result %s" % res.status_code)
         except Exception as e:
             logger.exception(e)
             raise e
