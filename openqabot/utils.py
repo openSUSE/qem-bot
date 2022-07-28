@@ -2,6 +2,12 @@
 # SPDX-License-Identifier: MIT
 from copy import deepcopy
 
+import requests
+from requests import Session
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from typing import Optional
+
 
 def walk(inc):
     if isinstance(inc, list):
@@ -41,3 +47,19 @@ def normalize_results(result: str) -> str:
         return "failed"
 
     return "failed"
+
+
+def __retry(retries: Optional[int]) -> Session:
+
+    adapter = HTTPAdapter(max_retries=Retry(retries, backoff_factor=5))
+    http = requests.Session()
+    http.mount("https://", adapter)
+    http.mount("http://", adapter)
+
+    return http
+
+
+no_retry = __retry(None)
+retry3 = __retry(3)
+retry5 = __retry(5)
+retry20 = __retry(20)

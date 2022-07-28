@@ -15,9 +15,9 @@ from ..pc_helper import (
     apply_publiccloud_pint_image,
     apply_publiccloud_regex,
 )
+from ..utils import retry3 as requests
 from .baseconf import BaseConf
 from .incident import Incident
-from ..requests import requests
 
 
 logger = getLogger("bot.types.aggregate")

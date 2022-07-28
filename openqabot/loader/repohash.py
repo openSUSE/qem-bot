@@ -1,14 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from datetime import datetime
 from hashlib import md5
 from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
-from datetime import datetime
+
 from requests import ConnectionError, HTTPError
 
 from ..errors import NoRepoFoundError
-from ..requests import requests
+from ..utils import retry5 as requests
 
 logger = getLogger("bot.loader.repohash")
 
