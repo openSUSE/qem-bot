@@ -3,15 +3,13 @@
 from argparse import Namespace
 from logging import getLogger
 from os import environ
-import requests as req
-
 
 from . import QEM_DASHBOARD
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
-from .requests import requests
+from .utils import retry3 as requests
 
 logger = getLogger("bot.openqabot")
 
@@ -43,7 +41,7 @@ class OpenQABot:
 
         url = QEM_DASHBOARD + api
         try:
-            res = req.put(url, headers=self.token, json=data)
+            res = requests.put(url, headers=self.token, json=data)
             logger.info("Put to dashboard result %s" % res.status_code)
         except Exception as e:
             logger.exception(e)

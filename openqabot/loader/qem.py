@@ -3,8 +3,9 @@
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-import requests as req
 from typing import Dict, List, NamedTuple, Sequence
+
+import requests as req
 
 from .. import QEM_DASHBOARD
 from ..errors import (
@@ -14,9 +15,9 @@ from ..errors import (
     NoRepoFoundError,
     NoResultsError,
 )
-from ..requests import requests
 from ..types import Data
 from ..types.incident import Incident
+from ..utils import retry5 as requests
 
 logger = getLogger("bot.loader.qem")
 
@@ -219,8 +220,8 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
 def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
 
     retry = kwargs.get("retry", 0)
-
     while retry >= 0:
+
         retry -= 1
         try:
             ret = req.patch(QEM_DASHBOARD + "api/incidents", headers=token, json=data)
@@ -242,7 +243,7 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
 
 def post_job(token: Dict[str, str], data) -> None:
     try:
-        result = req.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
+        result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
         if result.status_code != 200:
             logger.error(result.text)
 

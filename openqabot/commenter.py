@@ -9,20 +9,11 @@ import osc.conf
 import osc.core
 
 from openqabot.errors import NoResultsError
-import openqabot.requests
 
 from . import OBS_URL
-from . import QEM_DASHBOARD
-from .loader.qem import (
-    IncReq,
-    JobAggr,
-    get_aggregate_results,
-    get_incident_results,
-    get_incidents,
-)
+from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
-from .requests import requests
 from .types.incident import Incident
 
 logger = getLogger("bot.commenter")

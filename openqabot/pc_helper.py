@@ -6,7 +6,7 @@ import re
 
 import bs4
 
-from .requests import requests
+from .utils import retry5 as requests
 
 logger = logging.getLogger("bot.openqabot.pc_helper")
 

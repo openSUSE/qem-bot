@@ -5,13 +5,13 @@ from logging import getLogger
 from typing import Any, List, Set
 
 import urllib3
+import urllib3.exceptions
 
 from .. import SMELT
 from ..utils import walk
-from ..requests import requests
+from ..utils import retry20 as requests
 
 logger = getLogger("bot.loader.smelt")
-
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -27,9 +27,9 @@ repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
 status { name } } } } } } } packages { edges { node { name } } } } } } }'
 
 
-def get_json(query: dict, host: str = SMELT) -> dict:
+def get_json(query: str, host: str = SMELT) -> dict:
     try:
-        return requests.get(SMELT, params={"query": query}, verify=False).json()
+        return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
         logger.exception(e)
         raise e

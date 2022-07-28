@@ -4,21 +4,22 @@ from argparse import Namespace
 from functools import lru_cache
 from logging import getLogger
 from typing import List
+from urllib.error import HTTPError
 
 import osc.conf
 import osc.core
-from urllib.error import HTTPError
+
 from openqabot.errors import NoResultsError
 
-from . import QEM_DASHBOARD, OBS_GROUP, OBS_MAINT_PRJ, OBS_URL
+from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD
 from .loader.qem import (
     IncReq,
     JobAggr,
-    get_incidents_approver,
-    get_incident_settings,
     get_aggregate_settings,
+    get_incident_settings,
+    get_incidents_approver,
 )
-from .requests import requests
+from .utils import retry3 as requests
 
 logger = getLogger("bot.approver")
 
