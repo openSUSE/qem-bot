@@ -44,6 +44,17 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
       -r RETRY, --retry RETRY
                             Number of retries
 
+## Expected workflow
+
+* For every incident in SMELT an entry should show up in qem-dashboard
+  (`smelt-sync`)
+* For every incident in qem-dashboard incident and aggregate tests are
+  triggered (`incidents-run+updates-run`)
+* Results from incident + aggregate tests show up on the dashboard
+  (`inc-sync-results+aggr-sync-results`)
+* If there is a non-zero amount of related openQA jobs *and* none of them
+  failed then qem-bot approves in IBS (`inc-approve`)
+
 ## Misc
 
 **Token** is required but if isn't used https://openqa.suse.de or is invoked with
