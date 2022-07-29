@@ -69,6 +69,7 @@ def f_osconf(monkeypatch):
 
 
 @responses.activate
+@pytest.mark.xfail(reason="Bug in responses")
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 def test_no_jobs(fake_qem, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
