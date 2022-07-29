@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 from copy import deepcopy
 
-import requests
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -51,8 +50,14 @@ def normalize_results(result: str) -> str:
 
 def __retry(retries: Optional[int]) -> Session:
 
-    adapter = HTTPAdapter(max_retries=Retry(retries, backoff_factor=5))
-    http = requests.Session()
+    adapter = HTTPAdapter(
+        max_retries=Retry(
+            retries,
+            backoff_factor=5,
+            status_forcelist=frozenset({404, 403, 413, 429, 503}),
+        )
+    )
+    http = Session()
     http.mount("https://", adapter)
     http.mount("http://", adapter)
 

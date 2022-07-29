@@ -1,6 +1,7 @@
 import pytest
-
-from openqabot.utils import walk, normalize_results
+import responses
+from responses import registries
+from openqabot.utils import walk, normalize_results, retry3
 
 
 def test_normalize_results():
@@ -76,3 +77,14 @@ def test_normalize_results():
 def test_walk(data, result):
     ret = walk(data)
     assert result == ret
+
+
+@responses.activate(registry=registries.OrderedRegistry)
+def test_retry3():
+    rsp1 = responses.add(responses.GET, "http://host.some", status=503)
+    rsp2 = responses.add(responses.GET, "http://host.some", status=503)
+    rsp3 = responses.add(responses.GET, "http://host.some", status=200)
+
+    req = retry3.get("http://host.some")
+    assert req.status_code == 200
+    assert rsp3.call_count == 1
