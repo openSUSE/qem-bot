@@ -9,7 +9,7 @@ import urllib3.exceptions
 
 from .. import SMELT
 from ..utils import walk
-from ..utils import retry20 as requests
+from ..utils import retry10 as requests
 
 logger = getLogger("bot.loader.smelt")
 
