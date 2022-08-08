@@ -7,7 +7,7 @@ from logging import getLogger
 from typing import Any, Dict, List, Optional
 
 from . import ProdVer, Repos
-from .. import QEM_DASHBOARD
+from .. import DOWNLOAD_BASE, QEM_DASHBOARD
 from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import (
@@ -81,6 +81,7 @@ class Aggregate(BaseConf):
                 full_post["openqa"]["__CI_JOB_URL"] = ci_url
 
             test_incidents = defaultdict(list)
+            test_repos = defaultdict(list)
 
             # only testing queue and not livepatch
             valid_incidents = [
@@ -90,6 +91,18 @@ class Aggregate(BaseConf):
                 for inc in valid_incidents:
                     if Repos(template.product, template.version, arch) in inc.channels:
                         test_incidents[issue].append(inc)
+
+            for issue, incs in test_incidents.items():
+                tmpl = issue.replace("ISSUES", "REPOS")
+                for inc in incs:
+                    if self.test_issues[issue].product.startswith("openSUSE"):
+                        test_repos[tmpl].append(
+                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
+                        )
+                    else:
+                        test_repos[tmpl].append(
+                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{arch}/"
+                        )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
                 sorted(
@@ -165,6 +178,8 @@ class Aggregate(BaseConf):
 
             for template, issues in test_incidents.items():
                 full_post["openqa"][template] = ",".join(str(x) for x in issues)
+            for template, issues in test_repos.items():
+                full_post["openqa"][template] = ",".join(issues)
             for issues in test_incidents.values():
                 full_post["qem"]["incidents"] += issues
 
