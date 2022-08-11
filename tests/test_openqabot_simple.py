@@ -99,7 +99,7 @@ def test_passed(mock_runtime, mock_openqa_passed, caplog):
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
-    assert "Triggering 1 products in openqa" in messages
+    assert "Triggering 1 products in openQA" in messages
 
 
 @responses.activate
@@ -122,7 +122,7 @@ def test_dry(mock_runtime, mock_openqa_passed, caplog):
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 6
-    assert "Would trigger 1 products in openqa"
+    assert "Would trigger 1 products in openQA"
 
 
 @responses.activate
@@ -146,9 +146,9 @@ def test_passed_non_osd(mock_runtime, mock_openqa_passed, caplog):
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
-    assert "Triggering 1 products in openqa" in messages
+    assert "Triggering 1 products in openQA" in messages
     assert (
-        "Another instance of openqa : {'fake': 'result'} not posted to dashboard"
+        "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard"
         in messages
     )
 
@@ -174,5 +174,5 @@ def test_passed_post_osd_failed(mock_runtime, mock_openqa_exception, caplog):
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
-    assert "Triggering 1 products in openqa" in messages
+    assert "Triggering 1 products in openQA" in messages
     assert "POST failed, not updating dashboard" in messages

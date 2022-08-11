@@ -101,7 +101,7 @@ def get_parser():
         "--openqa-instance",
         type=urlparse,
         default=urlparse("https://openqa.suse.de"),
-        help="OpenQA instance to use\n Other instances than OSD do not update dashboard database",
+        help="The openQA instance to use\n Other instances than OSD do not update dashboard database",
     )
 
     parser.add_argument(
@@ -117,7 +117,7 @@ def get_parser():
     commands = parser.add_subparsers()
 
     cmdfull = commands.add_parser(
-        "full-run", help="Full schedule for Maintenance Incidents in openqa"
+        "full-run", help="Full schedule for Maintenance Incidents in openQA"
     )
     cmdfull.add_argument(
         "-i",
@@ -129,7 +129,7 @@ def get_parser():
 
     cmdinc = commands.add_parser(
         "incidents-run",
-        help="Incidents only schedule for Maintenance Incidents in openqa",
+        help="Incidents only schedule for Maintenance Incidents in openQA",
     )
     cmdinc.add_argument(
         "-i",
@@ -140,7 +140,7 @@ def get_parser():
     cmdinc.set_defaults(func=do_incident_schedule)
 
     cmdupd = commands.add_parser(
-        "updates-run", help="updates only schedule for Maintenance Incidents in openqa"
+        "updates-run", help="updates only schedule for Maintenance Incidents in openQA"
     )
     cmdupd.add_argument(
         "-i",
