@@ -93,7 +93,7 @@ def test_passed(mock_runtime, mock_openqa_passed, caplog):
     )
     bot = OpenQABot(args)
 
-    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar")
+    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar", json={"id": 234})
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]

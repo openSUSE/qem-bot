@@ -42,7 +42,10 @@ class OpenQABot:
         url = QEM_DASHBOARD + api
         try:
             res = requests.put(url, headers=self.token, json=data)
-            logger.info("Result of PUT operation to dashboard: %s" % res)
+            logger.info(
+                "Put to dashboard result %s, database id: %s"
+                % (res.status_code, res.json().get("id", "No id?"))
+            )
         except Exception as e:
             logger.exception(e)
             raise e
