@@ -35,7 +35,8 @@ class OpenQABot:
     def post_qem(self, data, api) -> None:
         if not self.openqa:
             logger.warning(
-                "Another instance of openqa : %s not posted to dashboard" % data
+                "No valid openQA configuration specified: '%s' not posted to dashboard"
+                % data
             )
             return
 
@@ -60,12 +61,12 @@ class OpenQABot:
             post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
         if self.dry:
-            logger.info("Would trigger %s products in openqa" % len(post))
+            logger.info("Would trigger %s products in openQA" % len(post))
             for job in post:
                 logger.info(job)
 
         else:
-            logger.info("Triggering %s products in openqa" % len(post))
+            logger.info("Triggering %s products in openQA" % len(post))
             for job in post:
                 logger.info("Triggering %s" % str(job))
                 try:
