@@ -84,8 +84,7 @@ class Aggregate(BaseConf):
             test_repos = defaultdict(list)
 
             # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
-            if "TEST_ISSUES_ARCH" in self.settings:
-                arch = self.settings["TEST_ISSUES_ARCH"]
+            issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
             # only testing queue and not livepatch
             valid_incidents = [
@@ -93,7 +92,10 @@ class Aggregate(BaseConf):
             ]
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
-                    if Repos(template.product, template.version, arch) in inc.channels:
+                    if (
+                        Repos(template.product, template.version, issues_arch)
+                        in inc.channels
+                    ):
                         test_incidents[issue].append(inc)
 
             for issue, incs in test_incidents.items():
@@ -105,7 +107,7 @@ class Aggregate(BaseConf):
                         )
                     else:
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{arch}/"
+                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
