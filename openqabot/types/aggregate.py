@@ -83,6 +83,10 @@ class Aggregate(BaseConf):
             test_incidents = defaultdict(list)
             test_repos = defaultdict(list)
 
+            # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
+            if "TEST_ISSUES_ARCH" in self.settings:
+                arch = self.settings["TEST_ISSUES_ARCH"]
+
             # only testing queue and not livepatch
             valid_incidents = [
                 i for i in incidents if not any((i.livepatch, i.staging))
