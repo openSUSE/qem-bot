@@ -67,15 +67,14 @@ class Approver:
             # everything is green --> approve inc
             incidents_to_approve.append(inc)
 
+        logger.info("Incidents to approve:")
+        for inc in incidents_to_approve:
+            logger.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
+
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
-
             for inc in incidents_to_approve:
                 overall_result &= self.osc_approve(inc)
-        else:
-            logger.info("Incidents to approve:")
-            for inc in incidents_to_approve:
-                logger.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
 
         logger.info("End of bot run")
 

@@ -185,6 +185,11 @@ def test_403_response(fake_qem, f_osconf, caplog, monkeypatch):
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
+        "Incidents to approve:",
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:2:200",
+        "SUSE:Maintenance:3:300",
+        "SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Received 'Not allowed'. Request 100 likely already approved, ignoring",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -219,6 +224,11 @@ def test_404_response(fake_qem, f_osconf, caplog, monkeypatch):
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
+        "Incidents to approve:",
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:2:200",
+        "SUSE:Maintenance:3:300",
+        "SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Received 'Not allowed'. Request 100 removed or problem on OBS side, ignoring",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -253,6 +263,11 @@ def test_500_response(fake_qem, f_osconf, caplog, monkeypatch):
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
+        "Incidents to approve:",
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:2:200",
+        "SUSE:Maintenance:3:300",
+        "SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Recived error 500, reason: 'Not allowed' for Request 100 - problem on OBS side",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -287,6 +302,11 @@ def test_osc_unknown_exception(fake_qem, f_osconf, caplog, monkeypatch):
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
+        "Incidents to approve:",
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:2:200",
+        "SUSE:Maintenance:3:300",
+        "SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Fake OBS exception",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -321,6 +341,11 @@ def test_osc_all_pass(fake_qem, f_osconf, caplog, monkeypatch):
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
+        "Incidents to approve:",
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:2:200",
+        "SUSE:Maintenance:3:300",
+        "SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Accepting review for SUSE:Maintenance:2:200",
         "Accepting review for SUSE:Maintenance:3:300",
