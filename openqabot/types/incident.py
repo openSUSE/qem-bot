@@ -69,7 +69,6 @@ class Incident:
         self.emu = incident["emu"]
         self.revisions = self._rev(self.channels, self.project)
         self.livepatch: bool = self._is_livepatch(self.packages)
-        self.azure: bool = self._is_azure(self.packages)
 
     @staticmethod
     def _rev(channels: List[Repos], project: str) -> Dict[ArchVer, int]:
@@ -131,12 +130,4 @@ class Incident:
             for req in requires:
                 if package.startswith(req) and package != "kernel-livepatch-tools":
                     return True
-        return False
-
-    @staticmethod
-    def _is_azure(packages) -> bool:
-        """return True if package is kernel for MS AZURE"""
-        for package in packages:
-            if package.startswith("kernel-azure"):
-                return True
         return False
