@@ -47,7 +47,6 @@ def mock_ex(monkeypatch):
 def test_inc_normal(mock_good):
     inc = Incident(test_data)
 
-    assert not inc.azure
     assert not inc.livepatch
     assert not inc.emu
     assert not inc.staging
@@ -70,15 +69,6 @@ def test_inc_normal_livepatch(mock_good):
     inc = Incident(modified_data)
 
     assert inc.livepatch
-
-
-def test_inc_normal_azure(mock_good):
-    modified_data = deepcopy(test_data)
-    modified_data["packages"] = ["kernel-azure"]
-    inc = Incident(modified_data)
-
-    assert inc.azure
-    assert not inc.livepatch
 
 
 def test_inc_norepo(mock_ex):
