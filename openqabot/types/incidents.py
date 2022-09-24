@@ -166,7 +166,7 @@ class Incidents(BaseConf):
                         )
                         continue
 
-                    if "Kernel" in flavor and not inc.livepatch and not inc.azure:
+                    if "Kernel" in flavor and not inc.livepatch:
                         if set(issue_dict.keys()).isdisjoint(
                             set(
                                 [

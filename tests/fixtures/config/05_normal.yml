@@ -36,6 +36,6 @@ incidents:
       packages:
         - kernel-source
         - kernel-livepatch
-        - kernel-azure  
+        - kernel-azure
 empty_key:
   - empty
