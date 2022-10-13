@@ -62,6 +62,17 @@ class openQAInterface:
             raise e
         return ret
 
+    @lru_cache(maxsize=512)
+    def get_job_comments(self, job_id: int):
+        ret = []
+        try:
+            ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id)
+            ret = map(lambda c: {"text": c.get("text", "")}, ret)
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        return ret
+
     @lru_cache(maxsize=256)
     def is_devel_group(self, groupid: int) -> bool:
         ret = None
