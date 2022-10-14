@@ -34,6 +34,36 @@ def fake_openqa_comment_api(func):
     return wrapper
 
 
+def fake_responses_for_unblocking_incidents_via_openqa_comments(incident: int):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            responses.add(
+                responses.GET,
+                "http://dashboard.qam.suse.de/api/jobs/update/20005",
+                json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
+            )
+            responses.add(
+                responses.GET,
+                re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
+                json=[{"status": "passed"}, {"status": "passed"}],
+            )
+            responses.add(
+                responses.GET,
+                url="http://instance.qa/api/v1/jobs/20005/comments",
+                json=[{"text": "@review:acceptable_for:incident_%s:foo" % incident}],
+            )
+            responses.add(
+                responses.GET,
+                re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
+                json=[],
+            )
+
+        return wrapper
+
+    return decorator
+
+
 @pytest.fixture(scope="function")
 def fake_qem(monkeypatch, request):
     def f_inc_approver(*args):
@@ -439,31 +469,21 @@ def test_one_aggr_failed(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@fake_responses_for_unblocking_incidents_via_openqa_comments(incident=2)
 def test_approval_unblocked_via_openqa_comment(fake_qem, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-
-    responses.add(
-        responses.GET,
-        "http://dashboard.qam.suse.de/api/jobs/update/20005",
-        json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
-    )
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    responses.add(
-        responses.GET,
-        url="http://instance.qa/api/v1/jobs/20005/comments",
-        json=[{"text": "@review:acceptable_for:incident_2:foo"}],
-    )
-    responses.add(
-        responses.GET,
-        re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
-        json=[],
-    )
-
     approver = Approver(_namespace(True, "123", False, openqa_instance_url))
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@fake_responses_for_unblocking_incidents_via_openqa_comments(incident=22)
+def test_approval_still_blocked_if_openqa_comment_not_relevant(fake_qem, caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+    approver = Approver(_namespace(True, "123", False, openqa_instance_url))
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "SUSE:Maintenance:2:200" not in messages
