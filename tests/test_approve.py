@@ -28,8 +28,10 @@ def fake_openqa_comment_api(func):
         responses.add(
             responses.GET,
             re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
-            json=[],
+            json={"error": "job not found"},
+            status=404,
         )
+        return func(*args, **kwargs)
 
     return wrapper
 
@@ -53,11 +55,7 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(incident: int):
                 url="http://instance.qa/api/v1/jobs/20005/comments",
                 json=[{"text": "@review:acceptable_for:incident_%s:foo" % incident}],
             )
-            responses.add(
-                responses.GET,
-                re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
-                json=[],
-            )
+            return func(*args, **kwargs)
 
         return wrapper
 
@@ -421,10 +419,11 @@ def test_one_incident_failed(fake_qem, caplog):
     args = _namespace(True, "123", False, openqa_instance_url)
 
     approver = Approver(args)
+    approver.client.retries = 0
 
     assert approver() == 0
 
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has failed job in incidents" in messages
     assert "SUSE:Maintenance:2:200" in messages
@@ -454,10 +453,11 @@ def test_one_aggr_failed(fake_qem, caplog):
     args = _namespace(True, "123", False, openqa_instance_url)
 
     approver = Approver(args)
+    approver.client.retries = 0
 
     assert approver() == 0
 
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 2 has failed job in aggregates" in messages
     assert "SUSE:Maintenance:1:100" in messages
@@ -470,9 +470,11 @@ def test_one_aggr_failed(fake_qem, caplog):
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 @fake_responses_for_unblocking_incidents_via_openqa_comments(incident=2)
+@fake_openqa_comment_api
 def test_approval_unblocked_via_openqa_comment(fake_qem, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     approver = Approver(_namespace(True, "123", False, openqa_instance_url))
+    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
@@ -481,9 +483,11 @@ def test_approval_unblocked_via_openqa_comment(fake_qem, caplog):
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 @fake_responses_for_unblocking_incidents_via_openqa_comments(incident=22)
+@fake_openqa_comment_api
 def test_approval_still_blocked_if_openqa_comment_not_relevant(fake_qem, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     approver = Approver(_namespace(True, "123", False, openqa_instance_url))
+    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" not in messages

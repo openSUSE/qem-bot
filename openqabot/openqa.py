@@ -19,6 +19,7 @@ class openQAInterface:
     def __init__(self, instance: ParseResult) -> None:
         self.url = instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
+        self.retries = 3
 
     def __bool__(self) -> bool:
         """True only for the configured openQA instance, used for decide to update dashboard database or not"""
@@ -33,7 +34,9 @@ class openQAInterface:
             )
         )
         try:
-            self.openqa.openqa_request("POST", "isos", data=settings, retries=3)
+            self.openqa.openqa_request(
+                "POST", "isos", data=settings, retries=self.retries
+            )
         except RequestError as e:
             logger.error("openQA returned %s" % e.args[-1])
             logger.error("Post failed with {}".format(pformat(settings)))
@@ -66,7 +69,9 @@ class openQAInterface:
     def get_job_comments(self, job_id: int):
         ret = []
         try:
-            ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id)
+            ret = self.openqa.openqa_request(
+                "GET", "jobs/%s/comments" % job_id, retries=self.retries
+            )
             ret = map(lambda c: {"text": c.get("text", "")}, ret)
         except Exception as e:
             logger.exception(e)
