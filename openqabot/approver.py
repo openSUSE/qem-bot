@@ -10,6 +10,7 @@ import osc.conf
 import osc.core
 import re
 
+from openqa_client.exceptions import RequestError
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
 
@@ -85,9 +86,12 @@ class Approver:
 
     def is_job_marked_acceptable_for_incident(self, job: JobAggr, inc: int) -> bool:
         regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
-        for comment in self.client.get_job_comments(job.job_id):
-            if regex.match(comment["text"]):
-                return True
+        try:
+            for comment in self.client.get_job_comments(job.job_id):
+                if regex.match(comment["text"]):
+                    return True
+        except RequestError:
+            pass
         return False
 
     @lru_cache(maxsize=128)
