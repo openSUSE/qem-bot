@@ -30,6 +30,7 @@ def fake_openqa_comment_api(func):
             re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
             json=[],
         )
+        return func(*args, **kwargs)
 
     return wrapper
 
@@ -58,6 +59,7 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(incident: int):
                 re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
                 json=[],
             )
+            return func(*args, **kwargs)
 
         return wrapper
 
