@@ -8,8 +8,10 @@ from urllib.error import HTTPError
 
 import osc.conf
 import osc.core
+import re
 
 from openqabot.errors import NoResultsError
+from openqabot.openqa import openQAInterface
 
 from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD
 from .loader.qem import (
@@ -29,6 +31,7 @@ class Approver:
         self.dry = args.dry
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.all_incidents = args.all_incidents
+        self.client = openQAInterface(args.openqa_instance)
 
     def __call__(self) -> int:
         logger.info("Start approving incidents in IBS")
@@ -55,12 +58,12 @@ class Approver:
 
                 u_jobs = []
 
-            if not self.get_incident_result(i_jobs, "api/jobs/incident/"):
+            if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
                 logger.info("Inc %s has failed job in incidents" % str(inc.inc))
                 continue
 
             if any(i.withAggregate for i in i_jobs):
-                if not self.get_incident_result(u_jobs, "api/jobs/update/"):
+                if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
                     logger.info("Inc %s has failed job in aggregates" % str(inc.inc))
                     continue
 
@@ -80,23 +83,36 @@ class Approver:
 
         return 0 if overall_result else 1
 
+    def is_job_marked_acceptable_for_incident(self, job: JobAggr, inc: int) -> bool:
+        regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
+        for comment in self.client.get_job_comments(job.job_id):
+            if regex.match(comment["text"]):
+                return True
+        return False
+
     @lru_cache(maxsize=128)
-    def get_jobs(self, job: JobAggr, api: str) -> bool:
+    def get_jobs(self, job: JobAggr, api: str, inc: int) -> bool:
         results = requests.get(
             QEM_DASHBOARD + api + str(job.job_id), headers=self.token
         ).json()
+
+        # keep jobs explicitly marked as acceptable for this incident by openQA comments
+        for res in results:
+            not_ok_job = res["status"] != "passed"
+            if not_ok_job and self.is_job_marked_acceptable_for_incident(job, inc):
+                res["status"] = "passed"
 
         if not results:
             raise NoResultsError("Job %s not found " % str(job.job_id))
 
         return all(r["status"] == "passed" for r in results)
 
-    def get_incident_result(self, jobs: List[JobAggr], api: str) -> bool:
+    def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
         res = False
 
         for job in jobs:
             try:
-                res = self.get_jobs(job, api)
+                res = self.get_jobs(job, api, inc)
             except NoResultsError as e:
                 logger.info(e)
                 continue
