@@ -70,7 +70,7 @@ class openQAInterface:
         ret = []
         try:
             ret = self.openqa.openqa_request(
-                "GET", "jobs/%s/comments" % job_id, retries=self.retries
+                "GET", "jobs/%s/comments" % job_id, retries=0
             )
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:
