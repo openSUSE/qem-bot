@@ -72,10 +72,9 @@ class openQAInterface:
             ret = self.openqa.openqa_request(
                 "GET", "jobs/%s/comments" % job_id, retries=self.retries
             )
-            ret = map(lambda c: {"text": c.get("text", "")}, ret)
+            ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:
             logger.exception(e)
-            raise e
         return ret
 
     @lru_cache(maxsize=256)
