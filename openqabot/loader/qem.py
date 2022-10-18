@@ -70,6 +70,11 @@ def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
     return [IncReq(i["number"], i["rr_number"]) for i in incidents if i["inReviewQAM"]]
 
 
+def get_single_incident(token: Dict[str, str], id: int) -> List[IncReq]:
+    incident = requests.get(QEM_DASHBOARD + "api/incidents/" + id, headers=token).json()
+    return [IncReq(incident["number"], incident["rr_number"])]
+
+
 def get_incident_settings(
     inc: int, token: Dict[str, str], all_incidents: bool = False
 ) -> List[JobAggr]:

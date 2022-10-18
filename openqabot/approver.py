@@ -21,6 +21,7 @@ from .loader.qem import (
     get_aggregate_settings,
     get_incident_settings,
     get_incidents_approver,
+    get_single_incident,
 )
 from .utils import retry3 as requests
 
@@ -30,14 +31,18 @@ logger = getLogger("bot.approver")
 class Approver:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
+        self.single_incident = args.incident
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.all_incidents = args.all_incidents
         self.client = openQAInterface(args.openqa_instance)
 
     def __call__(self) -> int:
         logger.info("Start approving incidents in IBS")
-
-        increqs = get_incidents_approver(self.token)
+        increqs = (
+            get_single_incident(self.token, self.single_incident)
+            if self.single_incident
+            else get_incidents_approver(self.token)
+        )
 
         overall_result = True
         incidents_to_approve = []

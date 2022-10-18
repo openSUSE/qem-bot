@@ -163,6 +163,14 @@ def get_parser():
         action="store_true",
         help="use all incidents whithout care about rrid",
     )
+    cmdappr.add_argument(
+        "-I",
+        "--incident",
+        required=False,
+        type=str,
+        help="Incident ID (to approve only a single incident)",
+    )
+
     cmdappr.set_defaults(func=do_approve)
 
     cmdcomment = commands.add_parser(
