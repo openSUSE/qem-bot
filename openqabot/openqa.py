@@ -74,7 +74,9 @@ class openQAInterface:
             )
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:
-            logger.exception(e)
+            (method, url, status_code) = e.args
+            if status_code != 404:
+                logger.exception(e)
         return ret
 
     @lru_cache(maxsize=256)
