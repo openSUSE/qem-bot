@@ -110,6 +110,10 @@ class Approver:
         for res in results:
             not_ok_job = res["status"] != "passed"
             if not_ok_job and self.is_job_marked_acceptable_for_incident(job, inc):
+                logger.info(
+                    "Ignoring failed job %s for incident %s due to openQA comment"
+                    % (job.job_id, inc)
+                )
                 res["status"] = "passed"
 
         if not results:
