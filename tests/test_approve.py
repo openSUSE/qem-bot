@@ -541,6 +541,7 @@ def test_approval_unblocked_via_openqa_comment(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
+    assert "Ignoring failed job 20005 for incident 2 due to openQA comment" in messages
 
 
 @responses.activate
