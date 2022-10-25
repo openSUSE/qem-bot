@@ -108,13 +108,17 @@ class Approver:
 
         # keep jobs explicitly marked as acceptable for this incident by openQA comments
         for res in results:
-            not_ok_job = res["status"] != "passed"
-            if not_ok_job and self.is_job_marked_acceptable_for_incident(job, inc):
+            ok_job = res["status"] == "passed"
+            if ok_job:
+                continue
+            if self.is_job_marked_acceptable_for_incident(job, inc):
                 logger.info(
                     "Ignoring failed job %s for incident %s due to openQA comment"
                     % (job.job_id, inc)
                 )
                 res["status"] = "passed"
+            else:
+                break
 
         if not results:
             raise NoResultsError("Job %s not found " % str(job.job_id))
