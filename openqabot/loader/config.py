@@ -11,7 +11,7 @@ from ..types import Data
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
 
-logger = getLogger("bot.loader.config")
+log = getLogger("bot.loader.config")
 
 
 def load_metadata(
@@ -27,7 +27,7 @@ def load_metadata(
         try:
             data = loader.load(p)
         except Exception as e:
-            logger.exception(e)
+            log.exception(e)
             continue
 
         try:
@@ -37,7 +37,7 @@ def load_metadata(
             continue
 
         if "product" not in data:
-            logger.debug("Skipping invalid config %s" % p)
+            log.debug("Skipping invalid config %s" % p)
             continue
 
         if settings:
@@ -50,9 +50,7 @@ def load_metadata(
                     try:
                         ret.append(Aggregate(data["product"], settings, data[key]))
                     except NoTestIssues:
-                        logger.warning(
-                            "No 'test_issues' in %s config" % data["product"]
-                        )
+                        log.warning("No 'test_issues' in %s config" % data["product"])
                 else:
                     continue
     return ret
@@ -66,16 +64,16 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            logger.info("Skipping invalid config %s - empty config" % str(p))
+            log.info("Skipping invalid config %s - empty config" % str(p))
             continue
         if not isinstance(data, dict):
-            logger.info("Skipping invalid config %s - invalid format" % str(p))
+            log.info("Skipping invalid config %s - invalid format" % str(p))
             continue
 
         try:
             flavor = data["aggregate"]["FLAVOR"]
         except KeyError:
-            logger.info("Config %s does not have aggregate" % str(p))
+            log.info("Config %s does not have aggregate" % str(p))
             continue
 
         try:
@@ -83,7 +81,7 @@ def read_products(path: Path) -> List[Data]:
             version = data["settings"]["VERSION"]
             product = data["product"]
         except Exception as e:
-            logger.exception(e)
+            log.exception(e)
             continue
 
         for arch in data["aggregate"]["archs"]:
@@ -98,7 +96,7 @@ def get_onearch(path: Path) -> Set[str]:
     try:
         data = loader.load(path)
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         return set()
 
     return set(data)
