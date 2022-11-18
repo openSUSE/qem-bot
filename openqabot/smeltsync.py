@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
 
-logger = getLogger("bot.smeltsync")
+log = getLogger("bot.smeltsync")
 
 
 class SMELTSync:
@@ -20,16 +20,16 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        logger.info("Start syncing incidents from smelt to dashboard")
+        log.info("Start syncing incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
-        logger.info("Updating info about %s incidents" % str(len(data)))
-        logger.info("Data: %s" % pformat(data))
+        log.info("Updating info about %s incidents" % str(len(data)))
+        log.info("Data: %s" % pformat(data))
 
         if not self.dry:
             ret = update_incidents(self.token, data, retry=self.retry)
         else:
-            logger.info("Dry run, nothing synced")
+            log.info("Dry run, nothing synced")
             ret = 0
 
         return ret
