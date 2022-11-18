@@ -118,16 +118,19 @@ def f_osconf(monkeypatch):
     monkeypatch.setattr(osc.conf, "get_config", fake)
 
 
+def approver(incident=None):
+    args = _namespace(True, "123", False, openqa_instance_url, incident)
+    approver = Approver(args)
+    approver.client.retries = 0
+    return approver()
+
+
 @responses.activate
 @pytest.mark.xfail(reason="Bug in responses")
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
     approver()
-
     assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 4 has at least one failed job in incident tests" in messages
@@ -172,10 +175,7 @@ def test_single_incident(fake_qem, caplog):
         re.compile(r"http://dashboard.qam.suse.de/api/jobs/update/1000.*"),
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "failed"}],
     )
-    args = _namespace(True, "123", False, openqa_instance_url, 1)
-
-    approver = Approver(args)
-    approver()
+    approver(incident=1)
     assert len(caplog.records) == 5
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has at least one failed job in incident tests" in messages
@@ -184,10 +184,7 @@ def test_single_incident(fake_qem, caplog):
     assert "SUSE:Maintenance:1:100" not in messages
 
     caplog.clear()
-
-    args = _namespace(True, "123", False, openqa_instance_url, 4)
-    approver = Approver(args)
-    approver()
+    approver(incident=4)
     assert len(caplog.records) == 4
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 4 has at least one failed job in incident tests" not in messages
@@ -200,10 +197,6 @@ def test_single_incident(fake_qem, caplog):
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
 
     assert len(caplog.records) == 7
@@ -220,10 +213,6 @@ def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
 @pytest.mark.parametrize("fake_qem", [("aggr")], indirect=True)
 def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
     assert len(caplog.records) == 11
     messages = [x[-1] for x in caplog.record_tuples]
@@ -240,10 +229,6 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
 @pytest.mark.parametrize("fake_qem", [("inc")], indirect=True)
 def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
     assert len(caplog.records) == 7
     messages = [x[-1] for x in caplog.record_tuples]
@@ -437,11 +422,7 @@ def test_one_incident_failed(
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    approver = Approver(args)
-    approver.client.retries = 0
-
     assert approver() == 0
-
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has at least one failed job in incident tests" in messages
@@ -463,13 +444,7 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
     )
     add_two_passed_response()
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    approver.client.retries = 0
-
     assert approver() == 0
-
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 2 has at least one failed job in aggregate tests" in messages
@@ -492,8 +467,6 @@ def test_approval_unblocked_via_openqa_comment(
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    approver = Approver(_namespace(True, "123", False, openqa_instance_url, None))
-    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
@@ -512,8 +485,6 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    approver = Approver(_namespace(True, "123", False, openqa_instance_url, None))
-    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" not in messages
