@@ -38,51 +38,32 @@ class SMELTSync:
     def _review_rrequest(requestSet):
         if not requestSet:
             return None
-        else:
-            rr = sorted(requestSet, key=itemgetter("requestId"), reverse=True)[0]
-            if rr["status"]["name"] in ("new", "review", "accepted", "revoked"):
-                return rr
-            else:
-                return None
+        rr = sorted(requestSet, key=itemgetter("requestId"), reverse=True)[0]
+        valid = ("new", "review", "accepted", "revoked")
+        return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
     def _is_inreview(rr_number) -> bool:
-        if rr_number["reviewSet"]:
-            if rr_number["status"]["name"] == "review":
-                return True
-            else:
-                return False
-        else:
-            return False
+        return rr_number["reviewSet"] and rr_number["status"]["name"] == "review"
 
     @staticmethod
     def _is_revoked(rr_number) -> bool:
-        if rr_number["reviewSet"]:
-            if rr_number["status"]["name"] == "revoked":
-                return True
-            else:
-                return False
-        else:
-            return False
+        return rr_number["reviewSet"] and rr_number["status"]["name"] == "revoked"
 
     @staticmethod
     def _is_accepted(rr_number) -> bool:
-        if (
+        return (
             rr_number["status"]["name"] == "accepted"
             or rr_number["status"]["name"] == "new"
-        ):
-            return True
-        else:
-            return False
+        )
 
     @staticmethod
     def _has_qam_review(rr_number) -> bool:
-        if rr_number["reviewSet"]:
-            rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
-            review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-            if review and review[0]["status"]["name"] in ("review", "new"):
-                return True
-        return False
+        if not rr_number["reviewSet"]:
+            return False
+        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+        return review and review[0]["status"]["name"] in ("review", "new")
 
     @classmethod
     def _create_record(cls, inc):
