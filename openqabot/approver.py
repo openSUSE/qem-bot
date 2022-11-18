@@ -28,6 +28,27 @@ from .utils import retry3 as requests
 log = getLogger("bot.approver")
 
 
+def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
+    if e.code == 403:
+        log.info(
+            "Received '%s'. Request %s likely already approved, ignoring"
+            % (e.reason, inc.req)
+        )
+        return True
+    elif e.code == 404:
+        log.info(
+            "Received '%s'. Request %s removed or problem on OBS side, ignoring"
+            % (e.reason, inc.req)
+        )
+        return False
+    else:
+        log.error(
+            "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
+            % (e.code, e.reason, inc.req)
+        )
+        return False
+
+
 class Approver:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
@@ -166,24 +187,7 @@ class Approver:
                 message=msg,
             )
         except HTTPError as e:
-            if e.code == 403:
-                log.info(
-                    "Received '%s'. Request %s likely already approved, ignoring"
-                    % (e.reason, inc.req)
-                )
-                return True
-            elif e.code == 404:
-                log.info(
-                    "Received '%s'. Request %s removed or problem on OBS side, ignoring"
-                    % (e.reason, inc.req)
-                )
-                return False
-            else:
-                log.error(
-                    "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
-                    % (e.code, e.reason, inc.req)
-                )
-                return False
+            return _handle_http_error(e, inc)
         except Exception as e:
             log.exception(e)
             return False
