@@ -45,42 +45,7 @@ class Approver:
         )
 
         overall_result = True
-        incidents_to_approve = []
-
-        for inc in increqs:
-            try:
-                i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
-            except NoResultsError as e:
-                logger.info(e)
-                continue
-            try:
-                u_jobs = get_aggregate_settings(inc.inc, self.token)
-            except NoResultsError as e:
-                logger.info(e)
-
-                if any(i.withAggregate for i in i_jobs):
-                    logger.info("Aggregate missing for %s" % str(inc.inc))
-                    continue
-
-                u_jobs = []
-
-            if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-                logger.info(
-                    "Inc %s has at least one failed job in incident tests"
-                    % str(inc.inc)
-                )
-                continue
-
-            if any(i.withAggregate for i in i_jobs):
-                if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-                    logger.info(
-                        "Inc %s has at least one failed job in aggregate tests"
-                        % str(inc.inc)
-                    )
-                    continue
-
-            # everything is green --> approve inc
-            incidents_to_approve.append(inc)
+        incidents_to_approve = [inc for inc in increqs if self._approvable(inc)]
 
         logger.info("Incidents to approve:")
         for inc in incidents_to_approve:
@@ -94,6 +59,40 @@ class Approver:
         logger.info("End of bot run")
 
         return 0 if overall_result else 1
+
+    def _approvable(self, inc: IncReq) -> bool:
+        try:
+            i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
+        except NoResultsError as e:
+            logger.info(e)
+            return False
+        try:
+            u_jobs = get_aggregate_settings(inc.inc, self.token)
+        except NoResultsError as e:
+            logger.info(e)
+
+            if any(i.withAggregate for i in i_jobs):
+                logger.info("Aggregate missing for %s" % str(inc.inc))
+                return False
+
+            u_jobs = []
+
+        if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
+            logger.info(
+                "Inc %s has at least one failed job in incident tests" % str(inc.inc)
+            )
+            return False
+
+        if any(i.withAggregate for i in i_jobs):
+            if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
+                logger.info(
+                    "Inc %s has at least one failed job in aggregate tests"
+                    % str(inc.inc)
+                )
+                return False
+
+        # everything is green --> add incident to approve list
+        return True
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job: JobAggr, inc: int) -> bool:
