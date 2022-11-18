@@ -1,6 +1,19 @@
 import pytest
 import responses
-from responses import registries
+
+# responses versions older than
+# https://github.com/getsentry/responses/releases/tag/0.17.0
+# do not have "registries" so we need to skip on older versions
+has_registries = False
+try:
+    from responses import registries
+
+    has_registries = True
+except ImportError as e:
+    import logging
+
+    logging.info(str(e) + ": Likely older python version")
+
 from openqabot.utils import walk, normalize_results, retry3
 
 
@@ -79,12 +92,14 @@ def test_walk(data, result):
     assert result == ret
 
 
-@responses.activate(registry=registries.OrderedRegistry)
-def test_retry3():
-    rsp1 = responses.add(responses.GET, "http://host.some", status=503)
-    rsp2 = responses.add(responses.GET, "http://host.some", status=503)
-    rsp3 = responses.add(responses.GET, "http://host.some", status=200)
+if has_registries:
 
-    req = retry3.get("http://host.some")
-    assert req.status_code == 200
-    assert rsp3.call_count == 1
+    @responses.activate(registry=registries.OrderedRegistry)
+    def test_retry3():
+        rsp1 = responses.add(responses.GET, "http://host.some", status=503)
+        rsp2 = responses.add(responses.GET, "http://host.some", status=503)
+        rsp3 = responses.add(responses.GET, "http://host.some", status=200)
+
+        req = retry3.get("http://host.some")
+        assert req.status_code == 200
+        assert rsp3.call_count == 1
