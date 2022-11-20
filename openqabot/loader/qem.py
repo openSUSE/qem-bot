@@ -115,21 +115,19 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     if "error" in data:
         raise ValueError
 
-    ret = []
-    for d in data:
-        ret.append(
-            Data(
-                number,
-                d["id"],
-                d["flavor"],
-                d["arch"],
-                d["settings"]["DISTRI"],
-                d["version"],
-                d["settings"]["BUILD"],
-                "",
-            )
+    ret = [
+        Data(
+            number,
+            d["id"],
+            d["flavor"],
+            d["arch"],
+            d["settings"]["DISTRI"],
+            d["version"],
+            d["settings"]["BUILD"],
+            "",
         )
-
+        for d in data
+    ]
     return ret
 
 
@@ -156,9 +154,8 @@ def get_incident_results(inc: int, token: Dict[str, str]):
 
 
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
-    settings = requests.get(
-        QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
-    ).json()
+    url = QEM_DASHBOARD + "api/update_settings/" + str(inc)
+    settings = requests.get(url, headers=token).json()
     if not settings:
         raise NoResultsError(f"Inc {inc} does not have any aggregates settings")
 
