@@ -106,22 +106,32 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     if "error" in data:
         raise ValueError
 
-    ret = []
-    for d in data:
-        ret.append(
-            Data(
-                number,
-                d["id"],
-                d["flavor"],
-                d["arch"],
-                d["settings"]["DISTRI"],
-                d["version"],
-                d["settings"]["BUILD"],
-                "",
-            )
+    ret = [
+        Data(
+            number,
+            d["id"],
+            d["flavor"],
+            d["arch"],
+            d["settings"]["DISTRI"],
+            d["version"],
+            d["settings"]["BUILD"],
+            "",
         )
-
+        for d in data
+    ]
     return ret
+
+
+def get_result(job_id: int, token: Dict[str, str], method: str) -> dict:
+    try:
+        url = QEM_DASHBOARD + "api/jobs/" + f"{method}" + "/" + f"{job_id}"
+        data = requests.get(url, headers=token).json()
+    except Exception as e:
+        log.exception(e)
+        raise e
+    if "error" in data:
+        raise ValueError(data["error"])
+    return data
 
 
 def get_incident_results(inc: int, token: Dict[str, str]):
@@ -130,26 +140,13 @@ def get_incident_results(inc: int, token: Dict[str, str]):
     except NoResultsError as e:
         raise e
 
-    ret = []
-    for job in settings:
-        try:
-            data = requests.get(
-                QEM_DASHBOARD + "api/jobs/incident/" + f"{job.job_id}", headers=token
-            ).json()
-            ret += data
-        except Exception as e:
-            log.exception(e)
-            raise e
-        if "error" in data:
-            raise ValueError(data["error"])
-
+    ret = [get_result(job.job_id, token, "incident") for job in settings]
     return ret
 
 
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
-    settings = requests.get(
-        QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
-    ).json()
+    url = QEM_DASHBOARD + "api/update_settings/" + str(inc)
+    settings = requests.get(url, headers=token).json()
     if not settings:
         raise NoResultsError("Inc %s does not have any aggregates settings" % str(inc))
 
@@ -205,20 +202,7 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
     except NoResultsError as e:
         raise e
 
-    ret = []
-    for job in settings:
-        try:
-            data = requests.get(
-                QEM_DASHBOARD + "api/jobs/update/" + f"{job.job_id}", headers=token
-            ).json()
-        except Exception as e:
-            log.exception(e)
-            raise e
-        if "error" in data:
-            raise ValueError(data["error"])
-
-        ret += data
-
+    ret = [get_result(job.job_id, token, "update") for job in settings]
     return ret
 
 
