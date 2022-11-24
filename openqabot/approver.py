@@ -64,13 +64,25 @@ class Approver:
 
                 u_jobs = []
 
-            if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-                logger.info("Inc %s has failed job in incidents" % str(inc.inc))
+            incident_results = self.get_incident_result(
+                i_jobs, "api/jobs/incident/", inc.inc
+            )
+            if not incident_results[0]:
+                logger.info(
+                    "Inc %s has failed job in incidents (%s)"
+                    % (str(inc.inc), ",".join(str(i) for i in incident_results[1]))
+                )
                 continue
 
             if any(i.withAggregate for i in i_jobs):
-                if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-                    logger.info("Inc %s has failed job in aggregates" % str(inc.inc))
+                incident_results = self.get_incident_result(
+                    u_jobs, "api/jobs/update/", inc.inc
+                )
+                if not incident_results[0]:
+                    logger.info(
+                        "Inc %s has failed job in aggregates (%s)"
+                        % (str(inc.inc), ",".join(str(i) for i in incident_results[1]))
+                    )
                     continue
 
             # everything is green --> approve inc
@@ -107,37 +119,42 @@ class Approver:
         ).json()
 
         # keep jobs explicitly marked as acceptable for this incident by openQA comments
+        passed_jobs = []
+        failed_jobs = []
+        acceptable_jobs = []
         for res in results:
-            ok_job = res["status"] == "passed"
-            if ok_job:
+            if res["status"] == "passed":
+                passed_jobs.append(job.job_id)
                 continue
             if self.is_job_marked_acceptable_for_incident(job, inc):
                 logger.info(
                     "Ignoring failed job %s for incident %s due to openQA comment"
                     % (job.job_id, inc)
                 )
+                acceptable_jobs.append(job.job_id)
                 res["status"] = "passed"
             else:
-                break
+                failed_jobs.append(job.job_id)
 
         if not results:
             raise NoResultsError("Job %s not found " % str(job.job_id))
 
-        return all(r["status"] == "passed" for r in results)
+        return [passed_jobs, failed_jobs, acceptable_jobs]
 
     def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
-        res = False
+        all_passed = False
 
         for job in jobs:
             try:
-                res = self.get_jobs(job, api, inc)
+                results = self.get_jobs(job, api, inc)
+                all_passed = len(results[1]) == 0
             except NoResultsError as e:
                 logger.info(e)
                 continue
-            if not res:
-                return False
+            if not all_passed:
+                return [False, results[1]]
 
-        return res
+        return [all_passed, results[1]]
 
     @staticmethod
     def osc_approve(inc: IncReq) -> bool:
