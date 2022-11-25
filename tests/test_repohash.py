@@ -10,22 +10,6 @@ from requests import ConnectionError, HTTPError
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 
 
-class FakeDatetime:
-    date = "FakeDateTime"
-
-    @staticmethod
-    def now():
-        return FakeDatetime()
-
-    def __str__(self) -> str:
-        return self.date
-
-
-@pytest.fixture
-def mock_datetime(monkeypatch):
-    monkeypatch.setattr(openqabot.loader.repohash, "datetime", FakeDatetime)
-
-
 @responses.activate
 def test_get_max_revison_manager_aarch64():
 
@@ -80,7 +64,7 @@ def test_get_max_revison_3():
 
 
 @responses.activate
-def test_get_max_revison_connectionerror(caplog, mock_datetime):
+def test_get_max_revison_connectionerror(caplog):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
@@ -105,12 +89,12 @@ def test_get_max_revison_connectionerror(caplog, mock_datetime):
 
     assert (
         caplog.records[0].msg
-        == "FakeDateTime: http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
     )
 
 
 @responses.activate
-def test_get_max_revison_httperror(caplog, mock_datetime):
+def test_get_max_revison_httperror(caplog):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
@@ -135,12 +119,12 @@ def test_get_max_revison_httperror(caplog, mock_datetime):
 
     assert (
         caplog.records[0].msg
-        == "FakeDateTime: http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
     )
 
 
 @responses.activate
-def test_get_max_revison_xmlerror(caplog, mock_datetime):
+def test_get_max_revison_xmlerror(caplog):
 
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
 
@@ -165,7 +149,7 @@ def test_get_max_revison_xmlerror(caplog, mock_datetime):
 
     assert (
         caplog.records[0].msg
-        == "FakeDateTime: http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
     )
 
 
