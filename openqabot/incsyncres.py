@@ -9,7 +9,7 @@ from .loader.qem import get_active_incidents, get_incident_settings_data
 from .syncres import SyncRes
 from .types import Data
 
-logger = getLogger("bot.incsyncres")
+log = getLogger("bot.incsyncres")
 
 
 class IncResultsSync(SyncRes):
@@ -54,6 +54,6 @@ class IncResultsSync(SyncRes):
         for r in results:
             self.post_result(r)
 
-        logger.info("End of bot run")
+        log.info("End of bot run")
 
         return 0

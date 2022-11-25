@@ -23,6 +23,14 @@ _namespace = namedtuple(
 openqa_instance_url = urlparse("http://instance.qa")
 
 
+def add_two_passed_response():
+    responses.add(
+        responses.GET,
+        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
+        json=[{"status": "passed"}, {"status": "passed"}],
+    )
+
+
 @pytest.fixture(scope="function")
 def fake_openqa_comment_api():
     responses.add(
@@ -34,17 +42,18 @@ def fake_openqa_comment_api():
 
 
 @pytest.fixture(scope="function")
+def fake_two_passed_jobs():
+    add_two_passed_response()
+
+
+@pytest.fixture(scope="function")
 def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
     responses.add(
         responses.GET,
         "http://dashboard.qam.suse.de/api/jobs/update/20005",
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
     )
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
+    add_two_passed_response()
     responses.add(
         responses.GET,
         url="http://instance.qa/api/v1/jobs/20005/comments",
@@ -58,10 +67,7 @@ def fake_qem(monkeypatch, request):
         return [IncReq(1, 100), IncReq(2, 200), IncReq(3, 300), IncReq(4, 400)]
 
     def f_inc_single_approver(token: Dict[str, str], id: int) -> List[IncReq]:
-        if id == 1:
-            return [IncReq(1, 100)]
-        else:
-            return [IncReq(4, 400)]
+        return [IncReq(1, 100) if id == 1 else IncReq(4, 400)]
 
     # inc 1 needs aggregates
     # inc 2 needs aggregates
@@ -112,24 +118,22 @@ def f_osconf(monkeypatch):
     monkeypatch.setattr(osc.conf, "get_config", fake)
 
 
+def approver(incident=None):
+    args = _namespace(True, "123", False, openqa_instance_url, incident)
+    approver = Approver(args)
+    approver.client.retries = 0
+    return approver()
+
+
 @responses.activate
 @pytest.mark.xfail(reason="Bug in responses")
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_no_jobs(fake_qem, caplog):
+def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json={},
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
     approver()
-
     assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has failed job in incidents" in messages
+    assert "Inc 4 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:4:400" not in messages
@@ -171,25 +175,19 @@ def test_single_incident(fake_qem, caplog):
         re.compile(r"http://dashboard.qam.suse.de/api/jobs/update/1000.*"),
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "failed"}],
     )
-    args = _namespace(True, "123", False, openqa_instance_url, 1)
-
-    approver = Approver(args)
-    approver()
-    assert len(caplog.records) == 4
+    approver(incident=1)
+    assert len(caplog.records) == 5
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has failed job in incidents" in messages
+    assert "Inc 1 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:1:100" not in messages
 
     caplog.clear()
-
-    args = _namespace(True, "123", False, openqa_instance_url, 4)
-    approver = Approver(args)
-    approver()
+    approver(incident=4)
     assert len(caplog.records) == 4
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has failed job in incidents" not in messages
+    assert "Inc 4 has at least one failed job in incident tests" not in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -197,19 +195,9 @@ def test_single_incident(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_all_passed(fake_qem, caplog):
+def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
-
     assert len(caplog.records) == 7
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:1:100" in messages
@@ -222,17 +210,8 @@ def test_all_passed(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("aggr")], indirect=True)
-def test_inc_passed_aggr_without_results(fake_qem, caplog):
+def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
     assert len(caplog.records) == 11
     messages = [x[-1] for x in caplog.record_tuples]
@@ -247,17 +226,8 @@ def test_inc_passed_aggr_without_results(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("inc")], indirect=True)
-def test_inc_without_results(fake_qem, caplog):
+def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-
     assert approver() == 0
     assert len(caplog.records) == 7
     messages = [x[-1] for x in caplog.record_tuples]
@@ -269,23 +239,14 @@ def test_inc_without_results(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_403_response(fake_qem, f_osconf, caplog, monkeypatch):
+def test_403_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(False, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    assert approver() == 0
+    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
@@ -308,23 +269,14 @@ def test_403_response(fake_qem, f_osconf, caplog, monkeypatch):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_404_response(fake_qem, f_osconf, caplog, monkeypatch):
+def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         raise HTTPError("Fake OBS", 404, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(False, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    assert approver() == 1
+    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
@@ -347,23 +299,14 @@ def test_404_response(fake_qem, f_osconf, caplog, monkeypatch):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_500_response(fake_qem, f_osconf, caplog, monkeypatch):
+def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(False, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    assert approver() == 1
+    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
@@ -386,23 +329,16 @@ def test_500_response(fake_qem, f_osconf, caplog, monkeypatch):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_osc_unknown_exception(fake_qem, f_osconf, caplog, monkeypatch):
+def test_osc_unknown_exception(
+    fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         raise Exception("Fake OBS exception")
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(False, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    assert approver() == 1
+    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
@@ -425,23 +361,14 @@ def test_osc_unknown_exception(fake_qem, f_osconf, caplog, monkeypatch):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_osc_all_pass(fake_qem, f_osconf, caplog, monkeypatch):
+def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         pass
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(False, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    assert approver() == 0
+    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "Start approving incidents in IBS",
@@ -458,32 +385,31 @@ def test_osc_all_pass(fake_qem, f_osconf, caplog, monkeypatch):
     ]
 
 
-@responses.activate
-@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_one_incident_failed(fake_qem, fake_openqa_comment_api, caplog):
-    caplog.set_level(logging.DEBUG, logger="bot.approver")
-
+@pytest.fixture(scope="function")
+def fake_incident_1_failed_2_passed(request):
     responses.add(
         responses.GET,
-        "http://dashboard.qam.suse.de/api/jobs/incident/1005",
+        "http://dashboard.qam.suse.de/api/jobs/incident/%s" % request.param,
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
     )
+    add_two_passed_response()
 
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
 
-    approver = Approver(args)
-    approver.client.retries = 0
-
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@pytest.mark.parametrize("fake_incident_1_failed_2_passed", [1005], indirect=True)
+def test_one_incident_failed(
+    fake_qem,
+    fake_incident_1_failed_2_passed,
+    fake_two_passed_jobs,
+    fake_openqa_comment_api,
+    caplog,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
-
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has failed job in incidents" in messages
+    assert "Inc 1 has at least one failed job in incident tests" in messages
     assert "SUSE:Maintenance:2:200" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -501,22 +427,11 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
         "http://dashboard.qam.suse.de/api/jobs/update/20005",
         json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
     )
-
-    responses.add(
-        responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
-        json=[{"status": "passed"}, {"status": "passed"}],
-    )
-    args = _namespace(True, "123", False, openqa_instance_url, None)
-
-    approver = Approver(args)
-    approver.client.retries = 0
-
+    add_two_passed_response()
     assert approver() == 0
-
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 2 has failed job in aggregates" in messages
+    assert "Inc 2 has failed job in aggregate tests" in messages
     assert "SUSE:Maintenance:1:100" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -536,8 +451,6 @@ def test_approval_unblocked_via_openqa_comment(
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    approver = Approver(_namespace(True, "123", False, openqa_instance_url, None))
-    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
@@ -556,8 +469,6 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    approver = Approver(_namespace(True, "123", False, openqa_instance_url, None))
-    approver.client.retries = 0
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" not in messages
