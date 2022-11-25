@@ -74,7 +74,8 @@ class Approver:
             if any(i.withAggregate for i in i_jobs):
                 if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
                     logger.info(
-                        "Inc %s has failed job in aggregate tests" % str(inc.inc)
+                        "Inc %s has at least one failed job in aggregate tests"
+                        % str(inc.inc)
                     )
                     continue
 
