@@ -431,7 +431,7 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
     assert approver() == 0
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 2 has failed job in aggregate tests" in messages
+    assert "Inc 2 has at least one failed job in aggregate tests" in messages
     assert "SUSE:Maintenance:1:100" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
