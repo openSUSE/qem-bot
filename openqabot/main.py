@@ -9,7 +9,9 @@ from .args import get_parser
 def create_logger() -> logging.Logger:
     logger = logging.getLogger("bot")
     handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(levelname)-2s: %(message)s")
+    formatter = logging.Formatter(
+        fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
