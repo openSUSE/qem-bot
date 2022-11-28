@@ -12,7 +12,7 @@ from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
 from .errors import PostOpenQAError
 from .types import Data
 
-log = logging.getLogger("bot.openqa")
+logger = logging.getLogger("bot.openqa")
 
 
 class openQAInterface:
@@ -26,7 +26,7 @@ class openQAInterface:
         return self.url.netloc == OPENQA_URL
 
     def post_job(self, settings) -> None:
-        log.info(
+        logger.info(
             "openqa-cli api --host %s -X post isos %s"
             % (
                 self.url.geturl(),
@@ -38,16 +38,16 @@ class openQAInterface:
                 "POST", "isos", data=settings, retries=self.retries
             )
         except RequestError as e:
-            log.error("openQA returned %s" % e.args[-1])
-            log.error("Post failed with {}".format(pformat(settings)))
+            logger.error("openQA returned %s" % e.args[-1])
+            logger.error("Post failed with {}".format(pformat(settings)))
             raise PostOpenQAError
         except Exception as e:
-            log.exception(e)
-            log.error("Post failed with {}".format(pformat(settings)))
+            logger.exception(e)
+            logger.error("Post failed with {}".format(pformat(settings)))
             raise PostOpenQAError
 
     def get_jobs(self, data: Data):
-        log.info("Getting openQA tests results for %s" % pformat(data))
+        logger.info("Getting openQA tests results for %s" % pformat(data))
         param = {}
         param["scope"] = "relevant"
         param["latest"] = "1"
@@ -61,7 +61,7 @@ class openQAInterface:
         try:
             ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
         except Exception as e:
-            log.exception(e)
+            logger.exception(e)
             raise e
         return ret
 
@@ -76,7 +76,7 @@ class openQAInterface:
         except Exception as e:
             (method, url, status_code) = e.args
             if status_code != 404:
-                log.exception(e)
+                logger.exception(e)
         return ret
 
     @lru_cache(maxsize=256)
@@ -86,7 +86,7 @@ class openQAInterface:
         try:
             ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         except Exception as e:
-            log.exception(e)
+            logger.exception(e)
             raise e
 
         # return True as safe option if ret = None

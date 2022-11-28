@@ -14,7 +14,7 @@ from ..utils import retry3 as requests
 from .baseconf import BaseConf
 from .incident import Incident
 
-log = getLogger("bot.types.incidents")
+logger = getLogger("bot.types.incidents")
 
 
 class Incidents(BaseConf):
@@ -59,7 +59,7 @@ class Incidents(BaseConf):
                 headers=token,
             ).json()
         except Exception as e:
-            log.exception(e)
+            logger.exception(e)
 
         if not jobs:
             return False
@@ -132,7 +132,7 @@ class Incidents(BaseConf):
                             ArchVer(arch, self.settings["VERSION"])
                         ]
                     except KeyError:
-                        log.debug(
+                        logger.debug(
                             "Incident %s does not have %s arch in %s"
                             % (inc.id, arch, self.settings["VERSION"])
                         )
@@ -148,7 +148,7 @@ class Incidents(BaseConf):
                             channels_set.add(f_channel)
 
                     if not issue_dict:
-                        log.debug(
+                        logger.debug(
                             "No channels in %s for %s on %s" % (inc.id, flavor, arch)
                         )
                         continue
@@ -160,7 +160,7 @@ class Incidents(BaseConf):
                     if not ignore_onetime and self._is_scheduled_job(
                         token, inc, arch, self.settings["VERSION"], flavor
                     ):
-                        log.info(
+                        logger.info(
                             "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
                             % (flavor, self.settings["VERSION"], inc.id, arch)
                         )
@@ -181,7 +181,7 @@ class Incidents(BaseConf):
                                 ]
                             )
                         ):
-                            log.warning(
+                            logger.warning(
                                 "Kernel incident %s doesn't have product repository"
                                 % str(inc)
                             )
@@ -207,10 +207,10 @@ class Incidents(BaseConf):
 
                         if pos and not pos.isdisjoint(full_post["openqa"].keys()):
                             full_post["qem"]["withAggregate"] = False
-                            log.info("Aggregate not needed for incident %s" % inc.id)
+                            logger.info("Aggregate not needed for incident %s" % inc.id)
                         if neg and neg.isdisjoint(full_post["openqa"].keys()):
                             full_post["qem"]["withAggregate"] = False
-                            log.info("Aggregate not needed for incident %s" % inc.id)
+                            logger.info("Aggregate not needed for incident %s" % inc.id)
                         if not (neg and pos):
                             full_post["qem"]["withAggregate"] = False
 
@@ -252,7 +252,7 @@ class Incidents(BaseConf):
                         query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
                         settings = apply_pc_tools_image(settings)
                         if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
-                            log.error(
+                            logger.error(
                                 f"Failed to query latest publiccloud tools image using {query}"
                             )
                             continue
@@ -261,7 +261,7 @@ class Incidents(BaseConf):
                     if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
                         settings = apply_publiccloud_regex(settings)
                         if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
-                            log.error(
+                            logger.error(
                                 f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
                             )
                             continue
@@ -269,7 +269,7 @@ class Incidents(BaseConf):
                     if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                         settings = apply_publiccloud_pint_image(settings)
                         if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
-                            log.error(
+                            logger.error(
                                 f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
                             )
                             continue

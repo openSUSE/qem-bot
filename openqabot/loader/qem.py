@@ -19,7 +19,7 @@ from ..types import Data
 from ..types.incident import Incident
 from ..utils import retry5 as requests
 
-log = getLogger("bot.loader.qem")
+logger = getLogger("bot.loader.qem")
 
 
 class IncReq(NamedTuple):
@@ -41,15 +41,15 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
         try:
             xs.append(Incident(i))
         except NoRepoFoundError as e:
-            log.info(
+            logger.info(
                 "Project %s can't calculate repohash %s .. skipping" % (i["project"], e)
             )
         except EmptyChannels as e:
-            log.info(
+            logger.info(
                 "Project %s has empty channels - check incident in SMELT" % i["project"]
             )
         except EmptyPackagesError as e:
-            log.info(
+            logger.info(
                 "Project %s has empty packages - check incident in SMELT" % i["project"]
             )
 
@@ -60,7 +60,7 @@ def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
     try:
         data = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
     except Exception as e:
-        log.exception(e)
+        logger.exception(e)
         raise e
     return list(set([i["number"] for i in data]))
 
@@ -96,42 +96,32 @@ def get_incident_settings(
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
     url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
-    log.info("Getting settings for %s" % number)
+    logger.info("Getting settings for %s" % number)
     try:
         data = requests.get(url, headers=token).json()
     except Exception as e:
-        log.exception(e)
+        logger.exception(e)
         raise e
 
     if "error" in data:
         raise ValueError
 
-    ret = [
-        Data(
-            number,
-            d["id"],
-            d["flavor"],
-            d["arch"],
-            d["settings"]["DISTRI"],
-            d["version"],
-            d["settings"]["BUILD"],
-            "",
+    ret = []
+    for d in data:
+        ret.append(
+            Data(
+                number,
+                d["id"],
+                d["flavor"],
+                d["arch"],
+                d["settings"]["DISTRI"],
+                d["version"],
+                d["settings"]["BUILD"],
+                "",
+            )
         )
-        for d in data
-    ]
+
     return ret
-
-
-def get_result(job_id: int, token: Dict[str, str], method: str) -> dict:
-    try:
-        url = QEM_DASHBOARD + "api/jobs/" + f"{method}" + "/" + f"{job_id}"
-        data = requests.get(url, headers=token).json()
-    except Exception as e:
-        log.exception(e)
-        raise e
-    if "error" in data:
-        raise ValueError(data["error"])
-    return data
 
 
 def get_incident_results(inc: int, token: Dict[str, str]):
@@ -140,13 +130,26 @@ def get_incident_results(inc: int, token: Dict[str, str]):
     except NoResultsError as e:
         raise e
 
-    ret = [get_result(job.job_id, token, "incident") for job in settings]
+    ret = []
+    for job in settings:
+        try:
+            data = requests.get(
+                QEM_DASHBOARD + "api/jobs/incident/" + f"{job.job_id}", headers=token
+            ).json()
+            ret += data
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        if "error" in data:
+            raise ValueError(data["error"])
+
     return ret
 
 
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
-    url = QEM_DASHBOARD + "api/update_settings/" + str(inc)
-    settings = requests.get(url, headers=token).json()
+    settings = requests.get(
+        QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
+    ).json()
     if not settings:
         raise NoResultsError("Inc %s does not have any aggregates settings" % str(inc))
 
@@ -167,7 +170,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
     try:
         settings = requests.get(url, headers=token).json()
     except Exception as e:
-        log.exception(e)
+        logger.exception(e)
         raise e
 
     ret = []
@@ -176,7 +179,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
             f"Product: {data.product} on arch: {data.arch} does not have any settings"
         )
 
-    log.debug("Getting id for %s" % pformat(data))
+    logger.debug("Getting id for %s" % pformat(data))
 
     # use last three schedule
     for s in settings[:3]:
@@ -202,7 +205,20 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
     except NoResultsError as e:
         raise e
 
-    ret = [get_result(job.job_id, token, "update") for job in settings]
+    ret = []
+    for job in settings:
+        try:
+            data = requests.get(
+                QEM_DASHBOARD + "api/jobs/update/" + f"{job.job_id}", headers=token
+            ).json()
+        except Exception as e:
+            logger.exception(e)
+            raise e
+        if "error" in data:
+            raise ValueError(data["error"])
+
+        ret += data
+
     return ret
 
 
@@ -215,13 +231,13 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
         try:
             ret = req.patch(QEM_DASHBOARD + "api/incidents", headers=token, json=data)
         except Exception as e:
-            log.exception(e)
+            logger.exception(e)
             return 1
         else:
             if ret.status_code == 200:
-                log.info("Smelt Incidents updated")
+                logger.info("Smelt Incidents updated")
             else:
-                log.error(
+                logger.error(
                     "Smelt Incidents were not synced to dashboard: error %s"
                     % ret.status_code
                 )
@@ -234,7 +250,7 @@ def post_job(token: Dict[str, str], data) -> None:
     try:
         result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
         if result.status_code != 200:
-            log.error(result.text)
+            logger.error(result.text)
 
     except Exception as e:
-        log.exception(e)
+        logger.exception(e)

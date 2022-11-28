@@ -8,24 +8,24 @@ from openqabot.errors import NoRepoFoundError
 from requests import ConnectionError, HTTPError
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
-SLES = BASE_XML % "256"
-PROJECT = "SUSE:Maintenance:12345"
 
 
 @responses.activate
 def test_get_max_revison_manager_aarch64():
 
     repos = [("SLE-Module-SUSE-Manager-Server", "4.1")]
+    project = "SUSE:Maintenance:12345"
     arch = "aarch64"
 
     with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
 
 @responses.activate
 def test_get_max_revison_opensuse():
 
     repos = [("openSUSE-SLE", "4.1")]
+    project = "SUSE:Maintenance:12345"
     arch = "aarch64"
     opensuse = BASE_XML % "256"
 
@@ -34,41 +34,58 @@ def test_get_max_revison_opensuse():
         url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml",
         body=opensuse,
     )
-    ret = rp.get_max_revision(repos, arch, PROJECT)
+    ret = rp.get_max_revision(repos, arch, project)
     assert ret == 256
-
-
-repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
-arch = "x86_64"
-
-
-def add_sles_sled_response(sled_body):
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
-        body=SLES,
-    )
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
-        body=sled_body,
-    )
 
 
 @responses.activate
 def test_get_max_revison_3():
-    add_sles_sled_response(BASE_XML % "257")
-    ret = rp.get_max_revision(repos, arch, PROJECT)
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    sled = BASE_XML % "257"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body=sled,
+    )
+
+    ret = rp.get_max_revision(repos, arch, project)
+
     assert ret == 257
 
 
 @responses.activate
 def test_get_max_revison_connectionerror(caplog):
+
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response(ConnectionError("Failed"))
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body=ConnectionError("Failed"),
+    )
 
     with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
     assert (
         caplog.records[0].msg
@@ -78,11 +95,27 @@ def test_get_max_revison_connectionerror(caplog):
 
 @responses.activate
 def test_get_max_revison_httperror(caplog):
+
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response(HTTPError("Failed"))
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body=HTTPError("Failed"),
+    )
 
     with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
     assert (
         caplog.records[0].msg
@@ -92,11 +125,27 @@ def test_get_max_revison_httperror(caplog):
 
 @responses.activate
 def test_get_max_revison_xmlerror(caplog):
+
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response("<invalid>")
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body="<invalid>",
+    )
 
     with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
     assert (
         caplog.records[0].msg
@@ -106,20 +155,52 @@ def test_get_max_revison_xmlerror(caplog):
 
 @responses.activate
 def test_get_max_revison_empty_xml(caplog):
+
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response("<invalid></invalid>")
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body="<invalid></invalid>",
+    )
 
     with pytest.raises(NoRepoFoundError):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
 
 @responses.activate
 def test_get_max_revison_exception(caplog):
+
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response(Exception("Failed"))
+
+    repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
+    project = "SUSE:Maintenance:12345"
+    arch = "x86_64"
+
+    sles = BASE_XML % "256"
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=sles,
+    )
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        body=Exception("Failed"),
+    )
 
     with pytest.raises(Exception):
-        rp.get_max_revision(repos, arch, PROJECT)
+        rp.get_max_revision(repos, arch, project)
 
     assert "Failed" == str(caplog.records[0].msg)
 

@@ -16,7 +16,7 @@ from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
 from .types.incident import Incident
 
-log = getLogger("bot.commenter")
+logger = getLogger("bot.commenter")
 
 
 class Commenter:
@@ -30,27 +30,27 @@ class Commenter:
 
     def __call__(self) -> int:
 
-        log.info("Start commenting incidents in IBS")
+        logger.info("Start commenting incidents in IBS")
 
         for inc in self.incidents:
             try:
                 i_jobs = get_incident_results(inc.id, self.token)
                 u_jobs = get_aggregate_results(inc.id, self.token)
             except ValueError as e:
-                log.debug(e)
+                logger.debug(e)
                 continue
             except NoResultsError as e:
-                log.debug(e)
+                logger.debug(e)
                 continue
 
             state = "none"
             if any(j["status"] in ["running"] for j in i_jobs + u_jobs):
-                log.info("%s needs to wait a bit longer" % inc)
+                logger.info("%s needs to wait a bit longer" % inc)
             else:
                 if any(
                     j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs
                 ):
-                    log.info("There is a failed job for %s" % inc)
+                    logger.info("There is a failed job for %s" % inc)
                     state = "failed"
                 else:
                     state = "passed"
@@ -62,11 +62,11 @@ class Commenter:
 
     def osc_comment(self, inc: Incident, msg: str, state: str) -> None:
         if inc.rr is None:
-            log.debug("Skipping comment -- no request defined")
+            logger.debug("Skipping comment -- no request defined")
             return
 
         if not msg:
-            log.debug("Skipping empty comment")
+            logger.debug("Skipping empty comment")
             return
 
         kw = {}
@@ -87,33 +87,33 @@ class Commenter:
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
         if comment is not None and comment["comment"].count("\n") == msg.count("\n"):
-            log.debug("Previous comment is too similar")
+            logger.debug("Previous comment is too similar")
             return
 
         if comment is None:
-            log.debug("No comment with this state, looking without the state filter")
+            logger.debug("No comment with this state, looking without the state filter")
             comment, _ = self.commentapi.comment_find(comments, bot_name)
 
         if comment is None:
-            log.debug("No comment to replace found")
+            logger.debug("No comment to replace found")
         else:
             if not self.dry:
                 self.commentapi.delete(comment["id"])
             else:
-                log.info("Would delete comment %d" % int(comment["id"]))
+                logger.info("Would delete comment %d" % int(comment["id"]))
 
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Would write comment to request %s" % inc)
-            log.debug(pformat(msg))
+            logger.info("Would write comment to request %s" % inc)
+            logger.debug(pformat(msg))
 
     def summarize_message(self, jobs) -> str:
         groups = {}
         for job in jobs:
             if "job_group" not in job:
                 # workaround for experimets of some QAM devs
-                log.warning(f"group missing in {job['job_id']}")
+                logger.warning(f"group missing in {job['job_id']}")
                 continue
             gl = "{!s}@{!s}".format(
                 Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"])

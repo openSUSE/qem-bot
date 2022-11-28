@@ -9,7 +9,7 @@ from .loader.config import read_products
 from .loader.qem import get_aggregate_settings_data
 from .syncres import SyncRes
 
-log = getLogger("bot.aggrsync")
+logger = getLogger("bot.aggrsync")
 
 
 class AggregateResultsSync(SyncRes):
@@ -26,7 +26,7 @@ class AggregateResultsSync(SyncRes):
             try:
                 update_setting += get_aggregate_settings_data(self.token, product)
             except EmptySettings as e:
-                log.info(e)
+                logger.info(e)
                 continue
 
         job_results = {}
@@ -53,6 +53,6 @@ class AggregateResultsSync(SyncRes):
         for r in results:
             self.post_result(r)
 
-        log.info("End of bot run")
+        logger.info("End of bot run")
 
         return 0

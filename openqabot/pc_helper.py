@@ -8,7 +8,7 @@ import bs4
 
 from .utils import retry5 as requests
 
-log = logging.getLogger("bot.openqabot.pc_helper")
+logger = logging.getLogger("bot.openqabot.pc_helper")
 
 
 def fetch_matching_link(url, regex):
@@ -21,7 +21,7 @@ def fetch_matching_link(url, regex):
         req = requests.get(url + "/?C=M;O=A")
         text = req.text
     except BaseException as err:
-        log.error("error fetching '%s': %s" % (url, err))
+        logger.error("error fetching '%s': %s" % (url, err))
         return None
     getpage_soup = bs4.BeautifulSoup(text, "html.parser")
     # Returns lazy iterator, so
@@ -59,7 +59,7 @@ def apply_publiccloud_regex(settings):
         )
         return settings
     except BaseException as e:
-        log.warning(f"PUBLIC_CLOUD_IMAGE_REGEX handling failed: {e}")
+        logger.warning(f"PUBLIC_CLOUD_IMAGE_REGEX handling failed: {e}")
         settings["PUBLIC_CLOUD_IMAGE_LOCATION"] = None
         return settings
 
@@ -73,7 +73,7 @@ def apply_pc_tools_image(settings):
             del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
         return settings
     except BaseException as e:
-        log.warning(f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed: {e}")
+        logger.warning(f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed: {e}")
         return settings
 
 
@@ -120,7 +120,7 @@ def apply_publiccloud_pint_image(settings):
             del settings["PUBLIC_CLOUD_PINT_FIELD"]
         return settings
     except BaseException as e:
-        log.warning(
+        logger.warning(
             f"PUBLIC_CLOUD_PINT_QUERY handling failed for {settings['PUBLIC_CLOUD_PINT_NAME']}: {e}"
         )
         settings["PUBLIC_CLOUD_IMAGE_ID"] = None
