@@ -209,6 +209,5 @@ class Aggregate(BaseConf):
         ignore_onetime: bool = False,
     ) -> List[Dict[str, Any]]:
         return [
-            self.handle_arch(incidents, token, ci_url, ignore_onetime)
-            for arch in self.archs
+            handle_arch(incidents, token, ci_url, ignore_onetime) for arch in self.archs
         ]
