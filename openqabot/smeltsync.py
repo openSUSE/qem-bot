@@ -44,11 +44,11 @@ class SMELTSync:
 
     @staticmethod
     def _is_inreview(rr_number) -> bool:
-        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
+        return rr_number["reviewSet"] and rr_number["status"]["name"] == "review"
 
     @staticmethod
     def _is_revoked(rr_number) -> bool:
-        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
+        return rr_number["reviewSet"] and rr_number["status"]["name"] == "revoked"
 
     @staticmethod
     def _is_accepted(rr_number) -> bool:
@@ -63,7 +63,7 @@ class SMELTSync:
             return False
         rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
         review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-        return bool(review) and review[0]["status"]["name"] in ("review", "new")
+        return review and review[0]["status"]["name"] in ("review", "new")
 
     @classmethod
     def _create_record(cls, inc):
