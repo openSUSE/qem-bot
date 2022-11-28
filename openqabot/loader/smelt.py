@@ -12,7 +12,7 @@ from .. import SMELT
 from ..utils import walk
 from ..utils import retry10 as requests
 
-log = getLogger("bot.loader.smelt")
+logger = getLogger("bot.loader.smelt")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -121,7 +121,7 @@ def get_json(query: str, host: str = SMELT) -> dict:
     try:
         return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
-        log.exception(e)
+        logger.exception(e)
         raise e
 
 
@@ -139,7 +139,7 @@ def get_active_incidents() -> Set[int]:
         try:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
         except ValidationError as e:
-            log.exception("Invalid data from SMELT received")
+            logger.exception("Invalid data from SMELT received")
             return []
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
@@ -147,7 +147,7 @@ def get_active_incidents() -> Set[int]:
         if has_next:
             cursor = incidents["pageInfo"]["endCursor"]
 
-    log.info("Loaded %s active incidents" % len(active))
+    logger.info("Loaded %s active incidents" % len(active))
 
     return active
 
@@ -155,17 +155,17 @@ def get_active_incidents() -> Set[int]:
 def get_incident(incident: int):
     query = INCIDENT % {"incident": incident}
 
-    log.info("Getting info about incident %s from SMELT" % incident)
+    logger.info("Getting info about incident %s from SMELT" % incident)
     inc_result = get_json(query)
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
     except ValidationError as e:
-        log.exception("Invalid data from SMELT for incident %s" % incident)
+        logger.exception("Invalid data from SMELT for incident %s" % incident)
         return None
     except Exception as e:
-        log.error("Unknown error for incident %s" % incident)
-        log.exception(e)
+        logger.error("Unknown error for incident %s" % incident)
+        logger.exception(e)
         return None
 
     return inc_result

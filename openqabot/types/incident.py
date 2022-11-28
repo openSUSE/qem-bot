@@ -8,7 +8,7 @@ from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
 
-log = getLogger("bot.types.incident")
+logger = getLogger("bot.types.incident")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 

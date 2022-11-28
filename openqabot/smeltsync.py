@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
 
-log = getLogger("bot.smeltsync")
+logger = getLogger("bot.smeltsync")
 
 
 class SMELTSync:
@@ -20,16 +20,16 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Start syncing incidents from smelt to dashboard")
+        logger.info("Start syncing incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
-        log.info("Updating info about %s incidents" % str(len(data)))
-        log.info("Data: %s" % pformat(data))
+        logger.info("Updating info about %s incidents" % str(len(data)))
+        logger.info("Data: %s" % pformat(data))
 
         if not self.dry:
             ret = update_incidents(self.token, data, retry=self.retry)
         else:
-            log.info("Dry run, nothing synced")
+            logger.info("Dry run, nothing synced")
             ret = 0
 
         return ret
@@ -38,32 +38,51 @@ class SMELTSync:
     def _review_rrequest(requestSet):
         if not requestSet:
             return None
-        rr = sorted(requestSet, key=itemgetter("requestId"), reverse=True)[0]
-        valid = ("new", "review", "accepted", "revoked")
-        return rr if rr["status"]["name"] in valid else None
+        else:
+            rr = sorted(requestSet, key=itemgetter("requestId"), reverse=True)[0]
+            if rr["status"]["name"] in ("new", "review", "accepted", "revoked"):
+                return rr
+            else:
+                return None
 
     @staticmethod
     def _is_inreview(rr_number) -> bool:
-        return rr_number["reviewSet"] and rr_number["status"]["name"] == "review"
+        if rr_number["reviewSet"]:
+            if rr_number["status"]["name"] == "review":
+                return True
+            else:
+                return False
+        else:
+            return False
 
     @staticmethod
     def _is_revoked(rr_number) -> bool:
-        return rr_number["reviewSet"] and rr_number["status"]["name"] == "revoked"
+        if rr_number["reviewSet"]:
+            if rr_number["status"]["name"] == "revoked":
+                return True
+            else:
+                return False
+        else:
+            return False
 
     @staticmethod
     def _is_accepted(rr_number) -> bool:
-        return (
+        if (
             rr_number["status"]["name"] == "accepted"
             or rr_number["status"]["name"] == "new"
-        )
+        ):
+            return True
+        else:
+            return False
 
     @staticmethod
     def _has_qam_review(rr_number) -> bool:
-        if not rr_number["reviewSet"]:
-            return False
-        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
-        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-        return review and review[0]["status"]["name"] in ("review", "new")
+        if rr_number["reviewSet"]:
+            rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+            review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+            if review and review[0]["status"]["name"] in ("review", "new"):
+                return True
+        return False
 
     @classmethod
     def _create_record(cls, inc):

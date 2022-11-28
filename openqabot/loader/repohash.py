@@ -12,7 +12,7 @@ from requests.exceptions import RetryError
 from ..errors import NoRepoFoundError
 from ..utils import retry5 as requests
 
-log = getLogger("bot.loader.repohash")
+logger = getLogger("bot.loader.repohash")
 
 
 def get_max_revision(
@@ -41,14 +41,14 @@ def get_max_revision(
             HTTPError,
             RetryError,
         ):  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("%s not found -- skip incident" % url)
+            logger.info("%s not found -- skip incident" % url)
             raise NoRepoFoundError
         except Exception as e:
-            log.exception(e)
+            logger.exception(e)
             raise e
 
         if cs is None:
-            log.error("%s's revision is None" % url)
+            logger.error("%s's revision is None" % url)
             raise NoRepoFoundError
 
         rev = int(str(cs.text))
