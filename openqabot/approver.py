@@ -25,7 +25,28 @@ from .loader.qem import (
 )
 from .utils import retry3 as requests
 
-logger = getLogger("bot.approver")
+log = getLogger("bot.approver")
+
+
+def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
+    if e.code == 403:
+        log.info(
+            "Received '%s'. Request %s likely already approved, ignoring"
+            % (e.reason, inc.req)
+        )
+        return True
+    elif e.code == 404:
+        log.info(
+            "Received '%s'. Request %s removed or problem on OBS side, ignoring"
+            % (e.reason, inc.req)
+        )
+        return False
+    else:
+        log.error(
+            "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
+            % (e.code, e.reason, inc.req)
+        )
+        return False
 
 
 class Approver:
@@ -37,7 +58,7 @@ class Approver:
         self.client = openQAInterface(args.openqa_instance)
 
     def __call__(self) -> int:
-        logger.info("Start approving incidents in IBS")
+        log.info("Start approving incidents in IBS")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
@@ -47,16 +68,16 @@ class Approver:
         overall_result = True
         incidents_to_approve = [inc for inc in increqs if self._approvable(inc)]
 
-        logger.info("Incidents to approve:")
+        log.info("Incidents to approve:")
         for inc in incidents_to_approve:
-            logger.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
+            log.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
             for inc in incidents_to_approve:
                 overall_result &= self.osc_approve(inc)
 
-        logger.info("End of bot run")
+        log.info("End of bot run")
 
         return 0 if overall_result else 1
 
@@ -117,13 +138,13 @@ class Approver:
             if ok_job:
                 continue
             if self.is_job_marked_acceptable_for_incident(job, inc):
-                logger.info(
+                log.info(
                     "Ignoring failed job %s for incident %s due to openQA comment"
                     % (job.job_id, inc)
                 )
                 res["status"] = "passed"
             else:
-                logger.info(
+                log.info(
                     "Found failed, not-ignored job %s for incident %s"
                     % (job.job_id, inc)
                 )
@@ -141,7 +162,7 @@ class Approver:
             try:
                 res = self.get_jobs(job, api, inc)
             except NoResultsError as e:
-                logger.info(e)
+                log.info(e)
                 continue
             if not res:
                 return False
@@ -154,7 +175,7 @@ class Approver:
         msg = (
             "Request accepted for '" + OBS_GROUP + "' based on data in " + QEM_DASHBOARD
         )
-        logger.info(
+        log.info(
             "Accepting review for "
             + OBS_MAINT_PRJ
             + ":%s:%s" % (str(inc.inc), str(inc.req))
@@ -169,26 +190,9 @@ class Approver:
                 message=msg,
             )
         except HTTPError as e:
-            if e.code == 403:
-                logger.info(
-                    "Received '%s'. Request %s likely already approved, ignoring"
-                    % (e.reason, inc.req)
-                )
-                return True
-            elif e.code == 404:
-                logger.info(
-                    "Received '%s'. Request %s removed or problem on OBS side, ignoring"
-                    % (e.reason, inc.req)
-                )
-                return False
-            else:
-                logger.error(
-                    "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
-                    % (e.code, e.reason, inc.req)
-                )
-                return False
+            return _handle_http_error(e, inc)
         except Exception as e:
-            logger.exception(e)
+            log.exception(e)
             return False
 
         return True
