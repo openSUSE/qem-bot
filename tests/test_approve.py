@@ -129,7 +129,7 @@ def test_no_jobs(fake_qem, caplog):
 
     assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has failed job in incidents" in messages
+    assert "Inc 4 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:4:400" not in messages
@@ -175,9 +175,9 @@ def test_single_incident(fake_qem, caplog):
 
     approver = Approver(args)
     approver()
-    assert len(caplog.records) == 4
+    assert len(caplog.records) == 5
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has failed job in incidents" in messages
+    assert "Inc 1 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:1:100" not in messages
@@ -189,7 +189,7 @@ def test_single_incident(fake_qem, caplog):
     approver()
     assert len(caplog.records) == 4
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has failed job in incidents" not in messages
+    assert "Inc 4 has at least one failed job in incident tests" not in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -481,9 +481,9 @@ def test_one_incident_failed(fake_qem, fake_openqa_comment_api, caplog):
 
     assert approver() == 0
 
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has failed job in incidents" in messages
+    assert "Inc 1 has at least one failed job in incident tests" in messages
     assert "SUSE:Maintenance:2:200" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -514,9 +514,9 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
 
     assert approver() == 0
 
-    assert len(caplog.records) == 7
+    assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 2 has failed job in aggregates" in messages
+    assert "Inc 2 has at least one failed job in aggregate tests" in messages
     assert "SUSE:Maintenance:1:100" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages

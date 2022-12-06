@@ -65,12 +65,18 @@ class Approver:
                 u_jobs = []
 
             if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-                logger.info("Inc %s has failed job in incidents" % str(inc.inc))
+                logger.info(
+                    "Inc %s has at least one failed job in incident tests"
+                    % str(inc.inc)
+                )
                 continue
 
             if any(i.withAggregate for i in i_jobs):
                 if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-                    logger.info("Inc %s has failed job in aggregates" % str(inc.inc))
+                    logger.info(
+                        "Inc %s has at least one failed job in aggregate tests"
+                        % str(inc.inc)
+                    )
                     continue
 
             # everything is green --> approve inc
@@ -118,6 +124,10 @@ class Approver:
                 )
                 res["status"] = "passed"
             else:
+                logger.info(
+                    "Found failed, not-ignored job %s for incident %s"
+                    % (job.job_id, inc)
+                )
                 break
 
         if not results:
