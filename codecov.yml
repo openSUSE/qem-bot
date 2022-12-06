@@ -1,0 +1,23 @@
+codecov:
+  branch: master
+comment:
+  behavior: default
+  require_changes: true
+coverage:
+  range: 40..100
+  round: down
+  precision: 2
+  status:
+    changes: false
+    project:
+      default:
+        target: 44.0
+        threshold: 0.1
+      fully_covered:
+        target: 100.0
+        paths:
+          - errors.py
+          - utils.py
+    patch:
+      default:
+        branches: null
