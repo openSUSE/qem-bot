@@ -11,17 +11,17 @@ from .loader.qem import get_incidents
 from .openqa import openQAInterface
 from .utils import retry3 as requests
 
-logger = getLogger("bot.openqabot")
+log = getLogger("bot.openqabot")
 
 
 class OpenQABot:
     def __init__(self, args: Namespace) -> None:
-        logger.info("Bot schedule starts now")
+        log.info("Bot schedule starts now")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(self.token)
-        logger.info("%s incidents loaded from qem dashboard" % len(self.incidents))
+        log.info("%s incidents loaded from qem dashboard" % len(self.incidents))
 
         extrasettings = get_onearch(args.singlearch)
 
@@ -34,7 +34,7 @@ class OpenQABot:
 
     def post_qem(self, data, api) -> None:
         if not self.openqa:
-            logger.warning(
+            log.warning(
                 "No valid openQA configuration specified: '%s' not posted to dashboard"
                 % data
             )
@@ -43,40 +43,40 @@ class OpenQABot:
         url = QEM_DASHBOARD + api
         try:
             res = requests.put(url, headers=self.token, json=data)
-            logger.info(
+            log.info(
                 "Put to dashboard result %s, database id: %s"
                 % (res.status_code, res.json().get("id", "No id?"))
             )
         except Exception as e:
-            logger.exception(e)
+            log.exception(e)
             raise e
 
     def post_openqa(self, data) -> None:
         self.openqa.post_job(data)
 
     def __call__(self):
-        logger.info("Starting bot mainloop")
+        log.info("Starting bot mainloop")
         post = []
         for worker in self.workers:
             post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
         if self.dry:
-            logger.info("Would trigger %s products in openQA" % len(post))
+            log.info("Would trigger %s products in openQA" % len(post))
             for job in post:
-                logger.info(job)
+                log.info(job)
 
         else:
-            logger.info("Triggering %s products in openQA" % len(post))
+            log.info("Triggering %s products in openQA" % len(post))
             for job in post:
-                logger.info("Triggering %s" % str(job))
+                log.info("Triggering %s" % str(job))
                 try:
                     self.post_openqa(job["openqa"])
                 except PostOpenQAError:
-                    logger.info("POST failed, not updating dashboard")
+                    log.info("POST failed, not updating dashboard")
                     pass
                 else:
                     self.post_qem(job["qem"], job["api"])
 
-        logger.info("End of bot run")
+        log.info("End of bot run")
 
         return 0

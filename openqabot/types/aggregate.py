@@ -20,7 +20,7 @@ from .baseconf import BaseConf
 from .incident import Incident
 
 
-logger = getLogger("bot.types.aggregate")
+log = getLogger("bot.types.aggregate")
 
 
 class Aggregate(BaseConf):
@@ -125,7 +125,7 @@ class Aggregate(BaseConf):
                     headers=token,
                 ).json()
             except Exception as e:
-                logger.exception(e)
+                log.exception(e)
                 old_jobs = None
 
             old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
@@ -136,7 +136,7 @@ class Aggregate(BaseConf):
                     full_post["openqa"]["REPOHASH"], old_repohash, old_build
                 )
             except SameBuildExists:
-                logger.info(
+                log.info(
                     "For %s aggreagate on %s there is existing build"
                     % (self.product, arch)
                 )
@@ -155,7 +155,7 @@ class Aggregate(BaseConf):
                 query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
                 settings = apply_pc_tools_image(settings)
                 if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
-                    logger.error(
+                    log.error(
                         f"Failed to query latest publiccloud tools image using {query}"
                     )
                     continue
@@ -164,7 +164,7 @@ class Aggregate(BaseConf):
             if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
                 settings = apply_publiccloud_regex(settings)
                 if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
-                    logger.error(
+                    log.error(
                         f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
                     )
                     continue
@@ -172,7 +172,7 @@ class Aggregate(BaseConf):
             if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                 settings = apply_publiccloud_pint_image(settings)
                 if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
-                    logger.error(
+                    log.error(
                         f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
                     )
                     continue

@@ -11,7 +11,7 @@ from .openqa import openQAInterface
 from .types import Data
 from .utils import normalize_results
 
-logger = getLogger("bot.syncres")
+log = getLogger("bot.syncres")
 
 
 class SyncRes:
@@ -58,11 +58,11 @@ class SyncRes:
             return False
 
         if data["clone_id"]:
-            logger.info("Job '%s' already has a clone, ignoring" % data["clone_id"])
+            log.info("Job '%s' already has a clone, ignoring" % data["clone_id"])
             return False
 
         if self._is_in_devel_group(data):
-            logger.info(
+            log.info(
                 "Ignoring job '%s' in development group '%s'"
                 % (data["id"], data["group"])
             )
@@ -71,13 +71,13 @@ class SyncRes:
         return True
 
     def post_result(self, result):
-        logger.debug(
+        log.debug(
             "Posting results of %s job %s with status %s"
             % (self.operation, result["job_id"], result["status"])
         )
-        logger.debug("Full post data: %s" % pformat(result))
+        log.debug("Full post data: %s" % pformat(result))
 
         if not self.dry and self.client:
             post_job(self.token, result)
         else:
-            logger.info("Dry run -- data in dashboard untouched")
+            log.info("Dry run -- data in dashboard untouched")
