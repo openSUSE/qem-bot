@@ -49,13 +49,12 @@ class Aggregate(BaseConf):
     @staticmethod
     def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
         today = date.today().strftime("%Y%m%d")
-        build = today
 
         if build.startswith(today) and repohash == old_repohash:
             raise SameBuildExists
 
         counter = int(build.split("-")[-1]) + 1 if build.startswith(today) else 1
-        return f"{build}-{counter}"
+        return f"{today}-{counter}"
 
     def __call__(
         self,
