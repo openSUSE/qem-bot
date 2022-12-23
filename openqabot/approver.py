@@ -116,10 +116,12 @@ class Approver:
         return True
 
     @lru_cache(maxsize=512)
-    def is_job_marked_acceptable_for_incident(self, job: JobAggr, inc: int) -> bool:
+    def is_job_marked_acceptable_for_incident(
+        self, job_aggr: JobAggr, inc: int
+    ) -> bool:
         regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
         try:
-            for comment in self.client.get_job_comments(job.job_id):
+            for comment in self.client.get_job_comments(job_aggr.id):
                 if regex.match(comment["text"]):
                     return True
         except RequestError:
@@ -127,9 +129,9 @@ class Approver:
         return False
 
     @lru_cache(maxsize=128)
-    def get_jobs(self, job: JobAggr, api: str, inc: int) -> bool:
+    def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
         results = requests.get(
-            QEM_DASHBOARD + api + str(job.job_id), headers=self.token
+            QEM_DASHBOARD + api + str(job_aggr.id), headers=self.token
         ).json()
 
         # keep jobs explicitly marked as acceptable for this incident by openQA comments
@@ -137,30 +139,30 @@ class Approver:
             ok_job = res["status"] == "passed"
             if ok_job:
                 continue
-            if self.is_job_marked_acceptable_for_incident(job, inc):
+            if self.is_job_marked_acceptable_for_incident(job_aggr, inc):
                 log.info(
-                    "Ignoring failed job %s for incident %s due to openQA comment"
-                    % (job.job_id, inc)
+                    "Ignoring failed job setting %s for incident %s due to openQA comment"
+                    % (job_aggr.id, inc)
                 )
                 res["status"] = "passed"
             else:
                 log.info(
-                    "Found failed, not-ignored job %s for incident %s"
-                    % (job.job_id, inc)
+                    "Found failed, not-ignored job setting %s for incident %s"
+                    % (job_aggr.id, inc)
                 )
                 break
 
         if not results:
-            raise NoResultsError("Job %s not found " % str(job.job_id))
+            raise NoResultsError("Job setting %s not found " % str(job_aggr.id))
 
         return all(r["status"] == "passed" for r in results)
 
     def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
         res = False
 
-        for job in jobs:
+        for job_aggr in jobs:
             try:
-                res = self.get_jobs(job, api, inc)
+                res = self.get_jobs(job_aggr, api, inc)
             except NoResultsError as e:
                 log.info(e)
                 continue
