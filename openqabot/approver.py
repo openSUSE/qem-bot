@@ -116,12 +116,10 @@ class Approver:
         return True
 
     @lru_cache(maxsize=512)
-    def is_job_marked_acceptable_for_incident(
-        self, job_aggr: JobAggr, inc: int
-    ) -> bool:
+    def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
         regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
         try:
-            for comment in self.client.get_job_comments(job_aggr.id):
+            for comment in self.client.get_job_comments(job_id):
                 if regex.match(comment["text"]):
                     return True
         except RequestError:
@@ -139,10 +137,10 @@ class Approver:
             ok_job = res["status"] == "passed"
             if ok_job:
                 continue
-            if self.is_job_marked_acceptable_for_incident(job_aggr, inc):
+            if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
                 log.info(
-                    "Ignoring failed job setting %s for incident %s due to openQA comment"
-                    % (job_aggr.id, inc)
+                    "Ignoring failed job %s for incident %s due to openQA comment"
+                    % (res["job_id"], inc)
                 )
                 res["status"] = "passed"
             else:

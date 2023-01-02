@@ -51,12 +51,16 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
     responses.add(
         responses.GET,
         "http://dashboard.qam.suse.de/api/jobs/update/20005",
-        json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100002, "status": "failed"},
+            {"job_id": 100003, "status": "passed"},
+        ],
     )
     add_two_passed_response()
     responses.add(
         responses.GET,
-        url="http://instance.qa/api/v1/jobs/120005/comments",
+        url="http://instance.qa/api/v1/jobs/100002/comments",
         json=[{"text": "@review:acceptable_for:incident_%s:foo" % request.param}],
     )
 
@@ -158,12 +162,12 @@ def test_single_incident(fake_qem, caplog):
     responses.add(
         responses.GET,
         re.compile(r"http://dashboard.qam.suse.de/api/jobs/incident/100"),
-        json=[{"incident_settings": 1000, "job_id": 1, "status": "failed"}],
+        json=[{"incident_settings": 1000, "job_id": 100001, "status": "failed"}],
     )
     responses.add(
         responses.GET,
         re.compile(r"http://dashboard.qam.suse.de/api/jobs/incident/400"),
-        json=[{"incident_settings": 1000, "job_id": 1, "status": "passed"}],
+        json=[{"incident_settings": 1000, "job_id": 100000, "status": "passed"}],
     )
     responses.add(
         responses.GET,
@@ -173,7 +177,11 @@ def test_single_incident(fake_qem, caplog):
     responses.add(
         responses.GET,
         re.compile(r"http://dashboard.qam.suse.de/api/jobs/update/1000.*"),
-        json=[{"status": "passed"}, {"status": "failed"}, {"status": "failed"}],
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100001, "status": "failed"},
+            {"job_id": 100002, "status": "failed"},
+        ],
     )
     approver(incident=1)
     assert len(caplog.records) == 5
@@ -391,7 +399,11 @@ def fake_incident_1_failed_2_passed(request):
     responses.add(
         responses.GET,
         "http://dashboard.qam.suse.de/api/jobs/incident/%s" % request.param,
-        json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100001, "status": "failed"},
+            {"job_id": 100002, "status": "passed"},
+        ],
     )
     add_two_passed_response()
 
@@ -427,7 +439,11 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
     responses.add(
         responses.GET,
         "http://dashboard.qam.suse.de/api/jobs/update/20005",
-        json=[{"status": "passed"}, {"status": "failed"}, {"status": "passed"}],
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100001, "status": "failed"},
+            {"job_id": 100002, "status": "passed"},
+        ],
     )
     add_two_passed_response()
     assert approver() == 0
@@ -443,7 +459,6 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
 
 
 @responses.activate
-@pytest.mark.xfail(reason="Feature is not yet properly implemented")
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_incidents_via_openqa_comments", [(2)], indirect=True
@@ -458,7 +473,7 @@ def test_approval_unblocked_via_openqa_comment(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
-    assert "Ignoring failed job 120005 for incident 2 due to openQA comment" in messages
+    assert "Ignoring failed job 100002 for incident 2 due to openQA comment" in messages
 
 
 @responses.activate
