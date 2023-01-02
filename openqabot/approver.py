@@ -119,7 +119,7 @@ class Approver:
     def is_job_marked_acceptable_for_incident(self, job: JobAggr, inc: int) -> bool:
         regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
         try:
-            for comment in self.client.get_job_comments(job.openqa_id):
+            for comment in self.client.get_job_comments(job.job_id):
                 if regex.match(comment["text"]):
                     return True
         except RequestError:
@@ -140,18 +140,18 @@ class Approver:
             if self.is_job_marked_acceptable_for_incident(job, inc):
                 log.info(
                     "Ignoring failed job %s for incident %s due to openQA comment"
-                    % (job.openqa_id, inc)
+                    % (job.job_id, inc)
                 )
                 res["status"] = "passed"
             else:
                 log.info(
                     "Found failed, not-ignored job %s for incident %s"
-                    % (job.openqa_id, inc)
+                    % (job.job_id, inc)
                 )
                 break
 
         if not results:
-            raise NoResultsError("Job %s not found " % str(job.openqa_id))
+            raise NoResultsError("Job %s not found " % str(job.job_id))
 
         return all(r["status"] == "passed" for r in results)
 
