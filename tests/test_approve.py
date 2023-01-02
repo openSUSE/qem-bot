@@ -56,7 +56,7 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
     add_two_passed_response()
     responses.add(
         responses.GET,
-        url="http://instance.qa/api/v1/jobs/20005/comments",
+        url="http://instance.qa/api/v1/jobs/120005/comments",
         json=[{"text": "@review:acceptable_for:incident_%s:foo" % request.param}],
     )
 
@@ -78,16 +78,16 @@ def fake_qem(monkeypatch, request):
         if "inc" in request.param:
             raise NoResultsError("No results for settings")
         results = {
-            1: [JobAggr(i, False, True) for i in range(1000, 1010)],
-            2: [JobAggr(i, False, True) for i in range(2000, 2010)],
+            1: [JobAggr(i, 100000 + i, False, True) for i in range(1000, 1010)],
+            2: [JobAggr(i, 100000 + i, False, True) for i in range(2000, 2010)],
             3: [
-                JobAggr(3000, False, False),
-                JobAggr(3001, False, False),
-                JobAggr(3002, False, True),
-                JobAggr(3002, False, False),
-                JobAggr(3003, False, True),
+                JobAggr(3000, 103000, False, False),
+                JobAggr(3001, 103001, False, False),
+                JobAggr(3002, 103002, False, True),
+                JobAggr(3002, 103002, False, False),
+                JobAggr(3003, 103003, False, True),
             ],
-            4: [JobAggr(i, False, False) for i in range(4000, 4010)],
+            4: [JobAggr(i, 100000 + i, False, False) for i in range(4000, 4010)],
         }
         return results.get(inc, None)
 
@@ -96,9 +96,9 @@ def fake_qem(monkeypatch, request):
             raise NoResultsError("No results for settings")
         results = {
             4: [],
-            1: [JobAggr(i, True, False) for i in range(10000, 10010)],
-            2: [JobAggr(i, True, False) for i in range(20000, 20010)],
-            3: [JobAggr(i, True, False) for i in range(30000, 30010)],
+            1: [JobAggr(i, 100000 + i, True, False) for i in range(10000, 10010)],
+            2: [JobAggr(i, 100000 + i, True, False) for i in range(20000, 20010)],
+            3: [JobAggr(i, 100000 + i, True, False) for i in range(30000, 30010)],
         }
         return results.get(inc, None)
 
@@ -179,6 +179,7 @@ def test_single_incident(fake_qem, caplog):
     assert len(caplog.records) == 5
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has at least one failed job in incident tests" in messages
+    assert "Found failed, not-ignored job 101000 for incident 1" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "SUSE:Maintenance:1:100" not in messages
@@ -410,6 +411,7 @@ def test_one_incident_failed(
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has at least one failed job in incident tests" in messages
+    assert "Found failed, not-ignored job 101005 for incident 1" in messages
     assert "SUSE:Maintenance:2:200" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -432,6 +434,7 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 2 has at least one failed job in aggregate tests" in messages
+    assert "Found failed, not-ignored job 120005 for incident 2" in messages
     assert "SUSE:Maintenance:1:100" in messages
     assert "SUSE:Maintenance:3:300" in messages
     assert "SUSE:Maintenance:4:400" in messages
@@ -454,7 +457,7 @@ def test_approval_unblocked_via_openqa_comment(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:2:200" in messages
-    assert "Ignoring failed job 20005 for incident 2 due to openQA comment" in messages
+    assert "Ignoring failed job 120005 for incident 2 due to openQA comment" in messages
 
 
 @responses.activate
