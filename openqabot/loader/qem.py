@@ -28,7 +28,7 @@ class IncReq(NamedTuple):
 
 
 class JobAggr(NamedTuple):
-    job_id: int
+    id: int
     aggregate: bool
     withAggregate: bool
 
@@ -131,10 +131,10 @@ def get_incident_results(inc: int, token: Dict[str, str]):
         raise e
 
     ret = []
-    for job in settings:
+    for job_aggr in settings:
         try:
             data = requests.get(
-                QEM_DASHBOARD + "api/jobs/incident/" + f"{job.job_id}", headers=token
+                QEM_DASHBOARD + "api/jobs/incident/" + f"{job_aggr.id}", headers=token
             ).json()
             ret += data
         except Exception as e:
@@ -206,10 +206,10 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
         raise e
 
     ret = []
-    for job in settings:
+    for job_aggr in settings:
         try:
             data = requests.get(
-                QEM_DASHBOARD + "api/jobs/update/" + f"{job.job_id}", headers=token
+                QEM_DASHBOARD + "api/jobs/update/" + f"{job_aggr.id}", headers=token
             ).json()
         except Exception as e:
             log.exception(e)
