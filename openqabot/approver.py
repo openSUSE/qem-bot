@@ -145,8 +145,8 @@ class Approver:
                 res["status"] = "passed"
             else:
                 log.info(
-                    "Found failed, not-ignored job setting %s for incident %s"
-                    % (job_aggr.id, inc)
+                    "Found failed, not-ignored job %s for incident %s"
+                    % (res["job_id"], inc)
                 )
                 break
 
