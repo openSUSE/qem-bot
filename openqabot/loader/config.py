@@ -17,13 +17,11 @@ log = getLogger("bot.loader.config")
 def load_metadata(
     path: Path, aggregate: bool, incidents: bool, extrasettings: Set[str]
 ) -> List[Union[Aggregate, Incidents]]:
-
     ret: List[Union[Aggregate, Incidents]] = []
 
     loader = YAML(typ="safe")
 
     for p in path.glob("*.yml"):
-
         try:
             data = loader.load(p)
         except Exception as e:

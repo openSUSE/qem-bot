@@ -171,7 +171,6 @@ class Approver:
 
     @staticmethod
     def osc_approve(inc: IncReq) -> bool:
-
         msg = (
             "Request accepted for '" + OBS_GROUP + "' based on data in " + QEM_DASHBOARD
         )

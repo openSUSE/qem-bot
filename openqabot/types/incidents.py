@@ -84,7 +84,6 @@ class Incidents(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
-
         DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
         ret = []
@@ -113,6 +112,10 @@ class Incidents(BaseConf):
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
+                            continue
+
+                    if "excluded_packages" in data:
+                        if inc.contains_package(data["excluded_packages"]):
                             continue
 
                     if inc.livepatch:
@@ -236,7 +239,7 @@ class Incidents(BaseConf):
                         if delta_prio:
                             full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
-                        # add custom vars to job settings
+                    # add custom vars to job settings
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 

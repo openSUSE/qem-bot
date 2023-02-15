@@ -20,7 +20,6 @@ class IncResultsSync(SyncRes):
         self.active = get_active_incidents(self.token)
 
     def __call__(self) -> int:
-
         incidents: List[Data] = []
 
         for inc in self.active:

@@ -29,7 +29,6 @@ class Commenter:
         self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
-
         log.info("Start commenting incidents in IBS")
 
         for inc in self.incidents:

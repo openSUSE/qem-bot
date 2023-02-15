@@ -20,7 +20,6 @@ def get_max_revision(
     arch: str,
     project: str,
 ) -> int:
-
     max_rev = 0
 
     url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
