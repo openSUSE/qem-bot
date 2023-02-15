@@ -115,6 +115,10 @@ class Incidents(BaseConf):
                         if not inc.contains_package(data["packages"]):
                             continue
 
+                    if "excluded_packages" in data:
+                        if inc.contains_package(data["excluded_packages"]):
+                            continue
+
                     if inc.livepatch:
                         if flavor not in [
                             "Server-DVD-Incidents-Kernel",
@@ -236,7 +240,7 @@ class Incidents(BaseConf):
                         if delta_prio:
                             full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
-                        # add custom vars to job settings
+                    # add custom vars to job settings
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
