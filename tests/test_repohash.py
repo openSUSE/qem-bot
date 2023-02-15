@@ -14,7 +14,6 @@ PROJECT = "SUSE:Maintenance:12345"
 
 @responses.activate
 def test_get_max_revison_manager_aarch64():
-
     repos = [("SLE-Module-SUSE-Manager-Server", "4.1")]
     arch = "aarch64"
 
@@ -24,7 +23,6 @@ def test_get_max_revison_manager_aarch64():
 
 @responses.activate
 def test_get_max_revison_opensuse():
-
     repos = [("openSUSE-SLE", "4.1")]
     arch = "aarch64"
     opensuse = BASE_XML % "256"

@@ -84,7 +84,6 @@ class Incidents(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
-
         DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
         ret = []

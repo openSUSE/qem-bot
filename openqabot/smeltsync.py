@@ -86,7 +86,6 @@ class SMELTSync:
 
     @classmethod
     def _create_record(cls, inc):
-
         incident = {}
         incident["isActive"] = True
 

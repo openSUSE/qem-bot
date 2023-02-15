@@ -49,7 +49,6 @@ def normalize_results(result: str) -> str:
 
 
 def __retry(retries: Optional[int], backoff_factor: float) -> Session:
-
     adapter = HTTPAdapter(
         max_retries=Retry(
             retries,

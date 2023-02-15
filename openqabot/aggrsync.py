@@ -20,7 +20,6 @@ class AggregateResultsSync(SyncRes):
         self.product = read_products(args.configs)
 
     def __call__(self) -> int:
-
         update_setting = []
         for product in self.product:
             try:

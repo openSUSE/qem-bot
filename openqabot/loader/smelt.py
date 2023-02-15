@@ -172,7 +172,6 @@ def get_incident(incident: int):
 
 
 def get_incidents(active: Set[int]) -> List[Any]:
-
     incidents = []
 
     with CT.ThreadPoolExecutor() as executor:

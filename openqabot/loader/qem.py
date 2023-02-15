@@ -223,10 +223,8 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
 
 
 def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
-
     retry = kwargs.get("retry", 0)
     while retry >= 0:
-
         retry -= 1
         try:
             ret = req.patch(QEM_DASHBOARD + "api/incidents", headers=token, json=data)
