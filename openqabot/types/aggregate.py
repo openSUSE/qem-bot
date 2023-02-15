@@ -179,15 +179,13 @@ class Aggregate(BaseConf):
 
             for template, issues in test_incidents.items():
                 full_post["openqa"][template] = ",".join(str(x) for x in issues)
+                full_post["qem"]["incidents"] += issues
             for template, issues in test_repos.items():
                 full_post["openqa"][template] = ",".join(issues)
-            for issues in test_incidents.values():
-                full_post["qem"]["incidents"] += issues
 
             full_post["qem"]["incidents"] = [
                 str(inc) for inc in set(full_post["qem"]["incidents"])
             ]
-
             if not full_post["qem"]["incidents"]:
                 continue
 
