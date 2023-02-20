@@ -119,13 +119,7 @@ class Incidents(BaseConf):
                             continue
 
                     if inc.livepatch:
-                        if flavor not in [
-                            "Server-DVD-Incidents-Kernel",
-                            "Server-DVD-Incidents-Kernel-RT",
-                        ]:
-                            continue
-                        else:
-                            full_post["openqa"]["KGRAFT"] = "1"
+                        full_post["openqa"]["KGRAFT"] = "1"
 
                     full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
 
