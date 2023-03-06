@@ -66,7 +66,7 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int):
+    def get_job_comments(self, job_id: int) -> list[str]:
         ret = []
         try:
             ret = self.openqa.openqa_request(
@@ -75,7 +75,9 @@ class openQAInterface:
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:
             (method, url, status_code) = e.args
-            if status_code != 404:
+            if status_code == 404:
+                log.info("Job %s not found in openQA" % job_id)
+            else:
                 log.exception(e)
         return ret
 
