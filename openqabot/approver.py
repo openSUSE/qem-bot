@@ -140,14 +140,14 @@ class Approver:
                 continue
             if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
                 log.info(
-                    "Ignoring failed job %s for incident %s due to openQA comment"
-                    % (res["job_id"], inc)
+                    "Ignoring failed job %s/t%s for incident %s due to openQA comment"
+                    % (str(self.client.url.geturl()), res["job_id"], inc)
                 )
                 res["status"] = "passed"
             else:
                 log.info(
-                    "Found failed, not-ignored job %s for incident %s"
-                    % (res["job_id"], inc)
+                    "Found failed, not-ignored job %s/t%s for incident %s"
+                    % (str(self.client.url.geturl()), res["job_id"], inc)
                 )
                 break
 

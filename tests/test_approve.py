@@ -193,7 +193,10 @@ def test_single_incident(fake_qem, caplog):
         "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
         in messages
     )
-    assert "Found failed, not-ignored job 100001 for incident 1" in messages
+    assert (
+        "Found failed, not-ignored job http://instance.qa/t100001 for incident 1"
+        in messages
+    )
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:1:100" not in messages
@@ -435,7 +438,10 @@ def test_one_incident_failed(
         "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
         in messages
     )
-    assert "Found failed, not-ignored job 100001 for incident 1" in messages
+    assert (
+        "Found failed, not-ignored job http://instance.qa/t100001 for incident 1"
+        in messages
+    )
     assert "* SUSE:Maintenance:2:200" in messages
     assert "* SUSE:Maintenance:3:300" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -465,7 +471,10 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
         "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests"
         in messages
     )
-    assert "Found failed, not-ignored job 100001 for incident 2" in messages
+    assert (
+        "Found failed, not-ignored job http://instance.qa/t100001 for incident 2"
+        in messages
+    )
     assert "* SUSE:Maintenance:1:100" in messages
     assert "* SUSE:Maintenance:3:300" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -488,7 +497,10 @@ def test_approval_unblocked_via_openqa_comment(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "* SUSE:Maintenance:2:200" in messages
-    assert "Ignoring failed job 100002 for incident 2 due to openQA comment" in messages
+    assert (
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
+        in messages
+    )
 
 
 @responses.activate
