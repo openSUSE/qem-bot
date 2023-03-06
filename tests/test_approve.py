@@ -140,7 +140,7 @@ def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
     assert "Inc 4 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
-    assert "SUSE:Maintenance:4:400" not in messages
+    assert "* SUSE:Maintenance:4:400" not in messages
 
 
 @responses.activate
@@ -190,7 +190,7 @@ def test_single_incident(fake_qem, caplog):
     assert "Found failed, not-ignored job 100001 for incident 1" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
-    assert "SUSE:Maintenance:1:100" not in messages
+    assert "* SUSE:Maintenance:1:100" not in messages
 
     caplog.clear()
     approver(incident=4)
@@ -199,7 +199,7 @@ def test_single_incident(fake_qem, caplog):
     assert "Inc 4 has at least one failed job in incident tests" not in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
-    assert "SUSE:Maintenance:4:400" in messages
+    assert "* SUSE:Maintenance:4:400" in messages
 
 
 @responses.activate
@@ -209,10 +209,10 @@ def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
     assert approver() == 0
     assert len(caplog.records) == 7
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "SUSE:Maintenance:1:100" in messages
-    assert "SUSE:Maintenance:2:200" in messages
-    assert "SUSE:Maintenance:3:300" in messages
-    assert "SUSE:Maintenance:4:400" in messages
+    assert "* SUSE:Maintenance:1:100" in messages
+    assert "* SUSE:Maintenance:2:200" in messages
+    assert "* SUSE:Maintenance:3:300" in messages
+    assert "* SUSE:Maintenance:4:400" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
 
@@ -229,7 +229,7 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
     assert "Aggregate missing for 2" in messages
     assert "Aggregate missing for 3" in messages
     assert "Incidents to approve:" in messages
-    assert "SUSE:Maintenance:4:400" in messages
+    assert "* SUSE:Maintenance:4:400" in messages
     assert "End of bot run" in messages
 
 
@@ -242,7 +242,7 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Start approving incidents in IBS" in messages
     assert "Incidents to approve:" in messages
-    assert "SUSE:Maintenance" not in messages
+    assert "* SUSE:Maintenance" not in messages
     assert "End of bot run" in messages
 
 
@@ -260,10 +260,10 @@ def test_403_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert messages == [
         "Start approving incidents in IBS",
         "Incidents to approve:",
-        "SUSE:Maintenance:1:100",
-        "SUSE:Maintenance:2:200",
-        "SUSE:Maintenance:3:300",
-        "SUSE:Maintenance:4:400",
+        "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
+        "* SUSE:Maintenance:3:300",
+        "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Received 'Not allowed'. Request 100 likely already approved, ignoring",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -290,10 +290,10 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert messages == [
         "Start approving incidents in IBS",
         "Incidents to approve:",
-        "SUSE:Maintenance:1:100",
-        "SUSE:Maintenance:2:200",
-        "SUSE:Maintenance:3:300",
-        "SUSE:Maintenance:4:400",
+        "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
+        "* SUSE:Maintenance:3:300",
+        "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Received 'Not allowed'. Request 100 removed or problem on OBS side, ignoring",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -320,18 +320,18 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert messages == [
         "Start approving incidents in IBS",
         "Incidents to approve:",
-        "SUSE:Maintenance:1:100",
-        "SUSE:Maintenance:2:200",
-        "SUSE:Maintenance:3:300",
-        "SUSE:Maintenance:4:400",
+        "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
+        "* SUSE:Maintenance:3:300",
+        "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
-        "Recived error 500, reason: 'Not allowed' for Request 100 - problem on OBS side",
+        "Received error 500, reason: 'Not allowed' for Request 100 - problem on OBS side",
         "Accepting review for SUSE:Maintenance:2:200",
-        "Recived error 500, reason: 'Not allowed' for Request 200 - problem on OBS side",
+        "Received error 500, reason: 'Not allowed' for Request 200 - problem on OBS side",
         "Accepting review for SUSE:Maintenance:3:300",
-        "Recived error 500, reason: 'Not allowed' for Request 300 - problem on OBS side",
+        "Received error 500, reason: 'Not allowed' for Request 300 - problem on OBS side",
         "Accepting review for SUSE:Maintenance:4:400",
-        "Recived error 500, reason: 'Not allowed' for Request 400 - problem on OBS side",
+        "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side",
         "End of bot run",
     ]
 
@@ -352,10 +352,10 @@ def test_osc_unknown_exception(
     assert messages == [
         "Start approving incidents in IBS",
         "Incidents to approve:",
-        "SUSE:Maintenance:1:100",
-        "SUSE:Maintenance:2:200",
-        "SUSE:Maintenance:3:300",
-        "SUSE:Maintenance:4:400",
+        "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
+        "* SUSE:Maintenance:3:300",
+        "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Fake OBS exception",
         "Accepting review for SUSE:Maintenance:2:200",
@@ -382,10 +382,10 @@ def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert messages == [
         "Start approving incidents in IBS",
         "Incidents to approve:",
-        "SUSE:Maintenance:1:100",
-        "SUSE:Maintenance:2:200",
-        "SUSE:Maintenance:3:300",
-        "SUSE:Maintenance:4:400",
+        "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
+        "* SUSE:Maintenance:3:300",
+        "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
         "Accepting review for SUSE:Maintenance:2:200",
         "Accepting review for SUSE:Maintenance:3:300",
@@ -424,9 +424,9 @@ def test_one_incident_failed(
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 1 has at least one failed job in incident tests" in messages
     assert "Found failed, not-ignored job 100001 for incident 1" in messages
-    assert "SUSE:Maintenance:2:200" in messages
-    assert "SUSE:Maintenance:3:300" in messages
-    assert "SUSE:Maintenance:4:400" in messages
+    assert "* SUSE:Maintenance:2:200" in messages
+    assert "* SUSE:Maintenance:3:300" in messages
+    assert "* SUSE:Maintenance:4:400" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
 
@@ -451,9 +451,9 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Inc 2 has at least one failed job in aggregate tests" in messages
     assert "Found failed, not-ignored job 100001 for incident 2" in messages
-    assert "SUSE:Maintenance:1:100" in messages
-    assert "SUSE:Maintenance:3:300" in messages
-    assert "SUSE:Maintenance:4:400" in messages
+    assert "* SUSE:Maintenance:1:100" in messages
+    assert "* SUSE:Maintenance:3:300" in messages
+    assert "* SUSE:Maintenance:4:400" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
 
@@ -472,7 +472,7 @@ def test_approval_unblocked_via_openqa_comment(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "SUSE:Maintenance:2:200" in messages
+    assert "* SUSE:Maintenance:2:200" in messages
     assert "Ignoring failed job 100002 for incident 2 due to openQA comment" in messages
 
 
@@ -490,4 +490,4 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "SUSE:Maintenance:2:200" not in messages
+    assert "* SUSE:Maintenance:2:200" not in messages

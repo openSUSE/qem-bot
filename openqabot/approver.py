@@ -70,7 +70,7 @@ class Approver:
 
         log.info("Incidents to approve:")
         for inc in incidents_to_approve:
-            log.info(OBS_MAINT_PRJ + ":%s:%s" % (str(inc.inc), str(inc.req)))
+            log.info("* %s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req)))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
