@@ -43,7 +43,7 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
         return False
     else:
         log.error(
-            "Recived error %s, reason: '%s' for Request %s - problem on OBS side"
+            "Received error %s, reason: '%s' for Request %s - problem on OBS side"
             % (e.code, e.reason, inc.req)
         )
         return False

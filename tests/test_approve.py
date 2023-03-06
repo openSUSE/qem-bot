@@ -73,8 +73,8 @@ def fake_qem(monkeypatch, request):
     def f_inc_single_approver(token: Dict[str, str], id: int) -> List[IncReq]:
         return [IncReq(1, 100) if id == 1 else IncReq(4, 400)]
 
-    # inc 1 needs aggregates
-    # inc 2 needs aggregates
+    # Inc 1 needs aggregates
+    # Inc 2 needs aggregates
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
