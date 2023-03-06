@@ -66,7 +66,7 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int) -> list[str]:
+    def get_job_comments(self, job_id: int):
         ret = []
         try:
             ret = self.openqa.openqa_request(
