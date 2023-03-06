@@ -137,7 +137,10 @@ def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
     approver()
     assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has at least one failed job in incident tests" in messages
+    assert (
+        "SUSE:Maintenance:4:400 has at least one failed job in incident tests"
+        in messages
+    )
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:4:400" not in messages
@@ -186,7 +189,10 @@ def test_single_incident(fake_qem, caplog):
     approver(incident=1)
     assert len(caplog.records) == 5
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has at least one failed job in incident tests" in messages
+    assert (
+        "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
+        in messages
+    )
     assert "Found failed, not-ignored job 100001 for incident 1" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
@@ -196,7 +202,10 @@ def test_single_incident(fake_qem, caplog):
     approver(incident=4)
     assert len(caplog.records) == 4
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 4 has at least one failed job in incident tests" not in messages
+    assert (
+        "SUSE:Maintenance:4:400 has at least one failed job in incident tests"
+        not in messages
+    )
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -225,9 +234,9 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
     assert len(caplog.records) == 11
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Start approving incidents in IBS" in messages
-    assert "Aggregate missing for 1" in messages
-    assert "Aggregate missing for 2" in messages
-    assert "Aggregate missing for 3" in messages
+    assert "Aggregate missing for SUSE:Maintenance:1:100" in messages
+    assert "Aggregate missing for SUSE:Maintenance:2:200" in messages
+    assert "Aggregate missing for SUSE:Maintenance:3:300" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance:4:400" in messages
     assert "End of bot run" in messages
@@ -422,7 +431,10 @@ def test_one_incident_failed(
     assert approver() == 0
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 1 has at least one failed job in incident tests" in messages
+    assert (
+        "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
+        in messages
+    )
     assert "Found failed, not-ignored job 100001 for incident 1" in messages
     assert "* SUSE:Maintenance:2:200" in messages
     assert "* SUSE:Maintenance:3:300" in messages
@@ -449,7 +461,10 @@ def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
     assert approver() == 0
     assert len(caplog.records) == 8
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Inc 2 has at least one failed job in aggregate tests" in messages
+    assert (
+        "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests"
+        in messages
+    )
     assert "Found failed, not-ignored job 100001 for incident 2" in messages
     assert "* SUSE:Maintenance:1:100" in messages
     assert "* SUSE:Maintenance:3:300" in messages

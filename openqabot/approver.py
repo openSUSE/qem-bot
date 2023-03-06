@@ -28,6 +28,10 @@ from .utils import retry3 as requests
 log = getLogger("bot.approver")
 
 
+def _mi2str(inc: IncReq) -> str:
+    return "%s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
+
+
 def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
     if e.code == 403:
         log.info(
@@ -70,7 +74,7 @@ class Approver:
 
         log.info("Incidents to approve:")
         for inc in incidents_to_approve:
-            log.info("* %s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req)))
+            log.info("* %s" % _mi2str(inc))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
@@ -93,22 +97,19 @@ class Approver:
             log.info(e)
 
             if any(i.withAggregate for i in i_jobs):
-                log.info("Aggregate missing for %s" % str(inc.inc))
+                log.info("Aggregate missing for %s" % _mi2str(inc))
                 return False
 
             u_jobs = []
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-            log.info(
-                "Inc %s has at least one failed job in incident tests" % str(inc.inc)
-            )
+            log.info("%s has at least one failed job in incident tests" % _mi2str(inc))
             return False
 
         if any(i.withAggregate for i in i_jobs):
             if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
                 log.info(
-                    "Inc %s has at least one failed job in aggregate tests"
-                    % str(inc.inc)
+                    "%s has at least one failed job in aggregate tests" % _mi2str(inc)
                 )
                 return False
 
@@ -151,7 +152,10 @@ class Approver:
                 break
 
         if not results:
-            raise NoResultsError("Job setting %s not found " % str(job_aggr.id))
+            raise NoResultsError(
+                "Job setting %s not found for incident %s"
+                % (str(job_aggr.id), str(inc))
+            )
 
         return all(r["status"] == "passed" for r in results)
 
