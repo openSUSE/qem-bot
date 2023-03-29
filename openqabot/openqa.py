@@ -20,6 +20,8 @@ class openQAInterface:
         self.url = instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = 3
+        user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
+        self.openqa.session.headers.update(user_agent)
 
     def __bool__(self) -> bool:
         """True only for the configured openQA instance, used for decide to update dashboard database or not"""
