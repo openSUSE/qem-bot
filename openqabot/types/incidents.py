@@ -107,8 +107,12 @@ class Incidents(BaseConf):
                     full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
                     full_post["openqa"]["_OBSOLETE"] = "1"
                     full_post["openqa"]["INCIDENT_ID"] = inc.id
+
                     if ci_url:
                         full_post["openqa"]["__CI_JOB_URL"] = ci_url
+
+                    if inc.staging:
+                        continue
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
