@@ -66,6 +66,11 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
 
 
 @pytest.fixture(scope="function")
+def fake_responses_updating_job():
+    responses.add(responses.PATCH, "http://dashboard.qam.suse.de/api/jobs/100001")
+
+
+@pytest.fixture(scope="function")
 def fake_qem(monkeypatch, request):
     def f_inc_approver(*args):
         return [IncReq(1, 100), IncReq(2, 200), IncReq(3, 300), IncReq(4, 400)]
@@ -428,6 +433,7 @@ def test_one_incident_failed(
     fake_incident_1_failed_2_passed,
     fake_two_passed_jobs,
     fake_openqa_comment_api,
+    fake_responses_updating_job,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -451,7 +457,9 @@ def test_one_incident_failed(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
-def test_one_aggr_failed(fake_qem, fake_openqa_comment_api, caplog):
+def test_one_aggr_failed(
+    fake_qem, fake_openqa_comment_api, fake_responses_updating_job, caplog
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     responses.add(

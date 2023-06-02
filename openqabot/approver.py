@@ -59,7 +59,7 @@ class Approver:
         self.single_incident = args.incident
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.all_incidents = args.all_incidents
-        self.client = openQAInterface(args.openqa_instance)
+        self.client = openQAInterface(args)
 
     def __call__(self) -> int:
         log.info("Start approving incidents in IBS")

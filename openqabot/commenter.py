@@ -23,7 +23,7 @@ class Commenter:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
         self.token = {"Authorization": "Token {}".format(args.token)}
-        self.client = openQAInterface(args.openqa_instance)
+        self.client = openQAInterface(args)
         self.incidents = get_incidents(self.token)
         osc.conf.get_config(override_apiurl=OBS_URL)
         self.commentapi = CommentAPI(OBS_URL)

@@ -29,7 +29,7 @@ class OpenQABot:
             args.configs, args.disable_aggregates, args.disable_incidents, extrasettings
         )
 
-        self.openqa = openQAInterface(args.openqa_instance)
+        self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")
 
     def post_qem(self, data, api) -> None:

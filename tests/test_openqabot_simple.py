@@ -27,8 +27,9 @@ Namespace = namedtuple(
 @pytest.fixture
 def mock_openqa_passed(monkeypatch):
     class FakeClient:
-        def __init__(self, instance):
-            self.url = instance
+        def __init__(self, args):
+            self.url: ParseResult = args.openqa_instance
+            self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
         def __bool__(self):
             return self.url.netloc == "openqa.suse.de"
