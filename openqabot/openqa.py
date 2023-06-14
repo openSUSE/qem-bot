@@ -9,6 +9,7 @@ from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
 from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+from .loader.qem import update_job
 from .errors import PostOpenQAError
 from .types import Data
 
@@ -16,12 +17,13 @@ log = logging.getLogger("bot.openqa")
 
 
 class openQAInterface:
-    def __init__(self, instance: ParseResult) -> None:
-        self.url = instance
+    def __init__(self, args) -> None:
+        self.url: ParseResult = args.openqa_instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = 3
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)
+        self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
         """True only for the configured openQA instance, used for decide to update dashboard database or not"""
@@ -47,6 +49,12 @@ class openQAInterface:
             log.exception(e)
             log.error("Post failed with {}".format(pformat(settings)))
             raise PostOpenQAError
+
+    def handle_job_not_found(self, job_id: int):
+        log.info(
+            "Job %s not found in openQA, marking as obsolete on dashboard" % job_id
+        )
+        update_job(self.qem_token, job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data):
         log.info("Getting openQA tests results for %s" % pformat(data))
@@ -78,7 +86,7 @@ class openQAInterface:
         except Exception as e:
             (method, url, status_code) = e.args
             if status_code == 404:
-                log.info("Job %s not found in openQA" % job_id)
+                self.handle_job_not_found(job_id)
             else:
                 log.exception(e)
         return ret

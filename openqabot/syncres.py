@@ -20,7 +20,7 @@ class SyncRes:
     def __init__(self, args: Namespace) -> None:
         self.dry: bool = args.dry
         self.token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args.openqa_instance)
+        self.client = openQAInterface(args)
 
     @classmethod
     def normalize_data(cls, data: Data, job):

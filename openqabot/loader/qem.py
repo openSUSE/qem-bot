@@ -252,3 +252,15 @@ def post_job(token: Dict[str, str], data) -> None:
 
     except Exception as e:
         log.exception(e)
+
+
+def update_job(token: Dict[str, str], job_id: int, data) -> None:
+    try:
+        result = requests.patch(
+            QEM_DASHBOARD + "api/jobs/" + str(job_id), headers=token, json=data
+        )
+        if result.status_code != 200:
+            log.error(result.text)
+
+    except Exception as e:
+        log.exception(e)
