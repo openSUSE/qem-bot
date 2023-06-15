@@ -94,7 +94,6 @@ class Commenter:
         if comment is None:
             log.debug("No comment with this state, looking without the state filter")
             comment, _ = self.commentapi.comment_find(comments, self.bot_name)
-
         if comment is None:
             log.debug("No comment to replace found")
         else:
@@ -103,10 +102,10 @@ class Commenter:
             else:
                 log.info("Would delete comment %d" % int(comment["id"]))
 
+        log.info("Writing comment to request %d/%d" % (inc.inc, inc.req))
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Would write comment to request %d/%d" % (inc.inc, inc.req))
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs) -> str:

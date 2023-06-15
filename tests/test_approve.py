@@ -18,7 +18,7 @@ from openqabot.loader.qem import IncReq, JobAggr
 
 # Fake Namespace for Approver initialization
 _namespace = namedtuple(
-    "Namespace", ("dry", "token", "all_incidents", "openqa_instance", "incident")
+    "Namespace", ("dry", "token", "all_incidents", "openqa_instance", "incident", "post_comment", "osc_botname")
 )
 openqa_instance_url = urlparse("http://instance.qa")
 
@@ -127,8 +127,8 @@ def f_osconf(monkeypatch):
     monkeypatch.setattr(osc.conf, "get_config", fake)
 
 
-def approver(incident=None):
-    args = _namespace(True, "123", False, openqa_instance_url, incident)
+def approver(incident=None, post_comment=False, dry=True):
+    args = _namespace(dry, "123", False, openqa_instance_url, incident, post_comment, "El")
     approver = Approver(args)
     approver.client.retries = 0
     return approver()
@@ -202,6 +202,10 @@ def test_single_incident(fake_qem, caplog):
         "Found failed, not-ignored job http://instance.qa/t100001 for incident 1"
         in messages
     )
+    assert (
+        "Writing comment"
+        not in messages
+    )
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:1:100" not in messages
@@ -217,6 +221,12 @@ def test_single_incident(fake_qem, caplog):
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:4:400" in messages
+
+#    Note: uncommenting will do an actual OBS post request
+#    print("============================================")
+#    caplog.clear()
+#    approver(incident=1, post_comment=True, dry=False)
+#    assert len(caplog.records) == 5
 
 
 @responses.activate
