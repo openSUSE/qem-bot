@@ -31,17 +31,20 @@ def fetch_matching_link(url, regex):
     raise ValueError("No matching links found")
 
 
-# Gets the latest image from the given URL/regex
-# image is of the format 'URL/regex'
 def get_latest_pc_image(image):
+    """
+    Gets the latest image from the given URL/regex image is of the format 'URL/regex'
+    """
     basepath, _, regex = image.rpartition("/")
     return fetch_matching_link(basepath, re.compile(regex))
 
 
 def get_latest_tools_image(query):
-    # 'publiccloud_tools_<BUILD NUM>.qcow2' is generic name for image used by Public Cloud tests to run
-    # in openQA. query suppose to look like this "https://openqa.suse.de/group_overview/276.json" to get
-    # value for <BUILD NUM>
+    """
+    'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
+    in openQA. A query is supposed to look like this "https://openqa.suse.de/group_overview/276.json" to get
+    a value for <BUILD NUM>
+    """
 
     ## Get the first not-failing item
     build_results = requests.get(query).json()["build_results"]
@@ -51,8 +54,10 @@ def get_latest_tools_image(query):
     return None
 
 
-# Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
 def apply_publiccloud_regex(settings):
+    """
+    Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
+    """
     try:
         settings["PUBLIC_CLOUD_IMAGE_LOCATION"] = get_latest_pc_image(
             settings["PUBLIC_CLOUD_IMAGE_REGEX"]
@@ -65,6 +70,10 @@ def apply_publiccloud_regex(settings):
 
 
 def apply_pc_tools_image(settings):
+    """
+    Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
+    PUBLIC_CLOUD_TOOLS_IMAGE_BASE
+    """
     try:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
@@ -77,14 +86,18 @@ def apply_pc_tools_image(settings):
         return settings
 
 
-# Perform a pint query. Sucessive queries are cached
 @lru_cache(maxsize=None)
 def pint_query(query):
+    """
+    Perform a pint query. Sucessive queries are cached
+    """
     return requests.get(query).json()
 
 
-# Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
 def apply_publiccloud_pint_image(settings):
+    """
+    Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
+    """
     try:
         images = pint_query(settings["PUBLIC_CLOUD_PINT_QUERY"])["images"]
         region = (
