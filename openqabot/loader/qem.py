@@ -34,7 +34,12 @@ class JobAggr(NamedTuple):
 
 
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
-    incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+    incidents = requests.get(
+        QEM_DASHBOARD + "api/incidents", headers=token, verify=True
+    ).json()
+
+    if "error" in incidents:
+        raise Exception(incidents)
 
     xs = []
     for i in incidents:

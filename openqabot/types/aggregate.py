@@ -78,9 +78,23 @@ class Aggregate(BaseConf):
             issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
             # only testing queue and not livepatch
-            valid_incidents = [
-                i for i in incidents if not any((i.livepatch, i.staging))
-            ]
+            valid_incidents = list()
+            for i in incidents:
+                if not any((i.livepatch, i.staging)):
+                    # if filtering embargoed updates is on
+                    if self.filter_embargoed():
+                        # we take ONLY non-embargoed updates
+                        if i.embargoed:
+                            log.debug(
+                                "Incident %s is skipped because filtering \
+                                      embargoed is on and incident has embargoed True",
+                                i.id,
+                            )
+                        else:
+                            valid_incidents.append(i)
+                    # if filtering embargoed updates is off we ignoring this field
+                    else:
+                        valid_incidents.append(i)
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
                     if (

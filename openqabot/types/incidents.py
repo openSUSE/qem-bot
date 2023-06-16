@@ -87,6 +87,12 @@ class Incidents(BaseConf):
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
                 for inc in incidents:
+                    if self.filter_embargoed() and inc.embargoed:
+                        log.debug(
+                            "Incident %s is embargoed and filtering embargoed updates enabled",
+                            inc.id,
+                        )
+                        continue
                     full_post: Dict[str, Any] = {}
                     full_post["api"] = "api/incident_settings"
                     full_post["qem"] = {}

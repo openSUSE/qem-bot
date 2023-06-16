@@ -25,7 +25,8 @@ after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { inciden
 INCIDENT = '{incidents(incidentId: %(incident)s) { edges { node {emu project \
 repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
 { requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
-status { name } } } } } } } packages { edges { node { name } } } } } } }'
+status { name } } } } } } } packages { edges { node { name } } } } } \
+    edges{ node { crd } } } }'
 
 ACTIVE_INC_SCHEMA = {
     "type": "object",
@@ -101,6 +102,9 @@ INCIDENT_SCHEMA = {
                                         },
                                         "requestSet": {
                                             "type": "object",
+                                        },
+                                        "crd": {
+                                            "type": "string",
                                         },
                                     },
                                 },
