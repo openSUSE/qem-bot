@@ -5,11 +5,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from . import ArchVer, ProdVer, Repos
 from .. import QEM_DASHBOARD
-from ..pc_helper import (
-    apply_pc_tools_image,
-    apply_publiccloud_pint_image,
-    apply_publiccloud_regex,
-)
+from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
 from .baseconf import BaseConf
 from .incident import Incident
@@ -261,14 +257,6 @@ class Incidents(BaseConf):
                             )
                             continue
 
-                    # parse Public-Cloud image REGEX if present
-                    if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
-                        settings = apply_publiccloud_regex(settings)
-                        if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
-                            log.error(
-                                f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
-                            )
-                            continue
                     # parse Public-Cloud pint query if present
                     if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                         settings = apply_publiccloud_pint_image(settings)
