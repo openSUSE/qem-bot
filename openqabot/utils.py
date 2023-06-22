@@ -1,11 +1,24 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 from copy import deepcopy
 from typing import Optional
 
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+
+def create_logger(name: str) -> logging.Logger:
+    log = logging.getLogger(name)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+        fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    return log
 
 
 def walk(inc):

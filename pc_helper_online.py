@@ -2,7 +2,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from openqabot.main import create_logger
+from openqabot.utils import create_logger
 
 
 def main():
@@ -11,7 +11,7 @@ def main():
     Allowing to prove that Public Cloud related logic is actually working without executing
     a lot of code which is unrelated to pc_helper
     """
-    log = create_logger()
+    log = create_logger("pc_helper_online")
     settings = {
         "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "https://openqa.suse.de/group_overview/276.json"
     }
