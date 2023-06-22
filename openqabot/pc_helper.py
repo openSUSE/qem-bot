@@ -4,39 +4,9 @@ from functools import lru_cache
 import logging
 import re
 
-import bs4
-
 from .utils import retry5 as requests
 
 log = logging.getLogger("bot.openqabot.pc_helper")
-
-
-def fetch_matching_link(url, regex):
-    """
-    Apply odering by modification date (ascending) and return the first link that matches the given regex
-    """
-    try:
-        # Note: ?C=M;O=A - C - compare , M - modify time , O - order , A - asc
-        # So, the first link matching the regex is the most recent one
-        req = requests.get(url + "/?C=M;O=A")
-        text = req.text
-    except BaseException as err:
-        log.error("error fetching '%s': %s" % (url, err))
-        return None
-    getpage_soup = bs4.BeautifulSoup(text, "html.parser")
-    # Returns lazy iterator, so
-    links = getpage_soup.findAll("a", href=regex)
-    if links:
-        return f"{url}/{links[0].get('href')}"
-    raise ValueError("No matching links found")
-
-
-def get_latest_pc_image(image):
-    """
-    Gets the latest image from the given URL/regex image is of the format 'URL/regex'
-    """
-    basepath, _, regex = image.rpartition("/")
-    return fetch_matching_link(basepath, re.compile(regex))
 
 
 def get_latest_tools_image(query):
@@ -54,21 +24,6 @@ def get_latest_tools_image(query):
     return None
 
 
-def apply_publiccloud_regex(settings):
-    """
-    Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
-    """
-    try:
-        settings["PUBLIC_CLOUD_IMAGE_LOCATION"] = get_latest_pc_image(
-            settings["PUBLIC_CLOUD_IMAGE_REGEX"]
-        )
-        return settings
-    except BaseException as e:
-        log.warning(f"PUBLIC_CLOUD_IMAGE_REGEX handling failed: {e}")
-        settings["PUBLIC_CLOUD_IMAGE_LOCATION"] = None
-        return settings
-
-
 def apply_pc_tools_image(settings):
     """
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
@@ -79,11 +34,14 @@ def apply_pc_tools_image(settings):
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
                 settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
             )
-            del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
-        return settings
     except BaseException as e:
-        log.warning(f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed: {e}")
-        return settings
+        log_error = f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
+        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+            log_error += f" PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
+        log.warning(f"{log_error} : {e}")
+    finally:
+        del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+    return settings
 
 
 @lru_cache(maxsize=None)
@@ -99,7 +57,6 @@ def apply_publiccloud_pint_image(settings):
     Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
     """
     try:
-        images = pint_query(settings["PUBLIC_CLOUD_PINT_QUERY"])["images"]
         region = (
             settings["PUBLIC_CLOUD_PINT_REGION"]
             if "PUBLIC_CLOUD_PINT_REGION" in settings
@@ -110,6 +67,9 @@ def apply_publiccloud_pint_image(settings):
         # See https://www.suse.com/c/suse-public-cloud-image-life-cycle/
         image = None
         for state in ["active", "inactive", "deprecated"]:
+            images = pint_query(f"{settings['PUBLIC_CLOUD_PINT_QUERY']}{state}.json")[
+                "images"
+            ]
             image = get_recent_pint_image(
                 images, settings["PUBLIC_CLOUD_PINT_NAME"], region, state=state
             )
@@ -120,7 +80,13 @@ def apply_publiccloud_pint_image(settings):
         settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
-        # Remove pint query settings. They are not required in the scheduled job
+    except BaseException as e:
+        log_error = "PUBLIC_CLOUD_PINT_QUERY handling failed"
+        if "PUBLIC_CLOUD_PINT_NAME" in settings:
+            log_error += f' for {settings["PUBLIC_CLOUD_PINT_NAME"]}'
+        log.warning(f"{log_error}: {e}")
+        settings["PUBLIC_CLOUD_IMAGE_ID"] = None
+    finally:
         if "PUBLIC_CLOUD_PINT_QUERY" in settings:
             del settings["PUBLIC_CLOUD_PINT_QUERY"]
         if "PUBLIC_CLOUD_PINT_NAME" in settings:
@@ -131,13 +97,7 @@ def apply_publiccloud_pint_image(settings):
             del settings["PUBLIC_CLOUD_PINT_REGION"]
         if "PUBLIC_CLOUD_PINT_FIELD" in settings:
             del settings["PUBLIC_CLOUD_PINT_FIELD"]
-        return settings
-    except BaseException as e:
-        log.warning(
-            f"PUBLIC_CLOUD_PINT_QUERY handling failed for {settings['PUBLIC_CLOUD_PINT_NAME']}: {e}"
-        )
-        settings["PUBLIC_CLOUD_IMAGE_ID"] = None
-        return settings
+    return settings
 
 
 def get_recent_pint_image(images, name_regex, region=None, state="active"):
