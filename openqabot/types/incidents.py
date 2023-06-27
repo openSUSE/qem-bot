@@ -5,11 +5,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from . import ArchVer, ProdVer, Repos
 from .. import QEM_DASHBOARD
-from ..pc_helper import (
-    apply_pc_tools_image,
-    apply_publiccloud_pint_image,
-    apply_publiccloud_regex,
-)
+from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
 from .baseconf import BaseConf
 from .incident import Incident
@@ -253,29 +249,14 @@ class Incidents(BaseConf):
                     # if set, we use this query to detect latest public cloud tools image which used for running
                     # all public cloud related tests in openQA
                     if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-                        query = settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
                         settings = apply_pc_tools_image(settings)
                         if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
-                            log.error(
-                                f"Failed to query latest publiccloud tools image using {query}"
-                            )
                             continue
 
-                    # parse Public-Cloud image REGEX if present
-                    if "PUBLIC_CLOUD_IMAGE_REGEX" in settings:
-                        settings = apply_publiccloud_regex(settings)
-                        if not settings.get("PUBLIC_CLOUD_IMAGE_LOCATION", False):
-                            log.error(
-                                f"No publiccloud image found for {settings['PUBLIC_CLOUD_IMAGE_REGEX']}"
-                            )
-                            continue
                     # parse Public-Cloud pint query if present
                     if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                         settings = apply_publiccloud_pint_image(settings)
                         if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
-                            log.error(
-                                f"No publiccloud image fetched from pint for for {settings['PUBLIC_CLOUD_PINT_QUERY']}"
-                            )
                             continue
 
                     full_post["openqa"] = settings
