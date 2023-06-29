@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from pathlib import Path
 from openqabot.utils import create_logger
+from openqabot.loader.config import load_metadata
+from openqabot.types.incident import Incident
 
 
 def main():
@@ -12,33 +14,14 @@ def main():
     a lot of code which is unrelated to pc_helper
     """
     log = create_logger("pc_helper_online")
-    settings = {
-        "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "https://openqa.suse.de/group_overview/276.json"
-    }
-    log.info("Calling apply_pc_tools_image with :\n%s", settings)
-    apply_pc_tools_image(settings)
-    log.info("Setting after the call to apply_pc_tools_image:\n%s", settings)
-
-    settings = {
-        "PUBLIC_CLOUD_PINT_QUERY": "https://susepubliccloudinfo.suse.com/v1/amazon/images/",
-        "PUBLIC_CLOUD_PINT_NAME": "suse-sles-12-sp5-v[0-9]{8}-hvm-ssd-x86_64",
-        "PUBLIC_CLOUD_PINT_REGION": "us-east-1",
-        "PUBLIC_CLOUD_PINT_FIELD": "id",
-    }
-    log.info("Calling apply_publiccloud_pint_image with :\n%s", settings)
-    apply_publiccloud_pint_image(settings)
-    log.info("Setting after the call to apply_publiccloud_pint_image:\n%s", settings)
-
-    settings = {
-        "PUBLIC_CLOUD_PINT_QUERY": "https://susepubliccloudinfo.suse.com/v1/amazon/images/",
-        "PUBLIC_CLOUD_PINT_NAME": "suse-sles-15-sp2-chost-byos-v[0-9]{8}-hvm-ssd-x86_64",
-        "PUBLIC_CLOUD_PINT_REGION": "us-east-1",
-        "PUBLIC_CLOUD_PINT_FIELD": "id",
-    }
-    log.info("Calling apply_publiccloud_pint_image with :\n%s", settings)
-    apply_publiccloud_pint_image(settings)
-    log.info("Setting after the call to apply_publiccloud_pint_image:\n%s", settings)
+    products = load_metadata(Path('/home/asmorodskyi/source/metadata/bot-ng/'),False,True, {})
+    incidents = []
+    incidents.append(Incident({'approved': False, 'channels': ['SUSE:Updates:OpenStack-Cloud:9:x86_64'], 'emu': False, 'inReview': False, 'inReviewQAM': False, 'isActive': True, 'number': 17958, 'packages': ['ndctl'], 'project': 'SUSE:Maintenance:17958', 'rr_number': None}))
+    for product in products:
+        log.error(f" Calling for {product}")
+        product(incidents,{"token": "DDDDD"}, "DDDDD", True)
 
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

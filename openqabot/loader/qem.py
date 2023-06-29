@@ -39,6 +39,7 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
     xs = []
     for i in incidents:
         try:
+            log.error(i)
             xs.append(Incident(i))
         except NoRepoFoundError as e:
             log.info(

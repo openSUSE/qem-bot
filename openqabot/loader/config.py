@@ -1,6 +1,5 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from logging import getLogger
 from pathlib import Path
 from typing import List, Set, Union
 
@@ -8,10 +7,11 @@ from ruamel.yaml import YAML  # type: ignore
 
 from ..errors import NoTestIssues
 from ..types import Data
+from ..utils import create_logger
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
 
-log = getLogger("bot.loader.config")
+log = create_logger("bot.loader.config")
 
 
 def load_metadata(
