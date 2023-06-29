@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 import sys
 
 from .utils import create_logger
