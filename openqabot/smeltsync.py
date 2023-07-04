@@ -116,6 +116,10 @@ class SMELTSync:
         incident["approved"] = approved
         incident["rr_number"] = rr_number
         incident["inReviewQAM"] = inReviewQAM
+        # this is temporary solution. At first stage we will just push this field into dashboard
+        # next we will add logic to store it in dashboard and then finally we will replace
+        # here dummy value with real one from smelt
+        incident["embargoed"] = False
 
         return incident
 
