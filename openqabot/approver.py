@@ -41,8 +41,8 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
         return True
     elif e.code == 404:
         log.info(
-            "Received '%s'. Request %s removed or problem on OBS side, ignoring"
-            % (e.reason, inc.req)
+            "Received '%s'. Request %s removed or problem on OBS side: %s"
+            % (e.reason, inc.req, e.read().decode())
         )
         return False
     else:
