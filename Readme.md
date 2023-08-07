@@ -144,6 +144,11 @@ requests for consideration or create an issue with a code change proposal.
 
 ### Local testing
 
+Ensure you have the dependencies for development installed. The easiest
+way to get them is via pip:
+
+    pip install -r requirements-dev.txt
+
 There are currently only limited automatic tests available. Call
 
 ```
