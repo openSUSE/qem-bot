@@ -5,6 +5,7 @@ from urllib.error import HTTPError
 from urllib.parse import urlparse
 
 import functools
+import io
 import osc.conf
 import osc.core
 import pytest
@@ -299,7 +300,7 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
-        raise HTTPError("Fake OBS", 404, "Not allowed", "sd", None)
+        raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
@@ -312,13 +313,13 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
         "Accepting review for SUSE:Maintenance:1:100",
-        "Received 'Not allowed'. Request 100 removed or problem on OBS side, ignoring",
+        "Received 'Not Found'. Request 100 removed or problem on OBS side: review state",
         "Accepting review for SUSE:Maintenance:2:200",
-        "Received 'Not allowed'. Request 200 removed or problem on OBS side, ignoring",
+        "Received 'Not Found'. Request 200 removed or problem on OBS side: review state",
         "Accepting review for SUSE:Maintenance:3:300",
-        "Received 'Not allowed'. Request 300 removed or problem on OBS side, ignoring",
+        "Received 'Not Found'. Request 300 removed or problem on OBS side: review state",
         "Accepting review for SUSE:Maintenance:4:400",
-        "Received 'Not allowed'. Request 400 removed or problem on OBS side, ignoring",
+        "Received 'Not Found'. Request 400 removed or problem on OBS side: review state",
         "End of bot run",
     ]
 
