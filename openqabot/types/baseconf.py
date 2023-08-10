@@ -24,3 +24,6 @@ class BaseConf(metaclass=ABCMeta):
     @abstractstaticmethod
     def normalize_repos(config):
         pass
+
+    def filter_embargoed(self) -> bool:
+        return any(k.startswith("PUBLIC") for k in self.settings.keys())

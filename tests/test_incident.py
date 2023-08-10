@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from openqabot.errors import *
+from openqabot.errors import NoRepoFoundError, EmptyPackagesError, EmptyChannels
 from openqabot.types import Repos
 from openqabot.types.incident import Incident
 import openqabot.types.incident
@@ -25,6 +25,7 @@ test_data = {
     "packages": ["some", "package", "name"],
     "project": "SUSE:Maintenance:24618",
     "rr_number": 274060,
+    "embargoed": True,
 }
 
 
@@ -50,6 +51,7 @@ def test_inc_normal(mock_good):
     assert not inc.livepatch
     assert not inc.emu
     assert not inc.staging
+    assert inc.embargoed
     assert str(inc) == "24618"
     assert repr(inc) == "<Incident: SUSE:Maintenance:24618:274060>"
     assert inc.id == 24618
@@ -73,21 +75,21 @@ def test_inc_normal_livepatch(mock_good):
 
 def test_inc_norepo(mock_ex):
     with pytest.raises(NoRepoFoundError):
-        inc = Incident(test_data)
+        Incident(test_data)
 
 
 def test_inc_nopackage(mock_good):
     bad_data = deepcopy(test_data)
     bad_data["packages"] = []
     with pytest.raises(EmptyPackagesError):
-        inc = Incident(bad_data)
+        Incident(bad_data)
 
 
 def test_inc_nochannels(mock_good):
     bad_data = deepcopy(test_data)
     bad_data["channels"] = []
     with pytest.raises(EmptyChannels):
-        inc = Incident(bad_data)
+        Incident(bad_data)
 
 
 def test_inc_nochannels2(mock_good):
@@ -98,4 +100,4 @@ def test_inc_nochannels2(mock_good):
         "SUSE:Updates:SLE-Module-SUSE-Manager-Server:15-SP4:aarch64",
     ]
     with pytest.raises(EmptyChannels):
-        inc = Incident(bad_data)
+        Incident(bad_data)

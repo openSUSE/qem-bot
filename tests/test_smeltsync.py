@@ -2,7 +2,6 @@ from collections import namedtuple
 import logging
 import re
 
-import functools
 import pytest
 import responses
 
@@ -58,6 +57,7 @@ def fake_smelt_api(request):
                                     ]
                                 },
                                 "packages": {"edges": [{"node": {"name": "xrdp"}}]},
+                                "crd": request.param[3],
                             }
                         }
                     ]
@@ -90,7 +90,9 @@ def fake_dashboard_replyback():
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
-    "fake_smelt_api", [(["qam-openqa", "new", "review"])], indirect=True
+    "fake_smelt_api",
+    [(["qam-openqa", "new", "review", "2023-01-01 04:31:12"])],
+    indirect=True,
 )
 def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
@@ -104,12 +106,28 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
     assert responses.calls[1].response.json()[0]["inReviewQAM"] == True
     assert responses.calls[1].response.json()[0]["isActive"] == True
     assert responses.calls[1].response.json()[0]["approved"] == False
+    assert responses.calls[1].response.json()[0]["embargoed"] == True
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
-    "fake_smelt_api", [(["qam-openqa", "accepted", "new"])], indirect=True
+    "fake_smelt_api", [(["qam-openqa", "new", "review", None])], indirect=True
+)
+def test_embragoed_value(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
+    caplog.set_level(logging.DEBUG, logger="bot.syncres")
+    assert SMELTSync(_namespace(False, "123", False))() == 0
+    assert len(responses.calls) == 2
+    assert len(responses.calls[1].response.json()) == 1
+    assert responses.calls[1].response.json()[0]["embargoed"] == False
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [()], indirect=True)
+@pytest.mark.parametrize(
+    "fake_smelt_api",
+    [(["qam-openqa", "accepted", "new", "2023-01-01 04:31:12"])],
+    indirect=True,
 )
 def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
@@ -123,3 +141,4 @@ def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replybac
     assert responses.calls[1].response.json()[0]["inReviewQAM"] == False
     assert responses.calls[1].response.json()[0]["isActive"] == False
     assert responses.calls[1].response.json()[0]["approved"] == True
+    assert responses.calls[1].response.json()[0]["embargoed"] == True
