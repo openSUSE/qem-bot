@@ -9,6 +9,7 @@ from responses import matchers
 
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
+from openqabot import QEM_DASHBOARD
 
 _args = namedtuple("Args", ("openqa_instance", "token"))
 
@@ -29,14 +30,14 @@ def fake_osd_rsp(request):
 def fake_responses_failing_job_update():
     responses.add(
         responses.PATCH,
-        "http://dashboard.qam.suse.de/api/jobs/42",
+        f"{QEM_DASHBOARD}api/jobs/42",
         body="updated job",
         status=200,
         match=[matchers.json_params_matcher({"obsolete": False})],  # should *not* match
     )
     responses.add(
         responses.PATCH,
-        "http://dashboard.qam.suse.de/api/jobs/42",
+        f"{QEM_DASHBOARD}api/jobs/42",
         body="job not found",  # we pretend the job update fails
         status=404,
         match=[matchers.json_params_matcher({"obsolete": True})],

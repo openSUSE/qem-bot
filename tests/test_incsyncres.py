@@ -1,10 +1,11 @@
 from collections import namedtuple
 import logging
+from urllib.parse import urlparse
 import pytest
 import responses
-from urllib.parse import urlparse
 import openqabot.incsyncres
 from openqabot.incsyncres import IncResultsSync
+from openqabot import QEM_DASHBOARD
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
@@ -34,7 +35,7 @@ def test_clone_dry(get_a_i, caplog):
 
     responses.add(
         method="GET",
-        url="http://dashboard.qam.suse.de/api/incident_settings/100",
+        url=f"{QEM_DASHBOARD}api/incident_settings/100",
         json=data,
     )
 
@@ -93,7 +94,7 @@ def test_nogroup_dry(get_a_i, caplog):
 
     responses.add(
         method="GET",
-        url="http://dashboard.qam.suse.de/api/incident_settings/100",
+        url=f"{QEM_DASHBOARD}api/incident_settings/100",
         json=data,
     )
 
@@ -150,7 +151,7 @@ def test_devel_fast_dry(get_a_i, caplog):
 
     responses.add(
         method="GET",
-        url="http://dashboard.qam.suse.de/api/incident_settings/100",
+        url=f"{QEM_DASHBOARD}api/incident_settings/100",
         json=data,
     )
 
@@ -209,7 +210,7 @@ def test_devel_dry(get_a_i, caplog):
 
     responses.add(
         method="GET",
-        url="http://dashboard.qam.suse.de/api/incident_settings/100",
+        url=f"{QEM_DASHBOARD}api/incident_settings/100",
         json=data,
     )
 
@@ -274,7 +275,7 @@ def test_passed_dry(get_a_i, caplog):
 
     responses.add(
         method="GET",
-        url="http://dashboard.qam.suse.de/api/incident_settings/100",
+        url=f"{QEM_DASHBOARD}api/incident_settings/100",
         json=data,
     )
 

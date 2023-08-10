@@ -13,7 +13,7 @@ import responses
 from typing import Dict, List
 
 import openqabot.approver
-from openqabot.approver import Approver
+from openqabot.approver import Approver, QEM_DASHBOARD
 from openqabot.errors import NoResultsError
 from openqabot.loader.qem import IncReq, JobAggr
 
@@ -27,7 +27,7 @@ openqa_instance_url = urlparse("http://instance.qa")
 def add_two_passed_response():
     responses.add(
         responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"),
+        re.compile(f"{QEM_DASHBOARD}api/jobs/.*/.*"),
         json=[{"status": "passed"}, {"status": "passed"}],
     )
 
@@ -51,7 +51,7 @@ def fake_two_passed_jobs():
 def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
     responses.add(
         responses.GET,
-        "http://dashboard.qam.suse.de/api/jobs/update/20005",
+        f"{QEM_DASHBOARD}api/jobs/update/20005",
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},
@@ -68,7 +68,7 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
 
 @pytest.fixture(scope="function")
 def fake_responses_updating_job():
-    responses.add(responses.PATCH, "http://dashboard.qam.suse.de/api/jobs/100001")
+    responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
 
 
 @pytest.fixture(scope="function")
@@ -158,7 +158,7 @@ def test_single_incident(fake_qem, caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     responses.add(
         responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/incident/.*"),
+        re.compile(f"{QEM_DASHBOARD}api/incident/.*"),
         json={
             "approved": False,
             "inReview": True,
@@ -170,12 +170,12 @@ def test_single_incident(fake_qem, caplog):
     )
     responses.add(
         responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/incident/100"),
+        re.compile(f"{QEM_DASHBOARD}api/jobs/incident/100"),
         json=[{"incident_settings": 1000, "job_id": 100001, "status": "failed"}],
     )
     responses.add(
         responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/incident/400"),
+        re.compile(f"{QEM_DASHBOARD}api/jobs/incident/400"),
         json=[{"incident_settings": 1000, "job_id": 100000, "status": "passed"}],
     )
     responses.add(
@@ -185,7 +185,7 @@ def test_single_incident(fake_qem, caplog):
     )
     responses.add(
         responses.GET,
-        re.compile(r"http://dashboard.qam.suse.de/api/jobs/update/1000.*"),
+        re.compile(f"{QEM_DASHBOARD}api/jobs/update/1000.*"),
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100001, "status": "failed"},
@@ -416,7 +416,7 @@ def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
 def fake_incident_1_failed_2_passed(request):
     responses.add(
         responses.GET,
-        "http://dashboard.qam.suse.de/api/jobs/incident/%s" % request.param,
+        f"{QEM_DASHBOARD}api/jobs/incident/%s" % request.param,
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100001, "status": "failed"},
@@ -465,7 +465,7 @@ def test_one_aggr_failed(
 
     responses.add(
         responses.GET,
-        "http://dashboard.qam.suse.de/api/jobs/update/20005",
+        f"{QEM_DASHBOARD}api/jobs/update/20005",
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100001, "status": "failed"},
