@@ -248,7 +248,7 @@ class Incidents(BaseConf):
                     ] = f"https://smelt.suse.de/incident/{inc.id}"
                     full_post["openqa"][
                         "__DASHBOARD_INCIDENT_URL"
-                    ] = f"https://dashboard.qam.suse.de/incident/{inc.id}"
+                    ] = f"{QEM_DASHBOARD}incident/{inc.id}"
 
                     settings = full_post["openqa"].copy()
 

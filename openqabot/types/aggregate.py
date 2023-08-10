@@ -185,7 +185,7 @@ class Aggregate(BaseConf):
                 continue
 
             full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-                f"https://dashboard.qam.suse.de/incident/{inc}"
+                f"{QEM_DASHBOARD}incident/{inc}"
                 for inc in set(full_post["qem"]["incidents"])
             )
             full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(

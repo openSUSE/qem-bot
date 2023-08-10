@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import pytest
 import responses
 
+from openqabot import QEM_DASHBOARD
 from openqabot.openqabot import OpenQABot
 import openqabot.openqabot
 from openqabot.errors import PostOpenQAError
@@ -94,7 +95,7 @@ def test_passed(mock_runtime, mock_openqa_passed, caplog):
     )
     bot = OpenQABot(args)
 
-    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar", json={"id": 234})
+    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar", json={"id": 234})
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
@@ -118,7 +119,7 @@ def test_dry(mock_runtime, mock_openqa_passed, caplog):
     )
     bot = OpenQABot(args)
 
-    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar")
+    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
@@ -141,7 +142,7 @@ def test_passed_non_osd(mock_runtime, mock_openqa_passed, caplog):
     )
     bot = OpenQABot(args)
 
-    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar")
+    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
@@ -169,7 +170,7 @@ def test_passed_post_osd_failed(mock_runtime, mock_openqa_exception, caplog):
     )
     bot = OpenQABot(args)
 
-    responses.add(responses.PUT, "http://dashboard.qam.suse.de/bar")
+    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]

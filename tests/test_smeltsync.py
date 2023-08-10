@@ -7,6 +7,7 @@ import responses
 
 import openqabot.smeltsync
 from openqabot.smeltsync import SMELTSync
+from openqabot import QEM_DASHBOARD
 
 # Fake Namespace for SyncRes initialization
 _namespace = namedtuple("Namespace", ("dry", "token", "retry"))
@@ -82,7 +83,7 @@ def fake_dashboard_replyback():
 
     responses.add_callback(
         responses.PATCH,
-        re.compile(r"http://dashboard.qam.suse.de/api/incidents"),
+        re.compile(f"{QEM_DASHBOARD}api/incidents"),
         callback=reply_callback,
     )
 
