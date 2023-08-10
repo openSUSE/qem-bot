@@ -4,7 +4,7 @@ from openqabot.types.baseconf import BaseConf, Incident
 from typing import Any, Dict, List, Optional
 
 
-class TestBaseConf(BaseConf):
+class FakeBaseConf(BaseConf):
     def __call__(
         self,
         incidents: List[Incident],
@@ -12,7 +12,7 @@ class TestBaseConf(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
-        pass
+        return [{"foo": "bar"}]
 
     @staticmethod
     def normalize_repos(config):
@@ -25,7 +25,7 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 @pytest.fixture
 def baseconf_gen():
-    return TestBaseConf(prod_name, settings, {})
+    return FakeBaseConf(prod_name, settings, {})
 
 
 def test_baseconf_init(baseconf_gen):
