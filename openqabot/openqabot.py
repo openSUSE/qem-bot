@@ -61,12 +61,12 @@ class OpenQABot:
             post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
         if self.dry:
-            log.info("Would trigger %s products in openQA" % len(post))
+            log.info("Would trigger %d products in openQA" % len(post))
             for job in post:
                 log.info(job)
 
         else:
-            log.info("Triggering %s products in openQA" % len(post))
+            log.info("Triggering %d products in openQA" % len(post))
             for job in post:
                 log.info("Triggering %s" % str(job))
                 try:

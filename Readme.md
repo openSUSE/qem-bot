@@ -30,7 +30,7 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
     optional arguments:
       -h, --help            show this help message and exit
       -c CONFIGS, --configs CONFIGS
-                            Directory with openqabot configuration metadata
+                            Directory or single file with openqabot configuration metadata
       --dry                 Dry run, do not post any data
       -d, --debug           Enable debug output
       -t TOKEN, --token TOKEN

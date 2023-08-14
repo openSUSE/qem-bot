@@ -14,6 +14,15 @@ from ..types.incidents import Incidents
 log = getLogger("bot.loader.config")
 
 
+def get_yml_list(path: Path) -> List[Path]:
+    yml_list = []
+    if path.is_file() and path.match("*.yml"):
+        yml_list.append(path)
+    else:
+        yml_list = [p for p in path.glob("*.yml")]
+    return yml_list
+
+
 def load_metadata(
     path: Path, aggregate: bool, incidents: bool, extrasettings: Set[str]
 ) -> List[Union[Aggregate, Incidents]]:
@@ -21,7 +30,7 @@ def load_metadata(
 
     loader = YAML(typ="safe")
 
-    for p in path.glob("*.yml"):
+    for p in get_yml_list(path):
         try:
             data = loader.load(p)
         except Exception as e:
@@ -58,7 +67,7 @@ def read_products(path: Path) -> List[Data]:
     loader = YAML(typ="safe")
     ret = []
 
-    for p in path.glob("*.yml"):
+    for p in get_yml_list(path):
         data = loader.load(p)
 
         if not data:
