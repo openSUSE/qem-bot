@@ -80,7 +80,7 @@ def get_parser():
         "--configs",
         type=Path,
         default=Path("/etc/openqabot"),
-        help="Directory with openqabot configuration metadata",
+        help="Directory or single file with openqabot configuration metadata",
     )
 
     parser.add_argument(
