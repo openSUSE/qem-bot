@@ -1,12 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from functools import lru_cache
+from logging import getLogger
 import re
 
 from .utils import retry5 as requests
-from .utils import create_logger
 
-log = create_logger("pc_helper")
+log = getLogger("openqabot.pc_helper")
 
 
 def get_latest_tools_image(query):
