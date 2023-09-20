@@ -1,5 +1,5 @@
 osc
-openqa-client
+openqa-client==4.2.1
 requests
 ruamel.yaml
 jsonschema
