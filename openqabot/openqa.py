@@ -84,7 +84,7 @@ class openQAInterface:
             )
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:
-            (method, url, status_code) = e.args
+            (method, url, status_code, *other) = e.args
             if status_code == 404:
                 self.handle_job_not_found(job_id)
             else:
