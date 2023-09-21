@@ -1,7 +1,7 @@
 # Configuration format of qem-bot
 
 Configuration, in another way also called metadata of qem-bot, is held in yaml files with one file per "product". Additionally, there is one special config file called `singlearch.yml` which contains a list of packages that exist only on a single architecture.
-Configuration usually spans over multiple files. The default location accepted from qem-bot is `/etc/openqabot/`. All configuration files must have `.yml` extension.
+Configuration usually spans over multiple files. The default location accepted from qem-bot is `/etc/openqabot/`. All configuration files must have `.yml` or `.yaml` extension.
 
 ```bash
 /etc/openqabot ❯❯❯ tree
