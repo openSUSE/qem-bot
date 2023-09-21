@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from ruamel.yaml import YAML
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from openqabot.utils import create_logger
+from openqabot.utils import create_logger, get_yml_list
 
 
 def main():
@@ -31,7 +31,7 @@ def main():
     args = parser.parse_args()
     log.info(f"Parsing configuration files from {args.configs}")
     loader = YAML(typ="safe")
-    for p in Path(args.configs).glob("*.yml"):
+    for p in get_yml_list(Path(args.configs)):
         try:
             data = loader.load(p)
             log.info(f"Processing {p}")

@@ -10,17 +10,9 @@ from ..errors import NoTestIssues
 from ..types import Data
 from ..types.aggregate import Aggregate
 from ..types.incidents import Incidents
+from ..utils import get_yml_list
 
 log = getLogger("bot.loader.config")
-
-
-def get_yml_list(path: Path) -> List[Path]:
-    yml_list = []
-    if path.is_file() and path.match("*.yml"):
-        yml_list.append(path)
-    else:
-        yml_list = [p for p in path.glob("*.yml")]
-    return yml_list
 
 
 def load_metadata(
