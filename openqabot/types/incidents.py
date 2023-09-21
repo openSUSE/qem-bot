@@ -87,6 +87,8 @@ class Incidents(BaseConf):
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
                 for inc in incidents:
+                    if self.settings["VERSION"] != "12-SP5":
+                        continue
                     if self.filter_embargoed() and inc.embargoed:
                         log.debug(
                             "Incident %s is embargoed and filtering embargoed updates enabled",
@@ -138,11 +140,28 @@ class Incidents(BaseConf):
                             ArchVer(arch, self.settings["VERSION"])
                         ]
                     except KeyError:
-                        log.debug(
-                            "Incident %s does not have %s arch in %s"
-                            % (inc.id, arch, self.settings["VERSION"])
-                        )
-                        continue
+                        # in case incident has only unversioned SLE12 module
+                        # ArchVer key will have (d.arch = arch, d.version = 12)
+                        # but self.settings["VERSION"] can be any of ("12","12-SP1" ... "12-SP5")
+                        # so in most cases in first try will end with keyerror and we need test
+                        # version "12" on all servicepacks of SLE12SPx
+                        if self.settings["VERSION"].startswith("12"):
+                            try:
+                                full_post["openqa"]["REPOHASH"] = inc.revisions[
+                                    ArchVer(arch, "12")
+                                ]
+                            except KeyError:
+                                log.debug(
+                                    "Incident %s does not have %s arch in SLE-12 module version"
+                                    % (inc.id, arch)
+                                )
+                                continue
+                        else:
+                            log.debug(
+                                "Incident %s does not have %s arch in %s"
+                                % (inc.id, arch, self.settings["VERSION"])
+                            )
+                            continue
 
                     channels_set = set()
                     issue_dict = {}
