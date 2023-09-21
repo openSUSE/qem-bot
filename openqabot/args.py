@@ -155,12 +155,12 @@ def get_parser():
     cmdsync.set_defaults(func=do_sync_smelt)
 
     cmdappr = commands.add_parser(
-        "inc-approve", help="Aprove incidents which passed tests"
+        "inc-approve", help="Approve incidents which passed tests"
     )
     cmdappr.add_argument(
         "--all-incidents",
         action="store_true",
-        help="use all incidents whithout care about rrid",
+        help="use all incidents without care about rrid",
     )
     cmdappr.add_argument(
         "-I",

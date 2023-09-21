@@ -4,14 +4,15 @@ Configuration, in another way also called metadata of qem-bot, is held in yaml f
 Configuration usually spans over multiple files. The default location accepted from qem-bot is `/etc/openqabot/`. All configuration files must have `.yml` extension.
 
 ```bash
-/etc/openqabot ❯❯❯ tree                   
-.                          
-├── singlearch.yml               
-├── leap154.yml                   
-├── sles15sp3.yml        
-├── micro53.yml          
+/etc/openqabot ❯❯❯ tree
+.
+├── singlearch.yml
+├── leap154.yml
+├── sles15sp3.yml
+├── micro53.yml
 ...
 ```
+
 Example of `singlearch.yml`:
 
 ```yaml
@@ -42,7 +43,7 @@ settings:
 * `product` - mandatory and must be unique, no other config file can have the same product. 
 * `settings` - mandatory mapping containing `key` : `value` which are used directly in job schedule. From this the pairs `DISTRI` and `VERSION` are mandatory.
 
-## Aggregate part of the config
+## Aggregate part of the configuration
 
 Used to schedule multiple Incidents in a product as one BUILD named **YYYYMMDD-{counter from 1}**. Jobs scheduled on this part of the config will have multiple vars `*_TEST_REPO` used to add Incident repositories. 
 
@@ -65,14 +66,14 @@ Example:
 ```
 
 * `aggregate` - self-explanatory, mapping containing all needed settings for the aggregate schedule of a given *product*
-* `FLAVOR` - flavour used by the schedule, can be only once per product, mandatory
+* `FLAVOR` - flavor used by the schedule, can be only once per product, mandatory
 * `archs` - list scheduled architectures, mandatory
 * `test_issues` - mandatory, contains a mapping of `*_TEST_ISSUES`, which are used to decide which Incidents to be scheduled in aggregate jobs. Values are `PRODUCT-IDENTIFICATION:VERSION`. `PRODUCT-IDENTIFICATION` as defined in OBS/IBS. `VERSION` same as `PRODUCT-IDENTIFICATION`, could use different versions for different `*_TEST_ISSUES`.
   * `OS_TEST_ISSUES` variable is implicit, always used by *os-autoinst-distri-opensuse*, contains identification of the base product.
   * All others contain modules, addons, and extensions used in this aggregate. First part of the key name must be the same (uppercase, os-autoinst-distri-opensuse will convert it to lowercase) as an addon, extension or module identification in `SCC_ADDONS` variable defined in the job template inside the openQA instance.
 * `onetime` - optional key, boolean. By default, qem-bot sets it to `False`. When set to `True`, it limits bot scheduling this aggregate to only once per day.
 
-## Incidents part of the config
+## Incidents part of the configuration
 
 Used to schedule jobs per one Incident. Scheduled jobs will have BUILD **:INCIDENT_NR:shortest_package_name**. All needed links to scheduled incident repositories are in the `INCIDENT_REPO` variable.
 

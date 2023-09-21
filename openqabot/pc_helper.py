@@ -47,7 +47,7 @@ def apply_pc_tools_image(settings):
 @lru_cache(maxsize=None)
 def pint_query(query):
     """
-    Perform a pint query. Sucessive queries are cached
+    Perform a pint query. Successive queries are cached
     """
     return requests.get(query).json()
 
@@ -102,7 +102,12 @@ def apply_publiccloud_pint_image(settings):
 
 def get_recent_pint_image(images, name_regex, region=None, state="active"):
     """
-    From the given set of images (received json from pint), get the latest one that matches the given criteria (name given as regular expression, region given as string, and state given the state of the image)
+    From the given set of images (received json from pint),
+    get the latest one that matches the given criteria:
+     - name given as regular expression,
+     - region given as string,
+     - state given the state of the image
+
     Get the latest one based on 'publishedon'
     """
 
@@ -116,8 +121,11 @@ def get_recent_pint_image(images, name_regex, region=None, state="active"):
         region = None
     recentimage = None
     for image in images:
-        # Apply selection criteria. state and region criteria can be omitted by setting the corresponding variable to None
-        # This is required, because certain public cloud providers do not make a distinction on e.g. the region and thus this check is not needed there
+        # Apply selection criteria: state and region criteria
+        # can be omitted by setting the corresponding variable to None
+        # This is required, because certain public cloud providers
+        # do not make a distinction on e.g. the region
+        # and thus this check is not needed there
         if name.match(image["name"]) is None:
             continue
         if (state is not None) and (image["state"] != state):

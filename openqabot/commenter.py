@@ -111,7 +111,7 @@ class Commenter:
         groups = {}
         for job in jobs:
             if "job_group" not in job:
-                # workaround for experimets of some QAM devs
+                # workaround for experiments of some QAM devs
                 log.warning(f"group missing in {job['job_id']}")
                 continue
             gl = "{!s}@{!s}".format(
