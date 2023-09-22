@@ -64,12 +64,19 @@ class Incidents(BaseConf):
             return False
 
         for job in jobs:
-            if (
-                job["flavor"] == flavor
-                and job["arch"] == arch
-                and job["settings"]["REPOHASH"] == inc.revisions[ArchVer(arch, ver)]
-            ):
-                return True
+            try:
+                if (
+                    job["flavor"] == flavor
+                    and job["arch"] == arch
+                    and job["settings"]["REPOHASH"] == inc.revisions[ArchVer(arch, ver)]
+                ):
+                    return True
+            except KeyError:
+                log.debug(
+                    "Incident %s does not have %s arch in SLE-12 module version"
+                    % (inc.id, arch)
+                )
+                continue
 
         return False
 
