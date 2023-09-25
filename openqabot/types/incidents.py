@@ -94,8 +94,6 @@ class Incidents(BaseConf):
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
                 for inc in incidents:
-                    if self.settings["VERSION"] != "12-SP5":
-                        continue
                     if self.filter_embargoed() and inc.embargoed:
                         log.debug(
                             "Incident %s is embargoed and filtering embargoed updates enabled",
