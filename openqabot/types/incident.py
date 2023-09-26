@@ -71,6 +71,18 @@ class Incident:
         self.revisions = self._rev(self.channels, self.project)
         self.livepatch: bool = self._is_livepatch(self.packages)
 
+    def revisions_with_fallback(self, arch: str, ver: str):
+        try:
+            arch_ver = ArchVer(arch, ver)
+            # An unversioned SLE12 module will have ArchVer version "12"
+            # but settings["VERSION"] can be any of "12","12-SP1" ... "12-SP5".
+            if arch_ver not in self.revisions and ver.startswith("12"):
+                arch_ver = ArchVer(arch, "12")
+            return self.revisions[arch_ver]
+        except KeyError:
+            log.debug("Incident %s does not have %s arch in %s" % (self.id, arch, ver))
+            return None
+
     @staticmethod
     def _rev(channels: List[Repos], project: str) -> Dict[ArchVer, int]:
         rev: Dict[ArchVer, int] = {}

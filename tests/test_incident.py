@@ -101,3 +101,19 @@ def test_inc_nochannels2(mock_good):
     ]
     with pytest.raises(EmptyChannels):
         Incident(bad_data)
+
+
+def test_inc_revisions(mock_good):
+    incident = Incident(test_data)
+    assert incident.revisions_with_fallback("x86_64", "15-SP4")
+    assert incident.revisions_with_fallback("aarch64", "15-SP4")
+
+    unversioned_data = deepcopy(test_data)
+    unversioned_data["channels"] = [
+        "SUSE:Updates:SLE-Module-HPC:12:x86_64",
+    ]
+    incident = Incident(unversioned_data)
+    assert incident.revisions_with_fallback("x86_64", "12")
+    assert incident.revisions_with_fallback("x86_64", "12-SP5")
+    assert not incident.revisions_with_fallback("aarch64", "12")
+    assert not incident.revisions_with_fallback("aarch64", "12-SP5")
