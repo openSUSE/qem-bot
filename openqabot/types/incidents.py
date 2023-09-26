@@ -72,11 +72,21 @@ class Incidents(BaseConf):
                 ):
                     return True
             except KeyError:
-                log.debug(
-                    "Incident %s does not have %s arch in SLE-12 module version"
-                    % (inc.id, arch)
-                )
-                continue
+                try:
+                    if ver.startswith("12"):
+                        if (
+                            job["flavor"] == flavor
+                            and job["arch"] == arch
+                            and job["settings"]["REPOHASH"]
+                            == inc.revisions[ArchVer(arch, "12")]
+                        ):
+                            return True
+                except KeyError:
+                    log.debug(
+                        "Incident %s does not have %s arch in SLE-12 module version"
+                        % (inc.id, arch)
+                    )
+                    continue
 
         return False
 
