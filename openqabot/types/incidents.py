@@ -115,7 +115,6 @@ class Incidents(BaseConf):
 
                     if ci_url:
                         full_post["openqa"]["__CI_JOB_URL"] = ci_url
-
                     if inc.staging:
                         continue
 
@@ -136,7 +135,7 @@ class Incidents(BaseConf):
                         full_post["openqa"]["RRID"] = inc.rrid
 
                     # old bot used variable "REPO_ID"
-                    revs = inc.revisions_with_fallback(arch, self.settings("VERSION"))
+                    revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
                     if not revs:
                         continue
                     full_post["openqa"]["REPOHASH"] = revs
