@@ -11,8 +11,7 @@ def test_incidents_constructor():
     What is the bare minimal set of arguments
     needed by the constructor?
     """
-    test_config = {}
-    test_config["FLAVOR"] = {}
+    test_config = {"FLAVOR": {}}
     inc = Incidents(product="", settings=None, config=test_config, extrasettings=None)
 
 
@@ -20,8 +19,7 @@ def test_incidents_printable():
     """
     Try the printable
     """
-    test_config = {}
-    test_config["FLAVOR"] = {}
+    test_config = {"FLAVOR": {}}
     inc = Incidents(
         product="hello", settings=None, config=test_config, extrasettings=None
     )
@@ -33,8 +31,7 @@ def test_incidents_call():
     What is the bare minimal set of arguments
     needed by the callable?
     """
-    test_config = {}
-    test_config["FLAVOR"] = {}
+    test_config = {"FLAVOR": {}}
     inc = Incidents(product="", settings=None, config=test_config, extrasettings=None)
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -48,7 +45,22 @@ def test_incidents_call_with_flavors():
     assert res == []
 
 
-def test_incidents_call_with_incidents():
+@pytest.fixture
+def incidents_default():
+    def _call(
+        test_config, extrasettings=None, settings={"VERSION": "", "DISTRI": None}
+    ):
+        return Incidents(
+            product="",
+            settings=settings,
+            config=test_config,
+            extrasettings=extrasettings,
+        )
+
+    return _call
+
+
+def test_incidents_call_with_incidents(incidents_default):
     class MyIncident(object):
         def __init__(self):
             self.id = None
@@ -61,19 +73,13 @@ def test_incidents_call_with_incidents():
         def revisions_with_fallback(self, arch, version):
             pass
 
-    test_config = {}
-    test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
-    inc = Incidents(
-        product="",
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
-        extrasettings=None,
-    )
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {}}}}
+    inc = incidents_default(test_config)
     res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
 
-def test_incidents_call_with_issues():
+def test_incidents_call_with_issues(incidents_default):
     class MyIncident(object):
         def __init__(self):
             self.id = None
@@ -87,14 +93,8 @@ def test_incidents_call_with_issues():
         def revisions_with_fallback(self, arch, version):
             pass
 
-    test_config = {}
-    test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
-    inc = Incidents(
-        product="",
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
-        extrasettings=None,
-    )
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
+    inc = incidents_default(test_config)
     res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
@@ -120,7 +120,7 @@ def request_mock(monkeypatch):
     monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
 
 
-def test_incidents_call_with_channels(request_mock):
+def test_incidents_call_with_channels(request_mock, incidents_default):
     class MyIncident(object):
         def __init__(self):
             self.id = None
@@ -135,20 +135,15 @@ def test_incidents_call_with_channels(request_mock):
         def revisions_with_fallback(self, arch, version):
             return True
 
-    test_config = {}
-    test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
-
-    inc = Incidents(
-        product="",
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
-        extrasettings=set(),
-    )
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
+    inc = incidents_default(test_config, extrasettings=set())
     res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
 
 
-def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
+def test_incidents_call_public_cloud_pint_query(
+    request_mock, monkeypatch, incidents_default
+):
     class MyIncident(object):
         def __init__(self):
             self.id = None
@@ -164,20 +159,14 @@ def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
         def revisions_with_fallback(self, arch, version):
             return True
 
-    test_config = {}
-    test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
-
     monkeypatch.setattr(
         "openqabot.types.incidents.apply_publiccloud_pint_image",
         lambda *args, **kwargs: {"PUBLIC_CLOUD_IMAGE_ID": 1234},
     )
 
-    inc = Incidents(
-        product="",
-        settings={"VERSION": "", "DISTRI": None, "PUBLIC_CLOUD_PINT_QUERY": None},
-        config=test_config,
-        extrasettings=set(),
-    )
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
+    pc_settings = {"VERSION": "", "DISTRI": None, "PUBLIC_CLOUD_PINT_QUERY": None}
+    inc = incidents_default(test_config, extrasettings=set(), settings=pc_settings)
     res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
     assert "PUBLIC_CLOUD_IMAGE_ID" in res[0]["openqa"]

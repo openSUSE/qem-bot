@@ -11,9 +11,11 @@ log = getLogger("openqabot.pc_helper")
 
 def get_latest_tools_image(query):
     """
-    'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
-    in openQA. A query is supposed to look like this "https://openqa.suse.de/group_overview/276.json" to get
-    a value for <BUILD NUM>
+    'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name
+    for an image used by Public Cloud tests to run in openQA.
+    A query is supposed to look like this
+    "https://openqa.suse.de/group_overview/276.json"
+    to get a value for <BUILD NUM>
     """
 
     ## Get the first not-failing item
@@ -100,6 +102,133 @@ def apply_publiccloud_pint_image(settings):
     return settings
 
 
+def get_pint_image(name_filter, field, state, query, region=None):
+    """
+    Calculate the most recent image in PINT:
+    1. Compose PINT url using query+state,
+    2. get list of images from the url,
+    3. search the one with name matching the filter,
+    4. return the newest one.
+
+    :param str name_filter passed to get_recent_pint_image
+    :param str field key name in dictionary returned by PINT to be used as ID in the return dictionary
+    :param str state active/inactive used as name of the json file in PINT url
+    :param str query url of PINT, has not to have '/' at the end
+    :param str region optional filter, mostly needed by AWS
+    :return two keys dictionary: NAME and ID or an empty dictionary in case of error
+    """
+    settings = {}
+    url = f"{query}/{state}.json"
+    log.debug("Pint url:%s name_filter:%s region:%s", url, name_filter, region)
+    try:
+        images = pint_query(url)["images"]
+        image = get_recent_pint_image(images, name_filter, region=region, state=state)
+        if image is None:
+            raise ValueError(
+                f"Cannot find matching image in PINT with name:[{name_filter}] and state:{state}"
+            )
+        if field not in image.keys() or "name" not in image.keys():
+            raise ValueError(
+                f"Cannot find expected keys '{field}' in the selected image dictionary {image}"
+            )
+        settings["ID"] = image[field]
+        settings["NAME"] = image["name"]
+    except BaseException as e:
+        log.warning(f"get_pint_image handling failed: {e}")
+    log.debug("Return settings:%s", settings)
+    return settings
+
+
+def pint_url(pint_base_url, csp_name):
+    """
+    :param str pint_base_url, usually https://susepubliccloudinfo.suse.com/v1
+    :param str csp_name microsoft, amazon, google, ...
+    :return str PINT url for the images API
+    """
+    url = f"{pint_base_url}/{csp_name}/images"
+    log.debug("PINT url:%s", url)
+    return url
+
+
+def sles4sap_pint_gce(name_filter, state, pint_base_url):
+    """
+    Query PINT about GCE images and retrieve the latest one
+    """
+    job_settings = {}
+    ret = get_pint_image(
+        name_filter=name_filter,
+        field="project",
+        state=state,
+        query=pint_url(pint_base_url, "google"),
+    )
+    if any(ret):
+        job_settings["PUBLIC_CLOUD_IMAGE_NAME"] = f"{ret['ID']}/{ret['NAME']}"
+        job_settings["PUBLIC_CLOUD_IMAGE_STATE"] = state
+    return job_settings
+
+
+def sles4sap_pint_ec2(name_filter, state, pint_base_url, region_list):
+    """
+    Query PINT about EC2 images and retrieve the latest one
+    for each of the requested regions.
+    Returned data is organized in a different way from sles4sap_pint_azure
+    and sles4sap_pint_gce
+    """
+    job_settings = {}
+    images_list = {}
+    for this_region in region_list:
+        ret = get_pint_image(
+            name_filter=name_filter,
+            field="id",
+            state=state,
+            query=pint_url(pint_base_url, "amazon"),
+            region=this_region,
+        )
+        if any(ret):
+            images_list[this_region] = ret
+    if any(images_list):
+        # All element should have same name, just get the first
+        job_settings["PUBLIC_CLOUD_IMAGE_NAME"] = next(iter(images_list.items()))[1][
+            "NAME"
+        ]
+        job_settings["PUBLIC_CLOUD_IMAGE_STATE"] = state
+        job_settings["SLES4SAP_QESAP_OS_OWNER"] = "aws-marketplace"
+        # Pack all pairs region/AMI in a ';' separated values string
+        setting_regions = []
+        setting_ami = []
+        for image_region, image_settings in images_list.items():
+            setting_regions.append(image_region)
+            setting_ami.append(image_settings["ID"])
+        job_settings["PUBLIC_CLOUD_IMAGE_NAME_REGIONS"] = ";".join(setting_regions)
+        job_settings["PUBLIC_CLOUD_IMAGE_NAME_ID"] = ";".join(setting_ami)
+    return job_settings
+
+
+def apply_sles4sap_pint_image(
+    cloud_provider, pint_base_url, name_filter, region_list=None
+):
+    """
+    Return OS_IMAGE related settings based on the given SLES4SAP_IMAGE_REGEX
+    :param str cloud_provider uppercase cps name: could be one of AZURE|GCE|EC2
+    :param str pint_base_url forwarded to lower layer, usually is https://susepubliccloudinfo.suse.com/v1
+    :param str name_filter forwarded to lower layer to pint_url
+    :param str region_list=None only considered by EC2
+    :return dict Dictionary of OS_IMAGE related settings
+    """
+    job_settings = {}
+    for state in ["active", "inactive"]:
+        if "GCE" in cloud_provider:
+            job_settings = sles4sap_pint_gce(name_filter, state, pint_base_url)
+        elif "EC2" in cloud_provider:
+            job_settings = sles4sap_pint_ec2(
+                name_filter, state, pint_base_url, region_list
+            )
+        if any(job_settings):
+            break
+    log.debug("Sles4sap job settings:%s", job_settings)
+    return job_settings
+
+
 def get_recent_pint_image(images, name_regex, region=None, state="active"):
     """
     From the given set of images (received json from pint),
@@ -109,6 +238,11 @@ def get_recent_pint_image(images, name_regex, region=None, state="active"):
      - state given the state of the image
 
     Get the latest one based on 'publishedon'
+    :param list images field adressed by "images" key in json returned by pint_query
+    :param str name_regex has to be valid regexp, will be passed to re.compile
+    :param str region if provided only considers images for this region
+    :param str state only considers images with this state
+    :return dict selected image
     """
 
     def is_newer(date1, date2):

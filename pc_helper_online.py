@@ -4,7 +4,11 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from ruamel.yaml import YAML
-from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.pc_helper import (
+    apply_pc_tools_image,
+    apply_publiccloud_pint_image,
+    apply_sles4sap_pint_image,
+)
 from openqabot.utils import create_logger, get_yml_list
 
 
@@ -47,6 +51,23 @@ def main():
                     apply_publiccloud_pint_image(settings)
                     if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
                         log.error(f"Failed to get PUBLIC_CLOUD_IMAGE_ID from {data}")
+                if "SLES4SAP_PINT_QUERY" in settings and "incidents" in data:
+                    for flavor in data["incidents"]["FLAVOR"]:
+                        if (
+                            "pint_name_regexp"
+                            not in data["incidents"]["FLAVOR"][flavor]
+                        ):
+                            continue
+                        cloud_provider = ""
+                        if "azure" in flavor.lower():
+                            cloud_provider = "AZURE"
+                        out_settings = apply_sles4sap_pint_image(
+                            cloud_provider, settings["SLES4SAP_PINT_QUERY"], ""
+                        )
+                        if not out_settings or not out_settings.get(
+                            "SLES4SAP_QESAP_OS_VER", False
+                        ):
+                            log.error("Nothing valid in out_settings:%s", out_settings)
         except Exception as e:
             log.exception(e)
             continue
