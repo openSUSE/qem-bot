@@ -102,6 +102,15 @@ class Incidents(BaseConf):
                     full_post["openqa"] = {}
                     full_post["openqa"].update(self.settings)
                     if "flavor_settings" in data:
+                        if any(
+                            forbidden_key in data["flavor_settings"]
+                            for forbidden_key in ["DISTRI", "VERSION"]
+                        ):
+                            log.error(
+                                "flavor:%s ignored as DISTRI and VERSION not allowed in flavor_settings",
+                                flavor,
+                            )
+                            continue
                         full_post["openqa"].update(data["flavor_settings"])
 
                     full_post["qem"]["incident"] = inc.id

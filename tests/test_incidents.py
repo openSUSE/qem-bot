@@ -209,6 +209,57 @@ def test_incidents_call_with_flavor_settings(request_mock):
     assert res[0]["openqa"]["SOMETHING_NEW"] == "something flavor specific"
 
 
+def test_incidents_call_with_flavor_settings_distri_version(request_mock):
+    """
+    DISTRI and VERSION settings cannot be changed using flavor_settings.
+    """
+    test_config = {}
+    test_config["FLAVOR"] = {
+        "AAA": {
+            "archs": [""],
+            "issues": {"1234": ":"},
+            "packages": ["Donalduck"],
+            "flavor_settings": {
+                "DISTRI": "flavor distri",
+                "SOMETHING": "flavor win",
+            },
+        },
+        "BBB": {
+            "archs": [""],
+            "issues": {"1234": ":"},
+            "packages": ["Donalduck"],
+            "flavor_settings": {
+                "VERSION": "flavor version",
+                "SOMETHING": "flavor win",
+            },
+        },
+        "CCC": {
+            "archs": [""],
+            "issues": {"1234": ":"},
+            "packages": ["Donalduck"],
+            "flavor_settings": {
+                "SOMETHING": "flavor win",
+            },
+        },
+    }
+
+    inc = Incidents(
+        product="",
+        settings={
+            "VERSION": "1.2.3",
+            "DISTRI": "IM_A_DISTRI",
+            "SOMETHING": "original",
+        },
+        config=test_config,
+        extrasettings=set(),
+    )
+    res = inc(incidents=[MyIncident_3()], token={}, ci_url="", ignore_onetime=False)
+    assert len(res) == 1
+    assert res[0]["openqa"]["VERSION"] == "1.2.3"
+    assert res[0]["openqa"]["DISTRI"] == "IM_A_DISTRI"
+    assert res[0]["openqa"]["SOMETHING"] == "flavor win"
+
+
 def test_incidents_call_with_flavor_settings_isolated(request_mock):
     """
     Product configuration has 4 settings.
