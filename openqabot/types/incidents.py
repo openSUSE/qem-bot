@@ -96,12 +96,30 @@ class Incidents(BaseConf):
                             inc.id,
                         )
                         continue
+                    full_post: Dict[str, Any] = {}
+                    full_post["api"] = "api/incident_settings"
+                    full_post["qem"] = {}
+                    full_post["openqa"] = {}
+                    full_post["openqa"].update(self.settings)
+                    if "flavor_settings" in data:
+                        full_post["openqa"].update(data["flavor_settings"])
 
+                    full_post["qem"]["incident"] = inc.id
+                    full_post["openqa"]["ARCH"] = arch
+                    full_post["qem"]["arch"] = arch
+                    full_post["openqa"]["FLAVOR"] = flavor
+                    full_post["qem"]["flavor"] = flavor
+                    full_post["openqa"]["VERSION"] = self.settings["VERSION"]
+                    full_post["qem"]["version"] = self.settings["VERSION"]
+                    full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
+                    full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
+                    full_post["openqa"]["_OBSOLETE"] = "1"
+                    full_post["openqa"]["INCIDENT_ID"] = inc.id
+
+                    if ci_url:
+                        full_post["openqa"]["__CI_JOB_URL"] = ci_url
                     if inc.staging:
                         continue
-
-                    if "flavor_settings" in data:
-                        self.settings.update(data["flavor_settings"])
 
                     if "packages" in data:
                         if not inc.contains_package(data["packages"]):
@@ -111,22 +129,6 @@ class Incidents(BaseConf):
                         if inc.contains_package(data["excluded_packages"]):
                             continue
 
-                    full_post: Dict[str, Any] = {}
-                    full_post["api"] = "api/incident_settings"
-                    full_post["qem"] = {}
-                    full_post["openqa"] = {}
-                    full_post["qem"]["incident"] = inc.id
-                    full_post["openqa"]["ARCH"] = arch
-                    full_post["qem"]["arch"] = arch
-                    full_post["openqa"]["FLAVOR"] = flavor
-                    full_post["qem"]["flavor"] = flavor
-                    full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
-                    full_post["openqa"]["_OBSOLETE"] = "1"
-                    full_post["openqa"]["INCIDENT_ID"] = inc.id
-
-                    if ci_url:
-                        full_post["openqa"]["__CI_JOB_URL"] = ci_url
-
                     if inc.livepatch:
                         full_post["openqa"]["KGRAFT"] = "1"
 
@@ -135,11 +137,6 @@ class Incidents(BaseConf):
                     if inc.rrid:
                         full_post["openqa"]["RRID"] = inc.rrid
 
-                    # Settings for the POST command
-                    full_post["openqa"].update(self.settings)
-                    full_post["openqa"]["VERSION"] = self.settings["VERSION"]
-                    full_post["qem"]["version"] = self.settings["VERSION"]
-                    full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
                     # old bot used variable "REPO_ID"
                     revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
                     if not revs:

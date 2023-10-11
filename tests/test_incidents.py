@@ -48,19 +48,24 @@ def test_incidents_call_with_flavors():
     assert res == []
 
 
+class MyIncident_0(object):
+    """
+    The simpler possible implementation of Incident class
+    """
+
+    def __init__(self):
+        self.id = None
+        self.staging = False
+        self.livepatch = False
+        self.packages = [None]
+        self.rrid = None
+        self.revisions = {("", ""): None}
+
+    def revisions_with_fallback(self, arch, version):
+        pass
+
+
 def test_incidents_call_with_incidents():
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-
-        def revisions_with_fallback(self, arch, version):
-            pass
-
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
     inc = Incidents(
@@ -69,24 +74,17 @@ def test_incidents_call_with_incidents():
         config=test_config,
         extrasettings=None,
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_0()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
 
+class MyIncident_1(MyIncident_0):
+    def __init__(self):
+        super().__init__()
+        self.channels = []
+
+
 def test_incidents_call_with_issues():
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-            self.channels = []
-
-        def revisions_with_fallback(self, arch, version):
-            pass
-
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
     inc = Incidents(
@@ -95,7 +93,7 @@ def test_incidents_call_with_issues():
         config=test_config,
         extrasettings=None,
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_1()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
 
@@ -120,21 +118,17 @@ def request_mock(monkeypatch):
     monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
 
 
+class MyIncident_2(MyIncident_1):
+    def __init__(self):
+        super().__init__()
+        self.channels = [("", "", "")]
+        self.emu = False
+
+    def revisions_with_fallback(self, arch, version):
+        return True
+
+
 def test_incidents_call_with_channels(request_mock):
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-            self.channels = [("", "", "")]
-            self.emu = False
-
-        def revisions_with_fallback(self, arch, version):
-            return True
-
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -144,28 +138,21 @@ def test_incidents_call_with_channels(request_mock):
         config=test_config,
         extrasettings=set(),
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_2()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
 
 
+class MyIncident_3(MyIncident_2):
+    def __init__(self):
+        super().__init__()
+        self.channels = [("", "", "")]
+        self.emu = False
+
+    def contains_package(self, requires):
+        return True
+
+
 def test_incidents_call_with_packages(request_mock):
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-            self.channels = [("", "", "")]
-            self.emu = False
-
-        def revisions_with_fallback(self, arch, version):
-            return True
-
-        def contains_package(self, requires):
-            return True
-
     test_config = {}
     test_config["FLAVOR"] = {
         "AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}
@@ -177,28 +164,20 @@ def test_incidents_call_with_packages(request_mock):
         config=test_config,
         extrasettings=set(),
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_3()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
 
 
 def test_incidents_call_with_flavor_settings(request_mock):
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-            self.channels = [("", "", "")]
-            self.emu = False
-
-        def revisions_with_fallback(self, arch, version):
-            return True
-
-        def contains_package(self, requires):
-            return True
-
+    """
+    Product configuration has 4 settings.
+    Incident configuration has only 1 flavor.
+    The only flavor is using flavor_settings.
+    Set of setting in product and flavor:
+    - match on SOMETHING: flavor value has to win
+    - flavor set extend product set SOMETHING_NEW:
+    - one setting is only at product level SOMETHING_ELSE
+    """
     test_config = {}
     test_config["FLAVOR"] = {
         "AAA": {
@@ -223,29 +202,61 @@ def test_incidents_call_with_flavor_settings(request_mock):
         config=test_config,
         extrasettings=set(),
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_3()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
     assert res[0]["openqa"]["SOMETHING"] == "flavor win"
     assert res[0]["openqa"]["SOMETHING_ELSE"] == "original_else"
     assert res[0]["openqa"]["SOMETHING_NEW"] == "something flavor specific"
 
 
+def test_incidents_call_with_flavor_settings_isolated(request_mock):
+    """
+    Product configuration has 4 settings.
+    Incident configuration has 2 flavors.
+    Only the first flavor is using flavor_settings, the other is not.
+    Test that POST for the second exactly and only contains the product settings.
+    """
+    test_config = {}
+    test_config["FLAVOR"] = {
+        "AAA": {
+            "archs": [""],
+            "issues": {"1234": ":"},
+            "packages": ["Donalduck"],
+            "flavor_settings": {
+                "SOMETHING": "flavor win",
+                "SOMETHING_NEW": "something flavor specific",
+            },
+        },
+        "BBB": {
+            "archs": [""],
+            "issues": {"1234": ":"},
+            "packages": ["Donalduck"],
+        },
+    }
+
+    inc = Incidents(
+        product="",
+        settings={
+            "VERSION": "",
+            "DISTRI": None,
+            "SOMETHING": "original",
+            "SOMETHING_ELSE": "original_else",
+        },
+        config=test_config,
+        extrasettings=set(),
+    )
+    res = inc(incidents=[MyIncident_3()], token={}, ci_url="", ignore_onetime=False)
+    assert len(res) == 2
+    assert res[1]["openqa"]["SOMETHING"] == "original"
+
+
+class MyIncident_4(MyIncident_3):
+    def __init__(self):
+        super().__init__()
+        self.embargoed = False
+
+
 def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
-    class MyIncident(object):
-        def __init__(self):
-            self.id = None
-            self.staging = False
-            self.livepatch = False
-            self.packages = [None]
-            self.rrid = None
-            self.revisions = {("", ""): None}
-            self.channels = [("", "", "")]
-            self.emu = False
-            self.embargoed = False
-
-        def revisions_with_fallback(self, arch, version):
-            return True
-
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -260,6 +271,6 @@ def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
         config=test_config,
         extrasettings=set(),
     )
-    res = inc(incidents=[MyIncident()], token={}, ci_url="", ignore_onetime=False)
+    res = inc(incidents=[MyIncident_4()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
     assert "PUBLIC_CLOUD_IMAGE_ID" in res[0]["openqa"]
