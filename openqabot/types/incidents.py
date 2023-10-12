@@ -101,6 +101,7 @@ class Incidents(BaseConf):
                     full_post["qem"] = {}
                     full_post["openqa"] = {}
                     full_post["openqa"].update(self.settings)
+                    self.set_obsoletion(full_post["openqa"])
                     full_post["qem"]["incident"] = inc.id
                     full_post["openqa"]["ARCH"] = arch
                     full_post["qem"]["arch"] = arch
@@ -110,7 +111,6 @@ class Incidents(BaseConf):
                     full_post["qem"]["version"] = self.settings["VERSION"]
                     full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
                     full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
-                    full_post["openqa"]["_OBSOLETE"] = "1"
                     full_post["openqa"]["INCIDENT_ID"] = inc.id
 
                     if ci_url:

@@ -167,10 +167,10 @@ class Aggregate(BaseConf):
                 if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
                     continue
 
+            self.set_obsoletion(settings)
             full_post["openqa"].update(settings)
             full_post["openqa"]["FLAVOR"] = self.flavor
             full_post["openqa"]["ARCH"] = arch
-            full_post["openqa"]["_OBSOLETE"] = 1
 
             for template, issues in test_incidents.items():
                 full_post["openqa"][template] = ",".join(str(x) for x in issues)
