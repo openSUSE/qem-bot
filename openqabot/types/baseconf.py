@@ -27,3 +27,8 @@ class BaseConf(metaclass=ABCMeta):
 
     def filter_embargoed(self) -> bool:
         return any(k.startswith("PUBLIC") for k in self.settings.keys())
+
+    @staticmethod
+    def set_obsoletion(settings: dict) -> None:
+        if "_OBSOLETE" not in settings:
+            settings["_DEPRIORITIZEBUILD"] = 1
