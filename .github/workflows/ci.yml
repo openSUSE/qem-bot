@@ -13,6 +13,8 @@ jobs:
           cache: 'pip'
       - name: Setup enviroment
         run: pip install -r requirements-dev.txt
+      - name: Linting
+        run: make lint
       - name: Run tests + cov report
         run: make test-with-coverage
       - name: Check style
