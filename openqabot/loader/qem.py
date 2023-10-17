@@ -49,11 +49,11 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             log.info(
                 "Project %s can't calculate repohash %s .. skipping" % (i["project"], e)
             )
-        except EmptyChannels as e:
+        except EmptyChannels:
             log.info(
                 "Project %s has empty channels - check incident in SMELT" % i["project"]
             )
-        except EmptyPackagesError as e:
+        except EmptyPackagesError:
             log.info(
                 "Project %s has empty packages - check incident in SMELT" % i["project"]
             )

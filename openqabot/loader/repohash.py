@@ -1,6 +1,5 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from datetime import datetime
 from hashlib import md5
 from logging import getLogger
 from typing import List, Tuple

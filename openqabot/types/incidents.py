@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from . import ArchVer, ProdVer, Repos
+from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests

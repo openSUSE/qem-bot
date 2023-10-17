@@ -4,6 +4,7 @@ from functools import lru_cache
 import logging
 from pprint import pformat
 from urllib.parse import ParseResult
+from typing import Dict
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError

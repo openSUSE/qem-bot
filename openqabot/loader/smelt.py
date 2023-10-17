@@ -142,7 +142,7 @@ def get_active_incidents() -> Set[int]:
         ndata = get_json(query)
         try:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
-        except ValidationError as e:
+        except ValidationError:
             log.exception("Invalid data from SMELT received")
             return []
         incidents = ndata["data"]["incidents"]
@@ -164,7 +164,7 @@ def get_incident(incident: int):
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
-    except ValidationError as e:
+    except ValidationError:
         log.exception("Invalid data from SMELT for incident %s" % incident)
         return None
     except Exception as e:
