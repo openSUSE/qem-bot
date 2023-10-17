@@ -151,7 +151,7 @@ def get_active_incidents() -> Set[int]:
         if has_next:
             cursor = incidents["pageInfo"]["endCursor"]
 
-    log.info("Loaded %s active incidents" % len(active))
+    log.info("Loaded %s active incidents", len(active))
 
     return active
 
@@ -159,16 +159,16 @@ def get_active_incidents() -> Set[int]:
 def get_incident(incident: int):
     query = INCIDENT % {"incident": incident}
 
-    log.info("Getting info about incident %s from SMELT" % incident)
+    log.info("Getting info about incident %s from SMELT", incident)
     inc_result = get_json(query)
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
     except ValidationError:
-        log.exception("Invalid data from SMELT for incident %s" % incident)
+        log.exception("Invalid data from SMELT for incident %s", incident)
         return None
     except Exception as e:
-        log.error("Unknown error for incident %s" % incident)
+        log.error("Unknown error for incident %s", incident)
         log.exception(e)
         return None
 

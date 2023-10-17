@@ -142,8 +142,9 @@ class Aggregate(BaseConf):
                 )
             except SameBuildExists:
                 log.info(
-                    "For %s aggreagate on %s there is existing build"
-                    % (self.product, arch)
+                    "For %s aggreagate on %s there is existing build",
+                    self.product,
+                    arch,
                 )
                 continue
 

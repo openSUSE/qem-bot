@@ -23,8 +23,8 @@ class SMELTSync:
         log.info("Start syncing incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
-        log.info("Updating info about %s incidents" % str(len(data)))
-        log.info("Data: %s" % pformat(data))
+        log.info("Updating info about %s incidents", str(len(data)))
+        log.info("Data: %s", pformat(data))
 
         if not self.dry:
             ret = update_incidents(self.token, data, retry=self.retry)

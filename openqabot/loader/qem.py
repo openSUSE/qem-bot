@@ -47,15 +47,15 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             xs.append(Incident(i))
         except NoRepoFoundError as e:
             log.info(
-                "Project %s can't calculate repohash %s .. skipping" % (i["project"], e)
+                "Project %s can't calculate repohash %s .. skipping", i["project"], e
             )
         except EmptyChannels:
             log.info(
-                "Project %s has empty channels - check incident in SMELT" % i["project"]
+                "Project %s has empty channels - check incident in SMELT", i["project"]
             )
         except EmptyPackagesError:
             log.info(
-                "Project %s has empty packages - check incident in SMELT" % i["project"]
+                "Project %s has empty packages - check incident in SMELT", i["project"]
             )
 
     return xs
@@ -101,7 +101,7 @@ def get_incident_settings(
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
     url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
-    log.info("Getting settings for %s" % number)
+    log.info("Getting settings for %s", number)
     try:
         data = requests.get(url, headers=token).json()
     except Exception as e:
@@ -184,7 +184,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
             f"Product: {data.product} on arch: {data.arch} does not have any settings"
         )
 
-    log.debug("Getting id for %s" % pformat(data))
+    log.debug("Getting id for %s", pformat(data))
 
     # use last three schedule
     for s in settings[:3]:
@@ -241,8 +241,8 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
                 log.info("Smelt Incidents updated")
             else:
                 log.error(
-                    "Smelt Incidents were not synced to dashboard: error %s"
-                    % ret.status_code
+                    "Smelt Incidents were not synced to dashboard: error %s",
+                    ret.status_code,
                 )
                 continue
         return 0

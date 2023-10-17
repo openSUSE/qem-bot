@@ -80,7 +80,7 @@ class Incident:
                 arch_ver = ArchVer(arch, "12")
             return self.revisions[arch_ver]
         except KeyError:
-            log.debug("Incident %s does not have %s arch in %s" % (self.id, arch, ver))
+            log.debug("Incident %s does not have %s arch in %s", self.id, arch, ver)
             return None
 
     @staticmethod

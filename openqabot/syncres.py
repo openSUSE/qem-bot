@@ -58,13 +58,12 @@ class SyncRes:
             return False
 
         if data["clone_id"]:
-            log.info("Job '%s' already has a clone, ignoring" % data["clone_id"])
+            log.info("Job '%s' already has a clone, ignoring", data["clone_id"])
             return False
 
         if self._is_in_devel_group(data):
             log.info(
-                "Ignoring job '%s' in development group '%s'"
-                % (data["id"], data["group"])
+                "Ignoring job '%s' in development group '%s'", data["id"], data["group"]
             )
             return False
 
@@ -72,10 +71,12 @@ class SyncRes:
 
     def post_result(self, result):
         log.debug(
-            "Posting results of %s job %s with status %s"
-            % (self.operation, result["job_id"], result["status"])
+            "Posting results of %s job %s with status %s",
+            self.operation,
+            result["job_id"],
+            result["status"],
         )
-        log.debug("Full post data: %s" % pformat(result))
+        log.debug("Full post data: %s", pformat(result))
 
         if not self.dry and self.client:
             post_job(self.token, result)

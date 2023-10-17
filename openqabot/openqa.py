@@ -32,33 +32,29 @@ class openQAInterface:
 
     def post_job(self, settings) -> None:
         log.info(
-            "openqa-cli api --host %s -X post isos %s"
-            % (
-                self.url.geturl(),
-                " ".join(["%s=%s" % (k, v) for k, v in settings.items()]),
-            )
+            "openqa-cli api --host %s -X post isos %s",
+            self.url.geturl(),
+            " ".join(["%s=%s" % (k, v) for k, v in settings.items()]),
         )
         try:
             self.openqa.openqa_request(
                 "POST", "isos", data=settings, retries=self.retries
             )
         except RequestError as e:
-            log.error("openQA returned %s" % e.args[-1])
-            log.error("Post failed with {}".format(pformat(settings)))
+            log.error("openQA returned %s", e.args[-1])
+            log.error("Post failed with %s", pformat(settings))
             raise PostOpenQAError
         except Exception as e:
             log.exception(e)
-            log.error("Post failed with {}".format(pformat(settings)))
+            log.error("Post failed with %s", pformat(settings))
             raise PostOpenQAError
 
     def handle_job_not_found(self, job_id: int):
-        log.info(
-            "Job %s not found in openQA, marking as obsolete on dashboard" % job_id
-        )
+        log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data):
-        log.info("Getting openQA tests results for %s" % pformat(data))
+        log.info("Getting openQA tests results for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
         param["latest"] = "1"

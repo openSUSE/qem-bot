@@ -29,24 +29,24 @@ def main():
         help="Directory with openqabot configuration metadata",
     )
     args = parser.parse_args()
-    log.info(f"Parsing configuration files from {args.configs}")
+    log.info("Parsing configuration files from %s", args.configs)
     loader = YAML(typ="safe")
     for p in get_yml_list(Path(args.configs)):
         try:
             data = loader.load(p)
-            log.info(f"Processing {p}")
+            log.info("Processing %s", p)
             if "settings" in data:
                 settings = data["settings"]
                 if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
                     apply_pc_tools_image(settings)
                     if "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" not in settings:
                         log.error(
-                            f"Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from {data}"
+                            "Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from %s", data
                         )
                 if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                     apply_publiccloud_pint_image(settings)
                     if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
-                        log.error(f"Failed to get PUBLIC_CLOUD_IMAGE_ID from {data}")
+                        log.error("Failed to get PUBLIC_CLOUD_IMAGE_ID from %s", data)
         except Exception as e:
             log.exception(e)
             continue
