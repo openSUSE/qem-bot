@@ -5,10 +5,10 @@ from functools import lru_cache
 from logging import getLogger
 from typing import List
 from urllib.error import HTTPError
+import re
 
 import osc.conf
 import osc.core
-import re
 
 from openqa_client.exceptions import RequestError
 from openqabot.errors import NoResultsError
@@ -40,7 +40,7 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
             inc.req,
         )
         return True
-    elif e.code == 404:
+    if e.code == 404:
         log.info(
             "Received '%s'. Request %s removed or problem on OBS side: %s",
             e.reason,
@@ -48,14 +48,13 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
             e.read().decode(),
         )
         return False
-    else:
-        log.error(
-            "Received error %s, reason: '%s' for Request %s - problem on OBS side",
-            e.code,
-            e.reason,
-            inc.req,
-        )
-        return False
+    log.error(
+        "Received error %s, reason: '%s' for Request %s - problem on OBS side",
+        e.code,
+        e.reason,
+        inc.req,
+    )
+    return False
 
 
 class Approver:

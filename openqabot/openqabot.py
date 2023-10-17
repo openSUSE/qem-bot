@@ -74,7 +74,6 @@ class OpenQABot:
                     self.post_openqa(job["openqa"])
                 except PostOpenQAError:
                     log.info("POST failed, not updating dashboard")
-                    pass
                 else:
                     self.post_qem(job["qem"], job["api"])
 
