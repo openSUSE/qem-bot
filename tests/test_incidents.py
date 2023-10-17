@@ -168,11 +168,11 @@ def test_incidents_call_with_packages(request_mock):
     assert len(res) == 1
 
 
-def test_incidents_call_with_flavor_settings(request_mock):
+def test_incidents_call_with_params_expand(request_mock):
     """
     Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
-    The only flavor is using flavor_settings.
+    The only flavor is using params_expand.
     Set of setting in product and flavor:
     - match on SOMETHING: flavor value has to win
     - flavor set extend product set SOMETHING_NEW:
@@ -184,7 +184,7 @@ def test_incidents_call_with_flavor_settings(request_mock):
             "archs": [""],
             "issues": {"1234": ":"},
             "packages": ["Donalduck"],
-            "flavor_settings": {
+            "params_expand": {
                 "SOMETHING": "flavor win",
                 "SOMETHING_NEW": "something flavor specific",
             },
@@ -209,9 +209,9 @@ def test_incidents_call_with_flavor_settings(request_mock):
     assert res[0]["openqa"]["SOMETHING_NEW"] == "something flavor specific"
 
 
-def test_incidents_call_with_flavor_settings_distri_version(request_mock):
+def test_incidents_call_with_params_expand_distri_version(request_mock):
     """
-    DISTRI and VERSION settings cannot be changed using flavor_settings.
+    DISTRI and VERSION settings cannot be changed using params_expand.
     """
     test_config = {}
     test_config["FLAVOR"] = {
@@ -219,7 +219,7 @@ def test_incidents_call_with_flavor_settings_distri_version(request_mock):
             "archs": [""],
             "issues": {"1234": ":"},
             "packages": ["Donalduck"],
-            "flavor_settings": {
+            "params_expand": {
                 "DISTRI": "flavor distri",
                 "SOMETHING": "flavor win",
             },
@@ -228,7 +228,7 @@ def test_incidents_call_with_flavor_settings_distri_version(request_mock):
             "archs": [""],
             "issues": {"1234": ":"},
             "packages": ["Donalduck"],
-            "flavor_settings": {
+            "params_expand": {
                 "VERSION": "flavor version",
                 "SOMETHING": "flavor win",
             },
@@ -237,7 +237,7 @@ def test_incidents_call_with_flavor_settings_distri_version(request_mock):
             "archs": [""],
             "issues": {"1234": ":"},
             "packages": ["Donalduck"],
-            "flavor_settings": {
+            "params_expand": {
                 "SOMETHING": "flavor win",
             },
         },
@@ -260,11 +260,11 @@ def test_incidents_call_with_flavor_settings_distri_version(request_mock):
     assert res[0]["openqa"]["SOMETHING"] == "flavor win"
 
 
-def test_incidents_call_with_flavor_settings_isolated(request_mock):
+def test_incidents_call_with_params_expand_isolated(request_mock):
     """
     Product configuration has 4 settings.
     Incident configuration has 2 flavors.
-    Only the first flavor is using flavor_settings, the other is not.
+    Only the first flavor is using params_expand, the other is not.
     Test that POST for the second exactly and only contains the product settings.
     """
     test_config = {}
@@ -273,7 +273,7 @@ def test_incidents_call_with_flavor_settings_isolated(request_mock):
             "archs": [""],
             "issues": {"1234": ":"},
             "packages": ["Donalduck"],
-            "flavor_settings": {
+            "params_expand": {
                 "SOMETHING": "flavor win",
                 "SOMETHING_NEW": "something flavor specific",
             },

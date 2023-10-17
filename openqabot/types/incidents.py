@@ -101,18 +101,6 @@ class Incidents(BaseConf):
                     full_post["qem"] = {}
                     full_post["openqa"] = {}
                     full_post["openqa"].update(self.settings)
-                    if "flavor_settings" in data:
-                        if any(
-                            forbidden_key in data["flavor_settings"]
-                            for forbidden_key in ["DISTRI", "VERSION"]
-                        ):
-                            log.error(
-                                "flavor:%s ignored as DISTRI and VERSION not allowed in flavor_settings",
-                                flavor,
-                            )
-                            continue
-                        full_post["openqa"].update(data["flavor_settings"])
-
                     full_post["qem"]["incident"] = inc.id
                     full_post["openqa"]["ARCH"] = arch
                     full_post["qem"]["arch"] = arch
@@ -247,6 +235,16 @@ class Incidents(BaseConf):
                             full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
                     # add custom vars to job settings
+                    if "params_expand" in data and any(
+                        forbidden_key in data["params_expand"]
+                        for forbidden_key in ["DISTRI", "VERSION"]
+                    ):
+                        log.error(
+                            "flavor:%s ignored as DISTRI and VERSION not allowed in params_expand",
+                            flavor,
+                        )
+                        continue
+
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 

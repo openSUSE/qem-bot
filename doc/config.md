@@ -112,8 +112,6 @@ incidents:
       excluded_packages:
         - pkgthree
         - pkgfour
-      flavor_settings:
-        SOMETHING: "some value"
     Other-Incident-FLavor:
       ...
 ```
@@ -128,6 +126,6 @@ incidents:
 * `override_priority` - optional, integer. Overrides the default priority of the job. (default = 50, with modifiers for `*Minimal`, EMU and staging Incidents)
 * `packages` - optional, list of package names (or first part of pkg name). The incident must contain a package from this list to be scheduled into openQA.
 * `excluded_packages` - optional, list of package names, opposite to `packages`. If the Incident contains a package in this list, it isn't scheduled.
-* `flavor_settings` - flavor specific settings. Merged with `settings` dictionary. `flavor_settings` values win over `settings`.
+* `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values win over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
 
 All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`.
