@@ -169,6 +169,19 @@ def get_parser():
         type=str,
         help="Incident ID (to approve only a single incident)",
     )
+    cmdappr.add_argument(
+        "--post-comment",
+        required=False,
+        action="store_true",
+        help="Post a comment on a request if the incident is not approvable",
+    )
+    cmdappr.add_argument(
+        "--osc-botname",
+        required=False,
+        type=str,
+        default="openqa",
+        help="Name of the bot posting to OBS/IBS",
+    )
 
     cmdappr.set_defaults(func=do_approve)
 

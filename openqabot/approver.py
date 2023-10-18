@@ -6,6 +6,10 @@ from logging import getLogger
 from typing import List
 from urllib.error import HTTPError
 
+from .commenter import Commenter
+from collections import namedtuple
+from urllib.parse import urlparse
+
 import osc.conf
 import osc.core
 import re
@@ -60,6 +64,8 @@ class Approver:
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.all_incidents = args.all_incidents
         self.client = openQAInterface(args)
+        self.post_comment = args.post_comment
+        self.bot_name = args.osc_botname
 
     def __call__(self) -> int:
         log.info("Start approving incidents in IBS")
@@ -104,6 +110,7 @@ class Approver:
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
             log.info("%s has at least one failed job in incident tests" % _mi2str(inc))
+            self._post_obs_comment(inc)
             return False
 
         if any(i.withAggregate for i in i_jobs):
@@ -111,6 +118,7 @@ class Approver:
                 log.info(
                     "%s has at least one failed job in aggregate tests" % _mi2str(inc)
                 )
+                self._post_obs_comment(inc)
                 return False
 
         # everything is green --> add incident to approve list
@@ -199,3 +207,18 @@ class Approver:
             return False
 
         return True
+
+    def _post_obs_comment(self, inc: IncReq) -> bool:
+        if not self.post_comment:
+            return
+        log.info('_post_obs_comment %s' % str(inc))
+        openqa_instance_url = urlparse("http://instance.qa")
+        _namespace = namedtuple("Namespace", ("dry", "token", "openqa_instance", "osc_botname"))
+        a = _namespace(self.dry, "123", openqa_instance_url, self.bot_name)
+        commenter = Commenter(a)
+
+        # Set request id to a demo request https://build.suse.de/request/show/285542
+        inc = IncReq(inc=inc.inc, req=285542)
+
+        commenter.osc_comment(inc, "hello", "foo")
+

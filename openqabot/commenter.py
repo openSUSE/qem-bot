@@ -15,6 +15,7 @@ from .loader.qem import get_aggregate_results, get_incident_results, get_inciden
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
 from .types.incident import Incident
+from .loader.qem import ( IncReq )
 
 log = getLogger("bot.commenter")
 
@@ -24,9 +25,10 @@ class Commenter:
         self.dry = args.dry
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
-        self.incidents = get_incidents(self.token)
+#        self.incidents = get_incidents(self.token)
         osc.conf.get_config(override_apiurl=OBS_URL)
         self.commentapi = CommentAPI(OBS_URL)
+        self.bot_name = args.osc_botname
 
     def __call__(self) -> int:
         log.info("Start commenting incidents in IBS")
@@ -59,8 +61,8 @@ class Commenter:
 
         return 0
 
-    def osc_comment(self, inc: Incident, msg: str, state: str) -> None:
-        if inc.rr is None:
+    def osc_comment(self, inc: IncReq, msg: str, state: str) -> None:
+        if inc.inc is None:
             log.debug("Skipping comment -- no request defined")
             return
 
@@ -69,19 +71,19 @@ class Commenter:
             return
 
         kw = {}
-        kw["request_id"] = str(inc.rr)
+        kw["request_id"] = str(inc.req)
 
-        bot_name = "openqa"
         info = {}
         info["state"] = state
-        for key in inc.revisions.keys():
-            info["revision_%s_%s" % (key.version, key.arch)] = inc.revisions[key]
+#        for key in inc.revisions.keys():
+#            info["revision_%s_%s" % (key.version, key.arch)] = inc.revisions[key]
 
-        msg = self.commentapi.add_marker(msg, bot_name, info)
+        msg = self.commentapi.add_marker(msg, self.bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
 
         comments = self.commentapi.get_comments(**kw)
-        comment, _ = self.commentapi.comment_find(comments, bot_name, info)
+        log.info("Existing comments: (%s)" % str(comments))
+        comment, _ = self.commentapi.comment_find(comments, self.bot_name, info)
 
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
@@ -91,8 +93,7 @@ class Commenter:
 
         if comment is None:
             log.debug("No comment with this state, looking without the state filter")
-            comment, _ = self.commentapi.comment_find(comments, bot_name)
-
+            comment, _ = self.commentapi.comment_find(comments, self.bot_name)
         if comment is None:
             log.debug("No comment to replace found")
         else:
@@ -101,10 +102,10 @@ class Commenter:
             else:
                 log.info("Would delete comment %d" % int(comment["id"]))
 
+        log.info("Writing comment to request %d/%d" % (inc.inc, inc.req))
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Would write comment to request %s" % inc)
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs) -> str:
