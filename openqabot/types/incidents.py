@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from . import ArchVer, ProdVer, Repos
+from . import ProdVer, Repos
 from .. import QEM_DASHBOARD
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
@@ -150,7 +150,7 @@ class Incidents(BaseConf):
 
                     if not issue_dict:
                         log.debug(
-                            "No channels in %s for %s on %s" % (inc.id, flavor, arch)
+                            "No channels in %s for %s on %s", inc.id, flavor, arch
                         )
                         continue
 
@@ -162,8 +162,11 @@ class Incidents(BaseConf):
                         token, inc, arch, self.settings["VERSION"], flavor
                     ):
                         log.info(
-                            "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA "
-                            % (flavor, self.settings["VERSION"], inc.id, arch)
+                            "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA",
+                            flavor,
+                            self.settings["VERSION"],
+                            inc.id,
+                            arch,
                         )
                         continue
 
@@ -183,8 +186,8 @@ class Incidents(BaseConf):
                             )
                         ):
                             log.warning(
-                                "Kernel incident %s doesn't have product repository"
-                                % str(inc)
+                                "Kernel incident %s doesn't have product repository",
+                                str(inc),
                             )
                             continue
 
@@ -208,10 +211,10 @@ class Incidents(BaseConf):
 
                         if pos and not pos.isdisjoint(full_post["openqa"].keys()):
                             full_post["qem"]["withAggregate"] = False
-                            log.info("Aggregate not needed for incident %s" % inc.id)
+                            log.info("Aggregate not needed for incident %s", inc.id)
                         if neg and neg.isdisjoint(full_post["openqa"].keys()):
                             full_post["qem"]["withAggregate"] = False
-                            log.info("Aggregate not needed for incident %s" % inc.id)
+                            log.info("Aggregate not needed for incident %s", inc.id)
                         if not (neg and pos):
                             full_post["qem"]["withAggregate"] = False
 

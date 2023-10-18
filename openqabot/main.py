@@ -18,7 +18,7 @@ def main() -> None:
     cfg = parser.parse_args(sys.argv[1:])
 
     if not cfg.configs.exists() and not cfg.configs.is_dir():
-        log.error(f"Path {cfg.configs} is not a valid directory with config files")
+        log.error("Path %s is not a valid directory with config files", cfg.configs)
         sys.exit(1)
 
     if not hasattr(cfg, "func"):

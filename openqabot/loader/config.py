@@ -36,7 +36,7 @@ def load_metadata(
             continue
 
         if "product" not in data:
-            log.debug("Skipping invalid config %s" % p)
+            log.debug("Skipping invalid config %s", p)
             continue
 
         if settings:
@@ -49,7 +49,7 @@ def load_metadata(
                     try:
                         ret.append(Aggregate(data["product"], settings, data[key]))
                     except NoTestIssues:
-                        log.warning("No 'test_issues' in %s config" % data["product"])
+                        log.warning("No 'test_issues' in %s config", data["product"])
                 else:
                     continue
     return ret
@@ -63,16 +63,16 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            log.info("Skipping invalid config %s - empty config" % str(p))
+            log.info("Skipping invalid config %s - empty config", str(p))
             continue
         if not isinstance(data, dict):
-            log.info("Skipping invalid config %s - invalid format" % str(p))
+            log.info("Skipping invalid config %s - invalid format", str(p))
             continue
 
         try:
             flavor = data["aggregate"]["FLAVOR"]
         except KeyError:
-            log.info("Config %s does not have aggregate" % str(p))
+            log.info("Config %s does not have aggregate", str(p))
             continue
 
         try:

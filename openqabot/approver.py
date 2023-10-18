@@ -5,10 +5,10 @@ from functools import lru_cache
 from logging import getLogger
 from typing import List
 from urllib.error import HTTPError
+import re
 
 import osc.conf
 import osc.core
-import re
 
 from openqa_client.exceptions import RequestError
 from openqabot.errors import NoResultsError
@@ -35,22 +35,26 @@ def _mi2str(inc: IncReq) -> str:
 def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
     if e.code == 403:
         log.info(
-            "Received '%s'. Request %s likely already approved, ignoring"
-            % (e.reason, inc.req)
+            "Received '%s'. Request %s likely already approved, ignoring",
+            e.reason,
+            inc.req,
         )
         return True
-    elif e.code == 404:
+    if e.code == 404:
         log.info(
-            "Received '%s'. Request %s removed or problem on OBS side: %s"
-            % (e.reason, inc.req, e.read().decode())
+            "Received '%s'. Request %s removed or problem on OBS side: %s",
+            e.reason,
+            inc.req,
+            e.read().decode(),
         )
         return False
-    else:
-        log.error(
-            "Received error %s, reason: '%s' for Request %s - problem on OBS side"
-            % (e.code, e.reason, inc.req)
-        )
-        return False
+    log.error(
+        "Received error %s, reason: '%s' for Request %s - problem on OBS side",
+        e.code,
+        e.reason,
+        inc.req,
+    )
+    return False
 
 
 class Approver:
@@ -74,7 +78,7 @@ class Approver:
 
         log.info("Incidents to approve:")
         for inc in incidents_to_approve:
-            log.info("* %s" % _mi2str(inc))
+            log.info("* %s", _mi2str(inc))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
@@ -97,19 +101,19 @@ class Approver:
             log.info(e)
 
             if any(i.withAggregate for i in i_jobs):
-                log.info("Aggregate missing for %s" % _mi2str(inc))
+                log.info("Aggregate missing for %s", _mi2str(inc))
                 return False
 
             u_jobs = []
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-            log.info("%s has at least one failed job in incident tests" % _mi2str(inc))
+            log.info("%s has at least one failed job in incident tests", _mi2str(inc))
             return False
 
         if any(i.withAggregate for i in i_jobs):
             if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
                 log.info(
-                    "%s has at least one failed job in aggregate tests" % _mi2str(inc)
+                    "%s has at least one failed job in aggregate tests", _mi2str(inc)
                 )
                 return False
 
@@ -140,14 +144,18 @@ class Approver:
                 continue
             if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
                 log.info(
-                    "Ignoring failed job %s/t%s for incident %s due to openQA comment"
-                    % (str(self.client.url.geturl()), res["job_id"], inc)
+                    "Ignoring failed job %s/t%s for incident %s due to openQA comment",
+                    str(self.client.url.geturl()),
+                    res["job_id"],
+                    inc,
                 )
                 res["status"] = "passed"
             else:
                 log.info(
-                    "Found failed, not-ignored job %s/t%s for incident %s"
-                    % (str(self.client.url.geturl()), res["job_id"], inc)
+                    "Found failed, not-ignored job %s/t%s for incident %s",
+                    str(self.client.url.geturl()),
+                    res["job_id"],
+                    inc,
                 )
                 break
 
@@ -178,11 +186,7 @@ class Approver:
         msg = (
             "Request accepted for '" + OBS_GROUP + "' based on data in " + QEM_DASHBOARD
         )
-        log.info(
-            "Accepting review for "
-            + OBS_MAINT_PRJ
-            + ":%s:%s" % (str(inc.inc), str(inc.req))
-        )
+        log.info("Accepting review for %s:%s:%s", OBS_MAINT_PRJ, inc.inc, inc.req)
 
         try:
             osc.core.change_review_state(

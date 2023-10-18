@@ -7,7 +7,9 @@ from .incident import Incident
 
 
 class BaseConf(metaclass=ABCMeta):
-    def __init__(self, product: str, settings, config) -> None:
+    def __init__(
+        self, product: str, settings, config  # pylint: disable=unused-argument
+    ) -> None:
         self.product = product
         self.settings = settings
 

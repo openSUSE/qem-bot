@@ -44,12 +44,12 @@ class Commenter:
 
             state = "none"
             if any(j["status"] in ["running"] for j in i_jobs + u_jobs):
-                log.info("%s needs to wait a bit longer" % inc)
+                log.info("%s needs to wait a bit longer", inc)
             else:
                 if any(
                     j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs
                 ):
-                    log.info("There is a failed job for %s" % inc)
+                    log.info("There is a failed job for %s", inc)
                     state = "failed"
                 else:
                     state = "passed"
@@ -99,12 +99,12 @@ class Commenter:
             if not self.dry:
                 self.commentapi.delete(comment["id"])
             else:
-                log.info("Would delete comment %d" % int(comment["id"]))
+                log.info("Would delete comment %s", comment["id"])
 
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Would write comment to request %s" % inc)
+            log.info("Would write comment to request %s", inc)
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs) -> str:
@@ -112,7 +112,7 @@ class Commenter:
         for job in jobs:
             if "job_group" not in job:
                 # workaround for experiments of some QAM devs
-                log.warning(f"group missing in {job['job_id']}")
+                log.warning("group missing in %s", job["job_id"])
                 continue
             gl = "{!s}@{!s}".format(
                 Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"])

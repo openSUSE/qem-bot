@@ -16,7 +16,7 @@ def get_latest_tools_image(query):
     a value for <BUILD NUM>
     """
 
-    ## Get the first not-failing item
+    # Get the first not-failing item
     build_results = requests.get(query).json()["build_results"]
     for build in build_results:
         if build["failed"] == 0:
@@ -35,10 +35,10 @@ def apply_pc_tools_image(settings):
                 settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
             )
     except BaseException as e:
-        log_error = f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
+        log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             log_error += f" PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
-        log.warning(f"{log_error} : {e}")
+        log.warning("%s : %s", log_error, e)
     finally:
         del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
     return settings
@@ -84,7 +84,7 @@ def apply_publiccloud_pint_image(settings):
         log_error = "PUBLIC_CLOUD_PINT_QUERY handling failed"
         if "PUBLIC_CLOUD_PINT_NAME" in settings:
             log_error += f' for {settings["PUBLIC_CLOUD_PINT_NAME"]}'
-        log.warning(f"{log_error}: {e}")
+        log.warning("{%s: %s", log_error, e)
         settings["PUBLIC_CLOUD_IMAGE_ID"] = None
     finally:
         if "PUBLIC_CLOUD_PINT_QUERY" in settings:

@@ -47,15 +47,15 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             xs.append(Incident(i))
         except NoRepoFoundError as e:
             log.info(
-                "Project %s can't calculate repohash %s .. skipping" % (i["project"], e)
+                "Project %s can't calculate repohash %s .. skipping", i["project"], e
             )
-        except EmptyChannels as e:
+        except EmptyChannels:
             log.info(
-                "Project %s has empty channels - check incident in SMELT" % i["project"]
+                "Project %s has empty channels - check incident in SMELT", i["project"]
             )
-        except EmptyPackagesError as e:
+        except EmptyPackagesError:
             log.info(
-                "Project %s has empty packages - check incident in SMELT" % i["project"]
+                "Project %s has empty packages - check incident in SMELT", i["project"]
             )
 
     return xs
@@ -75,8 +75,10 @@ def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
     return [IncReq(i["number"], i["rr_number"]) for i in incidents if i["inReviewQAM"]]
 
 
-def get_single_incident(token: Dict[str, str], id: int) -> List[IncReq]:
-    incident = requests.get(QEM_DASHBOARD + "api/incidents/" + id, headers=token).json()
+def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]:
+    incident = requests.get(
+        QEM_DASHBOARD + "api/incidents/" + incident_id, headers=token
+    ).json()
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
@@ -87,7 +89,7 @@ def get_incident_settings(
         QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError("Inc %s does not have any job_settings" % str(inc))
+        raise NoResultsError(f"Inc {inc} does not have any job_settings")
 
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
@@ -101,7 +103,7 @@ def get_incident_settings(
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
     url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
-    log.info("Getting settings for %s" % number)
+    log.info("Getting settings for %s", number)
     try:
         data = requests.get(url, headers=token).json()
     except Exception as e:
@@ -156,7 +158,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
         QEM_DASHBOARD + "api/update_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError("Inc %s does not have any aggregates settings" % str(inc))
+        raise NoResultsError(f"Inc {inc} does not have any aggregates settings")
 
     # is string comparsion ... so we need reversed sort
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
@@ -184,7 +186,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
             f"Product: {data.product} on arch: {data.arch} does not have any settings"
         )
 
-    log.debug("Getting id for %s" % pformat(data))
+    log.debug("Getting id for %s", pformat(data))
 
     # use last three schedule
     for s in settings[:3]:
@@ -236,15 +238,14 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
         except Exception as e:
             log.exception(e)
             return 1
+        if ret.status_code == 200:
+            log.info("Smelt Incidents updated")
         else:
-            if ret.status_code == 200:
-                log.info("Smelt Incidents updated")
-            else:
-                log.error(
-                    "Smelt Incidents were not synced to dashboard: error %s"
-                    % ret.status_code
-                )
-                continue
+            log.error(
+                "Smelt Incidents were not synced to dashboard: error %s",
+                ret.status_code,
+            )
+            continue
         return 0
     return 2
 

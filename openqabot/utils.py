@@ -46,7 +46,7 @@ def walk(inc):
         if len(inc) == 1:
             if "edges" in inc:
                 return walk(inc["edges"])
-            elif "node" in inc:
+            if "node" in inc:
                 tmp = deepcopy(inc["node"])
                 del inc["node"]
                 inc.update(tmp)
