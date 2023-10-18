@@ -235,6 +235,16 @@ class Incidents(BaseConf):
                             full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
                     # add custom vars to job settings
+                    if "params_expand" in data and any(
+                        forbidden_key in data["params_expand"]
+                        for forbidden_key in ["DISTRI", "VERSION"]
+                    ):
+                        log.error(
+                            "flavor:%s ignored as DISTRI and VERSION not allowed in params_expand",
+                            flavor,
+                        )
+                        continue
+
                     if "params_expand" in data:
                         full_post["openqa"].update(data["params_expand"])
 
