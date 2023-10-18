@@ -5,8 +5,8 @@ all:
 only-test:
 	python3 -m pytest
 
-.PHONY: checkstyle
-checkstyle:
+.PHONY: black
+black:
 	black --check ./
 
 .PHONY: tidy
@@ -21,12 +21,17 @@ pylint:
 flake8:
 	flake8 ./openqabot pc_helper_online.py --config=setup.cfg
 
-.PHONY: lint
-lint: pylint flake8
-
 .PHONY: test-with-coverage
 test-with-coverage:
 	python3 -m pytest -v --cov=./openqabot --cov-report=xml --cov-report=term
 
+# aggregate targets
+
+.PHONY: lint
+lint: pylint flake8
+
+.PHONY: checkstyle
+checkstyle: black lint
+
 .PHONY: test
-test: only-test checkstyle lint
+test: only-test checkstyle
