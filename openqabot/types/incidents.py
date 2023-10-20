@@ -278,13 +278,19 @@ class Incidents(BaseConf):
     ) -> List[Dict[str, Any]]:
         ret = []
 
+        def incident_post_settings(inc, arch, flavor, data):
+            return self._handle_incident(
+                inc, arch, flavor, data, token, ci_url, ignore_onetime
+            )
+
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
-                for inc in incidents:
-                    ret.append(
-                        self._handle_incident(
-                            inc, arch, flavor, data, token, ci_url, ignore_onetime
-                        )
-                    )
+                ret.append(
+                    [
+                        incident_post_settings(inc, arch, flavor, data)
+                        for inc in incidents
+                    ]
+                )
+        ret = [r for sublist in ret for r in sublist]
         ret = [r for r in ret if r]
         return ret
