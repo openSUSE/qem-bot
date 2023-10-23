@@ -23,7 +23,8 @@ class BaseConf(metaclass=ABCMeta):
     ) -> List[Dict[str, Any]]:
         pass
 
-    @abstractstaticmethod
+    @abstractmethod
+    @staticmethod
     def normalize_repos(config):
         pass
 

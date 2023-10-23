@@ -11,3 +11,7 @@ jsonschema
 urllib3<2 # responses needs <2, see https://github.com/getsentry/responses/issues/635
 pylint
 flake8
+mypy
+types-jsonschema
+types-requests
+types-urllib3

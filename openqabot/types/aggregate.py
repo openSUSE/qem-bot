@@ -62,7 +62,7 @@ class Aggregate(BaseConf):
         ret = []
 
         for arch in self.archs:
-            full_post: Dict["str", Any] = {}
+            full_post: Dict[str, Any] = {}
             full_post["openqa"] = {}
             full_post["qem"] = {}
             full_post["qem"]["incidents"] = []

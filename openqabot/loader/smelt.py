@@ -144,7 +144,7 @@ def get_active_incidents() -> Set[int]:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
         except ValidationError:
             log.exception("Invalid data from SMELT received")
-            return []
+            return set()
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
         has_next = incidents["pageInfo"]["hasNextPage"]
