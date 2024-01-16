@@ -89,7 +89,9 @@ def get_incident_settings(
         QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
     ).json()
     if not settings:
-        raise NoResultsError(f"Inc {inc} does not have any job_settings")
+        raise NoResultsError(
+            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
+        )
 
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
