@@ -6,8 +6,7 @@ requests
 osc
 openqa-client
 ruamel.yaml
-black
 jsonschema
 urllib3<2 # responses needs <2, see https://github.com/getsentry/responses/issues/635
-pylint
-flake8
+flake8-black
+flake8-pylint

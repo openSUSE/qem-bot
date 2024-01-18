@@ -5,17 +5,9 @@ all:
 only-test:
 	python3 -m pytest
 
-.PHONY: black
-black:
-	black --check ./
-
 .PHONY: tidy
 tidy:
 	black ./
-
-.PHONY: pylint
-pylint:
-	pylint ./openqabot pc_helper_online.py --rcfile=pylintrc
 
 .PHONY: flake8
 flake8:
@@ -27,11 +19,8 @@ test-with-coverage:
 
 # aggregate targets
 
-.PHONY: lint
-lint: pylint flake8
-
 .PHONY: checkstyle
-checkstyle: black lint
+checkstyle: flake8
 
 .PHONY: test
 test: only-test checkstyle
