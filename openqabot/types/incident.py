@@ -3,10 +3,14 @@
 import re
 from logging import getLogger
 from typing import Dict, List, Tuple
+from urllib import request
 
+# Make sure we have the right dashboard URL
+from .. import QEM_DASHBOARD
 from . import ArchVer, Repos
-from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
 from ..loader.repohash import get_max_revision
+
 
 log = getLogger("bot.types.incident")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
@@ -145,3 +149,30 @@ class Incident:
                 if package.startswith(req) and package != "kernel-livepatch-tools":
                     return True
         return False
+
+    def has_failures(self, token) -> bool:
+        results = request.get(
+            QEM_DASHBOARD + "/api/jobs/incident/" + str(self.id), headers=token
+        ).json()
+
+        # This should be wrapped by a verbose flag so we return faster
+        for res in results:
+            if res["status"] == "passed":
+                continue
+            else:
+                log.info(
+                    "Found failed, not-ignored job /t%s for incident %s",
+                    res["job_id"],
+                    self.id,
+                )
+                break
+
+        if not results:
+            raise NoResultsError(
+                "Job setting %s not found for incident" % (str(self.id))
+            )
+
+        # Return true if there are any failed jobs, so if results is not empty
+        # and there is at least one failed job, return true, any() returns false
+        # if the iterable is empty
+        return any(r["status"] == "failed" for r in results)

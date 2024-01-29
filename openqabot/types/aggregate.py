@@ -92,8 +92,16 @@ class Aggregate(BaseConf):
                     # if filtering embargoed updates is off we ignoring this field
                     else:
                         valid_incidents.append(i)
+
+            # filter out incidents which have already failed in single incident tests
+            filtered_incidents = [
+                incident
+                for incident in valid_incidents
+                if not incident.has_failures(token)
+            ]
+
             for issue, template in self.test_issues.items():
-                for inc in valid_incidents:
+                for inc in filtered_incidents:
                     if (
                         Repos(template.product, template.version, issues_arch)
                         in inc.channels

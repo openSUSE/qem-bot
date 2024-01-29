@@ -91,15 +91,24 @@ def incident_mock(monkeypatch):
         arch: str
 
     class MockIncident:
-        def __init__(self, repo, embargoed):
+        def __init__(self, repo, embargoed, has_failures, mocked_incident=42):
+            self.id = mocked_incident
             self.livepatch = None
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
+            self._has_failures = has_failures
 
-    def _func(product, version, arch, embargoed=False):
+        def has_failures(self, token):
+            return self._has_failures
+
+    def _func(
+        product, version, arch, embargoed=False, has_failures=False, mocked_incident=42
+    ):
         repo = Repos(product=product, version=version, arch=arch)
-        return MockIncident(repo, embargoed=embargoed)
+        return MockIncident(
+            repo, embargoed=embargoed, has_failures=False, mocked_incident=42
+        )
 
     return _func
 
@@ -114,11 +123,36 @@ def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatc
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     acc = Aggregate("", settings={}, config=my_config)
     res = acc(
-        incidents=[incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")],
+        incidents=[
+            incident_mock(
+                product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", has_failures=False
+            )
+        ],
         token=None,
         ci_url=None,
     )
     assert len(res) == 1
+
+    res.append(
+        incident_mock(
+            product="BBBBBBBBB",
+            version="CCCCCCCC",
+            arch="the_heaven_incident",
+            has_failures=False,
+        )
+    )
+    assert len(res) == 2
+
+    res.append(
+        incident_mock(
+            product="BBBBBBBBB",
+            version="CCCCCCCC",
+            arch="the_demon_incident",
+            has_failures=True,
+            mocked_incident=666,
+        )
+    )
+    assert len(res) == 2  # the demon incident is not added, because it has failures
 
 
 def test_aggregate_call_pc_pint(request_mock, monkeypatch):
