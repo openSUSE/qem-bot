@@ -4,12 +4,11 @@ from argparse import Namespace
 from logging import getLogger
 from os import environ
 
-from . import QEM_DASHBOARD
+from openqabot.dashboard import put
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
 from .openqa import openQAInterface
-from .utils import retry3 as requests
 
 log = getLogger("bot.openqabot")
 
@@ -40,9 +39,8 @@ class OpenQABot:
             )
             return
 
-        url = QEM_DASHBOARD + api
         try:
-            res = requests.put(url, headers=self.token, json=data)
+            res = put(api, headers=self.token, json=data)
             log.info(
                 "Put to dashboard result %s, database id: %s",
                 res.status_code,

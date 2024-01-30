@@ -11,7 +11,7 @@ from .. import DOWNLOAD_BASE, QEM_DASHBOARD
 from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utils import retry3 as requests
+from ..dashboard import get_json
 from .baseconf import BaseConf
 from .incident import Incident
 
@@ -124,11 +124,11 @@ class Aggregate(BaseConf):
             )
 
             try:
-                old_jobs = requests.get(
-                    QEM_DASHBOARD + "api/update_settings",
+                old_jobs = get_json(
+                    "api/update_settings",
                     params={"product": self.product, "arch": arch},
                     headers=token,
-                ).json()
+                )
             except Exception as e:  # pylint: disable=broad-except
                 log.exception(e)
                 old_jobs = None

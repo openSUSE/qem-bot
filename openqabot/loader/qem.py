@@ -4,10 +4,7 @@ from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
 from typing import Dict, List, NamedTuple, Sequence
-
-import requests as req
-
-from .. import QEM_DASHBOARD
+from openqabot.dashboard import get_json, put, patch
 from ..errors import (
     EmptyChannels,
     EmptyPackagesError,
@@ -17,7 +14,6 @@ from ..errors import (
 )
 from ..types import Data
 from ..types.incident import Incident
-from ..utils import retry5 as requests
 
 log = getLogger("bot.loader.qem")
 
@@ -34,9 +30,7 @@ class JobAggr(NamedTuple):
 
 
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
-    incidents = requests.get(
-        QEM_DASHBOARD + "api/incidents", headers=token, verify=True
-    ).json()
+    incidents = get_json("api/incidents", headers=token, verify=True)
 
     if "error" in incidents:
         raise Exception(incidents)
@@ -63,7 +57,7 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
 
 def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
     try:
-        data = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+        data = get_json("api/incidents", headers=token)
     except Exception as e:
         log.exception(e)
         raise e
@@ -71,23 +65,19 @@ def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
 
 
 def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
-    incidents = requests.get(QEM_DASHBOARD + "api/incidents", headers=token).json()
+    incidents = get_json("api/incidents", headers=token)
     return [IncReq(i["number"], i["rr_number"]) for i in incidents if i["inReviewQAM"]]
 
 
 def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]:
-    incident = requests.get(
-        QEM_DASHBOARD + "api/incidents/" + incident_id, headers=token
-    ).json()
+    incident = get_json("api/incidents/" + incident_id, headers=token)
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
 def get_incident_settings(
     inc: int, token: Dict[str, str], all_incidents: bool = False
 ) -> List[JobAggr]:
-    settings = requests.get(
-        QEM_DASHBOARD + "api/incident_settings/" + str(inc), headers=token
-    ).json()
+    settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
         raise NoResultsError(
             f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
@@ -104,10 +94,9 @@ def get_incident_settings(
 
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
-    url = QEM_DASHBOARD + "api/incident_settings/" + f"{number}"
     log.info("Getting settings for %s", number)
     try:
-        data = requests.get(url, headers=token).json()
+        data = get_json("api/incident_settings/" + f"{number}", headers=token)
     except Exception as e:
         log.exception(e)
         raise e
@@ -140,9 +129,7 @@ def get_incident_results(inc: int, token: Dict[str, str]):
     ret = []
     for job_aggr in settings:
         try:
-            data = requests.get(
-                QEM_DASHBOARD + "api/jobs/incident/" + f"{job_aggr.id}", headers=token
-            ).json()
+            data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
             ret += data
         except Exception as e:
             log.exception(e)
@@ -154,8 +141,7 @@ def get_incident_results(inc: int, token: Dict[str, str]):
 
 
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
-    url = QEM_DASHBOARD + "api/update_settings/" + str(inc)
-    settings = requests.get(url, headers=token).json()
+    settings = get_json("api/update_settings/" + str(inc), headers=token)
     if not settings:
         raise NoResultsError(f"Inc {inc} does not have any aggregates settings")
 
@@ -168,13 +154,9 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
 
 
 def get_aggregate_settings_data(token: Dict[str, str], data: Data):
-    url = (
-        QEM_DASHBOARD
-        + "api/update_settings"
-        + f"?product={data.product}&arch={data.arch}"
-    )
+    url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
     try:
-        settings = requests.get(url, headers=token).json()
+        settings = get_json(url, headers=token)
     except Exception as e:
         log.exception(e)
         raise e
@@ -214,9 +196,7 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
     ret = []
     for job_aggr in settings:
         try:
-            data = requests.get(
-                QEM_DASHBOARD + "api/jobs/update/" + f"{job_aggr.id}", headers=token
-            ).json()
+            data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
         except Exception as e:
             log.exception(e)
             raise e
@@ -233,7 +213,7 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
     while retry >= 0:
         retry -= 1
         try:
-            ret = req.patch(QEM_DASHBOARD + "api/incidents", headers=token, json=data)
+            ret = patch("api/incidents", headers=token, json=data)
         except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             return 1
@@ -251,7 +231,7 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
 
 def post_job(token: Dict[str, str], data) -> None:
     try:
-        result = requests.put(QEM_DASHBOARD + "api/jobs", headers=token, json=data)
+        result = put("api/jobs", headers=token, json=data)
         if result.status_code != 200:
             log.error(result.text)
 
@@ -261,9 +241,7 @@ def post_job(token: Dict[str, str], data) -> None:
 
 def update_job(token: Dict[str, str], job_id: int, data) -> None:
     try:
-        result = requests.patch(
-            QEM_DASHBOARD + "api/jobs/" + str(job_id), headers=token, json=data
-        )
+        result = patch("api/jobs/" + str(job_id), headers=token, json=data)
         if result.status_code != 200:
             log.error(result.text)
 
