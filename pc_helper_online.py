@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+
+"""
+Helper for Public Cloud testing
+"""
+
 from argparse import ArgumentParser
 from pathlib import Path
 from ruamel.yaml import YAML
