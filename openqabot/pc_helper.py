@@ -11,11 +11,12 @@ log = getLogger("openqabot.pc_helper")
 
 def get_latest_tools_image(query):
     """
+    Get latest tools image.
+
     'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
     in openQA. A query is supposed to look like this "https://openqa.suse.de/group_overview/276.json" to get
     a value for <BUILD NUM>
     """
-
     # Get the first not-failing item
     build_results = requests.get(query).json()["build_results"]
     for build in build_results:
@@ -26,6 +27,8 @@ def get_latest_tools_image(query):
 
 def apply_pc_tools_image(settings):
     """
+    Apply the PC tools image in settings.
+
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
     PUBLIC_CLOUD_TOOLS_IMAGE_BASE
     """
@@ -47,15 +50,15 @@ def apply_pc_tools_image(settings):
 @lru_cache(maxsize=None)
 def pint_query(query):
     """
-    Perform a pint query. Successive queries are cached
+    Perform a pint query.
+
+    Successive queries are cached
     """
     return requests.get(query).json()
 
 
 def apply_publiccloud_pint_image(settings):
-    """
-    Applies PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX
-    """
+    """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
     try:
         region = (
             settings["PUBLIC_CLOUD_PINT_REGION"]
@@ -102,6 +105,8 @@ def apply_publiccloud_pint_image(settings):
 
 def get_recent_pint_image(images, name_regex, region=None, state="active"):
     """
+    Get most recent PINT image.
+
     From the given set of images (received json from pint),
     get the latest one that matches the given criteria:
      - name given as regular expression,
@@ -110,16 +115,16 @@ def get_recent_pint_image(images, name_regex, region=None, state="active"):
 
     Get the latest one based on 'publishedon'
     """
+    name = re.compile(name_regex)
+    if region == "":
+        region = None
+    recentimage = None
 
     def is_newer(date1, date2):
         # Checks if date1 is newer than date2. Expected date format: YYYYMMDD
         # Because for the format, we can do a simple int comparison
         return int(date1) > int(date2)
 
-    name = re.compile(name_regex)
-    if region == "":
-        region = None
-    recentimage = None
     for image in images:
         # Apply selection criteria: state and region criteria
         # can be omitted by setting the corresponding variable to None

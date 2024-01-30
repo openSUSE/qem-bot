@@ -52,8 +52,7 @@ class SyncRes:
         )
 
     def filter_jobs(self, data) -> bool:
-        """Filter out invalid/development jobs from results"""
-
+        """Filter out invalid/development jobs from results."""
         if "group" not in data:
             return False
 

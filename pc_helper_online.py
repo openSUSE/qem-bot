@@ -2,9 +2,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
-"""
-Helper for Public Cloud testing
-"""
+"""Helper for Public Cloud testing."""
 
 from argparse import ArgumentParser
 from pathlib import Path
@@ -15,7 +13,8 @@ from openqabot.utils import create_logger, get_yml_list
 
 def main():
     """
-    This code is used only for testing purpose.
+    Run Public Cloud helper with online access for testing purposes.
+
     Allowing to prove that Public Cloud related logic is actually working without executing
     a lot of code which is unrelated to pc_helper.
     As input it getting directory with openqabot configuration metadata (same folder as bot-ng )

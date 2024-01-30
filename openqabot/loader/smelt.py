@@ -130,8 +130,7 @@ def get_json(query: str, host: str = SMELT) -> dict:
 
 
 def get_active_incidents() -> Set[int]:
-    """Get active incidents from SMELT GraphQL api"""
-
+    """Get active incidents from SMELT GraphQL api."""
     active: Set[int] = set()
 
     has_next = True
