@@ -36,12 +36,11 @@ class SMELTSync:
 
     @staticmethod
     def _review_rrequest(request_set):
+        valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
         rr = sorted(request_set, key=itemgetter("requestId"), reverse=True)[0]
-        if rr["status"]["name"] in ("new", "review", "accepted", "revoked"):
-            return rr
-        return None
+        return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
     def _is_inreview(rr_number) -> bool:
@@ -57,21 +56,18 @@ class SMELTSync:
 
     @staticmethod
     def _is_accepted(rr_number) -> bool:
-        if (
+        return (
             rr_number["status"]["name"] == "accepted"
             or rr_number["status"]["name"] == "new"
-        ):
-            return True
-        return False
+        )
 
     @staticmethod
     def _has_qam_review(rr_number) -> bool:
-        if rr_number["reviewSet"]:
-            rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
-            review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-            if review and review[0]["status"]["name"] in ("review", "new"):
-                return True
-        return False
+        if not rr_number["reviewSet"]:
+            return False
+        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+        return bool(review) and review[0]["status"]["name"] in ("review", "new")
 
     @classmethod
     def _create_record(cls, inc):
