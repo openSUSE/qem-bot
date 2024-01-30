@@ -20,6 +20,7 @@ pylint:
 .PHONY: flake8
 flake8:
 	flake8 ./openqabot pc_helper_online.py --config=setup.cfg
+	echo $$?
 
 .PHONY: test-with-coverage
 test-with-coverage:

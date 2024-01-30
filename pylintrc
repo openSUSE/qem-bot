@@ -28,6 +28,9 @@ disable=
   W1201, # Use lazy % formatting in logging functions (logging-not-lazy)
   W3101, # missing-timeout
   W4905, # deprecated-decorator
-
+  # to prevent a warning from pylint about its configuration options itself
+  # that are needed in older versions but not necessary anymore in newer
+  # versions
+  useless-option-value,
 recursive = true
 fail-under=9.9
