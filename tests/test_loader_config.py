@@ -95,7 +95,7 @@ def test_read_products(caplog):
     assert any(x.endswith("invalid format") for x in messages)
     assert any(x.endswith("empty config") for x in messages)
     assert any(x.endswith("does not have aggregate") for x in messages)
-    assert "'DISTRI'" in messages
+    assert any(x.endswith("does not have 'DISTRI'") for x in messages)
 
 
 def test_read_products_file(caplog):
