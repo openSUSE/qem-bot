@@ -24,7 +24,7 @@ class SMELTSync:
 
         data = self._create_list(self.incidents)
         log.info("Updating info about %s incidents", str(len(data)))
-        log.info("Data: %s", pformat(data))
+        log.debug("Data: %s", pformat(data))
 
         if not self.dry:
             ret = update_incidents(self.token, data, retry=self.retry)
