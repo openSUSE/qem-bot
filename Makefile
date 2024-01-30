@@ -21,6 +21,10 @@ pylint:
 flake8:
 	flake8 ./openqabot pc_helper_online.py --config=setup.cfg
 
+.PHONY: mypy
+mypy:
+	mypy ./openqabot pc_helper_online.py
+
 .PHONY: test-with-coverage
 test-with-coverage:
 	python3 -m pytest -v --cov=./openqabot --cov-report=xml --cov-report=term
@@ -28,7 +32,7 @@ test-with-coverage:
 # aggregate targets
 
 .PHONY: lint
-lint: pylint flake8
+lint: pylint flake8 mypy
 
 .PHONY: checkstyle
 checkstyle: black lint

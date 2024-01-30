@@ -71,12 +71,12 @@ class Commenter:
         kw = {}
         kw["request_id"] = str(inc.rr)
 
-        bot_name = "openqa"
         info = {}
         info["state"] = state
-        for key in inc.revisions.keys():
-            info["revision_%s_%s" % (key.version, key.arch)] = inc.revisions[key]
+        for key, val in inc.revisions.items():
+            info["revision_%s_%s" % (key.version, key.arch)] = str(val)
 
+        bot_name = "openqa"
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
 
@@ -151,7 +151,7 @@ class Commenter:
 
         msg = ""
         for group in sorted(groups.keys()):
-            msg += "\n\n" + groups[group]["title"]
+            msg += "\n\n" + str(groups[group]["title"])
             infos = []
             if groups[group]["passed"]:
                 infos.append("{:d} tests passed".format(groups[group]["passed"]))

@@ -77,7 +77,7 @@ def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
 
 def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]:
     incident = requests.get(
-        QEM_DASHBOARD + "api/incidents/" + incident_id, headers=token
+        QEM_DASHBOARD + "api/incidents/" + str(incident_id), headers=token
     ).json()
     return [IncReq(incident["number"], incident["rr_number"])]
 

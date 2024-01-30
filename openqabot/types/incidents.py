@@ -23,8 +23,8 @@ class Incidents(BaseConf):
         return f"<Incidents product: {self.product}>"
 
     @staticmethod
-    def normalize_repos(config):
-        ret = {}
+    def normalize_repos(config) -> Dict[str, Dict[str, Any]]:
+        ret : Dict[str, Dict[str, Any]] = {}
         for flavor, data in config.items():
             ret[flavor] = {}
             for key, value in data.items():
