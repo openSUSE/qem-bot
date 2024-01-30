@@ -142,7 +142,7 @@ class Commenter:
                 continue
 
             # None vs ''
-            if not len(job_summary):
+            if not job_summary:
                 groups[gl]["passed"] = groups[gl]["passed"] + 1
                 continue
 
@@ -155,7 +155,7 @@ class Commenter:
             infos = []
             if groups[group]["passed"]:
                 infos.append("{:d} tests passed".format(groups[group]["passed"]))
-            if len(groups[group]["failed"]):
+            if groups[group]["failed"]:
                 infos.append("{:d} tests failed".format(len(groups[group]["failed"])))
             if groups[group]["unfinished"]:
                 infos.append(

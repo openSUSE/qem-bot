@@ -80,7 +80,7 @@ class openQAInterface:
                 "GET", "jobs/%s/comments" % job_id, retries=self.retries
             )
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             (_, _, status_code, *_) = e.args
             if status_code == 404:
                 self.handle_job_not_found(job_id)

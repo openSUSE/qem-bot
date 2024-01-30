@@ -10,6 +10,21 @@ from osc.core import http_POST
 from osc.core import makeurl
 
 
+def _comment_as_dict(comment_element):
+    """Convert an XML element comment into a dictionary.
+    :param comment_element: XML element that store a comment.
+    :returns: A Python dictionary object.
+    """
+    comment = {
+        "who": comment_element.get("who"),
+        "when": datetime.strptime(comment_element.get("when"), "%Y-%m-%d %H:%M:%S %Z"),
+        "id": comment_element.get("id"),
+        "parent": comment_element.get("parent", None),
+        "comment": comment_element.text,
+    }
+    return comment
+
+
 class CommentAPI(object):
     COMMENT_MARKER_REGEX = re.compile(
         r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->"
@@ -43,22 +58,6 @@ class CommentAPI(object):
             )
         return url
 
-    def _comment_as_dict(self, comment_element):
-        """Convert an XML element comment into a dictionary.
-        :param comment_element: XML element that store a comment.
-        :returns: A Python dictionary object.
-        """
-        comment = {
-            "who": comment_element.get("who"),
-            "when": datetime.strptime(
-                comment_element.get("when"), "%Y-%m-%d %H:%M:%S %Z"
-            ),
-            "id": comment_element.get("id"),
-            "parent": comment_element.get("parent", None),
-            "comment": comment_element.text,
-        }
-        return comment
-
     def get_comments(self, request_id=None, project_name=None, package_name=None):
         """Get the list of comments of an object in OBS.
 
@@ -71,7 +70,7 @@ class CommentAPI(object):
         root = root = ET.parse(http_GET(url)).getroot()
         comments = {}
         for c in root.findall("comment"):
-            c = self._comment_as_dict(c)
+            c = _comment_as_dict(c)
             comments[c["id"]] = c
         return comments
 
@@ -105,35 +104,8 @@ class CommentAPI(object):
                 return c, info
         return None, None
 
-    def command_find(self, comments, user, command=None, who_allowed=None):
-        """
-        Find comment commands with the optional conditions.
-
-        Usage (in comment):
-            @<user> <command> [args...]
-        """
-        command_re = re.compile(r"^@(?P<user>[^ ]+) (?P<args>.*)$", re.MULTILINE)
-
-        # Search for commands in the order the comment was created.
-        for comment in sorted(list(comments.values()), key=lambda c: c["when"]):
-            if who_allowed and comment["who"] not in who_allowed:
-                continue
-
-            # Handle stupid line endings returned in comments.
-            match = command_re.search(comment["comment"].replace("\r", ""))
-            if not match:
-                continue
-
-            if match.group("user") != user:
-                continue
-
-            args = match.group("args").strip().split(" ")
-            if command and (args[0] or None) != command:
-                continue
-
-            yield args, comment["who"]
-
-    def add_marker(self, comment, bot, info=None):
+    @staticmethod
+    def add_marker(comment, bot, info=None):
         """Add bot marker to comment that can be used to find comment."""
 
         if info:
@@ -143,12 +115,6 @@ class CommentAPI(object):
 
         marker = "<!-- {}{} -->".format(bot, " " + " ".join(infos) if info else "")
         return marker + "\n\n" + comment
-
-    def remove_marker(self, comment):
-        if comment.startswith("<!--"):
-            comment = "".join(comment.splitlines(True)[1:]).strip()
-
-        return comment
 
     def add_comment(
         self,

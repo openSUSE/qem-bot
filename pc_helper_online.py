@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+
+"""
+Helper for Public Cloud testing
+"""
+
 from argparse import ArgumentParser
 from pathlib import Path
 from ruamel.yaml import YAML
@@ -47,7 +52,7 @@ def main():
                     apply_publiccloud_pint_image(settings)
                     if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
                         log.error("Failed to get PUBLIC_CLOUD_IMAGE_ID from %s", data)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             continue
 
