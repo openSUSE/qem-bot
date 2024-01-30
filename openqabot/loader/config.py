@@ -25,7 +25,7 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             continue
 
@@ -79,7 +79,7 @@ def read_products(path: Path) -> List[Data]:
             distri = data["settings"]["DISTRI"]
             version = data["settings"]["VERSION"]
             product = data["product"]
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             continue
 
@@ -94,7 +94,7 @@ def get_onearch(path: Path) -> Set[str]:
 
     try:
         data = loader.load(path)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception(e)
         return set()
 

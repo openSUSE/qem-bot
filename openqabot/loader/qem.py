@@ -237,7 +237,7 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
         retry -= 1
         try:
             ret = req.patch(QEM_DASHBOARD + "api/incidents", headers=token, json=data)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             return 1
         if ret.status_code == 200:
@@ -258,7 +258,7 @@ def post_job(token: Dict[str, str], data) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception(e)
 
 
@@ -270,5 +270,5 @@ def update_job(token: Dict[str, str], job_id: int, data) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception(e)

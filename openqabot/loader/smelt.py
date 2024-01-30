@@ -167,7 +167,7 @@ def get_incident(incident: int):
     except ValidationError:
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Unknown error for incident %s", incident)
         log.exception(e)
         return None

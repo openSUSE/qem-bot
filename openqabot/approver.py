@@ -198,7 +198,7 @@ class Approver:
             )
         except HTTPError as e:
             return _handle_http_error(e, inc)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.exception(e)
             return False
 

@@ -1,6 +1,8 @@
 [MASTER]
 
 disable=
+  missing-docstring,
+  bad-continuation,
   C0103, # invalid-name
   C0114, # missing-module-docstring
   C0115, # missing-class-docstring
@@ -30,4 +32,3 @@ disable=
   W4905, # deprecated-decorator
 
 recursive = true
-fail-under=9.9
