@@ -75,7 +75,7 @@ def read_products(path: Path) -> List[Data]:
             version = data["settings"]["VERSION"]
             product = data["product"]
         except KeyError as e:
-            log.info("Config %s does not have %s", str(p), str(e))
+            log.info("Skipping config %s with no %s settings", str(p), str(e))
             continue
 
         for arch in data["aggregate"]["archs"]:

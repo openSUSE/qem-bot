@@ -20,7 +20,7 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Start syncing incidents from smelt to dashboard")
+        log.info("Starting to sync incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
         log.info("Updating info about %s incidents", str(len(data)))
