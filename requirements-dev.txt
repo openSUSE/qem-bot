@@ -11,3 +11,7 @@ jsonschema
 urllib3<2 # responses needs <2, see https://github.com/getsentry/responses/issues/635
 pylint
 flake8
+flake8-docstrings
+flake8-pydocstyle
+flake8-quotes
+mccabe
