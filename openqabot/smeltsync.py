@@ -26,13 +26,10 @@ class SMELTSync:
         log.info("Updating info about %s incidents", str(len(data)))
         log.debug("Data: %s", pformat(data))
 
-        if not self.dry:
-            ret = update_incidents(self.token, data, retry=self.retry)
-        else:
+        if self.dry:
             log.info("Dry run, nothing synced")
-            ret = 0
-
-        return ret
+            return 0
+        return update_incidents(self.token, data, retry=self.retry)
 
     @staticmethod
     def _review_rrequest(request_set):
