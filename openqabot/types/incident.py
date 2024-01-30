@@ -1,9 +1,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import re
-from logging import getLogger
+from logging import getLogger, DEBUG as LOG_DEBUG_LEVEL
 from typing import Dict, List, Tuple
-from urllib import request
+from openqabot.utils import retry3 as requests
 
 # Make sure we have the right dashboard URL
 from .. import QEM_DASHBOARD
@@ -151,21 +151,21 @@ class Incident:
         return False
 
     def has_failures(self, token) -> bool:
-        results = request.get(
+        results = requests.get(
             QEM_DASHBOARD + "/api/jobs/incident/" + str(self.id), headers=token
         ).json()
 
-        # This should be wrapped by a verbose flag so we return faster
-        for res in results:
-            if res["status"] == "passed":
-                continue
-            else:
-                log.info(
-                    "Found failed, not-ignored job /t%s for incident %s",
-                    res["job_id"],
+        failed_jobs = [res for res in results if res["status"] != "passed"]
+        if failed_jobs:
+            log.info("Found %s failed jobs for incident %s:", len(failed_jobs), self.id)
+            # if debug is enabled, print all failed jobs
+            if log.isEnabledFor(LOG_DEBUG_LEVEL):
+                log_debug = lambda job_id: log.debug(
+                    "Job %s is not marked as acceptable for incident %s",
+                    job_id,
                     self.id,
                 )
-                break
+                [log_debug(res["job_id"]) for res in failed_jobs]
 
         if not results:
             raise NoResultsError(
@@ -175,4 +175,4 @@ class Incident:
         # Return true if there are any failed jobs, so if results is not empty
         # and there is at least one failed job, return true, any() returns false
         # if the iterable is empty
-        return any(r["status"] == "failed" for r in results)
+        return any(failed_jobs)

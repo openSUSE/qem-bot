@@ -1,11 +1,20 @@
 from copy import deepcopy
+import logging
 
 import pytest
 
-from openqabot.errors import NoRepoFoundError, EmptyPackagesError, EmptyChannels
+from openqabot.errors import (
+    NoRepoFoundError,
+    EmptyPackagesError,
+    EmptyChannels,
+    NoResultsError,
+)
 from openqabot.types import Repos
 from openqabot.types.incident import Incident
 import openqabot.types.incident
+from openqabot.utils import (
+    retry3 as requests,
+)  # only needed for the mocking see openSUSE/qem-bot/issues/161
 
 test_data = {
     "approved": False,
@@ -118,3 +127,53 @@ def test_inc_revisions(mock_good):
     assert incident.revisions_with_fallback("x86_64", "12-SP5")
     assert not incident.revisions_with_fallback("aarch64", "12")
     assert not incident.revisions_with_fallback("aarch64", "12-SP5")
+
+
+class MockResponse:
+    # TODO: collect all instances where the same pattern is used and refactor,
+    # see openSUSE/qem-bot/issues/161
+    def __init__(self, json_data):
+        self.json_data = json_data
+
+    def json(self):
+        return self.json_data
+
+
+def mock_get(url, headers):
+    return MockResponse(
+        json_data=[
+            {"status": "passed", "job_id": 1},
+            {"status": "failed", "job_id": 2},
+            {"status": "passed", "job_id": 3},
+        ]
+    )
+
+
+def test_inc_has_failures(caplog, mock_good, monkeypatch):
+
+    monkeypatch.setattr(requests, "get", mock_get)
+    caplog.set_level(logging.DEBUG)
+    # Create an incident object
+    inc = Incident(test_data)
+
+    # Call the has_failures method
+    has_failures = inc.has_failures("token")
+
+    # Assert that the method returns True since there is a failed job
+    assert has_failures
+
+    assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
+    assert (
+        caplog.records[1].message
+        == "Job 2 is not marked as acceptable for incident 24618"
+    )
+    assert len(caplog.records) == 2
+
+    caplog.set_level(logging.INFO)
+    caplog.clear()
+
+    # Assert that the method returns True since there is a failed job
+    inc.has_failures("token")
+
+    assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
+    assert len(caplog.records) == 1
