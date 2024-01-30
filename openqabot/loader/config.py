@@ -71,16 +71,11 @@ def read_products(path: Path) -> List[Data]:
 
         try:
             flavor = data["aggregate"]["FLAVOR"]
-        except KeyError:
-            log.info("Config %s does not have aggregate", str(p))
-            continue
-
-        try:
             distri = data["settings"]["DISTRI"]
             version = data["settings"]["VERSION"]
             product = data["product"]
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except KeyError as e:
+            log.info("Config %s does not have %s", str(p), str(e))
             continue
 
         for arch in data["aggregate"]["archs"]:
