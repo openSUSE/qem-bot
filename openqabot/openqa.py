@@ -27,7 +27,10 @@ class openQAInterface:
         self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
-        """True only for the configured openQA instance, used for decide to update dashboard database or not"""
+        """Return True only for the configured openQA instance.
+
+        This is used for decide if the dashboard database should be updated or not
+        """
         return self.url.netloc == OPENQA_URL
 
     def post_job(self, settings) -> None:

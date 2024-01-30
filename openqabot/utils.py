@@ -23,10 +23,7 @@ def create_logger(name: str) -> logging.Logger:
 
 
 def get_yml_list(path: Path) -> List[Path]:
-    """
-    Create a list of YML filenames from a folder
-    or from a single file path.
-    """
+    """Create a list of YML filenames from a folder or single file path."""
     yml_list = []
     extensions = ("yml", "yaml")
     for ext in extensions:

@@ -12,6 +12,7 @@ from osc.core import makeurl
 
 def _comment_as_dict(comment_element):
     """Convert an XML element comment into a dictionary.
+
     :param comment_element: XML element that store a comment.
     :returns: A Python dictionary object.
     """
@@ -107,7 +108,6 @@ class CommentAPI(object):
     @staticmethod
     def add_marker(comment, bot, info=None):
         """Add bot marker to comment that can be used to find comment."""
-
         if info:
             infos = []
             for key, value in info.items():
@@ -178,13 +178,14 @@ class CommentAPI(object):
 
     def delete(self, comment_id):
         """Remove a comment object.
+
         :param comment_id: Id of the comment object.
         """
         url = makeurl(self.apiurl, ["comment", comment_id])
         return http_DELETE(url)
 
     def delete_children(self, comments):
-        """Removes the comments that have no childs
+        """Remove the comments that have no childs.
 
         :param comments dict of id->comment dict
         :return same hash without the deleted comments
@@ -207,6 +208,7 @@ class CommentAPI(object):
 
     def delete_from(self, request_id=None, project_name=None, package_name=None):
         """Remove the comments related with a request, project or package.
+
         :param request_id: Request where to remove comments.
         :param project_name: Project name where to remove comments.
         :param package_name: Package name where to remove comments.
