@@ -36,15 +36,15 @@ checkstyle: black lint
 .PHONY: test
 test: only-test checkstyle
 
-venv = qem-bot
-environment:
-	if [ ! -d "$(venv)" ]; then virtualenv -p python3 $(venv); fi
-	. $(venv)/bin/activate && pip install -r requirements-dev.txt -r requirements.txt
+VENV = qem-bot
+.PHONY environment:
+	if [ ! -d "$(VENV)" ]; then virtualenv -p python3 $(venv); fi
+	. $(VENV)/bin/activate && pip install -r requirements-dev.txt -r requirements.txt
 
 # devel: environment
-#   maybe use Makefile.venv instead to get a shell with virtualenv
+#   maybe use Makefile.VENV instead to get a shell with virtualenv
 # 	# we need to detect what shell we are using
 # 	shell=$$(basename $$SHELL); \
 # 	echo "Activating virtualenv for $$shell"; \
-# 	. $(venv) && \
+# 	. $(VENV) && \
 # 	exec $($(SHELL))
