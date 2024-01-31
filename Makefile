@@ -41,8 +41,9 @@ VENV = qem-bot
 	if [ ! -d "$(VENV)" ]; then virtualenv -p python3 $(venv); fi
 	. $(VENV)/bin/activate && pip install -r requirements-dev.txt -r requirements.txt
 
-# devel: environment
-#   maybe use Makefile.VENV instead to get a shell with virtualenv
+# Developers have bad memory, so we need to remind them to activate the virtualenv
+# maybe use Makefile.VENV instead to get a shell with virtualenv
+# .PHONY devel: environment
 # 	# we need to detect what shell we are using
 # 	shell=$$(basename $$SHELL); \
 # 	echo "Activating virtualenv for $$shell"; \
