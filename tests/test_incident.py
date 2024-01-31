@@ -132,21 +132,58 @@ def test_inc_revisions(mock_good):
 class MockResponse:
     # TODO: collect all instances where the same pattern is used and refactor,
     # see openSUSE/qem-bot/issues/161
-    def __init__(self, json_data):
+    def __init__(self, url, json_data, extra_data=None):
+        self.url = url  # the url helps us mock different responses
         self.json_data = json_data
+        self.extra_data = extra_data
+
+    def mock_comments(self, job=1777, incident=24618):
+        return [
+            {
+                "bugrefs": [],
+                "created": "2024-01-30 16:04:56 +0000",
+                "id": job,
+                "renderedMarkdown": None,
+                "text": "label:linked Job mentioned in https://progress.opensuse.org/issues/154156",
+                "text": "@review:acceptable_for:incident_%s:openqa#1337" % incident,
+                "updated": "2024-01-30 16:04:56 +0000",
+                "userName": "system",
+            }
+        ]
 
     def json(self):
+        if "openqa" in self.url:
+            self.json_data = []
+            if "1777" in self.url:
+                self.json_data = self.mock_comments()
+        if "qam" in self.url:
+            pass  # right now we don't need to mock anything else for requests to the dashboard
+        # leave comment for future debugging purposes
+        # logger.debug("Mocking json: %s", self.json_data)
         return self.json_data
 
+    def __repr__(self):
+        return f"<MockResponse for {self.url}>"
 
-def mock_get(url, headers):
+
+def mock_get(url, extra_data=None, headers=None):
     return MockResponse(
+        url=url,
         json_data=[
             {"status": "passed", "job_id": 1},
-            {"status": "failed", "job_id": 2},
+            {"status": "failed", "job_id": 1777},  # Accept the turk
+            {
+                "status": "softfailed",
+                "job_id": 2020,
+            },  # 2020 is the genesys of dark fate
+            {"status": "failed", "job_id": 2042},  # This one has a dark fate
             {"status": "passed", "job_id": 3},
-        ]
+        ],
+        extra_data=extra_data,
     )
+
+
+logger = logging.getLogger("bot.types.incident")
 
 
 def test_inc_has_failures(caplog, mock_good, monkeypatch):
@@ -165,7 +202,7 @@ def test_inc_has_failures(caplog, mock_good, monkeypatch):
     assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
     assert (
         caplog.records[1].message
-        == "Job 2 is not marked as acceptable for incident 24618"
+        == "Job 2042 is not marked as acceptable for incident 24618"
     )
     assert len(caplog.records) == 2
 

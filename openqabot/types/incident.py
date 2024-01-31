@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 from openqabot.utils import retry3 as requests
 
 # Make sure we have the right dashboard URL
-from .. import QEM_DASHBOARD
+from .. import QEM_DASHBOARD, OPENQA_URL
 from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
 from ..loader.repohash import get_max_revision
@@ -155,7 +155,7 @@ class Incident:
             QEM_DASHBOARD + "/api/jobs/incident/" + str(self.id), headers=token
         ).json()
 
-        failed_jobs = [res for res in results if res["status"] != "passed"]
+        failed_jobs = self.filter_failures(results)
         if failed_jobs:
             log.info("Found %s failed jobs for incident %s:", len(failed_jobs), self.id)
             if log.isEnabledFor(LOG_DEBUG_LEVEL):
@@ -177,3 +177,25 @@ class Incident:
             job_id,
             self.id,
         )
+
+    def filter_failures(self, results):
+        return [
+            res
+            for res in results
+            if res["status"] not in ("passed")
+            and not has_ignored_comment(res["job_id"], self.id)
+        ]
+
+
+@staticmethod
+def has_ignored_comment(job_id: int, inc: int):
+    ret = []
+    ret = requests.get(OPENQA_URL + "/api/v1/jobs/%s/comments" % job_id).json()
+    regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
+    for comment in ret:
+        if regex.match(comment["text"]):
+            # leave comment for future debugging purposes
+            # log.debug("matched comment incident %s: with comment %s", inc, comment)
+            return True
+
+    return False
