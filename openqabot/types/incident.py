@@ -159,12 +159,9 @@ class Incident:
         if failed_jobs:
             log.info("Found %s failed jobs for incident %s:", len(failed_jobs), self.id)
             if log.isEnabledFor(LOG_DEBUG_LEVEL):
-                log_debug = lambda job_id: log.debug(
-                    "Job %s is not marked as acceptable for incident %s",
-                    job_id,
-                    self.id,
+                list(
+                    map(lambda job: self.log_debug_incident(job["job_id"]), failed_jobs)
                 )
-                [log_debug(res["job_id"]) for res in failed_jobs]
 
         if not results:
             raise NoResultsError(
@@ -173,3 +170,10 @@ class Incident:
 
         # we only need to check if there are any failed jobs
         return any(failed_jobs)
+
+    def log_debug_incident(self, job_id):
+        log.debug(
+            "Job %s is not marked as acceptable for incident %s",
+            job_id,
+            self.id,
+        )
