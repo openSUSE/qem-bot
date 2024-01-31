@@ -83,6 +83,9 @@ class Aggregate(BaseConf):
             # only testing queue and not livepatch
             valid_incidents = list()
             for i in incidents:
+                if i.has_failures(token):
+                    # filter out incidents which have already failed in single incident tests
+                    continue
                 if not any((i.livepatch, i.staging)):
                     # if filtering embargoed updates is on
                     if self.filter_embargoed(self.flavor) and i.embargoed:
@@ -96,15 +99,8 @@ class Aggregate(BaseConf):
                     else:
                         valid_incidents.append(i)
 
-            # filter out incidents which have already failed in single incident tests
-            filtered_incidents = [
-                incident
-                for incident in valid_incidents
-                if not incident.has_failures(token)
-            ]
-
             for issue, template in self.test_issues.items():
-                for inc in filtered_incidents:
+                for inc in valid_incidents:
                     if (
                         Repos(template.product, template.version, issues_arch)
                         in inc.channels

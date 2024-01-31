@@ -2,6 +2,9 @@ from openqabot.types.aggregate import Aggregate
 from openqabot.types.incidents import Incident
 from openqabot.loader.repohash import get_max_revision
 import pytest
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 def test_aggregate_constructor():
@@ -102,12 +105,13 @@ def incident_mock(monkeypatch):
             self._has_failures = False
 
         def has_failures(self, token):
-            logger.info(
-                "incident %s, has_failures=%s",
-                self.id,
-                (self.id == 666),
+            does_it_have_failures = self.id == 666 or self._has_failures
+            logger.debug(
+                "incident %s, has_failures = %s",
+                self,
+                does_it_have_failures,
             )
-            return self._has_failures
+            return does_it_have_failures
 
         def __repr__(self):
             return f"<MockIncident id: {self.id} with repos {self.channels}>"
@@ -119,18 +123,11 @@ def incident_mock(monkeypatch):
     return _func
 
 
-from logging import getLogger
-
-logger = getLogger(__name__)
-
-
-def mock_has_failures(self, token):
-    logger.info(
-        "has failures called for incident %s, evaluated to %s",
-        self.id,
-        (self.id == 666),
-    )
-    return self.id == 666
+def _check_assert_incident(response, expected_count: int):
+    for list_of_incidents in response:
+        count_incidents = lambda x: len(x["qem"]["incidents"])
+        logger.debug("incident: %s", print(list_of_incidents))
+        assert expected_count == count_incidents(list_of_incidents)
 
 
 def test_aggregate_call_with_test_issues(
@@ -139,8 +136,7 @@ def test_aggregate_call_with_test_issues(
     """
     Test with a valid incident
     """
-    # monkeypatch.setattr(Incident, "has_failures", mock_has_failures)
-    # monkeypatch.setattr(Incident, "_rev", lambda self, *args: 42)
+
     caplog.set_level("DEBUG")
 
     my_config = {}
@@ -154,6 +150,7 @@ def test_aggregate_call_with_test_issues(
     good_incident = incident_mock(
         product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=1284
     )
+    logger.info("Testing the the_good_incident")
     these_incidents.append(good_incident)
 
     res = acc(
@@ -162,14 +159,12 @@ def test_aggregate_call_with_test_issues(
         ci_url=None,
     )
 
-    assert len(res) == 1
-    logger.info("Testing the the_demon_incident (%s)", len(res))
+    _check_assert_incident(res, 1)  # the good incident is good
 
-    logger.info("Testing the the_demon_incident (%s)", len(res))
-    [logger.info("res %s", r) for r in res[0]["qem"]["incidents"]]
     the_demon_incident = incident_mock(
         product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=666
     )
+    logger.info("Testing the the_demon_incident")
     these_incidents.append(the_demon_incident)
 
     res = acc(
@@ -178,7 +173,7 @@ def test_aggregate_call_with_test_issues(
         ci_url=None,
     )
 
-    assert len(res) == 1  # the demon incident is not added, because it has failures
+    _check_assert_incident(res, 1)  # the demon incident must be banished
 
     the_moved_incident = incident_mock(
         product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=1335
@@ -192,7 +187,8 @@ def test_aggregate_call_with_test_issues(
         ci_url=None,
     )
 
-    assert len(res) == 2  # the demon incident is not added, because it has failures
+    assert len(these_incidents) == 3  # banished doesn't mean gone
+    _check_assert_incident(res, 2)  # the moved incident decides not to leave
 
 
 def test_aggregate_call_pc_pint(request_mock, monkeypatch):
