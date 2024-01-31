@@ -172,8 +172,8 @@ def test_inc_has_failures(caplog, mock_good, monkeypatch):
     caplog.set_level(logging.INFO)
     caplog.clear()
 
-    # Assert that the method returns True since there is a failed job
     inc.has_failures("token")
 
+    # Check that the log only has one message, and that it matches our incident
     assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
     assert len(caplog.records) == 1

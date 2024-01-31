@@ -158,7 +158,6 @@ class Incident:
         failed_jobs = [res for res in results if res["status"] != "passed"]
         if failed_jobs:
             log.info("Found %s failed jobs for incident %s:", len(failed_jobs), self.id)
-            # if debug is enabled, print all failed jobs
             if log.isEnabledFor(LOG_DEBUG_LEVEL):
                 log_debug = lambda job_id: log.debug(
                     "Job %s is not marked as acceptable for incident %s",
@@ -172,7 +171,5 @@ class Incident:
                 "Job setting %s not found for incident" % (str(self.id))
             )
 
-        # Return true if there are any failed jobs, so if results is not empty
-        # and there is at least one failed job, return true, any() returns false
-        # if the iterable is empty
+        # we only need to check if there are any failed jobs
         return any(failed_jobs)
