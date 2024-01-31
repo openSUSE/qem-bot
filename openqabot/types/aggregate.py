@@ -26,6 +26,7 @@ class Aggregate(BaseConf):
         self.archs = config["archs"]
         self.onetime = config.get("onetime", False)
         self.test_issues = self.normalize_repos(config)
+        log.debug("Initialized Aggregate object for %s", self.product)
 
     @staticmethod
     def normalize_repos(config):
@@ -60,7 +61,9 @@ class Aggregate(BaseConf):
         ignore_onetime: bool = False,
     ) -> List[Dict[str, Any]]:
         ret = []
-
+        log.debug(
+            "Generating aggregate for %s the following incidents: %s", self, incidents
+        )
         for arch in self.archs:
             full_post: Dict["str", Any] = {}
             full_post["openqa"] = {}
