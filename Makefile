@@ -39,7 +39,7 @@ test: only-test checkstyle
 venv = qem-bot
 environment:
 	if [ ! -d "$(venv)" ]; then virtualenv -p python3 $(venv); fi
-	. $(venv)/bin/activate && pip install -r requirements.txt
+	. $(venv)/bin/activate && pip install -r requirements-dev.txt -r requirements.txt
 
 # devel: environment
 #   maybe use Makefile.venv instead to get a shell with virtualenv
