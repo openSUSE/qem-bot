@@ -1,4 +1,6 @@
 from openqabot.types.aggregate import Aggregate
+from openqabot.types.incidents import Incident
+from openqabot.loader.repohash import get_max_revision
 import pytest
 
 
@@ -91,67 +93,105 @@ def incident_mock(monkeypatch):
         arch: str
 
     class MockIncident:
-        def __init__(self, repo, embargoed, has_failures, mocked_incident=42):
+        def __init__(self, repo, embargoed, mocked_incident=42):
             self.id = mocked_incident
             self.livepatch = None
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
-            self._has_failures = has_failures
+            self._has_failures = False
 
         def has_failures(self, token):
+            logger.info(
+                "incident %s, has_failures=%s",
+                self.id,
+                (self.id == 666),
+            )
             return self._has_failures
 
-    def _func(
-        product, version, arch, embargoed=False, has_failures=False, mocked_incident=42
-    ):
+        def __repr__(self):
+            return f"<MockIncident id: {self.id} with repos {self.channels}>"
+
+    def _func(product, version, arch, embargoed=False, mocked_incident=42):
         repo = Repos(product=product, version=version, arch=arch)
-        return MockIncident(
-            repo, embargoed=embargoed, has_failures=False, mocked_incident=42
-        )
+        return MockIncident(repo, embargoed=embargoed, mocked_incident=mocked_incident)
 
     return _func
 
 
-def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatch):
+from logging import getLogger
+
+logger = getLogger(__name__)
+
+
+def mock_has_failures(self, token):
+    logger.info(
+        "has failures called for incident %s, evaluated to %s",
+        self.id,
+        (self.id == 666),
+    )
+    return self.id == 666
+
+
+def test_aggregate_call_with_test_issues(
+    request_mock, incident_mock, monkeypatch, caplog
+):
     """
     Test with a valid incident
     """
+    # monkeypatch.setattr(Incident, "has_failures", mock_has_failures)
+    # monkeypatch.setattr(Incident, "_rev", lambda self, *args: 42)
+    caplog.set_level("DEBUG")
+
     my_config = {}
-    my_config["FLAVOR"] = "None"
-    my_config["archs"] = ["ciao"]
+    my_config["FLAVOR"] = "Habanero"
+    my_config["archs"] = ["ciao", "aarch64"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
+    my_config["product"] = "openQA"
     acc = Aggregate("", settings={}, config=my_config)
+
+    these_incidents = []
+    good_incident = incident_mock(
+        product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=1284
+    )
+    these_incidents.append(good_incident)
+
     res = acc(
-        incidents=[
-            incident_mock(
-                product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", has_failures=False
-            )
-        ],
+        these_incidents,
         token=None,
         ci_url=None,
     )
+
     assert len(res) == 1
+    logger.info("Testing the the_demon_incident (%s)", len(res))
 
-    res.append(
-        incident_mock(
-            product="BBBBBBBBB",
-            version="CCCCCCCC",
-            arch="the_heaven_incident",
-            has_failures=False,
-        )
+    logger.info("Testing the the_demon_incident (%s)", len(res))
+    [logger.info("res %s", r) for r in res[0]["qem"]["incidents"]]
+    the_demon_incident = incident_mock(
+        product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=666
     )
-    assert len(res) == 2
+    these_incidents.append(the_demon_incident)
 
-    res.append(
-        incident_mock(
-            product="BBBBBBBBB",
-            version="CCCCCCCC",
-            arch="the_demon_incident",
-            has_failures=True,
-            mocked_incident=666,
-        )
+    res = acc(
+        these_incidents,
+        token=None,
+        ci_url=None,
     )
+
+    assert len(res) == 1  # the demon incident is not added, because it has failures
+
+    the_moved_incident = incident_mock(
+        product="BBBBBBBBB", version="CCCCCCCC", arch="ciao", mocked_incident=1335
+    )
+    these_incidents.append(the_moved_incident)
+    logger.info("Testing the the_moved_incident (%s)", len(res))
+
+    res = acc(
+        these_incidents,
+        token=None,
+        ci_url=None,
+    )
+
     assert len(res) == 2  # the demon incident is not added, because it has failures
 
 
