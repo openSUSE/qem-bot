@@ -100,7 +100,7 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
     assert SMELTSync(_namespace(False, "123", False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Getting info about incident 100 from SMELT" in messages
-    assert "Start syncing incidents from smelt to dashboard" in messages
+    assert "Starting to sync incidents from smelt to dashboard" in messages
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
@@ -135,7 +135,7 @@ def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replybac
     assert SMELTSync(_namespace(False, "123", False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Getting info about incident 100 from SMELT" in messages
-    assert "Start syncing incidents from smelt to dashboard" in messages
+    assert "Starting to sync incidents from smelt to dashboard" in messages
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1

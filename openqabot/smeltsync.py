@@ -20,19 +20,16 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Start syncing incidents from smelt to dashboard")
+        log.info("Starting to sync incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
         log.info("Updating info about %s incidents", str(len(data)))
-        log.info("Data: %s", pformat(data))
+        log.debug("Data: %s", pformat(data))
 
-        if not self.dry:
-            ret = update_incidents(self.token, data, retry=self.retry)
-        else:
+        if self.dry:
             log.info("Dry run, nothing synced")
-            ret = 0
-
-        return ret
+            return 0
+        return update_incidents(self.token, data, retry=self.retry)
 
     @staticmethod
     def _review_rrequest(request_set):
