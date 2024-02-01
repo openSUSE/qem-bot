@@ -187,7 +187,6 @@ logger = logging.getLogger("bot.types.incident")
 
 
 def test_inc_has_failures(caplog, mock_good, monkeypatch):
-
     monkeypatch.setattr(requests, "get", mock_get)
     caplog.set_level(logging.DEBUG)
     # Create an incident object

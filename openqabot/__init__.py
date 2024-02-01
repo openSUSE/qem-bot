@@ -9,3 +9,4 @@ OBS_GROUP = "qam-openqa"
 OPENQA_URL = "openqa.suse.de"
 DEVELOPMENT_PARENT_GROUP_ID = 9
 DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
+ACCEPTABLE_FOR_INCIDENT_REGEXP = r"\@review\:acceptable_for\:incident_%s\:(.+)"

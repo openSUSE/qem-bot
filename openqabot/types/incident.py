@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 from openqabot.utils import retry3 as requests
 
 # Make sure we have the right dashboard URL
-from .. import QEM_DASHBOARD, OPENQA_URL
+from .. import QEM_DASHBOARD, OPENQA_URL, ACCEPTABLE_FOR_INCIDENT_REGEXP
 from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError, NoResultsError
 from ..loader.repohash import get_max_revision
@@ -188,13 +188,18 @@ class Incident:
 
 
 @staticmethod
+# TODO:
+# - move to utils
+# - remove almost duplicated code from Approver.is_job_marked_acceptable_for_incident
+#   as approver does not seem to operate over incidents
 def has_ignored_comment(job_id: int, inc: int):
     ret = []
     ret = requests.get(OPENQA_URL + "/api/v1/jobs/%s/comments" % job_id).json()
-    regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
+    regex = re.compile(ACCEPTABLE_FOR_INCIDENT_REGEXP % inc)
     for comment in ret:
         if regex.match(comment["text"]):
-            # leave comment for future debugging purposes
+            # leave comment for future debugging purposes, but don't spam the log
+            # as it pollutes the log with irrelevant information
             # log.debug("matched comment incident %s: with comment %s", inc, comment)
             return True
 
