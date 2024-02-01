@@ -38,7 +38,7 @@ test: only-test checkstyle
 
 VENV = qem-bot
 .PHONY environment:
-	if [ ! -d "$(VENV)" ]; then virtualenv -p python3 $(venv); fi
+	if [ ! -d "$(VENV)" ]; then virtualenv -p python3 $(VENV); fi
 	. $(VENV)/bin/activate && pip install -r requirements-dev.txt -r requirements.txt
 
 # Developers have bad memory, so we need to remind them to activate the virtualenv
