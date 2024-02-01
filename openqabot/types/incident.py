@@ -187,11 +187,13 @@ class Incident:
         ]
 
 
-@staticmethod
+# pylint: disable=fixme
 # TODO:
-# - move to utils
-# - remove almost duplicated code from Approver.is_job_marked_acceptable_for_incident
+#   - move to utils.py or a better place
+#   - remove almost duplicated code from Approver.is_job_marked_acceptable_for_incident
 #   as approver does not seem to operate over incidents
+#   about the TODO see discussion at https://github.com/openSUSE/qem-bot/pull/154#discussion_r1472721681
+@staticmethod
 def has_ignored_comment(job_id: int, inc: int):
     ret = []
     ret = requests.get(OPENQA_URL + "/api/v1/jobs/%s/comments" % job_id).json()
