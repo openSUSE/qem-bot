@@ -172,10 +172,7 @@ def mock_get(url, extra_data=None, headers=None):
         json_data=[
             {"status": "passed", "job_id": 1},
             {"status": "failed", "job_id": 1777},  # Accept the turk
-            {
-                "status": "softfailed",
-                "job_id": 2020,
-            },  # 2020 is the genesys of dark fate
+            {"status": "failed", "job_id": 2020},  # 2020 is the genesys of dark fate
             {"status": "failed", "job_id": 2042},  # This one has a dark fate
             {"status": "passed", "job_id": 3},
         ],
@@ -198,12 +195,12 @@ def test_inc_has_failures(caplog, mock_good, monkeypatch):
     # Assert that the method returns True since there is a failed job
     assert has_failures
 
-    assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
+    assert caplog.records[0].message == "Found 2 failed jobs for incident 24618:"
     assert (
         caplog.records[1].message
-        == "Job 2042 is not marked as acceptable for incident 24618"
+        == "Job 2020 is not marked as acceptable for incident 24618"
     )
-    assert len(caplog.records) == 2
+    assert len(caplog.records) == 3
 
     caplog.set_level(logging.INFO)
     caplog.clear()
@@ -211,5 +208,5 @@ def test_inc_has_failures(caplog, mock_good, monkeypatch):
     inc.has_failures("token")
 
     # Check that the log only has one message, and that it matches our incident
-    assert caplog.records[0].message == "Found 1 failed jobs for incident 24618:"
+    assert caplog.records[0].message == "Found 2 failed jobs for incident 24618:"
     assert len(caplog.records) == 1

@@ -105,13 +105,13 @@ def incident_mock(monkeypatch):
             self._has_failures = False
 
         def has_failures(self, token):
-            does_it_have_failures = self.id == 666 or self._has_failures
+            has_failures = self.id == 666 or self._has_failures
             logger.debug(
                 "incident %s, has_failures = %s",
                 self,
-                does_it_have_failures,
+                has_failures,
             )
-            return does_it_have_failures
+            return has_failures
 
         def __repr__(self):
             return f"<MockIncident id: {self.id} with repos {self.channels}>"
