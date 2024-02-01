@@ -13,6 +13,7 @@ import osc.core
 from openqa_client.exceptions import RequestError
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
+from openqabot.dashboard import get_json
 
 from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD
 from .loader.qem import (
@@ -23,7 +24,6 @@ from .loader.qem import (
     get_incidents_approver,
     get_single_incident,
 )
-from .utils import retry3 as requests
 
 log = getLogger("bot.approver")
 
@@ -133,9 +133,7 @@ class Approver:
 
     @lru_cache(maxsize=128)
     def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
-        results = requests.get(
-            QEM_DASHBOARD + api + str(job_aggr.id), headers=self.token
-        ).json()
+        results = get_json(api + str(job_aggr.id), headers=self.token)
 
         # keep jobs explicitly marked as acceptable for this incident by openQA comments
         for res in results:

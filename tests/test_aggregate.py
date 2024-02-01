@@ -59,7 +59,7 @@ def request_mock(monkeypatch):
         return MockResponse()
 
     monkeypatch.setattr(
-        "openqabot.types.aggregate.requests.get",
+        "openqabot.dashboard.requests.get",
         mock_get,
     )
 
