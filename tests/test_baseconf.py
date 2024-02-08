@@ -34,12 +34,13 @@ def test_baseconf_init(baseconf_gen):
 
 
 def test_is_embargoed(baseconf_gen):
-    assert baseconf_gen.filter_embargoed()
+    assert baseconf_gen.filter_embargoed("None")
 
     baseconf_gen.settings["PUBLIC_CLOUD_SOMETHING"] = ""
 
-    assert baseconf_gen.filter_embargoed()
+    assert baseconf_gen.filter_embargoed("None")
 
     baseconf_gen.settings = {}
 
-    assert baseconf_gen.filter_embargoed() is False
+    assert baseconf_gen.filter_embargoed("Noone") is False
+    assert baseconf_gen.filter_embargoed("Azure-test")
