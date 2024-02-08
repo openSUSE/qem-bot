@@ -27,8 +27,10 @@ class BaseConf(metaclass=ABCMeta):
     def normalize_repos(config):
         pass
 
-    def filter_embargoed(self) -> bool:
-        return any(k.startswith("PUBLIC") for k in self.settings.keys())
+    def filter_embargoed(self, flavor: str) -> bool:
+        return any(k.startswith("PUBLIC") for k in self.settings) or any(
+            flavor.startswith(s) for s in ("Azure", "EC2", "GCE")
+        )
 
     @staticmethod
     def set_obsoletion(settings: dict) -> None:

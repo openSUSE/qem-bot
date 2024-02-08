@@ -88,7 +88,7 @@ class Incidents(BaseConf):
     ) -> Dict[str, Any]:
         DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
-        if self.filter_embargoed() and inc.embargoed:
+        if self.filter_embargoed(flavor) and inc.embargoed:
             log.debug(
                 "Incident %s is embargoed and filtering embargoed updates enabled",
                 inc.id,

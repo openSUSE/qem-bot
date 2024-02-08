@@ -82,16 +82,13 @@ class Aggregate(BaseConf):
             for i in incidents:
                 if not any((i.livepatch, i.staging)):
                     # if filtering embargoed updates is on
-                    if self.filter_embargoed():
+                    if self.filter_embargoed(self.flavor) and i.embargoed:
                         # we take ONLY non-embargoed updates
-                        if i.embargoed:
-                            log.debug(
-                                "Incident %s is skipped because filtering \
+                        log.debug(
+                            "Incident %s is skipped because filtering \
                                       embargoed is on and incident has embargoed True",
-                                i.id,
-                            )
-                        else:
-                            valid_incidents.append(i)
+                            i.id,
+                        )
                     # if filtering embargoed updates is off we ignoring this field
                     else:
                         valid_incidents.append(i)

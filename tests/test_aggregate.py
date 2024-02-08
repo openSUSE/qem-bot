@@ -8,7 +8,7 @@ def test_aggregate_constructor():
     needed by the constructor?
     """
     config = {}
-    config["FLAVOR"] = None
+    config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
     acc = Aggregate("", None, config)
@@ -19,7 +19,7 @@ def test_aggregate_printable():
     Try the printable
     """
     config = {}
-    config["FLAVOR"] = None
+    config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
     acc = Aggregate("hello", None, config)
@@ -32,7 +32,7 @@ def test_aggregate_call():
     needed by the callable?
     """
     config = {}
-    config["FLAVOR"] = None
+    config["FLAVOR"] = "None"
     config["archs"] = []
     config["test_issues"] = {}
     acc = Aggregate("", None, config)
@@ -69,7 +69,7 @@ def test_aggregate_call_with_archs(request_mock):
     Configure an archs to enter in the function main loop
     """
     my_config = {}
-    my_config["FLAVOR"] = None
+    my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {}
     acc = Aggregate("", settings={}, config=my_config)
@@ -109,7 +109,7 @@ def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatc
     Test with a valid incident
     """
     my_config = {}
-    my_config["FLAVOR"] = None
+    my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     acc = Aggregate("", settings={}, config=my_config)
@@ -135,7 +135,7 @@ def test_aggregate_call_pc_pint(request_mock, monkeypatch):
     )
 
     my_config = {}
-    my_config["FLAVOR"] = None
+    my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
@@ -158,7 +158,7 @@ def test_aggregate_call_pc_pint_with_incidents(
         mockreturn,
     )
     my_config = {}
-    my_config["FLAVOR"] = None
+    my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
