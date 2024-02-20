@@ -116,11 +116,11 @@ class Incidents(BaseConf):
         if inc.staging:
             return None
 
-        if "packages" in data:
+        if "packages" in data and data["packages"] is not None:
             if not inc.contains_package(data["packages"]):
                 return None
 
-        if "excluded_packages" in data:
+        if "excluded_packages" in data and data["excluded_packages"] is not None:
             if inc.contains_package(data["excluded_packages"]):
                 return None
 
