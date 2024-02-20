@@ -70,7 +70,7 @@ def test_get_max_revison_connectionerror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 
@@ -84,7 +84,7 @@ def test_get_max_revison_httperror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 
@@ -98,7 +98,7 @@ def test_get_max_revison_xmlerror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skip incident"
+        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 
