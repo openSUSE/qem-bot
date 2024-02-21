@@ -105,3 +105,28 @@ class openQAInterface:
         return (
             ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True
         )  # ID of Development Group
+
+    @lru_cache(maxsize=256)
+    def get_single_job(self, job_id: int):
+        ret = None
+        try:
+            ret = self.openqa.openqa_request(
+                "GET",
+                "jobs/%s" % job_id,
+            )["job"]
+        except RequestError as e:
+            log.exception(e)
+        return ret
+
+    @lru_cache(maxsize=256)
+    def get_older_jobs(self, job_id: int, limit: int):
+        ret = []
+        try:
+            ret = self.openqa.openqa_request(
+                "GET",
+                "/tests/%s/ajax?previous_limit=%s&next_limit=0" % (job_id, limit),
+                retries=self.retries,
+            )
+        except RequestError as e:
+            log.exception(e)
+        return ret
