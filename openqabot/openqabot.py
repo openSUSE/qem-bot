@@ -1,10 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger
 from os import environ
 
 from openqabot.dashboard import put
+
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_incidents
@@ -66,7 +68,8 @@ class OpenQABot:
 
         else:
             log.info("Triggering %d products in openQA", len(post))
-            for job in post:
+
+            def poster(job):
                 log.info("Triggering %s", str(job))
                 try:
                     self.post_openqa(job["openqa"])
@@ -74,6 +77,9 @@ class OpenQABot:
                     log.info("POST failed, not updating dashboard")
                 else:
                     self.post_qem(job["qem"], job["api"])
+
+            with ThreadPoolExecutor() as executor:
+                wait([executor.submit(poster, job) for job in post])
 
         log.info("End of bot run")
 
