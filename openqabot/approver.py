@@ -131,39 +131,32 @@ class Approver:
             pass
         return False
 
+    def job_acceptable(self, inc: int, res) -> bool:
+        """
+        Check each job if it is acceptable for different reasons.
+
+        Keep jobs marked as acceptable for one incident by openQA comments.
+        """
+        if res["status"] == "passed":
+            return True
+        url = "{}/t{}".format(self.client.url.geturl(), res["job_id"])
+        if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
+            log.info(
+                "Ignoring failed job %s for incident %s due to openQA comment", url, inc
+            )
+            return True
+        log.info("Found failed, not-ignored job %s for incident %s", url, inc)
+        return False
+
     @lru_cache(maxsize=128)
     def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
         results = get_json(api + str(job_aggr.id), headers=self.token)
-
-        # keep jobs explicitly marked as acceptable for this incident by openQA comments
-        for res in results:
-            ok_job = res["status"] == "passed"
-            if ok_job:
-                continue
-            if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
-                log.info(
-                    "Ignoring failed job %s/t%s for incident %s due to openQA comment",
-                    str(self.client.url.geturl()),
-                    res["job_id"],
-                    inc,
-                )
-                res["status"] = "passed"
-            else:
-                log.info(
-                    "Found failed, not-ignored job %s/t%s for incident %s",
-                    str(self.client.url.geturl()),
-                    res["job_id"],
-                    inc,
-                )
-                break
-
         if not results:
             raise NoResultsError(
                 "Job setting %s not found for incident %s"
                 % (str(job_aggr.id), str(inc))
             )
-
-        return all(r["status"] == "passed" for r in results)
+        return all(self.job_acceptable(inc, r) for r in results)
 
     def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
         res = False
