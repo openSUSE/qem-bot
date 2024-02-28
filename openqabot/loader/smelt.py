@@ -26,7 +26,7 @@ INCIDENT = '{incidents(incidentId: %(incident)s) { edges { node {emu project \
 repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
 { requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
 status { name } } } } } } } packages { edges { node { name } } } } } \
-    edges{ node { crd } } } }'
+    edges{ node { crd priority } } } }'
 
 ACTIVE_INC_SCHEMA = {
     "type": "object",
@@ -105,6 +105,9 @@ INCIDENT_SCHEMA = {
                                         },
                                         "crd": {
                                             "type": "string",
+                                        },
+                                        "priority": {
+                                            "type": "number",
                                         },
                                     },
                                 },

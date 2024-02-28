@@ -99,6 +99,7 @@ class SMELTSync:
         incident["rr_number"] = rr_number
         incident["inReviewQAM"] = in_review_qam
         incident["embargoed"] = bool(inc["crd"])
+        incident["priority"] = inc["priority"]
 
         return incident
 
