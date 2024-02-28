@@ -59,6 +59,7 @@ def fake_smelt_api(request):
                                 },
                                 "packages": {"edges": [{"node": {"name": "xrdp"}}]},
                                 "crd": request.param[3],
+                                "priority": request.param[4],
                             }
                         }
                     ]
@@ -92,7 +93,7 @@ def fake_dashboard_replyback():
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
-    [(["qam-openqa", "new", "review", "2023-01-01 04:31:12"])],
+    [(["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600])],
     indirect=True,
 )
 def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
@@ -104,30 +105,36 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
-    assert responses.calls[1].response.json()[0]["inReviewQAM"] == True
-    assert responses.calls[1].response.json()[0]["isActive"] == True
-    assert responses.calls[1].response.json()[0]["approved"] == False
-    assert responses.calls[1].response.json()[0]["embargoed"] == True
+    incident = responses.calls[1].response.json()[0]
+    assert incident["inReviewQAM"] == True
+    assert incident["isActive"] == True
+    assert incident["approved"] == False
+    assert incident["embargoed"] == True
+    assert incident["priority"] == 600
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
-    "fake_smelt_api", [(["qam-openqa", "new", "review", None])], indirect=True
+    "fake_smelt_api", [(["qam-openqa", "new", "review", None, None])], indirect=True
 )
-def test_embragoed_value(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
+def test_no_embragoed_and_priority_value(
+    fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback
+):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(False, "123", False))() == 0
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
-    assert responses.calls[1].response.json()[0]["embargoed"] == False
+    incident = responses.calls[1].response.json()[0]
+    assert incident["embargoed"] == False
+    assert incident["priority"] == None
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
-    [(["qam-openqa", "accepted", "new", "2023-01-01 04:31:12"])],
+    [(["qam-openqa", "accepted", "new", "2023-01-01 04:31:12", 600])],
     indirect=True,
 )
 def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):

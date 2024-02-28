@@ -26,6 +26,7 @@ test_data = {
     "project": "SUSE:Maintenance:24618",
     "rr_number": 274060,
     "embargoed": True,
+    "priority": 600,
 }
 
 
