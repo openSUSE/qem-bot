@@ -51,8 +51,7 @@ def get_max_revision(
 
         rev = int(str(cs.text))
 
-        if rev > max_rev:
-            max_rev = rev
+        max_rev = max(max_rev, rev)
 
     if max_rev == 0:
         raise NoRepoFoundError
