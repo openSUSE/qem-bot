@@ -20,7 +20,7 @@ class Incident:
         self.rrid = f"{self.project}:{self.rr}" if self.rr else None
         self.staging = not incident["inReview"]
         self.embargoed = incident["embargoed"]
-        self.priority = incident["priority"]
+        self.priority = incident.get("priority")
 
         self.channels = [
             Repos(p, v, a)
