@@ -15,7 +15,13 @@ from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
 from openqabot.dashboard import get_json
 
-from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD
+from . import (
+    OBS_GROUP,
+    OBS_MAINT_PRJ,
+    OBS_URL,
+    QEM_DASHBOARD,
+    ACCEPTABLE_FOR_INCIDENT_REGEXP,
+)
 from .loader.qem import (
     IncReq,
     JobAggr,
@@ -122,7 +128,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
+        regex = re.compile(ACCEPTABLE_FOR_INCIDENT_REGEXP % inc)
         try:
             for comment in self.client.get_job_comments(job_id):
                 if regex.match(comment["text"]):

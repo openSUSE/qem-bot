@@ -26,6 +26,7 @@ class Aggregate(BaseConf):
         self.archs = config["archs"]
         self.onetime = config.get("onetime", False)
         self.test_issues = self.normalize_repos(config)
+        log.debug("Initialized Aggregate object for %s", self.product)
 
     @staticmethod
     def normalize_repos(config):
@@ -60,7 +61,9 @@ class Aggregate(BaseConf):
         ignore_onetime: bool = False,
     ) -> List[Dict[str, Any]]:
         ret = []
-
+        log.debug(
+            "Generating aggregate for %s the following incidents: %s", self, incidents
+        )
         for arch in self.archs:
             full_post: Dict["str", Any] = {}
             full_post["openqa"] = {}
@@ -80,6 +83,9 @@ class Aggregate(BaseConf):
             # only testing queue and not livepatch
             valid_incidents = list()
             for i in incidents:
+                if i.has_failures(token):
+                    # filter out incidents which have already failed in single incident tests
+                    continue
                 if not any((i.livepatch, i.staging)):
                     # if filtering embargoed updates is on
                     if self.filter_embargoed(self.flavor) and i.embargoed:
@@ -92,6 +98,7 @@ class Aggregate(BaseConf):
                     # if filtering embargoed updates is off we ignoring this field
                     else:
                         valid_incidents.append(i)
+
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
                     if (
