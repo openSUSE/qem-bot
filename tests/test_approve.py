@@ -24,6 +24,57 @@ _namespace = namedtuple(
 openqa_instance_url = urlparse("http://instance.qa")
 
 
+@pytest.fixture(scope="function")
+def fake_responses_for_unblocking_incidents_via_older_ok_result(request):
+    responses.add(
+        responses.GET,
+        f"{QEM_DASHBOARD}api/jobs/update/20005",
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100002, "status": "failed"},
+            {"job_id": 100003, "status": "passed"},
+        ],
+    )
+    add_two_passed_response()
+    responses.add(
+        responses.GET,
+        url="http://instance.qa/api/v1/jobs/100002/comments",
+        json=[{"text": "@review:acceptable_for:incident_555:foo"}],
+    )
+    responses.add(
+        responses.GET,
+        re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
+        json={
+            "data": [
+                {"build": "20240115-1", "id": 100002, "result": "failed"},
+                {"build": "20240114-1", "id": 100004, "result": "failed"},
+                {"build": "20240113-1", "id": 100005, "result": "softfailed"},
+            ]
+        },
+    )
+    responses.add(
+        responses.GET,
+        re.compile(f"http://instance.qa/api/v1/jobs/.*"),
+        json={
+            "job": {
+                "settings": {
+                    "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
+                    % request.param
+                }
+            }
+        },
+    )
+
+
+@pytest.fixture(scope="function")
+def fake_openqa_older_jobs_api():
+    responses.add(
+        responses.GET,
+        re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
+        status=404,
+    )
+
+
 def add_two_passed_response():
     responses.add(
         responses.GET,
@@ -404,7 +455,11 @@ def test_one_incident_failed(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
 def test_one_aggr_failed(
-    fake_qem, fake_openqa_comment_api, fake_responses_updating_job, caplog
+    fake_qem,
+    fake_openqa_comment_api,
+    fake_responses_updating_job,
+    fake_openqa_older_jobs_api,
+    caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
@@ -466,6 +521,67 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     fake_qem,
     fake_responses_for_unblocking_incidents_via_openqa_comments,
     fake_openqa_comment_api,
+    fake_openqa_older_jobs_api,
+    caplog,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "* SUSE:Maintenance:2:200" not in messages
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@pytest.mark.parametrize(
+    "fake_responses_for_unblocking_incidents_via_older_ok_result", [(2)], indirect=True
+)
+def test_approval_unblocked_via_openqa_older_ok_job(
+    fake_qem,
+    fake_responses_for_unblocking_incidents_via_older_ok_result,
+    caplog,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+    responses.add(
+        responses.GET,
+        re.compile(f"{QEM_DASHBOARD}api/jobs/100005"),
+        json={"status": "passed"},
+    )
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "* SUSE:Maintenance:2:200" in messages
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@pytest.mark.parametrize(
+    "fake_responses_for_unblocking_incidents_via_older_ok_result", [(2)], indirect=True
+)
+def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard(
+    fake_qem,
+    fake_responses_for_unblocking_incidents_via_older_ok_result,
+    caplog,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+    responses.add(
+        responses.GET,
+        re.compile(f"{QEM_DASHBOARD}api/jobs/100005"),
+        json={"error": "Job not found"},
+    )
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "* SUSE:Maintenance:2:200" not in messages
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@pytest.mark.parametrize(
+    "fake_responses_for_unblocking_incidents_via_older_ok_result",
+    [(2222)],
+    indirect=True,
+)
+def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(
+    fake_qem,
+    fake_responses_for_unblocking_incidents_via_older_ok_result,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")

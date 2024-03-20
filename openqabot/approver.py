@@ -5,6 +5,7 @@ from functools import lru_cache
 from logging import getLogger
 from typing import List
 from urllib.error import HTTPError
+from datetime import timedelta, datetime
 import re
 
 import osc.conf
@@ -15,7 +16,7 @@ from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
 from openqabot.dashboard import get_json
 
-from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD
+from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD, OLDEST_APPROVAL_JOB_DAYS
 from .loader.qem import (
     IncReq,
     JobAggr,
@@ -131,11 +132,96 @@ class Approver:
             pass
         return False
 
-    def job_acceptable(self, inc: int, res) -> bool:
+    @lru_cache(maxsize=512)
+    def validate_job_qam(self, job: int) -> bool:
+        # Check that valid test result is still present in the dashboard (see https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release request
+        qam_data = get_json("api/jobs/" + str(job), headers=self.token)
+        if not qam_data:
+            return False
+        if "error" in qam_data:
+            log.info(
+                "Cannot find job %s in the dashboard database to make sure it is valid",
+                job,
+            )
+            return False
+        if qam_data["status"] != "passed":
+            log.info(
+                'Job %s is not recorded as "passed" in the qam-dashboard database',
+                job,
+            )
+            return False
+        return True
+
+    @lru_cache(maxsize=512)
+    def was_ok_before(self, failed_job_id: int, inc: int) -> bool:
+        # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
+        older_jobs = self.client.get_older_jobs(failed_job_id, 20)
+        if older_jobs == []:
+            log.info("Cannot find older jobs for %s", failed_job_id)
+            return False
+
+        current_build = older_jobs["data"][0]["build"][:-2]
+        current_build_date = datetime.strptime(current_build, "%Y%m%d")
+
+        # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
+        oldest_build_usable = current_build_date - timedelta(
+            days=OLDEST_APPROVAL_JOB_DAYS
+        )
+
+        regex = re.compile(r"(.*)Maintenance:/%s/(.*)" % inc)
+        # Skipping first job, which was the current one
+        for i in range(1, len(older_jobs["data"])):
+            job = older_jobs["data"][i]
+            job_build = job["build"][:-2]
+            job_build_date = datetime.strptime(job_build, "%Y%m%d")
+
+            # Check the job is not too old
+            if job_build_date < oldest_build_usable:
+                log.info(
+                    "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered"
+                    % (failed_job_id, inc)
+                )
+                return False
+
+            if job["result"] != "passed" and job["result"] != "softfailed":
+                continue
+
+            # Check the job contains the update under test
+            job_settings = self.client.get_single_job(job["id"])
+            if not regex.match(str(job_settings)):
+                # Likely older jobs don't have it either. Giving up
+                log.info(
+                    "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test"
+                    % (failed_job_id, inc)
+                )
+                return False
+
+            if not self.validate_job_qam(job["id"]):
+                log.info(
+                    "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request"
+                    % (failed_job_id, job["id"], inc)
+                )
+                return False
+
+            log.info(
+                "Ignoring failed aggregate %s and using instead %s for update %s"
+                % (failed_job_id, job["id"], inc)
+            )
+            return True
+
+        log.info(
+            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate."
+            % (failed_job_id, inc)
+        )
+        return False
+
+    def job_acceptable(self, inc: int, api: str, res) -> bool:
         """
         Check each job if it is acceptable for different reasons.
 
         Keep jobs marked as acceptable for one incident by openQA comments.
+
+        Keep jobs marked as acceptable if are aggregate and were ok in the previous days.
         """
         if res["status"] == "passed":
             return True
@@ -143,6 +229,13 @@ class Approver:
         if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
             log.info(
                 "Ignoring failed job %s for incident %s due to openQA comment", url, inc
+            )
+            return True
+        if api == "api/jobs/update/" and self.was_ok_before(res["job_id"], inc):
+            log.info(
+                "Ignoring failed aggregate job %s for incident %s due to older eligible openQA job being ok",
+                url,
+                inc,
             )
             return True
         log.info("Found failed, not-ignored job %s for incident %s", url, inc)
@@ -156,7 +249,7 @@ class Approver:
                 "Job setting %s not found for incident %s"
                 % (str(job_aggr.id), str(inc))
             )
-        return all(self.job_acceptable(inc, r) for r in results)
+        return all(self.job_acceptable(inc, api, r) for r in results)
 
     def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
         res = False
