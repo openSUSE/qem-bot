@@ -70,6 +70,13 @@ def do_sync_aggregate_results(args):
     return syncer()
 
 
+def do_amqp(args):
+    from .amqp import AMQP
+
+    amqp = AMQP(args)
+    return amqp()
+
+
 def get_parser():
     parser = ArgumentParser(
         description="QEM-Dashboard, SMELT and openQA connector", prog="qem-bot"
@@ -186,5 +193,8 @@ def get_parser():
         "aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard"
     )
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
+
+    cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
+    cmdamqp.set_defaults(func=do_amqp)
 
     return parser
