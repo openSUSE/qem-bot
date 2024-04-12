@@ -6,7 +6,10 @@ SMELT = "https://smelt.suse.de/graphql"
 OBS_URL = "https://api.suse.de"
 OBS_MAINT_PRJ = "SUSE:Maintenance"
 OBS_GROUP = "qam-openqa"
-OPENQA_URL = "openqa.suse.de"
 DEVELOPMENT_PARENT_GROUP_ID = 9
 DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
 OLDEST_APPROVAL_JOB_DAYS = 6
+
+# Url of the "main" openQA server, this is only used to decide if the dashboard database should be updated or not;
+# to change the openQA instance to talk to, use -i / --openqa-instance parameter
+OPENQA_URL = "openqa.suse.de"
