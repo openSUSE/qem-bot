@@ -43,8 +43,17 @@ class AMQP(SyncRes):
 
     def __call__(self) -> int:
         log.info("AMQP listening started")
-        self.channel.start_consuming()
+        try:
+            self.channel.start_consuming()
+        except KeyboardInterrupt:
+            pass
+        self.stop()
         return 0
+
+    def stop(self):
+        if self.connection:
+            log.info("Closing AMQP connection")
+            self.connection.close()
 
     def on_message(self, unused_channel, method, unused_properties, body) -> None:
         message = json.loads(body)
