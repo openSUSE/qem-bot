@@ -8,7 +8,7 @@ from openqabot.amqp import AMQP
 from openqabot import QEM_DASHBOARD
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url"])
-args = namespace(False, "ToKeN", urlparse("http://instance.qa"), None)
+args = namespace(True, "ToKeN", urlparse("http://instance.qa"), None)
 amqp = AMQP(args)
 
 fake_method = namedtuple("Method", ["routing_key"])
@@ -70,7 +70,8 @@ def test_handling_incident(caplog):
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Job for incident 33222 done" in messages
-    assert "Accepting review for SUSE:Maintenance:33222:42" in messages
+    assert "Incidents to approve:" in messages
+    assert "* SUSE:Maintenance:33222:42" in messages
 
 
 @responses.activate
