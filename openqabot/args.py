@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse
+from . import AMQP_URL
 
 
 def do_full_schedule(args):
@@ -195,6 +196,9 @@ def get_parser():
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
+    cmdamqp.add_argument(
+        "--url", type=str, default=AMQP_URL, help="the URL of the AMQP server"
+    )
     cmdamqp.set_defaults(func=do_amqp)
 
     return parser

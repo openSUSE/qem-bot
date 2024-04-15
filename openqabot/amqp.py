@@ -9,7 +9,6 @@ import json
 import re
 import pika
 
-from . import AMQP_URL
 from .syncres import SyncRes
 from .types import Data
 from .loader.qem import get_incident_settings_data
@@ -28,8 +27,10 @@ class AMQP(SyncRes):
         self.args = args
         self.dry: bool = args.dry
         self.token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+        if not args.url:
+            return
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py
-        self.connection = pika.BlockingConnection(pika.URLParameters(AMQP_URL))
+        self.connection = pika.BlockingConnection(pika.URLParameters(args.url))
         self.channel = self.connection.channel()
         self.channel.exchange_declare(
             exchange="pubsub", exchange_type="topic", passive=True, durable=True

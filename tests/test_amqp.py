@@ -7,8 +7,8 @@ import responses
 from openqabot.amqp import AMQP
 from openqabot import QEM_DASHBOARD
 
-namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
-args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url"])
+args = namespace(False, "ToKeN", urlparse("http://instance.qa"), None)
 amqp = AMQP(args)
 
 fake_method = namedtuple("Method", ["routing_key"])
