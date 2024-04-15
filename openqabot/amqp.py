@@ -88,10 +88,7 @@ class AMQP(SyncRes):
                     self.post_result(r)
 
         # Try to approve incident
-        args = self.args
-        args.all_incidents = False
-        args.incident = inc_nr
-        approve = Approver(args)
+        approve = Approver(self.args, inc_nr)
         approve()
 
     def handle_aggregate(self, unused_build: str, unused_message) -> None:
