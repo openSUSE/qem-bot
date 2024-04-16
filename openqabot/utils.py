@@ -8,6 +8,7 @@ from pathlib import Path
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from .types import Data
 
 
 def create_logger(name: str) -> logging.Logger:
@@ -73,6 +74,13 @@ def normalize_results(result: str) -> str:
         return "failed"
 
     return "failed"
+
+
+def compare_incident_data(inc: Data, message) -> bool:
+    for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION"):
+        if key in message and getattr(inc, key.lower()) != message[key]:
+            return False
+    return True
 
 
 def __retry(retries: Optional[int], backoff_factor: float) -> Session:

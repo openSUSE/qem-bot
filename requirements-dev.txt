@@ -5,6 +5,7 @@ responses>=0.21.0
 requests
 osc
 openqa-client
+pika
 ruamel.yaml
 black
 jsonschema

@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse
+from . import AMQP_URL
 
 
 def do_full_schedule(args):
@@ -68,6 +69,13 @@ def do_sync_aggregate_results(args):
 
     syncer = AggregateResultsSync(args)
     return syncer()
+
+
+def do_amqp(args):
+    from .amqp import AMQP
+
+    amqp = AMQP(args)
+    return amqp()
 
 
 def get_parser():
@@ -186,5 +194,11 @@ def get_parser():
         "aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard"
     )
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
+
+    cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
+    cmdamqp.add_argument(
+        "--url", type=str, default=AMQP_URL, help="the URL of the AMQP server"
+    )
+    cmdamqp.set_defaults(func=do_amqp)
 
     return parser

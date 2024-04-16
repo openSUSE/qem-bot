@@ -59,11 +59,15 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
 
 
 class Approver:
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: Namespace, single_incident=None) -> None:
         self.dry = args.dry
-        self.single_incident = args.incident
+        if single_incident is None:
+            self.single_incident = args.incident
+            self.all_incidents = args.all_incidents
+        else:
+            self.single_incident = single_incident
+            self.all_incidents = False
         self.token = {"Authorization": "Token {}".format(args.token)}
-        self.all_incidents = args.all_incidents
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
