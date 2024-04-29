@@ -165,7 +165,11 @@ class Approver:
         regex: Pattern[str],
     ) -> Optional[bool]:
         job_build = job["build"][:-2]
-        job_build_date = datetime.strptime(job_build, "%Y%m%d")
+        try:
+            job_build_date = datetime.strptime(job_build, "%Y%m%d")
+        except (ValueError, TypeError):
+            log.info("Could not parse build date %s", job_build)
+            return None
 
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
@@ -211,7 +215,11 @@ class Approver:
 
         current_job, older_jobs = jobs["data"][0], jobs["data"][1:]
         current_build = current_job["build"][:-2]
-        current_build_date = datetime.strptime(current_build, "%Y%m%d")
+        try:
+            current_build_date = datetime.strptime(current_build, "%Y%m%d")
+        except (ValueError, TypeError):
+            log.info("Could not parse build date %s", current_build)
+            return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(
