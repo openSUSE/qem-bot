@@ -168,7 +168,10 @@ class Approver:
         try:
             job_build_date = datetime.strptime(job_build, "%Y%m%d")
         except (ValueError, TypeError):
-            log.info("Could not parse build date %s", job_build)
+            log.info(
+                "Could not parse build date %s. Won't consider this job as alternative for approval.",
+                job_build,
+            )
             return None
 
         # Check the job is not too old
@@ -218,7 +221,10 @@ class Approver:
         try:
             current_build_date = datetime.strptime(current_build, "%Y%m%d")
         except (ValueError, TypeError):
-            log.info("Could not parse build date %s", current_build)
+            log.info(
+                "Could not parse build date %s. Won't try to look at older jobs for approval.",
+                current_build,
+            )
             return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
