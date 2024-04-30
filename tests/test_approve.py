@@ -294,9 +294,9 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Start approving incidents in IBS" in messages
-    assert "Aggregate missing for SUSE:Maintenance:1:100" in messages
-    assert "Aggregate missing for SUSE:Maintenance:2:200" in messages
-    assert "Aggregate missing for SUSE:Maintenance:3:300" in messages
+    assert "No aggregate test results found for SUSE:Maintenance:1:100" in messages
+    assert "No aggregate test results found for SUSE:Maintenance:2:200" in messages
+    assert "No aggregate test results found for SUSE:Maintenance:3:300" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance:4:400" in messages
     assert "End of bot run" in messages
