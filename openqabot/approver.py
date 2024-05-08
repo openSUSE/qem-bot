@@ -106,7 +106,7 @@ class Approver:
             log.info(e)
 
             if any(i.withAggregate for i in i_jobs):
-                log.info("Aggregate missing for %s", _mi2str(inc))
+                log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
 
             u_jobs = []
