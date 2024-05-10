@@ -3,7 +3,7 @@
 from argparse import Namespace
 from functools import lru_cache
 from logging import getLogger
-from typing import List
+from typing import List, Pattern, Optional
 from urllib.error import HTTPError
 from datetime import timedelta, datetime
 import re
@@ -156,16 +156,76 @@ class Approver:
             return False
         return True
 
+    def _was_older_job_ok(
+        self,
+        failed_job_id: int,
+        inc: int,
+        job: dict,
+        oldest_build_usable: datetime,
+        regex: Pattern[str],
+    ) -> Optional[bool]:
+        job_build = job["build"][:-2]
+        try:
+            job_build_date = datetime.strptime(job_build, "%Y%m%d")
+        except (ValueError, TypeError):
+            log.info(
+                "Could not parse build date %s. Won't consider this job as alternative for approval.",
+                job_build,
+            )
+            return None
+
+        # Check the job is not too old
+        if job_build_date < oldest_build_usable:
+            log.info(
+                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered"
+                % (failed_job_id, inc)
+            )
+            return False
+
+        if job["result"] != "passed" and job["result"] != "softfailed":
+            return None
+
+        # Check the job contains the update under test
+        job_settings = self.client.get_single_job(job["id"])
+        if not regex.match(str(job_settings)):
+            # Likely older jobs don't have it either. Giving up
+            log.info(
+                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test"
+                % (failed_job_id, inc)
+            )
+            return False
+
+        if not self.validate_job_qam(job["id"]):
+            log.info(
+                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request"
+                % (failed_job_id, job["id"], inc)
+            )
+            return False
+
+        log.info(
+            "Ignoring failed aggregate %s and using instead %s for update %s"
+            % (failed_job_id, job["id"], inc)
+        )
+        return True
+
     @lru_cache(maxsize=512)
     def was_ok_before(self, failed_job_id: int, inc: int) -> bool:
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
-        older_jobs = self.client.get_older_jobs(failed_job_id, 20)
-        if older_jobs == []:
+        jobs = self.client.get_older_jobs(failed_job_id, 20)
+        if jobs == []:
             log.info("Cannot find older jobs for %s", failed_job_id)
             return False
 
-        current_build = older_jobs["data"][0]["build"][:-2]
-        current_build_date = datetime.strptime(current_build, "%Y%m%d")
+        current_job, older_jobs = jobs["data"][0], jobs["data"][1:]
+        current_build = current_job["build"][:-2]
+        try:
+            current_build_date = datetime.strptime(current_build, "%Y%m%d")
+        except (ValueError, TypeError):
+            log.info(
+                "Could not parse build date %s. Won't try to look at older jobs for approval.",
+                current_build,
+            )
+            return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(
@@ -173,46 +233,12 @@ class Approver:
         )
 
         regex = re.compile(r"(.*)Maintenance:/%s/(.*)" % inc)
-        # Skipping first job, which was the current one
-        for i in range(1, len(older_jobs["data"])):
-            job = older_jobs["data"][i]
-            job_build = job["build"][:-2]
-            job_build_date = datetime.strptime(job_build, "%Y%m%d")
-
-            # Check the job is not too old
-            if job_build_date < oldest_build_usable:
-                log.info(
-                    "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered"
-                    % (failed_job_id, inc)
-                )
-                return False
-
-            if job["result"] != "passed" and job["result"] != "softfailed":
-                continue
-
-            # Check the job contains the update under test
-            job_settings = self.client.get_single_job(job["id"])
-            if not regex.match(str(job_settings)):
-                # Likely older jobs don't have it either. Giving up
-                log.info(
-                    "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test"
-                    % (failed_job_id, inc)
-                )
-                return False
-
-            if not self.validate_job_qam(job["id"]):
-                log.info(
-                    "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request"
-                    % (failed_job_id, job["id"], inc)
-                )
-                return False
-
-            log.info(
-                "Ignoring failed aggregate %s and using instead %s for update %s"
-                % (failed_job_id, job["id"], inc)
+        for job in older_jobs:
+            was_ok = self._was_older_job_ok(
+                failed_job_id, inc, job, oldest_build_usable, regex
             )
-            return True
-
+            if was_ok is not None:
+                return was_ok
         log.info(
             "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate."
             % (failed_job_id, inc)
