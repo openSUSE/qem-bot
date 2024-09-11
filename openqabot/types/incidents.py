@@ -89,7 +89,7 @@ class Incidents(BaseConf):
         DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
         if self.filter_embargoed(flavor) and inc.embargoed:
-            log.debug(
+            log.info(
                 "Incident %s is embargoed and filtering embargoed updates enabled",
                 inc.id,
             )
