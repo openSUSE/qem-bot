@@ -588,3 +588,46 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "* SUSE:Maintenance:2:200" not in messages
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [("NoResultsError isn't raised")], indirect=True)
+@pytest.mark.parametrize(
+    "comment_text",
+    [
+        "\r\r@review:acceptable_for:incident_2:foo\r",  # Carriage returns
+        "Some irrelevant text\n@review:acceptable_for:incident_2:foo",  # Text before @review
+        "@review:acceptable_for:incident_2:foo\nSome extra text",  # Trailing characters
+        "\x0c@review:acceptable_for:incident_2:foo",  # Non-printable character
+    ],
+)
+def test_approval_unblocked_with_various_comment_formats(
+    fake_qem,
+    comment_text,
+    caplog,
+    fake_openqa_older_jobs_api,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    responses.add(
+        responses.GET,
+        f"{QEM_DASHBOARD}api/jobs/update/20005",
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100002, "status": "failed"},
+            {"job_id": 100003, "status": "passed"},
+        ],
+    )
+    add_two_passed_response()
+    responses.add(
+        responses.GET,
+        url="http://instance.qa/api/v1/jobs/100002/comments",
+        json=[{"text": comment_text}],
+    )
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "* SUSE:Maintenance:2:200" in messages
+    assert (
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
+        in messages
+    )

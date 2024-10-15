@@ -7,6 +7,7 @@ from typing import List, Pattern, Optional
 from urllib.error import HTTPError
 from datetime import timedelta, datetime
 import re
+import string
 
 import osc.conf
 import osc.core
@@ -56,6 +57,14 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
         inc.req,
     )
     return False
+
+
+def sanitize_comment_text(
+    text,
+):
+    text = "".join(x for x in text if x in string.printable)
+    text = text.replace("\r", " ").replace("\n", " ")
+    return text.strip()
 
 
 class Approver:
@@ -127,10 +136,13 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(r"\@review\:acceptable_for\:incident_%s\:(.+)" % inc)
+        regex = re.compile(
+            r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL
+        )
         try:
             for comment in self.client.get_job_comments(job_id):
-                if regex.match(comment["text"]):
+                sanitized_text = sanitize_comment_text(comment["text"])
+                if regex.search(sanitized_text):
                     return True
         except RequestError:
             pass
