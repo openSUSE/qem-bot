@@ -58,7 +58,7 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(request):
         json={
             "job": {
                 "settings": {
-                    "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
+                    "BASE_TEST_REPOS": "http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
                     % request.param
                 }
             }

@@ -29,7 +29,7 @@ def test_get_max_revison_opensuse():
 
     responses.add(
         responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml",
+        url="http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml",
         body=opensuse,
     )
     ret = rp.get_max_revision(repos, arch, PROJECT)
@@ -43,12 +43,12 @@ arch = "x86_64"
 def add_sles_sled_response(sled_body):
     responses.add(
         responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        url="http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
         body=SLES,
     )
     responses.add(
         responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
+        url="http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
         body=sled_body,
     )
 
@@ -70,7 +70,7 @@ def test_get_max_revison_connectionerror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
+        == "http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 
@@ -84,7 +84,7 @@ def test_get_max_revison_httperror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
+        == "http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 
@@ -98,7 +98,7 @@ def test_get_max_revison_xmlerror(caplog):
 
     assert (
         caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
+        == "http://mirror.nue2.suse.org/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
     )
 
 

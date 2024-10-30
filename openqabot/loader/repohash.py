@@ -21,7 +21,7 @@ def get_max_revision(
 ) -> int:
     max_rev = 0
 
-    url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
+    url_base = f"http://mirror.nue2.suse.org/ibs/{project.replace(':',':/')}"
 
     for repo in repos:
         # openSUSE and SLE incidents have different handling of architecture
