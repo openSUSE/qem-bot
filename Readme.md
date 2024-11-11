@@ -55,6 +55,10 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
 * If there is a non-zero amount of related openQA jobs *and* none of them
   failed then qem-bot approves in IBS (`inc-approve`)
 
+### Deployment
+
+See https://gitlab.suse.de/qa-maintenance/bot-ng/-/blob/master/Readme.md
+
 ## Misc
 
 **Token** is required but if isn't used https://openqa.suse.de or is invoked with
