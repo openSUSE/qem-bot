@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+
+from setuptools import setup
+
+setup(
+    name="qem-bot",
+    version="42",
+    license="MIT",
+    description="tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard",
+    long_description=open("Readme.md").read(),
+    long_description_content_type="text/markdown",
+    packages=["openqabot", "openqabot.loader", "openqabot.osclib", "openqabot.types"],
+    scripts=["bot-ng.py", "pc_helper_online.py"],
+)
