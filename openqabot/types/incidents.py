@@ -86,7 +86,7 @@ class Incidents(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> Dict[str, Any]:
-        DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
+        DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/"
         BASE_PRIO = 50
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info(
