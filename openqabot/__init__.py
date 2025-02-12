@@ -7,7 +7,7 @@ OBS_URL = "https://api.suse.de"
 OBS_MAINT_PRJ = "SUSE:Maintenance"
 OBS_GROUP = "qam-openqa"
 DEVELOPMENT_PARENT_GROUP_ID = 9
-DOWNLOAD_BASE = "http://download.suse.de/ibs/SUSE:/Maintenance:/"
+DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/"
 AMQP_URL = "amqps://suse:suse@rabbit.suse.de"
 OLDEST_APPROVAL_JOB_DAYS = 6
 
