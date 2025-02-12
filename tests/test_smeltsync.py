@@ -93,7 +93,7 @@ def fake_dashboard_replyback():
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
-    [(["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600])],
+    [["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
 def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
@@ -116,7 +116,7 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
-    "fake_smelt_api", [(["qam-openqa", "new", "review", None, None])], indirect=True
+    "fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True
 )
 def test_no_embragoed_and_priority_value(
     fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback
@@ -134,7 +134,7 @@ def test_no_embragoed_and_priority_value(
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
-    [(["qam-openqa", "accepted", "new", "2023-01-01 04:31:12", 600])],
+    [["qam-openqa", "accepted", "new", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
 def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
