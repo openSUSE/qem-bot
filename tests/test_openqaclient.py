@@ -44,6 +44,18 @@ def fake_responses_failing_job_update():
     )
 
 
+@pytest.fixture(scope="function")
+def fake_responses_for_acceptable_incidents():
+    responses.add(
+        responses.GET,
+        url="https://openqa.suse.de/api/v1/jobs/100003/comments",
+        json=[
+            {"text": "@review:acceptable_for:incident_1234:foo"},
+            {"text": "@review:acceptable_for:incident_5678:bar"},
+        ],
+    )
+
+
 def test_bool():
     false_address = urlparse("http://fake.openqa.site")
     true_address = urlparse("https://openqa.suse.de")
@@ -93,3 +105,14 @@ def test_handle_job_not_found(caplog, fake_responses_failing_job_update):
     assert len(responses.calls) == 1
     assert "Job 42 not found in openQA, marking as obsolete on dashboard" in messages
     assert "job not found" in messages  # the 404 fixture is supposed to match
+
+
+@responses.activate
+def test_incidents_job_is_acceptable_for(
+    caplog, fake_responses_for_acceptable_incidents
+):
+    client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
+    messages = [x[-1] for x in caplog.record_tuples]
+    res = client.incidents_job_is_acceptable_for(100003)
+    assert len(messages) == 0
+    assert res == [1234, 5678]

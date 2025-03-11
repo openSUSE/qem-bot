@@ -102,6 +102,21 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=512)
+    def incidents_job_is_acceptable_for(self, job_id: int) -> list[int]:
+        regex = re.compile(
+            r"@review:acceptable_for:incident_(\d+):(.+?)(?:$|\s)", re.DOTALL
+        )
+        ret = []
+        try:
+            for comment in self.get_job_comments(job_id):
+                sanitized_text = sanitize_comment_text(comment["text"])
+                for match in regex.findall(sanitized_text):
+                    ret.append(int(match[0]))
+        except RequestError:
+            pass
+        return ret
+
+    @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
         regex = re.compile(
             r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL
