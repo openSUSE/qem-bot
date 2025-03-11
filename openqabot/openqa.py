@@ -5,6 +5,8 @@ import logging
 from pprint import pformat
 from urllib.parse import ParseResult
 from typing import Dict
+import re
+import string
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
@@ -15,6 +17,14 @@ from .errors import PostOpenQAError
 from .types import Data
 
 log = logging.getLogger("bot.openqa")
+
+
+def sanitize_comment_text(
+    text,
+):
+    text = "".join(x for x in text if x in string.printable)
+    text = text.replace("\r", " ").replace("\n", " ")
+    return text.strip()
 
 
 class openQAInterface:
@@ -90,6 +100,20 @@ class openQAInterface:
             else:
                 log.exception(e)
         return ret
+
+    @lru_cache(maxsize=512)
+    def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
+        regex = re.compile(
+            r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL
+        )
+        try:
+            for comment in self.get_job_comments(job_id):
+                sanitized_text = sanitize_comment_text(comment["text"])
+                if regex.search(sanitized_text):
+                    return True
+        except RequestError:
+            pass
+        return False
 
     @lru_cache(maxsize=256)
     def is_devel_group(self, groupid: int) -> bool:

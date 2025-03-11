@@ -7,7 +7,6 @@ from typing import List, Pattern, Optional
 from urllib.error import HTTPError
 from datetime import timedelta, datetime
 import re
-import string
 
 import osc.conf
 import osc.core
@@ -57,14 +56,6 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
         inc.req,
     )
     return False
-
-
-def sanitize_comment_text(
-    text,
-):
-    text = "".join(x for x in text if x in string.printable)
-    text = text.replace("\r", " ").replace("\n", " ")
-    return text.strip()
 
 
 class Approver:
@@ -133,20 +124,6 @@ class Approver:
 
         # everything is green --> add incident to approve list
         return True
-
-    @lru_cache(maxsize=512)
-    def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(
-            r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL
-        )
-        try:
-            for comment in self.client.get_job_comments(job_id):
-                sanitized_text = sanitize_comment_text(comment["text"])
-                if regex.search(sanitized_text):
-                    return True
-        except RequestError:
-            pass
-        return False
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
@@ -268,7 +245,7 @@ class Approver:
         if res["status"] == "passed":
             return True
         url = "{}/t{}".format(self.client.url.geturl(), res["job_id"])
-        if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
+        if self.client.is_job_marked_acceptable_for_incident(res["job_id"], inc):
             log.info(
                 "Ignoring failed job %s for incident %s due to openQA comment", url, inc
             )
