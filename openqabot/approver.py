@@ -15,7 +15,7 @@ import osc.core
 from openqa_client.exceptions import RequestError
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
-from openqabot.dashboard import get_json
+from openqabot.dashboard import get_json, patch
 
 from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD, OLDEST_APPROVAL_JOB_DAYS
 from .loader.qem import (
@@ -133,6 +133,23 @@ class Approver:
 
         # everything is green --> add incident to approve list
         return True
+
+    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int):
+        try:
+            patch(
+                "api/jobs/"
+                + str(job_id)
+                + "/remarks?text=acceptable_for&incident_number="
+                + str(incident_number),
+                headers=self.token,
+            )
+        except RequestError as e:
+            log.info(
+                "Unable to mark job %i as acceptable for incident %i: %e",
+                job_id,
+                incident_number,
+                e,
+            )
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
@@ -267,13 +284,15 @@ class Approver:
         """
         if res["status"] == "passed":
             return True
-        url = "{}/t{}".format(self.client.url.geturl(), res["job_id"])
-        if self.is_job_marked_acceptable_for_incident(res["job_id"], inc):
+        job_id = res["job_id"]
+        url = "{}/t{}".format(self.client.url.geturl(), job_id)
+        if self.is_job_marked_acceptable_for_incident(job_id, inc):
             log.info(
                 "Ignoring failed job %s for incident %s due to openQA comment", url, inc
             )
+            self.mark_job_as_acceptable_for_incident(job_id, inc)
             return True
-        if api == "api/jobs/update/" and self.was_ok_before(res["job_id"], inc):
+        if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
             log.info(
                 "Ignoring failed aggregate job %s for incident %s due to older eligible openQA job being ok",
                 url,
