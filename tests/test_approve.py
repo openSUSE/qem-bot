@@ -75,6 +75,15 @@ def fake_openqa_older_jobs_api():
     )
 
 
+@pytest.fixture(scope="function")
+def fake_dashboard_remarks_api():
+    responses.add(
+        responses.PATCH,
+        f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
+        json=[{}],
+    )
+
+
 def add_two_passed_response():
     responses.add(
         responses.GET,
@@ -500,6 +509,7 @@ def test_approval_unblocked_via_openqa_comment(
     fake_qem,
     fake_responses_for_unblocking_incidents_via_openqa_comments,
     fake_openqa_comment_api,
+    fake_dashboard_remarks_api,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -606,6 +616,7 @@ def test_approval_unblocked_with_various_comment_formats(
     comment_text,
     caplog,
     fake_openqa_older_jobs_api,
+    fake_dashboard_remarks_api,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
@@ -630,4 +641,8 @@ def test_approval_unblocked_with_various_comment_formats(
     assert (
         "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
         in messages
+    )
+    responses.assert_call_count(
+        f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
+        1,
     )
