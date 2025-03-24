@@ -48,6 +48,11 @@ class IncResultsSync(SyncRes):
                 except KeyError:
                     continue
 
+                if r["status"] != "passed":
+                    r["acceptable_for_incidents"] = ",".join(
+                        self.client.incidents_job_is_acceptable_for(r["job_id"])
+                    )
+
                 results.append(r)
 
         for r in results:
