@@ -43,6 +43,13 @@ def do_sync_smelt(args):
     return syncer()
 
 
+def do_sync_gitea(args):
+    from .giteasync import GiteaSync
+
+    syncer = GiteaSync(args)
+    return syncer()
+
+
 def do_approve(args):
     from .approver import Approver
 
@@ -80,7 +87,7 @@ def do_amqp(args):
 
 def get_parser():
     parser = ArgumentParser(
-        description="QEM-Dashboard, SMELT and openQA connector", prog="qem-bot"
+        description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot"
     )
 
     parser.add_argument(
@@ -94,6 +101,11 @@ def get_parser():
     parser.add_argument(
         "--dry", action="store_true", help="Dry run, do not post any data"
     )
+    parser.add_argument(
+        "--fake-data",
+        action="store_true",
+        help="Use fake data, do not query data from real services",
+    )
 
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable debug output"
@@ -101,6 +113,9 @@ def get_parser():
 
     parser.add_argument(
         "-t", "--token", required=True, type=str, help="Token for qem dashboard api"
+    )
+    parser.add_argument(
+        "-g", "--gitea-token", required=False, type=str, help="Token for Gitea api"
     )
 
     parser.add_argument(
@@ -161,6 +176,23 @@ def get_parser():
         "smelt-sync", help="Sync data from SMELT into QEM Dashboard"
     )
     cmdsync.set_defaults(func=do_sync_smelt)
+
+    cmdgiteasync = commands.add_parser(
+        "gitea-sync", help="Sync data from Gitea into QEM Dashboard"
+    )
+    cmdgiteasync.add_argument(
+        "--gitea-repo",
+        required=False,
+        type=str,
+        default="products/SLFO",
+        help="Repository on Gitea to check for PRs",
+    )
+    cmdgiteasync.add_argument(
+        "--allow-build-failures",
+        action="store_true",
+        help="Sync data from PRs despite failing packages",
+    )
+    cmdgiteasync.set_defaults(func=do_sync_gitea)
 
     cmdappr = commands.add_parser(
         "inc-approve", help="Approve incidents which passed tests"

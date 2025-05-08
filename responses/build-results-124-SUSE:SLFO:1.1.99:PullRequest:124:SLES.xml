@@ -1,0 +1,116 @@
+<resultlist state="6e48177c5dc93e3281cdac1b5fdc1e04">
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="standard" arch="aarch64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <!-- The list of packages in this and other results is stripped down from the actual example on Gitea. -->
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="standard" arch="ppc64le" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="standard" arch="x86_64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="product" arch="aarch64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="product" arch="local" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="product" arch="ppc64le" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="product" arch="x86_64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="images" arch="aarch64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="images" arch="x86_64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="images" arch="ppc64le" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerkiwi" arch="aarch64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerkiwi" arch="x86_64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerkiwi" arch="ppc64le" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerfile" arch="aarch64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerfile" arch="x86_64" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="containerfile" arch="ppc64le" code="published" state="published">
+    <scmsync>https://src.suse.de/products/SLES#15.99</scmsync>
+    <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
+    <status package="base-image" code="excluded" />
+    <status package="busybox-image" code="excluded" />
+    <status package="gcc-15-image" code="succeeded" />
+  </result>
+</resultlist>

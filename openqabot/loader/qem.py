@@ -218,12 +218,15 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
             log.exception(e)
             return 1
         if ret.status_code == 200:
-            log.info("Smelt Incidents updated")
+            log.info("Smelt/Gitea Incidents updated")
         else:
             log.error(
-                "Smelt Incidents were not synced to dashboard: error %s",
+                "Smelt/Gitea Incidents were not synced to dashboard: error %s",
                 ret.status_code,
             )
+            error_text = ret.text
+            if len(error_text):
+                log.error(error_text)
             continue
         return 0
     return 2

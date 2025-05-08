@@ -22,6 +22,7 @@ tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
         updates-run         updates only schedule for Maintenance Incidents in
                             openqa
         smelt-sync          Sync data from SMELT into QEM Dashboard
+        gitea-sync          Sync data from Gitea into QEM Dashboard
         inc-approve         Approve incidents which passed tests
         inc-comment         Comment incidents in BuildService
         inc-sync-results    Sync results of openQA incidents jobs to Dashboard

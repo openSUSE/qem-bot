@@ -1,0 +1,17 @@
+<resultlist state="b00a87127ad02f47d72f328ea803da30">
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124" repository="standard" arch="aarch64" code="unpublished" state="unpublished">
+    <scmsync>https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scmsync>
+    <scminfo>f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scminfo>
+    <status package="tree" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124" repository="standard" arch="ppc64le" code="unpublished" state="unpublished">
+    <scmsync>https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scmsync>
+    <scminfo>f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scminfo>
+    <status package="tree" code="succeeded" />
+  </result>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124" repository="standard" arch="x86_64" code="unpublished" state="unpublished">
+    <scmsync>https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scmsync>
+    <scminfo>f229fea352e8f2689604bfc8a09e6ea8d0936a74663eb921a96b6f73d8f1ff7b</scminfo>
+    <status package="tree" code="succeeded" />
+  </result>
+</resultlist>
