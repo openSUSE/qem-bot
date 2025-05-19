@@ -1,0 +1,4 @@
+[Build]
+ImageTag=localhost/qem-bot
+SetWorkingDirectory=file
+File=/var/lib/data/qem/qem-bot/Containerfile
