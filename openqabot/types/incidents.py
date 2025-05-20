@@ -4,7 +4,7 @@ from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from . import ProdVer, Repos
-from .. import QEM_DASHBOARD
+from .. import QEM_DASHBOARD, GITEA
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
 from .baseconf import BaseConf
@@ -140,9 +140,22 @@ class Incidents(BaseConf):
         channels_set = set()
         issue_dict = {}
 
+        log.debug("Incident channels: %s", inc.channels)
         for issue, channel in data["issues"].items():
+            log.info(
+                "Meta-data channel: %s, %s, %s", channel.product, channel.version, arch
+            )
             f_channel = Repos(channel.product, channel.version, arch)
-            if f_channel in inc.channels:
+            if channel.product == "SLFO":
+                for inc_channel in inc.channels:
+                    if (
+                        inc_channel.product == "SUSE:SLFO"
+                        and inc_channel.version.startswith(channel.version)
+                        and inc_channel.arch == arch
+                    ):
+                        issue_dict[issue] = inc
+                        channels_set.add(f_channel)
+            elif f_channel in inc.channels:
                 issue_dict[issue] = inc
                 channels_set.add(f_channel)
 
@@ -243,9 +256,14 @@ class Incidents(BaseConf):
         if "params_expand" in data:
             full_post["openqa"].update(data["params_expand"])
 
-        full_post["openqa"][
-            "__SMELT_INCIDENT_URL"
-        ] = f"https://smelt.suse.de/incident/{inc.id}"
+        if inc.project == "SLFO":
+            full_post["openqa"][
+                "__GITEA_PR_URL"
+            ] = f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
+        else:
+            full_post["openqa"][
+                "__SMELT_INCIDENT_URL"
+            ] = f"https://smelt.suse.de/incident/{inc.id}"
         full_post["openqa"][
             "__DASHBOARD_INCIDENT_URL"
         ] = f"{QEM_DASHBOARD}incident/{inc.id}"

@@ -21,11 +21,15 @@ def get_max_revision(
 ) -> int:
     max_rev = 0
 
-    url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
+    url_start = "http://download.suse.de/ibs"
+    url_base = f"{url_start}/{project.replace(':',':/')}"
 
     for repo in repos:
+        # handle URLs for SLFO specifically
+        if project == "SLFO":
+            url = f"{url_start}/{repo[0].replace(':',':/')}:/{repo[1].replace(':',':/')}/standard/repodata/repomd.xml"
         # openSUSE and SLE incidents have different handling of architecture
-        if repo[0].startswith("openSUSE"):
+        elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
         else:
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
