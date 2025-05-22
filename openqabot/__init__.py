@@ -21,4 +21,4 @@ OLDEST_APPROVAL_JOB_DAYS = 6
 
 # Url of the "main" openQA server, this is only used to decide if the dashboard database should be updated or not;
 # to change the openQA instance to talk to, use -i / --openqa-instance parameter
-OPENQA_URL = "openqa.suse.de"
+OPENQA_URL = os.environ.get("MAIN_OPENQA_DOMAIN", "openqa.suse.de")
