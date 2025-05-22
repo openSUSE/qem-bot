@@ -5,9 +5,11 @@ import os
 
 # Used configuration parameters, e.g. api url's
 QEM_DASHBOARD = os.environ.get("QEM_DASHBOARD_URL", "http://dashboard.qam.suse.de/")
-SMELT = os.environ.get("SMELT_URL", "https://smelt.suse.de/graphql")
+SMELT_URL = os.environ.get("SMELT_URL", "https://smelt.suse.de/graphql")
+SMELT = SMELT_URL + "/graphql"
 GITEA = os.environ.get("GITEA_URL", "https://src.suse.de")
 OBS_URL = os.environ.get("OBS_URL", "https://api.suse.de")
+OBS_DOWNLOAD_URL = os.environ.get("OBS_DOWNLOAD_URL", "http://download.suse.de/ibs")
 OBS_MAINT_PRJ = "SUSE:Maintenance"
 OBS_GROUP = "qam-openqa"
 DEVELOPMENT_PARENT_GROUP_ID = 9

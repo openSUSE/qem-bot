@@ -7,7 +7,7 @@ import responses
 
 import openqabot.smeltsync
 from openqabot.smeltsync import SMELTSync
-from openqabot import QEM_DASHBOARD
+from openqabot import QEM_DASHBOARD, SMELT
 
 # Fake Namespace for SyncRes initialization
 _namespace = namedtuple("Namespace", ("dry", "token", "retry"))
@@ -17,7 +17,7 @@ _namespace = namedtuple("Namespace", ("dry", "token", "retry"))
 def fake_smelt_api(request):
     responses.add(
         responses.GET,
-        re.compile(r"https://smelt.suse.de/graphql\?query=.*"),
+        re.compile(SMELT + r"\?query=.*"),
         json={
             "data": {
                 "incidents": {

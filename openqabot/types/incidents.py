@@ -4,7 +4,7 @@ from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from . import ProdVer, Repos
-from .. import QEM_DASHBOARD, GITEA
+from .. import QEM_DASHBOARD, GITEA, SMELT_URL
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
 from .baseconf import BaseConf
@@ -263,7 +263,7 @@ class Incidents(BaseConf):
         else:
             full_post["openqa"][
                 "__SMELT_INCIDENT_URL"
-            ] = f"https://smelt.suse.de/incident/{inc.id}"
+            ] = f"{SMELT_URL}/incident/{inc.id}"
         full_post["openqa"][
             "__DASHBOARD_INCIDENT_URL"
         ] = f"{QEM_DASHBOARD}incident/{inc.id}"
