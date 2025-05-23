@@ -19,7 +19,8 @@ from openqabot.loader.qem import IncReq, JobAggr
 
 # Fake Namespace for Approver initialization
 _namespace = namedtuple(
-    "Namespace", ("dry", "token", "all_incidents", "openqa_instance", "incident")
+    "Namespace",
+    ("dry", "token", "all_incidents", "openqa_instance", "incident", "gitea_token"),
 )
 openqa_instance_url = urlparse("http://instance.qa")
 
@@ -189,7 +190,7 @@ def f_osconf(monkeypatch):
 
 
 def approver(incident=None):
-    args = _namespace(True, "123", False, openqa_instance_url, incident)
+    args = _namespace(True, "123", False, openqa_instance_url, incident, None)
     approver = Approver(args)
     approver.client.retries = 0
     return approver()
@@ -302,7 +303,7 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS" in messages
+    assert "Start approving incidents in IBS or Gitea" in messages
     assert "No aggregate test results found for SUSE:Maintenance:1:100" in messages
     assert "No aggregate test results found for SUSE:Maintenance:2:200" in messages
     assert "No aggregate test results found for SUSE:Maintenance:3:300" in messages
@@ -318,7 +319,7 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS" in messages
+    assert "Start approving incidents in IBS or Gitea" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance" not in messages
     assert "End of bot run" in messages
@@ -333,7 +334,10 @@ def test_403_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
+    assert (
+        Approver(_namespace(False, "123", False, openqa_instance_url, None, None))()
+        == 0
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received 'Not allowed'. Request 100 likely already approved, ignoring"
@@ -350,7 +354,10 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert (
+        Approver(_namespace(False, "123", False, openqa_instance_url, None, None))()
+        == 1
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received 'Not Found'. Request 100 removed or problem on OBS side: review state"
@@ -367,7 +374,10 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert (
+        Approver(_namespace(False, "123", False, openqa_instance_url, None, None))()
+        == 1
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side"
@@ -386,7 +396,10 @@ def test_osc_unknown_exception(
         raise Exception("Fake OBS exception")
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert (
+        Approver(_namespace(False, "123", False, openqa_instance_url, None, None))()
+        == 1
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fake OBS exception" in messages, "Fake OBS exception"
 
@@ -400,7 +413,10 @@ def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         pass
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
+    assert (
+        Approver(_namespace(False, "123", False, openqa_instance_url, None, None))()
+        == 0
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Incidents to approve:" in messages, "start of run must be marked explicitly"
     assert "End of bot run" in messages, "end of run must be marked explicitly"

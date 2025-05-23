@@ -6,7 +6,7 @@ from pprint import pformat
 from typing import Any, Dict, List
 
 from .loader.qem import update_incidents
-from .loader.gitea import get_open_prs, get_incidents_from_open_prs
+from .loader.gitea import make_token_header, get_open_prs, get_incidents_from_open_prs
 
 log = getLogger("bot.giteasync")
 
@@ -16,9 +16,7 @@ class GiteaSync:
         self.dry: bool = args.dry
         self.fake_data: bool = args.fake_data
         self.dashboard_token: Dict[str, str] = {"Authorization": "Token " + args.token}
-        self.gitea_token: Dict[str, str] = {
-            "Authorization": "token " + args.gitea_token
-        }
+        self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
         self.open_prs: List[Any] = get_open_prs(
             self.gitea_token, args.gitea_repo, self.fake_data
         )

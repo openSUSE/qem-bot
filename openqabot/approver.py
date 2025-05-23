@@ -3,8 +3,9 @@
 from argparse import Namespace
 from functools import lru_cache
 from logging import getLogger
-from typing import List, Pattern, Optional
+from typing import Dict, List, Pattern, Optional
 from urllib.error import HTTPError
+from urllib.parse import urlparse
 from datetime import timedelta, datetime
 import re
 import string
@@ -26,12 +27,17 @@ from .loader.qem import (
     get_incidents_approver,
     get_single_incident,
 )
+from .loader.gitea import make_token_header, review_pr
 
 log = getLogger("bot.approver")
 
 
 def _mi2str(inc: IncReq) -> str:
-    return "%s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
+    return (
+        "%s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
+        if inc.type is None
+        else "%s:%s" % (inc.type, str(inc.inc))
+    )
 
 
 def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
@@ -70,6 +76,7 @@ def sanitize_comment_text(
 class Approver:
     def __init__(self, args: Namespace, single_incident=None) -> None:
         self.dry = args.dry
+        self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
         if single_incident is None:
             self.single_incident = args.incident
             self.all_incidents = args.all_incidents
@@ -80,7 +87,7 @@ class Approver:
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Start approving incidents in IBS")
+        log.info("Start approving incidents in IBS or Gitea")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
@@ -97,7 +104,7 @@ class Approver:
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
             for inc in incidents_to_approve:
-                overall_result &= self.osc_approve(inc)
+                overall_result &= self.approve(inc)
 
         log.info("End of bot run")
 
@@ -326,13 +333,20 @@ class Approver:
 
         return res
 
-    @staticmethod
-    def osc_approve(inc: IncReq) -> bool:
-        msg = (
-            "Request accepted for '" + OBS_GROUP + "' based on data in " + QEM_DASHBOARD
+    def approve(self, inc: IncReq) -> bool:
+        msg = "Request accepted for '%s' based on data in %s" % (
+            OBS_GROUP,
+            QEM_DASHBOARD,
         )
-        log.info("Accepting review for %s:%s:%s", OBS_MAINT_PRJ, inc.inc, inc.req)
+        log.info("Accepting review for " + _mi2str(inc))
+        return (
+            self.git_approve(inc, msg)
+            if inc.type == "git"
+            else self.osc_approve(inc, msg)
+        )
 
+    @staticmethod
+    def osc_approve(inc: IncReq, msg: str) -> bool:
         try:
             osc.core.change_review_state(
                 apiurl=OBS_URL,
@@ -347,4 +361,19 @@ class Approver:
             log.exception(e)
             return False
 
+        return True
+
+    def git_approve(self, inc: IncReq, msg: str) -> bool:
+        try:
+            path_parts = urlparse(inc.url).path.split("/")
+            review_pr(
+                self.gitea_token,
+                "/".join(path_parts[-4:-2]),
+                inc.inc,
+                msg,
+                inc.scm_info,
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            log.exception(e)
+            return False
         return True

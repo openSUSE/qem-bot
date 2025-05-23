@@ -22,11 +22,28 @@ log = getLogger("bot.loader.gitea")
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+def make_token_header(token: str) -> Dict[str, str]:
+    return {} if token is None else {"Authorization": "token " + token}
+
+
 def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
     try:
         return requests.get(
             host + "/api/v1/" + query, verify=False, headers=token
         ).json()
+    except Exception as e:
+        log.exception(e)
+        raise e
+
+
+def post_json(
+    query: str, token: Dict[str, str], post_data: Any, host: str = GITEA
+) -> Any:
+    try:
+        url = host + "/api/v1/" + query
+        res = requests.post(url, verify=False, headers=token, data=post_data)
+        if not res.ok:
+            log.error("Unable to POST %s: %s", url, res.text)
     except Exception as e:
         log.exception(e)
         raise e
@@ -39,6 +56,16 @@ def read_json(name: str) -> Any:
 
 def read_xml(name: str) -> Any:
     return ET.parse("responses/%s.xml" % name)
+
+
+def reviews_url(repo_name: str, number: int):
+    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
+    return "repos/%s/pulls/%s/reviews" % (repo_name, number)
+
+
+def comments_url(repo_name: str, number: int):
+    # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueRemoveIssueBlocking
+    return "repos/%s/issues/%s/comments" % (repo_name, number)
 
 
 def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
@@ -59,6 +86,23 @@ def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
                 break
     log.info("Loaded %i active PRs/incidents from %s", len(open_prs), repo)
     return open_prs
+
+
+def review_pr(
+    token: Dict[str, str],
+    repo_name: str,
+    pr_number: int,
+    msg: str,
+    commit_id: str,
+    approve: bool = True,
+):
+    review_data = {
+        "body": msg,
+        "comments": [],
+        "commit_id": commit_id,
+        "event": "APPROVED" if approve else "REQUEST_CHANGES",
+    }
+    post_json(reviews_url(repo_name, pr_number), token, review_data)
 
 
 def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
@@ -199,10 +243,6 @@ def make_incident_from_pr(
         number = pr["number"]
         repo = pr["base"]["repo"]
         repo_name = repo["full_name"]
-        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
-        reviews_url = "repos/%s/pulls/%s/reviews" % (repo_name, number)
-        # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueRemoveIssueBlocking
-        comments_url = "repos/%s/issues/%s/comments" % (repo_name, number)
         incident = {
             "number": number,
             "project": repo["name"],
@@ -227,8 +267,8 @@ def make_incident_from_pr(
                 reviews = []
                 comments = []
         else:
-            reviews = get_json(reviews_url, token)
-            comments = get_json(comments_url, token)
+            reviews = get_json(reviews_url(repo_name, number), token)
+            comments = get_json(comments_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
             log.info("Skipping PR %s, no review by ", number)
             return None
