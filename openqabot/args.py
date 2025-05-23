@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse
-from . import AMQP_URL
+from . import AMQP_URL, OBS_GROUP
 
 
 def do_full_schedule(args):
@@ -191,6 +191,12 @@ def get_parser():
         "--allow-build-failures",
         action="store_true",
         help="Sync data from PRs despite failing packages",
+    )
+    cmdgiteasync.add_argument(
+        "--consider-unrequested-prs",
+        action="store_true",
+        help="Consider PRs where no review from team %s was requested as well"
+        % OBS_GROUP,
     )
     cmdgiteasync.set_defaults(func=do_sync_gitea)
 

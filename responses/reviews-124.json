@@ -1,42 +1,38 @@
 [
     {
         "body": "",
-        "comments_count": 0,
         "commit_id": "",
         "dismissed": false,
-        "html_url": "",
         "id": 3687,
         "official": true,
         "pull_request_url": "https://src.suse.de/products/SLFO/pulls/124",
         "stale": false,
         "state": "REQUEST_REVIEW",
         "submitted_at": "2025-05-06T10:41:02+02:00",
-        "team": null,
         "updated_at": "2025-05-06T10:41:02+02:00",
+        "team": null,
         "user": {
-            "active": false,
-            "avatar_url": "https://src.suse.de/avatars/08faa1f3e42ee3eeb33400cb88857f67b1b1aa9c7f645e1efb53c42a1fa64b43",
-            "created": "2025-03-17T14:06:04+01:00",
-            "description": "",
-            "email": "amajer+autogits_staging@suse.de",
-            "followers_count": 0,
-            "following_count": 0,
-            "full_name": "Autogits StagingBot",
-            "html_url": "https://src.suse.de/autogits_obs_staging_bot",
-            "id": 377,
-            "is_admin": false,
-            "language": "",
-            "last_login": "0001-01-01T00:00:00Z",
-            "location": "",
-            "login": "autogits_obs_staging_bot",
-            "login_name": "",
-            "prohibit_login": false,
-            "restricted": false,
-            "source_id": 0,
-            "starred_repos_count": 0,
-            "username": "autogits_obs_staging_bot",
-            "visibility": "public",
-            "website": ""
+            "login": "autogits_obs_staging_bot"
         }
+    },
+    {
+        "id": 3241,
+        "user": null,
+        "team": {
+            "id": 49,
+            "name": "qam-openqa",
+            "description": "",
+            "organization": null
+        },
+        "state": "REQUEST_REVIEW",
+        "body": "",
+        "commit_id": "",
+        "stale": false,
+        "official": false,
+        "dismissed": false,
+        "submitted_at": "2025-04-30T15:14:33+02:00",
+        "updated_at": "2025-04-30T15:14:33+02:00",
+        "html_url": "",
+        "pull_request_url": "https://src.suse.de/products/SLFO/pulls/120"
     }
 ]

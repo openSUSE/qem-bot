@@ -26,6 +26,7 @@ class GiteaSync:
             self.open_prs,
             self.gitea_token,
             not args.allow_build_failures,
+            not args.consider_unrequested_prs,
             self.fake_data,
         )
         self.retry = args.retry

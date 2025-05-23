@@ -23,6 +23,7 @@ _namespace = namedtuple(
         "retry",
         "gitea_repo",
         "allow_build_failures",
+        "consider_unrequested_prs",
     ),
 )
 
@@ -100,7 +101,7 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     monkeypatch.setattr(osc.core, "http_GET", fake_osc_http_get)
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
-    args = _namespace(False, False, "123", "456", False, "products/SLFO", True)
+    args = _namespace(False, False, "123", "456", False, "products/SLFO", True, False)
     assert GiteaSync(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
@@ -117,7 +118,7 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert incident["project"] == "SLFO"
     assert incident["url"] == "https://src.suse.de/products/SLFO/pulls/124"
     assert incident["inReview"] == True
-    assert incident["inReviewQAM"] == False
+    assert incident["inReviewQAM"] == True
     assert incident["isActive"] == True
     assert incident["approved"] == False
     assert incident["embargoed"] == False

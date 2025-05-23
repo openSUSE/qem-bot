@@ -15,7 +15,7 @@ import osc.core
 import osc.util.xml
 
 from ..utils import retry10 as requests
-from .. import GITEA, OBS_URL
+from .. import GITEA, OBS_GROUP, OBS_URL
 
 log = getLogger("bot.loader.gitea")
 
@@ -61,37 +61,37 @@ def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
     return open_prs
 
 
-def add_reviews(incident: Dict[str, Any], reviews: List[Any]):
+def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     approvals = 0
     changes_requested = 0
     review_requested = 0
     pending = 0
     pending_qam = 0
+    reviews_by_qam = 0
     for review in reviews:
         # ignore stale and dismissed reviews
         if review.get("stale", True) or review.get("dismissed", True):
             continue
         # accumulate number of reviews per state
         state = review.get("state", "")
-        if state == "APPROVED":
-            approvals += 1
-        elif state == "PENDING":
-            if review.get("user", {}).get("username", "") == "qem-bot":
+        team = review.get("team")
+        if team is not None and team.get("name", "") == OBS_GROUP:
+            reviews_by_qam += 1
+            if state == "APPROVED":
+                approvals += 1
+            elif state == "PENDING":
                 pending_qam += 1
-            else:
-                pending += 1
-        elif state == "COMMENT":
-            continue
-        elif state == "REQUEST_CHANGES":
-            changes_requested += 1
-        elif state == "REQUEST_REVIEW":
+            elif state == "REQUEST_CHANGES":
+                changes_requested += 1
+            elif state == "REQUEST_REVIEW":
+                pending_qam += 1
+                review_requested += 1
+        elif state in ("PENDING", "REQUEST_REVIEW"):
             pending += 1
-            review_requested += 1
-    incident["approved"] = (
-        approvals > 0 and changes_requested == 0 and review_requested == 0
-    )
-    incident["inReview"] = pending > 0
+    incident["approved"] = approvals > 0 and changes_requested + review_requested == 0
+    incident["inReview"] = pending + pending_qam > 0
     incident["inReviewQAM"] = pending_qam > 0
+    return reviews_by_qam
 
 
 def add_build_result(
@@ -188,7 +188,11 @@ def add_comments_and_referenced_build_results(
 
 
 def make_incident_from_pr(
-    pr: Dict[str, Any], token: Dict[str, str], only_successful_builds: bool, dry: bool
+    pr: Dict[str, Any],
+    token: Dict[str, str],
+    only_successful_builds: bool,
+    only_requested_prs: bool,
+    dry: bool,
 ):
     log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
@@ -225,7 +229,9 @@ def make_incident_from_pr(
         else:
             reviews = get_json(reviews_url, token)
             comments = get_json(comments_url, token)
-        add_reviews(incident, reviews)
+        if add_reviews(incident, reviews) < 1 and only_requested_prs:
+            log.info("Skipping PR %s, no review by ", number)
+            return None
         add_comments_and_referenced_build_results(
             incident, comments, only_successful_builds, dry
         )
@@ -244,7 +250,11 @@ def make_incident_from_pr(
 
 
 def get_incidents_from_open_prs(
-    open_prs: Set[int], token: Dict[str, str], only_successful_builds: bool, dry: bool
+    open_prs: Set[int],
+    token: Dict[str, str],
+    only_successful_builds: bool,
+    only_requested_prs: bool,
+    dry: bool,
 ) -> List[Any]:
     incidents = []
 
@@ -254,7 +264,12 @@ def get_incidents_from_open_prs(
     with CT.ThreadPoolExecutor() as executor:
         future_inc = [
             executor.submit(
-                make_incident_from_pr, pr, token, only_successful_builds, dry
+                make_incident_from_pr,
+                pr,
+                token,
+                only_successful_builds,
+                only_requested_prs,
+                dry,
             )
             for pr in open_prs
         ]
