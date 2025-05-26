@@ -20,6 +20,11 @@ class GiteaSync:
         self.open_prs: List[Any] = get_open_prs(
             self.gitea_token, args.gitea_repo, self.fake_data
         )
+        log.info(
+            "Loaded %i active PRs/incidents from %s",
+            len(self.open_prs),
+            args.gitea_repo,
+        )
         self.incidents = get_incidents_from_open_prs(
             self.open_prs,
             self.gitea_token,

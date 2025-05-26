@@ -70,21 +70,18 @@ def comments_url(repo_name: str, number: int):
 
 def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
     if dry:
-        open_prs = read_json("pulls")
-    else:
-        open_prs = []
-        page = 1
-        while True:
-            # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullRequests
-            prs_on_page = get_json(
-                "repos/%s/pulls?state=open&page=%i" % (repo, page), token
-            )
-            if isinstance(prs_on_page, list) and len(prs_on_page) > 0:
-                open_prs.extend(prs_on_page)
-                page += 1
-            else:
-                break
-    log.info("Loaded %i active PRs/incidents from %s", len(open_prs), repo)
+        return read_json("pulls")
+    open_prs = []
+    page = 1
+    while True:
+        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullRequests
+        prs_on_page = get_json(
+            "repos/%s/pulls?state=open&page=%i" % (repo, page), token
+        )
+        if not isinstance(prs_on_page, list) or len(prs_on_page) <= 0:
+            break
+        open_prs.extend(prs_on_page)
+        page += 1
     return open_prs
 
 
