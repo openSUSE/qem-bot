@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: astral-sh/ruff-action@v3
+      - name: Check style
+        run: make checkstyle
       - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
@@ -15,8 +18,6 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Run tests + cov report
         run: make test-with-coverage
-      - name: Check style
-        run: make checkstyle
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v5
         with:

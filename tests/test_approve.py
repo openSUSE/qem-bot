@@ -373,9 +373,9 @@ def test_403_response(
     monkeypatch.setattr(openqabot.loader.gitea, "GIT_REVIEW_BOT", "")
     assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "Received 'Not allowed'. Request 100 likely already approved, ignoring" in messages
-    ), "Expected handling of 403 responses logged"
+    assert "Received 'Not allowed'. Request 100 likely already approved, ignoring" in messages, (
+        "Expected handling of 403 responses logged"
+    )
 
 
 @responses.activate
@@ -389,9 +389,9 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "Received 'Not Found'. Request 100 removed or problem on OBS side: review state" in messages
-    ), "Expected handling of 404 responses logged"
+    assert "Received 'Not Found'. Request 100 removed or problem on OBS side: review state" in messages, (
+        "Expected handling of 404 responses logged"
+    )
 
 
 @responses.activate
@@ -405,9 +405,9 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side" in messages
-    ), "Expected handling of 500 responses logged"
+    assert "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side" in messages, (
+        "Expected handling of 500 responses logged"
+    )
 
 
 @responses.activate
@@ -553,9 +553,9 @@ def test_approval_unblocked_via_openqa_comment(
     assert "* SUSE:Maintenance:2:200" in messages, "incident approved as all failures are considered acceptable"
     assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
     for index in range(1, 4):
-        assert (
-            fake_dashboard_remarks_api[index].calls[0] in responses.calls
-        ), f"failing job with comment marked as acceptable ({index})"
+        assert fake_dashboard_remarks_api[index].calls[0] in responses.calls, (
+            f"failing job with comment marked as acceptable ({index})"
+        )
     assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in messages
 
 
@@ -587,13 +587,13 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
     assert fake_dashboard_remarks_api[1].calls[0] in responses.calls, "failing job with comment marked as acceptable"
     assert len(fake_dashboard_remarks_api[2].calls) == 0, "failing job without comment not marked as acceptable"
-    assert (
-        fake_dashboard_remarks_api[3].calls[0] in responses.calls
-    ), "another failing job with comment marked as acceptable despite previous unacceptable failure"
+    assert fake_dashboard_remarks_api[3].calls[0] in responses.calls, (
+        "another failing job with comment marked as acceptable despite previous unacceptable failure"
+    )
     assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in messages
-    assert (
-        "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment" not in messages
-    ), "log message only present for jobs before unacceptable failure"
+    assert "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment" not in messages, (
+        "log message only present for jobs before unacceptable failure"
+    )
 
 
 @responses.activate

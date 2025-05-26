@@ -1,3 +1,45 @@
-[tool.black]
+[tool.ruff]
 line-length = 120
 
+[tool.ruff.lint]
+# E, F: Standard pycodestyle and Pyflakes (default flake8)
+# D: pydocstyle (for D100, D101, etc.)
+# Q: flake8-quotes (for Q000)
+# PL: Pylint
+select = ["E", "F", "D", "Q", "PL"]
+
+ignore = [
+    "E501",   # line-too-long
+    "D100",   # missing-module-docstring
+    "D101",   # missing-class-docstring
+    "D102",   # missing-method-docstring
+    "D103",   # missing-function-docstring
+    "D104",   # missing-package-docstring
+    "D105",   # missing-magic-method-docstring
+    "D107",   # missing-init-docstring
+    "D203",   # incorrect-blank-line-before-class
+    "Q000",   # bad-quotes (inline)
+    "N801",   # invalid-class-name
+    "N802",   # invalid-function-name
+    "N803",   # invalid-argument-name
+    "N806",   # invalid-variable-name
+    "UP032",
+    "PLC0415", # import-outside-toplevel
+    "PLC1802", # use-implicit-booleaness-not-len
+    "F821",
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0914", # too-many-locals
+    "PLR0915", # too-many-statements
+    "PLR2004", # magic-value-comparison
+    "D415", # missing-terminal-punctuation
+    "D400", # missing-trailing-period
+    "D205", # missing-blank-line-after-summary
+    "D200", # unnecessary-multiline-docstring
+    "D211", # blank-line-before-class
+    "D213", # multi-line-summary-second-line
+    "PLW2901", # redefined-loop-name
+    "PLW0127", # self-assigning-variable
+    "PLW0128", # redeclared-assigned-name
+    "PLW0129", # assert-on-string-literal
+]
