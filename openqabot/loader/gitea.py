@@ -143,9 +143,9 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
 def add_build_result(
     incident: Dict[str, Any],
     res: Any,
-    successful_packages: set[str],
-    unpublished_repos: set[str],
-    failed_packages: set[str],
+    successful_packages: Set[str],
+    unpublished_repos: Set[str],
+    failed_packages: Set[str],
 ):
     state = res.get("state")
     if state != "published":
