@@ -2,7 +2,6 @@ from collections import namedtuple
 import logging
 import json
 from urllib.parse import urlparse
-import pytest
 import responses
 from openqabot.amqp import AMQP
 from openqabot import QEM_DASHBOARD

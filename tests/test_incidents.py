@@ -5,7 +5,6 @@ from typing import Optional
 
 from openqabot.types.incidents import Incidents
 from openqabot.types import Repos, ArchVer
-from unittest import mock
 import responses
 import pytest
 
@@ -17,7 +16,7 @@ def test_incidents_constructor():
     """
     test_config = {}
     test_config["FLAVOR"] = {}
-    inc = Incidents(
+    Incidents(
         product="",
         product_repo=None,
         product_version=None,
@@ -447,7 +446,7 @@ def test_gitea_incidents():
         assert qem["flavor"] == flavor
         assert qem["incident"] == inc.id
         assert qem["version"] == product_ver
-        assert qem["withAggregate"] == True
+        assert qem["withAggregate"]
         for s in computed_settings:
             assert s["ARCH"] == arch
             assert s["BASE_TEST_ISSUES"] == "%i" % inc.id

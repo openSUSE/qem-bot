@@ -11,7 +11,7 @@ def test_aggregate_constructor():
     config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
-    acc = Aggregate("", None, None, None, config)
+    Aggregate("", None, None, None, config)
 
 
 def test_aggregate_printable():

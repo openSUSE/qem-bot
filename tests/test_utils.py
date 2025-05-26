@@ -2,6 +2,8 @@ import pytest
 import responses
 from pathlib import Path
 
+from openqabot.utils import walk, normalize_results, retry3, get_yml_list
+
 # responses versions older than
 # https://github.com/getsentry/responses/releases/tag/0.17.0
 # do not have "registries" so we need to skip on older versions
@@ -14,8 +16,6 @@ except ImportError as e:
     import logging
 
     logging.info(str(e) + ": Likely older python version")
-
-from openqabot.utils import walk, normalize_results, retry3, get_yml_list
 
 
 def test_normalize_results():
@@ -97,8 +97,8 @@ if has_registries:
 
     @responses.activate(registry=registries.OrderedRegistry)
     def test_retry3():
-        rsp1 = responses.add(responses.GET, "http://host.some", status=503)
-        rsp2 = responses.add(responses.GET, "http://host.some", status=503)
+        _ = responses.add(responses.GET, "http://host.some", status=503)
+        _ = responses.add(responses.GET, "http://host.some", status=503)
         rsp3 = responses.add(responses.GET, "http://host.some", status=200)
         rsp4 = responses.add(responses.GET, "http://host.some", status=404)
 

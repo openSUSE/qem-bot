@@ -1,7 +1,7 @@
 from pathlib import Path
 import logging
 
-from openqabot.loader.config import *
+from openqabot.loader.config import get_onearch, load_metadata, read_products
 from openqabot.types import Data
 
 __root__ = Path(__file__).parent / "fixtures/config"

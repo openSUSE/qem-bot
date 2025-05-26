@@ -4,7 +4,6 @@ import re
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
-import functools
 import io
 import osc.conf
 import osc.core
@@ -57,7 +56,7 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(request):
     )
     responses.add(
         responses.GET,
-        re.compile(f"http://instance.qa/api/v1/jobs/.*"),
+        re.compile("http://instance.qa/api/v1/jobs/.*"),
         json={
             "job": {
                 "settings": {
