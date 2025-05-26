@@ -146,11 +146,11 @@ def test_sync_with_product_repo(
         assert channel in failed_or_unpublished
     assert incident["project"] == "SLFO"
     assert incident["url"] == "https://src.suse.de/products/SLFO/pulls/124"
-    assert incident["inReview"] == True
-    assert incident["inReviewQAM"] == True
-    assert incident["isActive"] == True
-    assert incident["approved"] == False
-    assert incident["embargoed"] == False
+    assert incident["inReview"]
+    assert incident["inReviewQAM"]
+    assert incident["isActive"]
+    assert not incident["approved"]
+    assert not incident["embargoed"]
     assert incident["priority"] == 0
 
     # expect the scminfo from the product repo of the configured product

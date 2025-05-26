@@ -1,6 +1,7 @@
 from collections import namedtuple
 import logging
-from urllib.parse import urlparse
+from typing import Dict
+from urllib.parse import urlparse, ParseResult
 
 import pytest
 import responses

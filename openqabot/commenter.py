@@ -177,7 +177,7 @@ class Commenter:
         testurl = osc.core.makeurl(
             self.client.openqa.baseurl, ["tests", str(job["job_id"])]
         )
-        if not job["status"] in ["passed", "failed", "softfailed"]:
+        if job["status"] not in ["passed", "failed", "softfailed"]:
             rstring = job["status"]
             if rstring == "none":
                 return None

@@ -1,18 +1,17 @@
 from collections import namedtuple
-from typing import Any, List
+from typing import List
 from pathlib import Path
 from urllib.parse import urlparse
 import os
 import logging
 
-from responses import GET, matchers
+from responses import GET
 import osc.conf
 import osc.core
 import pytest
 import responses
 
 import openqabot
-from openqabot.openqa import openQAInterface
 from openqabot import BUILD_REGEX, OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
 from openqabot.loader.gitea import read_json
 from openqabot.incrementapprover import IncrementApprover, IncrementConfig
@@ -221,10 +220,10 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     }
     assert (
         expected_livepatch_params | {"ARCH": "ppc64le"} in jobs
-    ), f"additional kernel livepatch jobs created"
+    ), "additional kernel livepatch jobs created"
     assert (
         expected_livepatch_params | {"ARCH": "aarch64"} not in jobs
-    ), f"additional kernel livepatch jobs only created if package is new"
+    ), "additional kernel livepatch jobs only created if package is new"
 
 
 @responses.activate

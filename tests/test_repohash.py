@@ -1,7 +1,6 @@
 import logging
 
 import openqabot.loader.repohash as rp
-import openqabot.loader.repohash
 import pytest
 import responses
 from openqabot.errors import NoRepoFoundError
