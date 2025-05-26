@@ -10,6 +10,7 @@ import osc.conf
 import osc.core
 import pytest
 import responses
+from responses import matchers
 from typing import Dict, List
 
 import openqabot.approver
@@ -133,12 +134,42 @@ def fake_responses_updating_job():
 
 
 @pytest.fixture(scope="function")
+def fake_responses_for_creating_pr_review():
+    responses.add(
+        responses.POST,
+        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
+        json={},
+        match=[
+            matchers.urlencoded_params_matcher(
+                {
+                    "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
+                    "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+                    "event": "APPROVED",
+                }
+            )
+        ],
+    )
+
+
+@pytest.fixture(scope="function")
 def fake_qem(monkeypatch, request):
     def f_inc_approver(*args):
-        return [IncReq(1, 100), IncReq(2, 200), IncReq(3, 300), IncReq(4, 400)]
+        return [
+            IncReq(1, 100),
+            IncReq(2, 200),
+            IncReq(3, 300),
+            IncReq(4, 400),
+            IncReq(
+                5,
+                500,
+                "git",
+                "https://src.suse.de/products/SLFO/pulls/124",
+                "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+            ),
+        ]
 
     def f_inc_single_approver(token: Dict[str, str], id: int) -> List[IncReq]:
-        return [IncReq(1, 100) if id == 1 else IncReq(4, 400)]
+        return [f_inc_approver()[id - 1]]
 
     # Inc 1 needs aggregates
     # Inc 2 needs aggregates
@@ -159,6 +190,7 @@ def fake_qem(monkeypatch, request):
                 JobAggr(3003, False, True),
             ],
             4: [JobAggr(i, False, False) for i in range(4000, 4010)],
+            5: [JobAggr(i, False, False) for i in range(5000, 5010)],
         }
         return results.get(inc, None)
 
@@ -166,6 +198,7 @@ def fake_qem(monkeypatch, request):
         if "aggr" in request.param:
             raise NoResultsError("No results for settings")
         results = {
+            5: [],
             4: [],
             1: [JobAggr(i, True, False) for i in range(10000, 10010)],
             2: [JobAggr(i, True, False) for i in range(20000, 20010)],
@@ -327,7 +360,14 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_403_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+def test_403_response(
+    fake_qem,
+    fake_two_passed_jobs,
+    fake_responses_for_creating_pr_review,
+    f_osconf,
+    caplog,
+    monkeypatch,
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
@@ -406,7 +446,14 @@ def test_osc_unknown_exception(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+def test_osc_all_pass(
+    fake_qem,
+    fake_two_passed_jobs,
+    fake_responses_for_creating_pr_review,
+    f_osconf,
+    caplog,
+    monkeypatch,
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
@@ -425,12 +472,15 @@ def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         "* SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
+        "* git:5",
         "Accepting review for SUSE:Maintenance:1:100",
         "Accepting review for SUSE:Maintenance:2:200",
         "Accepting review for SUSE:Maintenance:3:300",
         "Accepting review for SUSE:Maintenance:4:400",
+        "Accepting review for git:5",
     ]:
         assert i in messages, "individual reviews must be mentioned in logs"
+    assert len(responses.calls) == 76
 
 
 @pytest.fixture(scope="function")
