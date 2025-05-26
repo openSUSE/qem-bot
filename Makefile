@@ -5,13 +5,14 @@ all:
 only-test:
 	python3 -m pytest
 
+.PHONY: ruff
+ruff:
+	ruff check
+	ruff format --check
+
 .PHONY: tidy
 tidy:
-	black ./
-
-.PHONY: flake8
-flake8:
-	flake8 ./openqabot pc_helper_online.py --config=setup.cfg
+	ruff format
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -20,7 +21,7 @@ test-with-coverage:
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: flake8
+checkstyle: ruff
 
 .PHONY: test
 test: only-test checkstyle

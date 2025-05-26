@@ -150,7 +150,7 @@ Feel free to add issues in github or send pull requests.
 * For git commit messages use the rules stated on
   [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/)
   as a reference.
-* Run `black .` before committing changes to format code according to our
+* Run `make tidy` before committing changes to format code according to our
   standards. Preferably also run other tests as described in the subsequent
   section.
 * As a SUSE colleague consider signing commits which we consider to use for

@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Dict, Optional, List
+from typing import Optional, List
 from pathlib import Path
 from urllib.parse import urlparse
 import os
@@ -228,15 +228,15 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
         "FLAVOR": "Base-RT-Updates",
         "BUILD": "139.1-kernel-livepatch-rt-6.12.0-160000.5",
     }
-    assert (
-        expected_livepatch_params | {"ARCH": "ppc64le"} in jobs
-    ), f"additional kernel livepatch jobs of default flavor created"
-    assert (
-        expected_livepatch_rt_params | {"ARCH": "ppc64le"} in jobs
-    ), f"additional kernel livepatch jobs of RT flavor created"
-    assert (
-        expected_livepatch_params | {"ARCH": "aarch64"} not in jobs
-    ), "additional kernel livepatch jobs only created if package is new"
+    assert expected_livepatch_params | {"ARCH": "ppc64le"} in jobs, (
+        "additional kernel livepatch jobs of default flavor created"
+    )
+    assert expected_livepatch_rt_params | {"ARCH": "ppc64le"} in jobs, (
+        "additional kernel livepatch jobs of RT flavor created"
+    )
+    assert expected_livepatch_params | {"ARCH": "aarch64"} not in jobs, (
+        "additional kernel livepatch jobs only created if package is new"
+    )
 
 
 @responses.activate
