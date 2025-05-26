@@ -21,6 +21,7 @@ class Incident:
         self.staging = not incident["inReview"]
         self.embargoed = incident["embargoed"]
         self.priority = incident.get("priority")
+        self.type = incident.get("type", "smelt")
 
         self.channels = [
             Repos(p, v, a)
