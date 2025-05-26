@@ -63,6 +63,11 @@ def reviews_url(repo_name: str, number: int):
     return "repos/%s/pulls/%s/reviews" % (repo_name, number)
 
 
+def changed_files_url(repo_name: str, number: int):
+    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
+    return "repos/%s/pulls/%s/files" % (repo_name, number)
+
+
 def comments_url(repo_name: str, number: int):
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueRemoveIssueBlocking
     return "repos/%s/issues/%s/comments" % (repo_name, number)
@@ -169,9 +174,7 @@ def add_build_result(
             failed_packages.add(status.get("package"))
 
 
-def add_build_results(
-    incident: Dict[str, Any], obs_urls: List[str], only_successful: bool, dry: bool
-):
+def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
     successful_packages = set()
     unpublished_repos = set()
     failed_packages = set()
@@ -208,24 +211,44 @@ def add_build_results(
             ", ".join(failed_packages),
         )
     incident["channels"] = [*projects]
-    if not only_successful or len(failed_packages) + len(unpublished_repos) == 0:
-        incident["packages"] = [*successful_packages]
+    incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos]
+    incident["successful_packages"] = [*successful_packages]
 
 
 def add_comments_and_referenced_build_results(
     incident: Dict[str, Any],
     comments: List[Any],
-    only_successful_builds: bool,
     dry: bool,
 ):
     for comment in reversed(comments):
         body = comment["body"]
         user_name = comment["user"]["username"]
         if user_name == "autogits_obs_staging_bot":
-            add_build_results(
-                incident, re.findall("https://[^ ]*", body), only_successful_builds, dry
-            )
+            add_build_results(incident, re.findall("https://[^ ]*", body), dry)
             break
+
+
+def add_packages_from_patchinfo(
+    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+):
+    if dry:
+        patch_info = read_xml("patch-info")
+    else:
+        patch_info = osc.util.xml.xml_fromstring(
+            requests.get(patch_info_url, verify=False, headers=token).text
+        )
+    for res in patch_info.findall("package"):
+        incident["packages"].append(res.text)
+
+
+def add_packages_from_files(
+    incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool
+):
+    for file_info in files:
+        file_name = file_info.get("filename", "").split("/")[-1]
+        raw_url = file_info.get("raw_url")
+        if file_name == "_patchinfo" and raw_url is not None:
+            add_packages_from_patchinfo(incident, token, raw_url, dry)
 
 
 def make_incident_from_pr(
@@ -260,23 +283,31 @@ def make_incident_from_pr(
             if number == 124:
                 reviews = read_json("reviews-124")
                 comments = read_json("comments-124")
+                files = read_json("files-124")
             else:
                 reviews = []
                 comments = []
+                files = []
         else:
             reviews = get_json(reviews_url(repo_name, number), token)
             comments = get_json(comments_url(repo_name, number), token)
+            files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
             log.info("Skipping PR %s, no review by ", number)
             return None
-        add_comments_and_referenced_build_results(
-            incident, comments, only_successful_builds, dry
-        )
-        if len(incident["packages"]) == 0:
-            log.info("Skipping PR %s, no packages found/considered", number)
-            return None
+        add_comments_and_referenced_build_results(incident, comments, dry)
         if len(incident["channels"]) == 0:
             log.info("Skipping PR %s, no channels found/considered", number)
+            return None
+        if (
+            only_successful_builds
+            and len(incident["failed_or_unpublished_packages"]) > 0
+        ):
+            log.info("Skipping PR %s, not all packages succeeded and published", number)
+            return None
+        add_packages_from_files(incident, token, files, dry)
+        if len(incident["packages"]) == 0:
+            log.info("Skipping PR %s, no packages found/considered", number)
             return None
 
     except Exception as e:  # pylint: disable=broad-except

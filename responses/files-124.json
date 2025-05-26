@@ -1,0 +1,22 @@
+[
+  {
+    "filename": "patchinfo.23193048203482931/_patchinfo",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "changes": 10,
+    "html_url": "https://src.suse.de/products/SLFO/src/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo",
+    "contents_url": "https://src.suse.de/api/v1/repos/products/SLFO/contents/patchinfo.23193048203482931/_patchinfo?ref=2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea",
+    "raw_url": "https://src.suse.de/products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
+  },
+  {
+    "filename": "tree",
+    "status": "changed",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "html_url": "https://src.suse.de/products/SLFO/src/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/tree",
+    "contents_url": "https://src.suse.de/api/v1/repos/products/SLFO/contents/tree?ref=2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea",
+    "raw_url": "https://src.suse.de/products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/tree"
+  }
+]

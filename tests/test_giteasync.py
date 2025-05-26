@@ -1,4 +1,5 @@
 from collections import namedtuple
+from pathlib import Path
 import logging
 from typing import Any
 import re
@@ -49,7 +50,17 @@ def fake_gitea_api(request):
     )
     responses.add(
         responses.GET,
+        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/124/files",
+        json=read_json("files-124"),
+    )
+    responses.add(
+        responses.GET,
         re.compile(r"https://src.suse.de/api/v1/repos/products/SLFO/pulls/.*/reviews"),
+        json=[],
+    )
+    responses.add(
+        responses.GET,
+        re.compile(r"https://src.suse.de/api/v1/repos/products/SLFO/pulls/.*/files"),
         json=[],
     )
     responses.add(
@@ -63,6 +74,11 @@ def fake_gitea_api(request):
             r"https://src.suse.de/api/v1/repos/products/SLFO/issues/.*/comments"
         ),
         json=[],
+    )
+    responses.add(
+        responses.GET,
+        "https://src.suse.de/products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo",
+        body=Path("responses/patch-info.xml").read_bytes(),
     )
 
 
@@ -107,11 +123,11 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
     assert "Getting info about PR 131 from Gitea" in messages
     assert "Updating info about 1 incidents" in messages
-    assert len(responses.calls) == 17
+    assert len(responses.calls) == 25
     assert len(responses.calls[-1].response.json()) == 1
     incident = responses.calls[-1].response.json()[0]
     assert incident["number"] == 124
-    assert incident["packages"] == ["gcc-15-image"]
+    assert incident["packages"] == ["tree"]
     assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:x86_64" in incident["channels"]
     assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:aarch64" in incident["channels"]
     assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:ppc64le" in incident["channels"]
