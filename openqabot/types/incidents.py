@@ -256,17 +256,14 @@ class Incidents(BaseConf):
         if "params_expand" in data:
             full_post["openqa"].update(data["params_expand"])
 
-        if inc.project == "SLFO":
-            full_post["openqa"][
-                "__GITEA_PR_URL"
-            ] = f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
-        else:
-            full_post["openqa"][
-                "__SMELT_INCIDENT_URL"
-            ] = f"{SMELT_URL}/incident/{inc.id}"
-        full_post["openqa"][
-            "__DASHBOARD_INCIDENT_URL"
-        ] = f"{QEM_DASHBOARD}incident/{inc.id}"
+        url = (
+            f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
+            if inc.project == "SLFO"
+            else f"{SMELT_URL}/incident/{inc.id}"
+        )
+        dashboard_url = f"{QEM_DASHBOARD}incident/{inc.id}"
+        full_post["openqa"]["__SOURCE_CHANGE_URL"] = url
+        full_post["openqa"]["__DASHBOARD_INCIDENT_URL"] = dashboard_url
 
         settings = full_post["openqa"].copy()
 

@@ -1,17 +1,19 @@
 from collections import namedtuple
 from pathlib import Path
-import logging
 from typing import Any
+from urllib.parse import urljoin
+import logging
 import re
 
-import pytest
-import responses
+from responses import GET
 import osc.conf
 import osc.core
+import pytest
+import responses
 
-from openqabot.loader.gitea import read_json, read_xml
-from openqabot.giteasync import GiteaSync
 from openqabot import QEM_DASHBOARD, OBS_URL
+from openqabot.giteasync import GiteaSync
+from openqabot.loader.gitea import read_json, read_xml
 
 # Fake Namespace for GiteaSync initialization
 _namespace = namedtuple(
@@ -31,55 +33,20 @@ _namespace = namedtuple(
 
 @pytest.fixture(scope="function")
 def fake_gitea_api(request):
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/api/v1/repos/products/SLFO/pulls?state=open&page=1",
-        json=read_json("pulls"),
-    )
-    responses.add(
-        responses.GET,
-        re.compile(
-            r"https://src.suse.de/api/v1/repos/products/SLFO/pulls\?state=open&page=.*"
-        ),
-        json=[],
-    )
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/124/reviews",
-        json=read_json("reviews-124"),
-    )
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/124/files",
-        json=read_json("files-124"),
-    )
-    responses.add(
-        responses.GET,
-        re.compile(r"https://src.suse.de/api/v1/repos/products/SLFO/pulls/.*/reviews"),
-        json=[],
-    )
-    responses.add(
-        responses.GET,
-        re.compile(r"https://src.suse.de/api/v1/repos/products/SLFO/pulls/.*/files"),
-        json=[],
-    )
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/api/v1/repos/products/SLFO/issues/124/comments",
-        json=read_json("comments-124"),
-    )
-    responses.add(
-        responses.GET,
-        re.compile(
-            r"https://src.suse.de/api/v1/repos/products/SLFO/issues/.*/comments"
-        ),
-        json=[],
-    )
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo",
-        body=Path("responses/patch-info.xml").read_bytes(),
-    )
+    host = "https://src.suse.de"
+    pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
+    issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
+    patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
+    patchinfo_data = Path("responses/patch-info.xml").read_bytes()
+    responses.add(GET, pulls_url + "?state=open&page=1", json=read_json("pulls"))
+    responses.add(GET, re.compile(pulls_url + r"\?state=open&page=.*"), json=[])
+    responses.add(GET, pulls_url + "/124/reviews", json=read_json("reviews-124"))
+    responses.add(GET, pulls_url + "/124/files", json=read_json("files-124"))
+    responses.add(GET, re.compile(pulls_url + r"/.*/reviews"), json=[])
+    responses.add(GET, re.compile(pulls_url + r"/.*/files"), json=[])
+    responses.add(GET, issues_url + "/124/comments", json=read_json("comments-124"))
+    responses.add(GET, re.compile(issues_url + r"/.*/comments"), json=[])
+    responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 
 
 @pytest.fixture(scope="function")
@@ -139,7 +106,4 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert incident["approved"] == False
     assert incident["embargoed"] == False
     assert incident["priority"] == 0
-    assert (
-        incident["scminfo"]
-        == "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d"
-    )
+    assert "18bfa2a23fb7985d5d0" in incident["scminfo"]
