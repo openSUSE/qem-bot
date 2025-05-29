@@ -1,0 +1,10 @@
+[Service]
+EnvironmentFile=/var/lib/data/qem/qem-bot.env
+
+[Container]
+Environment=QEM_DASHBOARD_URL=http://localhost:3000/
+Pod=qem.pod
+Image=qem-bot.build
+Mount=type=bind,source=/var/lib/data/qem/oscrc,destination=/root/.config/osc/oscrc,ro=true,relabel=shared
+Mount=type=bind,source=/var/lib/data/qem/ssh,destination=/root/.ssh,ro=true,relabel=shared
+Exec=-g $GITEA_TOKEN -t $DASHBOARD_TOKEN gitea-sync

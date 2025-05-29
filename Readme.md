@@ -179,6 +179,9 @@ git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
 
 This should walk over the list of current incidents pending approval.
 
+It is possible to run qem-bot inside container, please see
+[docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
+
 ## License
 
 This project is licensed under the MIT license, see LICENSE file for details.
