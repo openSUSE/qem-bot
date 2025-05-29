@@ -1,0 +1,38 @@
+[
+    {
+        "body": "",
+        "commit_id": "",
+        "dismissed": false,
+        "id": 3687,
+        "official": true,
+        "pull_request_url": "https://src.suse.de/products/SLFO/pulls/124",
+        "stale": false,
+        "state": "REQUEST_REVIEW",
+        "submitted_at": "2025-05-06T10:41:02+02:00",
+        "updated_at": "2025-05-06T10:41:02+02:00",
+        "team": null,
+        "user": {
+            "login": "autogits_obs_staging_bot"
+        }
+    },
+    {
+        "id": 3241,
+        "user": null,
+        "team": {
+            "id": 49,
+            "name": "qam-openqa",
+            "description": "",
+            "organization": null
+        },
+        "state": "REQUEST_REVIEW",
+        "body": "",
+        "commit_id": "",
+        "stale": false,
+        "official": false,
+        "dismissed": false,
+        "submitted_at": "2025-04-30T15:14:33+02:00",
+        "updated_at": "2025-04-30T15:14:33+02:00",
+        "html_url": "",
+        "pull_request_url": "https://src.suse.de/products/SLFO/pulls/120"
+    }
+]

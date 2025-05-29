@@ -7,7 +7,7 @@ from logging import getLogger
 from typing import Any, Dict, List, Optional
 
 from . import ProdVer, Repos
-from .. import DOWNLOAD_BASE, QEM_DASHBOARD
+from .. import DOWNLOAD_BASE, QEM_DASHBOARD, SMELT_URL
 from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
@@ -187,7 +187,7 @@ class Aggregate(BaseConf):
                 for inc in set(full_post["qem"]["incidents"])
             )
             full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-                f"https://smelt.suse.de/incident/{inc}"
+                f"{SMELT_URL}/incident/{inc}"
                 for inc in set(full_post["qem"]["incidents"])
             )
 

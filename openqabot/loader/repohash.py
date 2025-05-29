@@ -8,6 +8,7 @@ from xml.etree import ElementTree as ET
 from requests import ConnectionError, HTTPError
 from requests.exceptions import RetryError
 
+from .. import OBS_DOWNLOAD_URL
 from ..errors import NoRepoFoundError
 from ..utils import retry5 as requests
 
@@ -21,11 +22,14 @@ def get_max_revision(
 ) -> int:
     max_rev = 0
 
-    url_base = f"http://download.suse.de/ibs/{project.replace(':',':/')}"
+    url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
 
     for repo in repos:
+        # handle URLs for SLFO specifically
+        if project == "SLFO":
+            url = f"{OBS_DOWNLOAD_URL}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/standard/repodata/repomd.xml"
         # openSUSE and SLE incidents have different handling of architecture
-        if repo[0].startswith("openSUSE"):
+        elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
         else:
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"

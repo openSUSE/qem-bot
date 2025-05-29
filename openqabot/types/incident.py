@@ -21,6 +21,7 @@ class Incident:
         self.staging = not incident["inReview"]
         self.embargoed = incident["embargoed"]
         self.priority = incident.get("priority")
+        self.type = incident.get("type", "smelt")
 
         self.channels = [
             Repos(p, v, a)
@@ -49,6 +50,15 @@ class Incident:
                 )
                 if len(val) == 2
             )
+        ]
+        # add channels for Gitea-based incidents
+        self.channels += [
+            Repos(":".join(val[0:2]), ":".join(val[2:-1]), val[-1])
+            for val in (
+                r.split(":")
+                for r in (i for i in incident["channels"] if i.startswith("SUSE:SLFO"))
+            )
+            if len(val) > 3
         ]
 
         # remove Manager-Server on aarch64 from channels

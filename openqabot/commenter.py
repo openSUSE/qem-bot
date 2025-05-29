@@ -32,6 +32,9 @@ class Commenter:
         log.info("Start commenting incidents in IBS")
 
         for inc in self.incidents:
+            if inc.type != "smelt":
+                log.debug("Skipping incident %i of type %s", inc.id, inc.type)
+                continue
             try:
                 i_jobs = get_incident_results(inc.id, self.token)
                 u_jobs = get_aggregate_results(inc.id, self.token)

@@ -10,6 +10,7 @@ import osc.conf
 import osc.core
 import pytest
 import responses
+from responses import matchers
 from typing import Dict, List
 
 import openqabot.approver
@@ -19,9 +20,11 @@ from openqabot.loader.qem import IncReq, JobAggr
 
 # Fake Namespace for Approver initialization
 _namespace = namedtuple(
-    "Namespace", ("dry", "token", "all_incidents", "openqa_instance", "incident")
+    "Namespace",
+    ("dry", "token", "all_incidents", "openqa_instance", "incident", "gitea_token"),
 )
 openqa_instance_url = urlparse("http://instance.qa")
+args = _namespace(False, "123", False, openqa_instance_url, None, None)
 
 
 @pytest.fixture(scope="function")
@@ -132,12 +135,42 @@ def fake_responses_updating_job():
 
 
 @pytest.fixture(scope="function")
+def fake_responses_for_creating_pr_review():
+    responses.add(
+        responses.POST,
+        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
+        json={},
+        match=[
+            matchers.urlencoded_params_matcher(
+                {
+                    "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
+                    "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+                    "event": "APPROVED",
+                }
+            )
+        ],
+    )
+
+
+@pytest.fixture(scope="function")
 def fake_qem(monkeypatch, request):
     def f_inc_approver(*args):
-        return [IncReq(1, 100), IncReq(2, 200), IncReq(3, 300), IncReq(4, 400)]
+        return [
+            IncReq(1, 100),
+            IncReq(2, 200),
+            IncReq(3, 300),
+            IncReq(4, 400),
+            IncReq(
+                5,
+                500,
+                "git",
+                "https://src.suse.de/products/SLFO/pulls/124",
+                "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+            ),
+        ]
 
     def f_inc_single_approver(token: Dict[str, str], id: int) -> List[IncReq]:
-        return [IncReq(1, 100) if id == 1 else IncReq(4, 400)]
+        return [f_inc_approver()[id - 1]]
 
     # Inc 1 needs aggregates
     # Inc 2 needs aggregates
@@ -158,6 +191,7 @@ def fake_qem(monkeypatch, request):
                 JobAggr(3003, False, True),
             ],
             4: [JobAggr(i, False, False) for i in range(4000, 4010)],
+            5: [JobAggr(i, False, False) for i in range(5000, 5010)],
         }
         return results.get(inc, None)
 
@@ -165,6 +199,7 @@ def fake_qem(monkeypatch, request):
         if "aggr" in request.param:
             raise NoResultsError("No results for settings")
         results = {
+            5: [],
             4: [],
             1: [JobAggr(i, True, False) for i in range(10000, 10010)],
             2: [JobAggr(i, True, False) for i in range(20000, 20010)],
@@ -189,7 +224,7 @@ def f_osconf(monkeypatch):
 
 
 def approver(incident=None):
-    args = _namespace(True, "123", False, openqa_instance_url, incident)
+    args = _namespace(True, "123", False, openqa_instance_url, incident, None)
     approver = Approver(args)
     approver.client.retries = 0
     return approver()
@@ -302,7 +337,7 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS" in messages
+    assert "Start approving incidents in IBS or Gitea" in messages
     assert "No aggregate test results found for SUSE:Maintenance:1:100" in messages
     assert "No aggregate test results found for SUSE:Maintenance:2:200" in messages
     assert "No aggregate test results found for SUSE:Maintenance:3:300" in messages
@@ -318,7 +353,7 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS" in messages
+    assert "Start approving incidents in IBS or Gitea" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance" not in messages
     assert "End of bot run" in messages
@@ -326,14 +361,21 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_403_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+def test_403_response(
+    fake_qem,
+    fake_two_passed_jobs,
+    fake_responses_for_creating_pr_review,
+    f_osconf,
+    caplog,
+    monkeypatch,
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
+    assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received 'Not allowed'. Request 100 likely already approved, ignoring"
@@ -350,7 +392,7 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received 'Not Found'. Request 100 removed or problem on OBS side: review state"
@@ -367,7 +409,7 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side"
@@ -386,21 +428,28 @@ def test_osc_unknown_exception(
         raise Exception("Fake OBS exception")
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 1
+    assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fake OBS exception" in messages, "Fake OBS exception"
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+def test_osc_all_pass(
+    fake_qem,
+    fake_two_passed_jobs,
+    fake_responses_for_creating_pr_review,
+    f_osconf,
+    caplog,
+    monkeypatch,
+):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
         pass
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
-    assert Approver(_namespace(False, "123", False, openqa_instance_url, None))() == 0
+    assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Incidents to approve:" in messages, "start of run must be marked explicitly"
     assert "End of bot run" in messages, "end of run must be marked explicitly"
@@ -409,12 +458,15 @@ def test_osc_all_pass(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
         "* SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
+        "* git:5",
         "Accepting review for SUSE:Maintenance:1:100",
         "Accepting review for SUSE:Maintenance:2:200",
         "Accepting review for SUSE:Maintenance:3:300",
         "Accepting review for SUSE:Maintenance:4:400",
+        "Accepting review for git:5",
     ]:
         assert i in messages, "individual reviews must be mentioned in logs"
+    assert len(responses.calls) == 76
 
 
 @pytest.fixture(scope="function")

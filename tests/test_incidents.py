@@ -60,6 +60,7 @@ class MyIncident_0(object):
         self.packages = [None]
         self.rrid = None
         self.revisions = {("", ""): None}
+        self.project = None
 
     def revisions_with_fallback(self, arch, version):
         pass

@@ -1,0 +1,155 @@
+[
+      {
+            "id": 1096,
+            "url": "https://src.suse.de/products/SLFO/pulls/131",
+            "number": 131,
+            "user": {"id": 54, "login": "…"},
+            "title": "_config: Drop python311 from %pythons (DR#374131)",
+            "body": "…",
+            "labels": [],
+            "requested_reviewers": null,
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 1082,
+            "url": "https://src.suse.de/products/SLFO/pulls/129",
+            "number": 129,
+            "user": {"id": 1, "login": "…"},
+            "title": "fix_sles_16_branching",
+            "body": "Fixing issues we will run into when we branch from main.\r\n\r\nThe new macro will require a deployment of current OBS code base, so don't merge it before.\r\n\r\nThis requests includes commits from https://src.suse.de/products/SLFO/pulls/128 to avoid merge conflicts.",
+            "labels": [],
+            "requested_reviewers": null,
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 1081,
+            "url": "https://src.suse.de/products/SLFO/pulls/128",
+            "number": 128,
+            "user": {"id": 1, "login": "…"},
+            "title": "fix_libarchive_for_i586",
+            "body": "Get libarchive building on i586\r\n\r\nRemoving big chunks of config, which are not used in SLFO, but leading to a lot of confusion.",
+            "labels": [],
+            "requested_reviewers": [{"id": 45, "login": "…"}],
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 975,
+            "url": "https://src.suse.de/products/SLFO/pulls/124",
+            "number": 124,
+            "user": {"id": 31, "login": "…"},
+            "title": "New Dummy test",
+            "body": "",
+            "labels": [],
+            "requested_reviewers": [{"id": 377, "login": "autogits_obs_staging_bot"}],
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 966,
+            "url": "https://src.suse.de/products/SLFO/pulls/123",
+            "number": 123,
+            "user": {"id": 9, "login": "…"},
+            "title": "Cleanup python related prefers",
+            "body": "There is no python 3.8, 3.9, 3.10 or 3.12 in SLFO. we're on the way\r\nmoving out 3.11 so everything should prefer 3.13 and everything else\r\ndepreferred",
+            "labels": [],
+            "requested_reviewers": null,
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 939,
+            "url": "https://src.suse.de/products/SLFO/pulls/120",
+            "number": 120,
+            "user": {"id": 31, "login": "…"},
+            "title": "Test commit for Merge Request",
+            "body": "",
+            "labels": [],
+            "requested_reviewers": [{"id": 54, "login": "autogits_obs_staging_bot"}],
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      },
+      {
+            "id": 842,
+            "url": "https://src.suse.de/products/SLFO/pulls/107",
+            "number": 107,
+            "user": {"id": 171, "login": "…"},
+            "title": "Testing reviews",
+            "body": "Testing reviews",
+            "labels": [],
+            "requested_reviewers": [{"id": 54, "login": "…"}, {"id": 65, "login": "…"}, {"id": 27, "login": "…"}],
+            "requested_reviewers_teams": null,
+            "state": "open",
+            "draft": false,
+            "is_locked": false,
+            "base": {
+                  "repo": {
+                        "id": 14799,
+                        "name": "SLFO",
+                        "full_name": "products/SLFO",
+                        "description": "Import of SLFO standard sources. This time in a SHA256 git repository."
+                  }
+            }
+      }
+]
