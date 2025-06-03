@@ -25,15 +25,11 @@ def create_logger(name: str) -> logging.Logger:
 
 def get_yml_list(path: Path) -> List[Path]:
     """Create a list of YML filenames from a folder or single file path."""
-    yml_list = []
-    extensions = ("yml", "yaml")
-    for ext in extensions:
-        if path.is_file():
-            if path.name.endswith("." + ext):
-                yml_list.append(path)
-        elif path.is_dir():
-            yml_list += list(path.glob("*." + ext))
-    return yml_list
+    return (
+        [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)]
+        if path.is_dir()
+        else [path]
+    )
 
 
 def walk(inc):
