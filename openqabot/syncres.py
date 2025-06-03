@@ -10,6 +10,7 @@ from .loader.qem import post_job
 from .openqa import openQAInterface
 from .types import Data
 from .utils import normalize_results
+from . import ALLOW_DEVELOPMENT_GROUPS
 
 log = getLogger("bot.syncres")
 
@@ -45,7 +46,7 @@ class SyncRes:
         return ret
 
     def _is_in_devel_group(self, data: Data) -> bool:
-        return (
+        return not ALLOW_DEVELOPMENT_GROUPS and (
             "Devel" in data["group"]
             or "Test" in data["group"]
             or self.client.is_devel_group(data["group_id"])
