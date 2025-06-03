@@ -107,6 +107,11 @@ def review_pr(
     post_json(reviews_url(repo_name, pr_number), token, review_data)
 
 
+def get_name(review: Dict[str, Any], of: str, via: str):
+    entity = review.get(of)
+    return entity.get(via, "") if entity is not None else ""
+
+
 def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     approvals = 0
     changes_requested = 0
@@ -120,8 +125,10 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
             continue
         # accumulate number of reviews per state
         state = review.get("state", "")
-        team = review.get("team")
-        if team is not None and team.get("name", "") == OBS_GROUP:
+        if OBS_GROUP in (
+            get_name(review, "user", "login"),  # concrete review via our bot account
+            get_name(review, "team", "name"),  # review request for team bot is part of
+        ):
             reviews_by_qam += 1
             if state == "APPROVED":
                 approvals += 1
