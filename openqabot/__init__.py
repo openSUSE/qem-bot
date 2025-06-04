@@ -5,7 +5,7 @@ import os
 
 # Used configuration parameters, e.g. api url's
 QEM_DASHBOARD = os.environ.get("QEM_DASHBOARD_URL", "http://dashboard.qam.suse.de/")
-SMELT_URL = os.environ.get("SMELT_URL", "https://smelt.suse.de/graphql")
+SMELT_URL = os.environ.get("SMELT_URL", "https://smelt.suse.de")
 SMELT = SMELT_URL + "/graphql"
 GITEA = os.environ.get("GITEA_URL", "https://src.suse.de")
 OBS_URL = os.environ.get("OBS_URL", "https://api.suse.de")
