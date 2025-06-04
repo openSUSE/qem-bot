@@ -44,4 +44,6 @@ class GiteaSync:
         if self.dry:
             log.info("Dry run, nothing synced")
             return 0
-        return update_incidents(self.dashboard_token, data, retry=self.retry)
+        return update_incidents(
+            self.dashboard_token, data, params={"type": "git"}, retry=self.retry
+        )
