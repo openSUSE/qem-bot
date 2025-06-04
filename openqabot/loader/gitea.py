@@ -300,7 +300,7 @@ def make_incident_from_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
-            log.info("Skipping PR %s, no review by ", number)
+            log.info("Skipping PR %s, no reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(incident, comments, dry)
         if len(incident["channels"]) == 0:
