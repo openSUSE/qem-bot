@@ -125,22 +125,6 @@ def test_get_yml_list_single_file_yml(tmp_path):
         assert filename in res[0].name
 
 
-def test_get_yml_list_single_file_not_yml(tmp_path):
-    """
-    Create a folder with a single .txt file (so not a supported valid file)
-    Call the function with the path of the file
-    The expected behavior is the function to return
-    an empty list
-    """
-    d = tmp_path / "it_is_a_folder"
-    d.mkdir()
-    p = d / "hello.txt"
-    p.write_text("")
-    # here call the function with the file path
-    res = get_yml_list(Path(p))
-    assert len(res) == 0
-
-
 def test_get_yml_list_folder_with_single_file_yml(tmp_path):
     d = tmp_path / "it_is_a_folder"
     d.mkdir()

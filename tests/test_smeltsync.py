@@ -2,6 +2,7 @@ from collections import namedtuple
 import logging
 import re
 
+from responses import matchers
 import pytest
 import responses
 
@@ -86,6 +87,7 @@ def fake_dashboard_replyback():
         responses.PATCH,
         re.compile(f"{QEM_DASHBOARD}api/incidents"),
         callback=reply_callback,
+        match=[matchers.query_param_matcher({})],
     )
 
 

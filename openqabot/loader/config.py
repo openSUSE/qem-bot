@@ -22,6 +22,12 @@ def load_metadata(
 
     loader = YAML(typ="safe")
 
+    log.debug(
+        "Loading meta-data from %s (with incidents: %r, with aggregates: %r)",
+        path,
+        not incidents,
+        not aggregate,
+    )
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
@@ -32,7 +38,7 @@ def load_metadata(
         try:
             settings = data.get("settings")
         except AttributeError:
-            # not valid yaml for bot settings
+            log.error("The YAML file '%s' contains no valid data for bot settings.", p)
             continue
 
         if "product" not in data:
@@ -52,6 +58,7 @@ def load_metadata(
                         log.warning("No 'test_issues' in %s config", data["product"])
                 else:
                     continue
+    log.debug("Loaded %i incidents/aggregates", len(ret))
     return ret
 
 
@@ -59,6 +66,7 @@ def read_products(path: Path) -> List[Data]:
     loader = YAML(typ="safe")
     ret = []
 
+    log.debug("Loading products from %s", path)
     for p in get_yml_list(path):
         data = loader.load(p)
 

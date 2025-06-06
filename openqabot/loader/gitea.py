@@ -107,6 +107,11 @@ def review_pr(
     post_json(reviews_url(repo_name, pr_number), token, review_data)
 
 
+def get_name(review: Dict[str, Any], of: str, via: str):
+    entity = review.get(of)
+    return entity.get(via, "") if entity is not None else ""
+
+
 def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     approvals = 0
     changes_requested = 0
@@ -120,8 +125,10 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
             continue
         # accumulate number of reviews per state
         state = review.get("state", "")
-        team = review.get("team")
-        if team is not None and team.get("name", "") == OBS_GROUP:
+        if OBS_GROUP in (
+            get_name(review, "user", "login"),  # concrete review via our bot account
+            get_name(review, "team", "name"),  # review request for team bot is part of
+        ):
             reviews_by_qam += 1
             if state == "APPROVED":
                 approvals += 1
@@ -293,7 +300,7 @@ def make_incident_from_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
-            log.info("Skipping PR %s, no review by ", number)
+            log.info("Skipping PR %s, no reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(incident, comments, dry)
         if len(incident["channels"]) == 0:

@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 import logging
 import re
 
-from responses import GET
+from responses import GET, matchers
 import osc.conf
 import osc.core
 import pytest
@@ -58,6 +58,7 @@ def fake_dashboard_replyback():
         responses.PATCH,
         re.compile(f"{QEM_DASHBOARD}api/incidents"),
         callback=reply_callback,
+        match=[matchers.query_param_matcher({"type": "git"})],
     )
 
 

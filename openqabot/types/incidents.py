@@ -12,6 +12,11 @@ from .incident import Incident
 
 log = getLogger("bot.types.incidents")
 
+DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/"
+DOWNLOAD_SLFO = DOWNLOAD_BASE + "SLFO:/"
+DOWNLOAD_MAINTENANCE = DOWNLOAD_BASE + "Maintenance:/"
+BASE_PRIO = 50
+
 
 class Incidents(BaseConf):
     def __init__(self, product: str, settings, config, extrasettings: Set[str]) -> None:
@@ -76,6 +81,13 @@ class Incidents(BaseConf):
 
         return False
 
+    def _make_repo_url(self, inc: Incident, chan: Repos):
+        return (
+            f"{DOWNLOAD_SLFO}{chan.version}:/PullRequest:/{inc.id}:/SLES/standard/"
+            if chan.product == "SLFO"
+            else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
+        )
+
     def _handle_incident(  # pylint: disable=too-many-return-statements
         self,
         inc: Incident,
@@ -86,8 +98,6 @@ class Incidents(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> Dict[str, Any]:
-        DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/"
-        BASE_PRIO = 50
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info(
                 "Incident %s is embargoed and filtering embargoed updates enabled",
@@ -199,12 +209,8 @@ class Incidents(BaseConf):
         for key, value in issue_dict.items():
             full_post["openqa"][key] = str(value.id)
 
-        repos = (
-            f"{DOWNLOAD_BASE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
-            for chan in channels_set
-        )
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(repos)
+            sorted(self._make_repo_url(inc, chan) for chan in channels_set)
         )  # sorted for testability
 
         full_post["qem"]["withAggregate"] = True
