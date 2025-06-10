@@ -197,6 +197,7 @@ class Incidents(BaseConf):
                         "LTSS_TEST_ISSUES",  # LTSS product dir
                         "BASE_TEST_ISSUES",  # GA product dir SLE15+
                         "RT_TEST_ISSUES",  # realtime kernel
+                        "COCO_TEST_ISSUES",  # Confidential Computing kernel
                     ]
                 )
             ):
