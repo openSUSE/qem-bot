@@ -61,8 +61,10 @@ updates information about incidents and related openQA tests.
   failed then qem-bot approves in IBS (`inc-approve`)
 
 ### Deployment
-
-See https://gitlab.suse.de/qa-maintenance/bot-ng/-/blob/master/Readme.md
+This script is *not* a service that is running constantly at some host. So the
+"deployment" is only done in form of regularly scheduled CI jobs. See
+https://gitlab.suse.de/qa-maintenance/bot-ng/-/blob/master/Readme.md for the
+SUSE-internal CI setup.
 
 ## Misc
 
