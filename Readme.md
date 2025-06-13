@@ -147,13 +147,16 @@ Feel free to add issues in github or send pull requests.
 ### Rules for commits
 
 * For git commit messages use the rules stated on
-  [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/) as
-  a reference
+  [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/)
+  as a reference.
+* Run `black .` before committing changes to format code according to our
+  standards. Preferably also run other tests as described in the subsequent
+  section.
 * As a SUSE colleague consider signing commits which we consider to use for
-  automatic deployments within SUSE
+  automatic deployments within SUSE.
 
-If this is too much hassle for you feel free to provide incomplete pull
-requests for consideration or create an issue with a code change proposal.
+If this is too much hassle for you feel free to provide incomplete pull requests
+for consideration or create an issue with a code change proposal.
 
 ### Local testing
 
@@ -162,13 +165,11 @@ way to get them is via pip:
 
     pip install -r requirements-dev.txt
 
-There are currently only limited automatic tests available. Call
+There are currently only limited automatic tests available. Run `make test`
+or `pytest` to execute Python-based unit tests. Run e.g.
+`pytest tests/test_amqp.py` to execute a single test.
 
-```
-make test
-```
-
-to execute all tests.
+Run `make checkstyle` to check coding style and `make lint` for linting.
 
 Another simple way for at least syntax correctness checks is to just call
 `./bot-ng.py --help` to show the help text if the source can be correctly
@@ -187,6 +188,76 @@ This should walk over the list of current incidents pending approval.
 
 It is possible to run qem-bot inside container, please see
 [docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
+
+#### Local integration testing with qem-dashboard and openQA
+Checkout [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
+the instructions from its README to setup up. Then all you need to do to start
+the dashboard is:
+
+```
+mojo webpack script/dashboard
+```
+
+---
+
+For setting up openQA you can follow its
+[installation guide](https://open.qa/docs/#installing) or go all in and also
+[create a development setup for openQA](https://open.qa/docs/#development-setup).
+
+---
+
+The first bot command you want to invoke is one of the `…-sync` commands, e.g.
+the following one to sync Gitea PRs into the dashboard:
+
+```
+./bot-ng.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
+```
+
+The `--fake-data` switch means that it will not actually query Gitea and just
+use some fake data instead. You can leave it out to test the integration with
+Gitea as well.
+
+---
+
+Then you can trigger some openQA tests specifying some metadata:
+
+```
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' incidents-run
+```
+
+The YAML document containing metadata can look like
+[this](https://progress.opensuse.org/issues/180812#note-24). Of course this
+needs according product definitions, test suites and a job group with job
+templates on openQA for any jobs to be actually scheduled. Using scenario
+definitions would also generally be possible but hasn't been tried yet.
+
+---
+
+Then you can sync back the result of the openQA tests to the dashboard:
+
+```
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-sync-results
+```
+
+To fake test results you can use an SQL command like
+`update jobs set state = 'done', result = 'softfailed' where state = 'scheduled';`
+on your local openQA database.
+
+If you want to re-try these steps from scratch you need to clean-up incident
+settings from the qem-dashboard database with an SQL command like
+`delete from incident_openqa_settings where id >= …;`.
+
+---
+
+You can also finally approve incidents/PRs based on the openQA test results,
+e.g.:
+
+```
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-approve
+```
+
+If you want to approve incidents for real you have to leave out the `--dry` flag
+of course. Then a token with write-permissions is required.
 
 ## License
 
