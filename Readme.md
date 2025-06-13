@@ -1,8 +1,12 @@
 [![ci](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/openSUSE/qem-bot/branch/master/graph/badge.svg?token=LTQET0ZPBG)](https://codecov.io/gh/openSUSE/qem-bot)
 # bot-ng
+"bot-ng" or "qem-bot" is a tool for scheduling maintenance tests on openQA based
+on [SMELT](https://tools.io.suse.de/smelt) incidents and Gitea PRs.
 
-tool for schedule maintenance jobs + sync SMELT/OpenQA to QEM-Dashboard
+It is tightly coupled with
+[qem-dashboard](https://github.com/openSUSE/qem-dashboard) where it reads and
+updates information about incidents and related openQA tests.
 
 ## Usage:
 
