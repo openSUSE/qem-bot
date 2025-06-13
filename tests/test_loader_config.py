@@ -43,8 +43,8 @@ def test_load_metadata_incidents(caplog):
 
     assert "<Incidents product: SOME15SP3>" == str(result[0])
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert "Skipping invalid config" in messages[1]
+    messages = [m[-1] for m in caplog.record_tuples if m[-1].startswith("Skipping")]
+    assert "Skipping invalid config" in messages[0]
 
 
 def test_load_metadata_all(caplog):
