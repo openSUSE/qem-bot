@@ -152,7 +152,7 @@ class Incidents(BaseConf):
 
         log.debug("Incident channels: %s", inc.channels)
         for issue, channel in data["issues"].items():
-            log.info(
+            log.debug(
                 "Meta-data channel: %s, %s, %s", channel.product, channel.version, arch
             )
             f_channel = Repos(channel.product, channel.version, arch)
