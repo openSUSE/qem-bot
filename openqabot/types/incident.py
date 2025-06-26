@@ -19,6 +19,11 @@ class Incident:
         self.id = incident["number"]
         self.rrid = f"{self.project}:{self.rr}" if self.rr else None
         self.staging = not incident["inReview"]
+        self.ongoing = (
+            incident["isActive"]
+            and incident["inReviewQAM"]
+            and not incident["approved"]
+        )
         self.embargoed = incident["embargoed"]
         self.priority = incident.get("priority")
         self.type = incident.get("type", "smelt")

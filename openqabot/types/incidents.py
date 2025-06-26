@@ -98,6 +98,12 @@ class Incidents(BaseConf):
         ci_url: Optional[str],
         ignore_onetime: bool,
     ) -> Dict[str, Any]:
+        if inc.type == "git" and not inc.ongoing:
+            log.info(
+                "Scheduling no jobs for incident %s as the PR is either closed, approved or review is no longer requested.",
+                inc.id,
+            )
+            return None
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info(
                 "Incident %s is embargoed and filtering embargoed updates enabled",

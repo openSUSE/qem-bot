@@ -61,6 +61,8 @@ class MyIncident_0(object):
         self.rrid = None
         self.revisions = {("", ""): None}
         self.project = None
+        self.ongoing = True
+        self.type = "smelt"
 
     def revisions_with_fallback(self, arch, version):
         pass
