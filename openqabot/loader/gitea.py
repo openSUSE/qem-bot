@@ -206,13 +206,13 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
                     failed_packages,
                 )
     if len(unpublished_repos) > 0:
-        log.warning(
+        log.info(
             "Some repos for PR %i have not been published yet: %s",
             incident["number"],
             ", ".join(unpublished_repos),
         )
     if len(failed_packages) > 0:
-        log.warning(
+        log.info(
             "Some packages for PR %i have failed: %s",
             incident["number"],
             ", ".join(failed_packages),

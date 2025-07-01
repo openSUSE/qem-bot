@@ -83,7 +83,7 @@ class Incidents(BaseConf):
 
     def _make_repo_url(self, inc: Incident, chan: Repos):
         return (
-            f"{DOWNLOAD_SLFO}{chan.version}:/PullRequest:/{inc.id}:/SLES/standard/"
+            f"{DOWNLOAD_SLFO}{chan.version}:/PullRequest:/{inc.id}/standard/"
             if chan.product == "SLFO"
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
