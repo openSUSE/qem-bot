@@ -155,22 +155,28 @@ def add_build_result(
     failed_packages: Set[str],
 ):
     state = res.get("state")
-    if state != "published":
-        unpublished_repos.add("@".join([res.get("project"), res.get("arch")]))
-        return
+    project = res.get("project")
     for scminfo_element in res.findall("scminfo"):
         found_scminfo = scminfo_element.text
-        existing_scminfo = incident.get("scminfo", None)
+        project_match = re.search(".*:PullRequest:\\d+:(.*)", project)
+        scm_info_key = (
+            "scminfo_" + project_match.group(1) if project_match else "scminfo"
+        )
+        existing_scminfo = incident.get(scm_info_key, None)
         if len(found_scminfo) > 0:
             if existing_scminfo is None or found_scminfo == existing_scminfo:
-                incident["scminfo"] = found_scminfo
+                incident[scm_info_key] = found_scminfo
             else:
                 log.warning(
-                    "Found inconsistent scminfo for PR %i, found '%s' and previously got '%s'",
+                    "Found inconsistent scminfo for PR %i and project %s, found '%s' and previously got '%s'",
                     incident["number"],
+                    project,
                     found_scminfo,
                     existing_scminfo,
                 )
+    if state != "published":
+        unpublished_repos.add("@".join([project, res.get("arch")]))
+        return
     for status in res.findall("status"):
         code = status.get("code")
         if code == "excluded":

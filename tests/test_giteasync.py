@@ -107,4 +107,5 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert incident["approved"] == False
     assert incident["embargoed"] == False
     assert incident["priority"] == 0
-    assert "18bfa2a23fb7985d5d0" in incident["scminfo"]
+    assert "f229fea352e8f268960" in incident["scminfo"]
+    assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
