@@ -114,8 +114,10 @@ class Incidents(BaseConf):
     ) -> Dict[str, Any]:
         if inc.type == "git" and not inc.ongoing:
             log.info(
-                "Scheduling no jobs for incident %s as the PR is either closed, approved or review is no longer requested.",
+                "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
                 inc.id,
+                arch,
+                flavor,
             )
             return None
         if self.filter_embargoed(flavor) and inc.embargoed:
