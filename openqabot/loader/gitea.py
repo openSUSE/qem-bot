@@ -156,12 +156,10 @@ def add_build_result(
 ):
     state = res.get("state")
     project = res.get("project")
+    project_match = re.search(".*:PullRequest:\\d+:(.*)", project)
+    scm_info_key = "scminfo_" + project_match.group(1) if project_match else "scminfo"
     for scminfo_element in res.findall("scminfo"):
         found_scminfo = scminfo_element.text
-        project_match = re.search(".*:PullRequest:\\d+:(.*)", project)
-        scm_info_key = (
-            "scminfo_" + project_match.group(1) if project_match else "scminfo"
-        )
         existing_scminfo = incident.get(scm_info_key, None)
         if len(found_scminfo) > 0:
             if existing_scminfo is None or found_scminfo == existing_scminfo:
@@ -174,6 +172,9 @@ def add_build_result(
                     found_scminfo,
                     existing_scminfo,
                 )
+    # require codestream builds to be successful and published …
+    if project_match:
+        return  # … but skip those checks for project-specific builds/repos as we do not use them anyway
     if state != "published":
         unpublished_repos.add("@".join([project, res.get("arch")]))
         return
