@@ -4,11 +4,13 @@ from hashlib import md5
 from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
+import re
 
 from requests import ConnectionError, HTTPError
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL
+from .gitea import PROJECT_REGEX
 from ..errors import NoRepoFoundError
 from ..utils import retry5 as requests
 
@@ -27,7 +29,11 @@ def get_max_revision(
     for repo in repos:
         # handle URLs for SLFO specifically
         if project == "SLFO":
+            # assing something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
             url = f"{OBS_DOWNLOAD_URL}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/standard/repodata/repomd.xml"
+            if re.search(PROJECT_REGEX, repo[1]):
+                log.info("skipping repohash of product-specifc repo '%s'" % url)
+                continue  # skip product repositories here (only consider code stream repositories)
         # openSUSE and SLE incidents have different handling of architecture
         elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
