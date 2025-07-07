@@ -27,7 +27,7 @@
         "state": "REQUEST_REVIEW",
         "body": "",
         "commit_id": "",
-        "stale": false,
+        "stale": true,
         "official": false,
         "dismissed": false,
         "submitted_at": "2025-04-30T15:14:33+02:00",

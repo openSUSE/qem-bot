@@ -120,8 +120,8 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     pending_qam = 0
     reviews_by_qam = 0
     for review in reviews:
-        # ignore stale and dismissed reviews
-        if review.get("stale", True) or review.get("dismissed", True):
+        # ignore dismissed reviews
+        if review.get("dismissed", True):
             continue
         # accumulate number of reviews per state
         state = review.get("state", "")
