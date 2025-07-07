@@ -88,6 +88,7 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     args = _namespace(False, False, "123", "456", False, "products/SLFO", True, False)
     assert GiteaSync(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
+    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
     assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
     assert "Getting info about PR 131 from Gitea" in messages
     assert "Updating info about 1 incidents" in messages
@@ -96,9 +97,11 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     incident = responses.calls[-1].response.json()[0]
     assert incident["number"] == 124
     assert incident["packages"] == ["tree"]
-    assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:x86_64" in incident["channels"]
-    assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:aarch64" in incident["channels"]
-    assert "SUSE:SLFO:1.1.99:PullRequest:124:SLES:ppc64le" in incident["channels"]
+    channels = incident["channels"]
+    failed_or_unpublished = incident["failed_or_unpublished_packages"]
+    for arch in ["ppc64le", "aarch64", "x86_64"]:
+        assert ":".join((expected_repo, arch)) in channels
+        assert "@".join((expected_repo, arch)) in failed_or_unpublished
     assert incident["project"] == "SLFO"
     assert incident["url"] == "https://src.suse.de/products/SLFO/pulls/124"
     assert incident["inReview"] == True
