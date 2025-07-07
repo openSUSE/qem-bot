@@ -17,6 +17,8 @@ import osc.util.xml
 from ..utils import retry10 as requests
 from .. import GITEA, OBS_GROUP, OBS_URL
 
+PROJECT_REGEX = ".*:PullRequest:\\d+:(.*)"
+
 log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -156,7 +158,7 @@ def add_build_result(
 ):
     state = res.get("state")
     project = res.get("project")
-    project_match = re.search(".*:PullRequest:\\d+:(.*)", project)
+    project_match = re.search(PROJECT_REGEX, project)
     scm_info_key = "scminfo_" + project_match.group(1) if project_match else "scminfo"
     for scminfo_element in res.findall("scminfo"):
         found_scminfo = scminfo_element.text
