@@ -7,14 +7,14 @@ from . import ProdVer, Repos
 from .. import QEM_DASHBOARD, GITEA, SMELT_URL
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
+from ..loader import gitea
 from .baseconf import BaseConf
 from .incident import Incident
 
 log = getLogger("bot.types.incidents")
 
-DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/"
-DOWNLOAD_SLFO = DOWNLOAD_BASE + "SLFO:/"
-DOWNLOAD_MAINTENANCE = DOWNLOAD_BASE + "Maintenance:/"
+DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs"
+DOWNLOAD_MAINTENANCE = DOWNLOAD_BASE + "/SUSE:/Maintenance:/"
 BASE_PRIO = 50
 
 
@@ -28,6 +28,12 @@ class Incidents(BaseConf):
         return f"<Incidents product: {self.product}>"
 
     @staticmethod
+    def product_version_from_issue_channel(issue: str) -> ProdVer:
+        channel_parts = issue.split(":")
+        version_parts = channel_parts[1].split("#")
+        return ProdVer(channel_parts[0], *version_parts)
+
+    @staticmethod
     def normalize_repos(config):
         ret = {}
         for flavor, data in config.items():
@@ -35,7 +41,7 @@ class Incidents(BaseConf):
             for key, value in data.items():
                 if key == "issues":
                     ret[flavor][key] = {
-                        template: ProdVer(channel.split(":")[0], channel.split(":")[1])
+                        template: Incidents.product_version_from_issue_channel(channel)
                         for template, channel in value.items()
                     }
                 else:
@@ -83,8 +89,8 @@ class Incidents(BaseConf):
 
     def _make_repo_url(self, inc: Incident, chan: Repos):
         return (
-            f"{DOWNLOAD_SLFO}{chan.version}:/PullRequest:/{inc.id}/standard/"
-            if chan.product == "SLFO"
+            gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan)
+            if chan.product == "SUSE:SLFO"
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
@@ -159,18 +165,24 @@ class Incidents(BaseConf):
         log.debug("Incident channels: %s", inc.channels)
         for issue, channel in data["issues"].items():
             log.debug(
-                "Meta-data channel: %s, %s, %s", channel.product, channel.version, arch
+                "Meta-data channel: %s, %s, %s",
+                channel.product,
+                "#".join((channel.version, channel.product_version)),
+                arch,
             )
-            f_channel = Repos(channel.product, channel.version, arch)
+            f_channel = Repos(
+                channel.product, channel.version, arch, channel.product_version
+            )
             if channel.product == "SLFO":
                 for inc_channel in inc.channels:
                     if (
                         inc_channel.product == "SUSE:SLFO"
                         and inc_channel.version.startswith(channel.version)
+                        and channel.product_version in ("", inc_channel.product_version)
                         and inc_channel.arch == arch
                     ):
                         issue_dict[issue] = inc
-                        channels_set.add(f_channel)
+                        channels_set.add(inc_channel)
             elif f_channel in inc.channels:
                 issue_dict[issue] = inc
                 channels_set.add(f_channel)

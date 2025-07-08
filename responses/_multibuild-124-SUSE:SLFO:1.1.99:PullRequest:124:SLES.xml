@@ -1,0 +1,15 @@
+<multibuild>
+ <flavor>sles_aarch64</flavor>
+ <flavor>sles_x86_64</flavor>
+
+ <flavor>sles_offline_aarch64</flavor>
+ <flavor>sles_offline_x86_64</flavor>
+
+ <flavor>sles_sap_x86_64</flavor>
+
+ <flavor>sles_ha_aarch64</flavor>
+ <flavor>sles_ha_x86_64</flavor>
+
+ <flavor>sles_online_aarch64</flavor>
+ <flavor>sles_online_x86_64</flavor>
+</multibuild>

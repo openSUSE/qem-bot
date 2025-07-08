@@ -4,15 +4,14 @@ from hashlib import md5
 from logging import getLogger
 from typing import List, Tuple
 from xml.etree import ElementTree as ET
-import re
 
 from requests import ConnectionError, HTTPError
 from requests.exceptions import RetryError
 
-from .. import OBS_DOWNLOAD_URL
-from .gitea import PROJECT_REGEX
+from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
 from ..errors import NoRepoFoundError
 from ..utils import retry5 as requests
+from . import gitea
 
 log = getLogger("bot.loader.repohash")
 
@@ -23,17 +22,21 @@ def get_max_revision(
     project: str,
 ) -> int:
     max_rev = 0
-
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
 
     for repo in repos:
         # handle URLs for SLFO specifically
         if project == "SLFO":
-            # assing something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
-            url = f"{OBS_DOWNLOAD_URL}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/standard/repodata/repomd.xml"
-            if re.search(PROJECT_REGEX, repo[1]):
-                log.info("skipping repohash of product-specifc repo '%s'" % url)
-                continue  # skip product repositories here (only consider code stream repositories)
+            product_name = gitea.get_product_name(repo[1])
+            if product_name not in OBS_PRODUCTS:
+                log.info(
+                    "skipping repo '%s' as product '%s' is not considered",
+                    repo[1],
+                    product_name,
+                )
+                continue
+            url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
+            log.debug("computing repohash for '%s' via: %s", repo[1], url)
         # openSUSE and SLE incidents have different handling of architecture
         elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
@@ -58,7 +61,6 @@ def get_max_revision(
         if cs is None:
             log.error("%s's revision is None", url)
             raise NoRepoFoundError
-
         max_rev = max(max_rev, int(str(cs.text)))
 
     return max_rev

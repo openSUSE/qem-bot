@@ -58,7 +58,7 @@ class Incident:
         ]
         # add channels for Gitea-based incidents
         self.channels += [
-            Repos(":".join(val[0:2]), ":".join(val[2:-1]), val[-1])
+            Repos(":".join(val[0:2]), ":".join(val[2:-1]), *(val[-1].split("#")))
             for val in (
                 r.split(":")
                 for r in (i for i in incident["channels"] if i.startswith("SUSE:SLFO"))
@@ -110,12 +110,11 @@ class Incident:
             if v:
                 version = v.group(0)
 
+            repo_info = (repo.product, repo.version, repo.product_version)
             if ArchVer(repo.arch, version) in tmpdict:
-                tmpdict[ArchVer(repo.arch, version)].append(
-                    (repo.product, repo.version)
-                )
+                tmpdict[ArchVer(repo.arch, version)].append(repo_info)
             else:
-                tmpdict[ArchVer(repo.arch, version)] = [(repo.product, repo.version)]
+                tmpdict[ArchVer(repo.arch, version)] = [repo_info]
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():

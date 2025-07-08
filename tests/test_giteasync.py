@@ -13,7 +13,8 @@ import responses
 
 from openqabot import QEM_DASHBOARD, OBS_URL
 from openqabot.giteasync import GiteaSync
-from openqabot.loader.gitea import read_json, read_xml
+from openqabot.loader.gitea import read_utf8, read_json, read_xml
+import openqabot.loader.gitea
 
 # Fake Namespace for GiteaSync initialization
 _namespace = namedtuple(
@@ -78,17 +79,32 @@ def fake_osc_get_config(override_apiurl: str):
     assert override_apiurl == OBS_URL
 
 
-@responses.activate
-def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+def fake_get_multibuild_data(obs_project: str):
+    assert obs_project == "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+    return read_utf8("_multibuild-124-" + obs_project + ".xml")
+
+
+def run_gitea_sync(caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
     monkeypatch.setattr(osc.core, "http_GET", fake_osc_http_get)
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
+    monkeypatch.setattr(
+        openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data
+    )
     args = _namespace(False, False, "123", "456", False, "products/SLFO", True, False)
     assert GiteaSync(args)() == 0
+
+
+@responses.activate
+def test_sync_with_product_repo(
+    caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch
+):
+    run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
-    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
+    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+    assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
     assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
     assert "Getting info about PR 131 from Gitea" in messages
     assert "Updating info about 1 incidents" in messages
@@ -99,9 +115,10 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert incident["packages"] == ["tree"]
     channels = incident["channels"]
     failed_or_unpublished = incident["failed_or_unpublished_packages"]
-    for arch in ["ppc64le", "aarch64", "x86_64"]:
-        assert ":".join((expected_repo, arch)) in channels
-        assert "@".join((expected_repo, arch)) in failed_or_unpublished
+    for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
+        channel = "#".join([":".join((expected_repo, arch)), "15.99"])
+        assert channel in channels
+        assert channel in failed_or_unpublished
     assert incident["project"] == "SLFO"
     assert incident["url"] == "https://src.suse.de/products/SLFO/pulls/124"
     assert incident["inReview"] == True
@@ -110,5 +127,30 @@ def test_sync(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     assert incident["approved"] == False
     assert incident["embargoed"] == False
     assert incident["priority"] == 0
+
+    # expect the scminfo from the product repo of the configured product
+    assert "18bfa2a23fb7985d5d0" in incident["scminfo"]
+    assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+
+
+@responses.activate
+def test_sync_with_codestream_repo(
+    caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch
+):
+    monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
+    monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
+    run_gitea_sync(caplog, monkeypatch)
+
+    # expect the codestream repo to be used
+    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
+    incident = responses.calls[-1].response.json()[0]
+    channels = incident["channels"]
+    failed_or_unpublished = incident["failed_or_unpublished_packages"]
+    for arch in ["ppc64le", "aarch64", "x86_64"]:
+        channel = ":".join((expected_repo, arch))
+        assert channel in channels
+        assert channel in failed_or_unpublished
+
+    # expect the scminfo from the codestream repo
     assert "f229fea352e8f268960" in incident["scminfo"]
     assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]

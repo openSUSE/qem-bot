@@ -7,11 +7,13 @@ class Repos(NamedTuple):
     product: str
     version: str
     arch: str
+    product_version: str = ""  # if non-empty, "version" is the codestream version
 
 
 class ProdVer(NamedTuple):
     product: str
     version: str
+    product_version: str = ""  # if non-empty, "version" is the codestream version
 
 
 class Data(NamedTuple):

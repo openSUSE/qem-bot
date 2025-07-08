@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
-from typing import Any, List, Set, Dict
+from typing import Any, List, Set, Dict, Tuple
 import re
 import xml.etree.ElementTree as ET
 
@@ -10,14 +10,14 @@ import json
 import urllib3
 import urllib3.exceptions
 
+from osc.core import MultibuildFlavorResolver
 import osc.conf
 import osc.core
 import osc.util.xml
 
 from ..utils import retry10 as requests
-from .. import GITEA, OBS_GROUP, OBS_URL
-
-PROJECT_REGEX = ".*:PullRequest:\\d+:(.*)"
+from .. import GITEA, OBS_GROUP, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS
+from ..types import Repos
 
 log = getLogger("bot.loader.gitea")
 
@@ -51,6 +51,11 @@ def post_json(
         raise e
 
 
+def read_utf8(name: str) -> Any:
+    with open("responses/%s" % name, "r", encoding="utf8") as utf8:
+        return utf8.read()
+
+
 def read_json(name: str) -> Any:
     with open("responses/%s.json" % name, "r", encoding="utf8") as json_file:
         return json.loads(json_file.read())
@@ -73,6 +78,44 @@ def changed_files_url(repo_name: str, number: int):
 def comments_url(repo_name: str, number: int):
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueRemoveIssueBlocking
     return "repos/%s/issues/%s/comments" % (repo_name, number)
+
+
+def get_product_name(obs_project: str) -> str:
+    product_match = re.search(".*:PullRequest:\\d+:(.*)", obs_project)
+    return product_match.group(1) if product_match else ""
+
+
+def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, str]:
+    m = re.search(".*/products/(.*)#(.*)", scmsync_url)
+    return (m.group(1), m.group(2)) if m else ("", "")
+
+
+def compute_repo_url(
+    base: str,
+    product_name: str,
+    repo: Tuple[str, str, str],
+    arch: str,
+    path: str = "repodata/repomd.xml",
+) -> str:
+    # return codestream repo if product name is empty
+    if product_name == "":
+        # assing something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
+        return f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}/{path}"
+
+    # return product repo for specified product
+    # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
+    return f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}/repo/{product_name}-{repo[2]}-{arch}/{path}"
+
+
+def compute_repo_url_for_job_setting(base: str, repo: Repos) -> str:
+    product_name = get_product_name(repo.version)
+    return compute_repo_url(
+        base,
+        product_name,
+        (repo.product, repo.version, repo.product_version),
+        repo.arch,
+        "",
+    )
 
 
 def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
@@ -152,14 +195,18 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
 def add_build_result(
     incident: Dict[str, Any],
     res: Any,
+    projects: Set[str],
     successful_packages: Set[str],
     unpublished_repos: Set[str],
     failed_packages: Set[str],
 ):
     state = res.get("state")
     project = res.get("project")
-    project_match = re.search(PROJECT_REGEX, project)
-    scm_info_key = "scminfo_" + project_match.group(1) if project_match else "scminfo"
+    product_name = get_product_name(project)
+    arch = res.get("arch")
+    channel = ":".join([project, arch])
+    # read Git hash from scminfo element
+    scm_info_key = "scminfo_" + product_name if len(product_name) != 0 else "scminfo"
     for scminfo_element in res.findall("scminfo"):
         found_scminfo = scminfo_element.text
         existing_scminfo = incident.get(scm_info_key, None)
@@ -174,11 +221,20 @@ def add_build_result(
                     found_scminfo,
                     existing_scminfo,
                 )
-    # require codestream builds to be successful and published …
-    if project_match:
-        return  # … but skip those checks for project-specific builds/repos as we do not use them anyway
+    # read product version from scmsync element, e.g. 15.99
+    for scmsync_element in res.findall("scmsync"):
+        (_, product_version) = get_product_name_and_version_from_scmsync(
+            scmsync_element.text
+        )
+        if len(product_version) > 0:
+            channel = "#".join([channel, product_version])
+            break
+    projects.add(channel)
+    # require only relevant projects to be built/published
+    if product_name not in OBS_PRODUCTS:
+        return
     if state != "published":
-        unpublished_repos.add("@".join([project, res.get("arch")]))
+        unpublished_repos.add(channel)
         return
     for status in res.findall("status"):
         code = status.get("code")
@@ -190,6 +246,43 @@ def add_build_result(
             failed_packages.add(status.get("package"))
 
 
+def get_multibuild_data(obs_project: str):
+    r = MultibuildFlavorResolver(OBS_URL, obs_project, "000productcompose")
+    return r.get_multibuild_data()
+
+
+def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool):
+    # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
+    product_name = get_product_name(obs_project)
+    if product_name == "":
+        return None
+    product_prefix = product_name.replace(":", "_").lower() + "_"
+    prefix_len = len(product_prefix)
+    if dry:
+        multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
+    else:
+        try:
+            multibuild_data = get_multibuild_data(obs_project)
+        except Exception as e:
+            log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
+            return None
+
+    # determine from the flavors we got what architectures are actually expected to be present
+    # note: The build info will contain result elements for archs like `local` and `ppc64le` that and the published
+    #       flag set even though no repos for those products are actually present. Considering these would lead to
+    #       problems later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering
+    #       to actually relevant ones.
+    flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
+    relevant_archs = set()
+    for flavor in flavors:
+        if flavor.startswith(product_prefix):
+            arch = flavor[prefix_len:]
+            if arch in ("x86_64", "aarch64", "ppc64le", "s390x"):
+                relevant_archs.add(arch)
+    log.debug("Relevant archs for %s: %s", obs_project, str(sorted(relevant_archs)))
+    return relevant_archs
+
+
 def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
     successful_packages = set()
     unpublished_repos = set()
@@ -198,18 +291,26 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
     for url in obs_urls:
         project_match = re.search(".*/project/show/(.*)", url)
         if project_match:
+            obs_project = project_match.group(1)
+            relevant_archs = determine_relevant_archs_from_multibuild_info(
+                obs_project, dry
+            )
             build_info_url = osc.core.makeurl(
-                OBS_URL, ["build", project_match.group(1), "_result"]
+                OBS_URL, ["build", obs_project, "_result"]
             )
             if dry:
-                build_info = read_xml("build-results-124-" + project_match.group(1))
+                build_info = read_xml("build-results-124-" + obs_project)
             else:
                 build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
             for res in build_info.getroot().findall("result"):
-                projects.add(":".join([res.get("project"), res.get("arch")]))
+                if OBS_REPO_TYPE != "" and res.get("repository") != OBS_REPO_TYPE:
+                    continue
+                if relevant_archs is not None and res.get("arch") not in relevant_archs:
+                    continue
                 add_build_result(
                     incident,
                     res,
+                    projects,
                     successful_packages,
                     unpublished_repos,
                     failed_packages,
@@ -229,6 +330,8 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
     incident["channels"] = [*projects]
     incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos]
     incident["successful_packages"] = [*successful_packages]
+    if "scminfo" not in incident and len(OBS_PRODUCTS) == 1:
+        incident["scminfo"] = incident.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
 
 
 def add_comments_and_referenced_build_results(

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from openqabot.types.incidents import Incidents
+from openqabot.types import Repos
 from unittest import mock
 import pytest
 
@@ -124,7 +125,7 @@ def request_mock(monkeypatch):
 class MyIncident_2(MyIncident_1):
     def __init__(self):
         super().__init__()
-        self.channels = [("", "", "")]
+        self.channels = [Repos("", "", "")]
         self.emu = False
 
     def revisions_with_fallback(self, arch, version):
@@ -148,7 +149,7 @@ def test_incidents_call_with_channels(request_mock):
 class MyIncident_3(MyIncident_2):
     def __init__(self):
         super().__init__()
-        self.channels = [("", "", "")]
+        self.channels = [Repos("", "", "")]
         self.emu = False
 
     def contains_package(self, requires):

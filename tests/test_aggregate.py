@@ -89,6 +89,7 @@ def incident_mock(monkeypatch):
         product: str
         version: str
         arch: str
+        product_version: str = ""
 
     class MockIncident:
         def __init__(self, repo, embargoed):
