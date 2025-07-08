@@ -59,12 +59,7 @@ def get_max_revision(
             log.error("%s's revision is None", url)
             raise NoRepoFoundError
 
-        rev = int(str(cs.text))
-
-        max_rev = max(max_rev, rev)
-
-    if max_rev == 0:
-        raise NoRepoFoundError
+        max_rev = max(max_rev, int(str(cs.text)))
 
     return max_rev
 
