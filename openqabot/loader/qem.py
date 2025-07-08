@@ -44,7 +44,10 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
             xs.append(Incident(i))
         except NoRepoFoundError as e:
             log.info(
-                "Project %s can't calculate repohash %s .. skipping", i["project"], e
+                "Project %s can't calculate repohash of incident %i: %s .. skipping",
+                i["project"],
+                i["number"],
+                e,
             )
         except EmptyChannels:
             log.info(
