@@ -177,7 +177,11 @@ class Incidents(BaseConf):
                 for inc_channel in inc.channels:
                     if (
                         inc_channel.product == "SUSE:SLFO"
-                        and inc_channel.version.startswith(channel.version)
+                        and (
+                            channel.product_version == inc_channel.product_version
+                            if len(inc_channel.product_version) > 0
+                            else inc_channel.version.startswith(channel.version)
+                        )
                         and channel.product_version in ("", inc_channel.product_version)
                         and inc_channel.arch == arch
                     ):

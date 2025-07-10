@@ -29,4 +29,4 @@ class Data(NamedTuple):
 
 class ArchVer(NamedTuple):
     arch: str
-    version: str
+    version: str  # the product version (and not the codestream version) if present in the context ArchVer is used
