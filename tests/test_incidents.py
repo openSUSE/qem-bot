@@ -342,3 +342,9 @@ def test_making_repo_url():
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE_15.7_x86_64"
     repo = incs._make_repo_url(inc, Repos("openSUSE-SLE", "15.7", "x86_64"))
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE-SLE_15.7"
+    slfo_chan = Repos(
+        "SUSE:SLFO", "SUSE:SLFO:1.1.99:PullRequest:166:SLES", "x86_64", "15.99"
+    )
+    repo = incs._make_repo_url(inc, slfo_chan)
+    exp_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/"
+    assert repo == exp_repo

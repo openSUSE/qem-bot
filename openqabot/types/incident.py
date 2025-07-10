@@ -111,10 +111,12 @@ class Incident:
                 version = v.group(0)
 
             repo_info = (repo.product, repo.version, repo.product_version)
-            if ArchVer(repo.arch, version) in tmpdict:
-                tmpdict[ArchVer(repo.arch, version)].append(repo_info)
+            ver = repo.product_version or version
+            arch_ver = ArchVer(repo.arch, ver)
+            if arch_ver in tmpdict:
+                tmpdict[arch_ver].append(repo_info)
             else:
-                tmpdict[ArchVer(repo.arch, version)] = [repo_info]
+                tmpdict[arch_ver] = [repo_info]
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
