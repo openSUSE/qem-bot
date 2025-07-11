@@ -210,7 +210,7 @@ class Incidents(BaseConf):
 
         if not ignore_onetime and self._is_scheduled_job(token, inc, arch, self.settings["VERSION"], flavor):
             log.info(
-                "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA",
+                "not scheduling: Flavor: %s, version: %s incident: %s, arch: %s  - exists in openQA",
                 flavor,
                 self.settings["VERSION"],
                 inc.id,
