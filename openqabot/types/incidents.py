@@ -50,10 +50,10 @@ class Incidents(BaseConf):
         return ret
 
     @staticmethod
-    def _repo_osuse(chan: Repos) -> Union[Repos, Tuple[str, str]]:
+    def _repo_osuse(chan: Repos) -> Union[Tuple[str, str, str], Tuple[str, str]]:
         if chan.product == "openSUSE-SLE":
             return chan.product, chan.version
-        return chan
+        return chan.product, chan.version, chan.arch
 
     @staticmethod
     def _is_scheduled_job(

@@ -329,3 +329,16 @@ def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
     res = inc(incidents=[MyIncident_4()], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == 1
     assert "PUBLIC_CLOUD_IMAGE_ID" in res[0]["openqa"]
+
+
+def test_making_repo_url():
+    s = {"VERSION": "", "DISTRI": None}
+    c = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
+    incs = Incidents(product="", settings=s, config=c, extrasettings=set())
+    inc = MyIncident_0()
+    inc.id = 42
+    exp_repo_start = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/42/"
+    repo = incs._make_repo_url(inc, Repos("openSUSE", "15.7", "x86_64"))
+    assert repo == exp_repo_start + "SUSE_Updates_openSUSE_15.7_x86_64"
+    repo = incs._make_repo_url(inc, Repos("openSUSE-SLE", "15.7", "x86_64"))
+    assert repo == exp_repo_start + "SUSE_Updates_openSUSE-SLE_15.7"
