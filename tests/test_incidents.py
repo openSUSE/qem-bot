@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from openqabot.types.incidents import Incidents
-from openqabot.types import Repos
+from openqabot.types import Repos, ArchVer
 from unittest import mock
 import pytest
 
@@ -348,3 +348,55 @@ def test_making_repo_url():
     repo = incs._make_repo_url(inc, slfo_chan)
     exp_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/"
     assert repo == exp_repo
+
+
+class MyIncident_5(MyIncident_2):
+    def revisions_with_fallback(self, arch, version):
+        return self.revisions[ArchVer(arch, version)]
+
+
+def test_gitea_incidents():
+    # declare fields of Repos used in this test
+    product = "SUSE:SLFO"  # "product" is used to store the name of the codestream in Gitea-based incidents …
+    version = "1.1.99:PullRequest:166:SLES"  # … and version is the full project including the product
+    archs = ["x86_64", "aarch64"]
+    product_ver = "15.99"
+
+    # declare meta-data
+    settings = {"VERSION": product_ver, "DISTRI": "sles"}
+    issues = {"BASE_TEST_ISSUES": "SLFO:1.1.99#15.99"}
+    flavor = "AAA"
+    test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues}}}
+
+    # create a Git-based incident
+    inc = inc = MyIncident_5()
+    inc.id = 42
+    repo_hash = 12345
+    inc.channels = [Repos(product, version, arch, product_ver) for arch in archs]
+    inc.revisions = {ArchVer(arch, product_ver): repo_hash for arch in archs}
+    inc.type = "git"
+
+    # compute openQA/dashboard settings for incident and check results
+    incs = Incidents("SLFO", settings, test_config, None)
+    incs.singlearch = set()
+    expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
+    res = incs(incidents=[inc], token={}, ci_url="", ignore_onetime=False)
+    assert len(res) == len(archs)
+    for arch, result in zip(archs, res):
+        qem = result["qem"]
+        computed_settings = [result["openqa"], qem["settings"]]
+        assert qem["arch"] == arch
+        assert qem["flavor"] == flavor
+        assert qem["incident"] == inc.id
+        assert qem["version"] == product_ver
+        assert qem["withAggregate"] == True
+        for s in computed_settings:
+            assert s["ARCH"] == arch
+            assert s["BASE_TEST_ISSUES"] == "%i" % inc.id
+            assert s["BUILD"] == ":%i:None" % inc.id
+            assert s["DISTRI"] == settings["DISTRI"]
+            assert s["FLAVOR"] == flavor
+            assert s["INCIDENT_ID"] == inc.id
+            assert s["INCIDENT_REPO"] == f"{expected_repo}-{arch}/"
+            assert s["REPOHASH"] == repo_hash
+            assert s["VERSION"] == product_ver
