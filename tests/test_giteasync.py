@@ -13,7 +13,13 @@ import responses
 
 from openqabot import QEM_DASHBOARD, OBS_URL
 from openqabot.giteasync import GiteaSync
-from openqabot.loader.gitea import read_utf8, read_json, read_xml
+from openqabot.loader.gitea import (
+    read_utf8,
+    read_json,
+    read_xml,
+    get_product_name,
+    get_product_name_and_version_from_scmsync,
+)
 import openqabot.loader.gitea
 
 # Fake Namespace for GiteaSync initialization
@@ -154,3 +160,15 @@ def test_sync_with_codestream_repo(
     # expect the scminfo from the codestream repo
     assert "f229fea352e8f268960" in incident["scminfo"]
     assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+
+
+def test_extracting_product_name_and_version():
+    assert get_product_name("1.1.99:PullRequest:166") == ""
+    assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
+
+    slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"
+    prod_ver = get_product_name_and_version_from_scmsync(slfo_url)
+    assert prod_ver == ("", "")
+    prod_url = "https://src.suse.de/products/SLES#15.99"
+    prod_ver = get_product_name_and_version_from_scmsync(prod_url)
+    assert prod_ver == ("SLES", "15.99")

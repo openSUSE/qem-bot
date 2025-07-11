@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from openqabot.errors import NoRepoFoundError, EmptyPackagesError, EmptyChannels
-from openqabot.types import Repos
+from openqabot.types import Repos, ArchVer
 from openqabot.types.incident import Incident
 import openqabot.types.incident
 
@@ -118,3 +118,23 @@ def test_inc_revisions(mock_good):
     assert incident.revisions_with_fallback("x86_64", "12-SP5")
     assert not incident.revisions_with_fallback("aarch64", "12")
     assert not incident.revisions_with_fallback("aarch64", "12-SP5")
+
+
+def test_slfo_channels_and_revisions(mock_good):
+    slfo_data = deepcopy(test_data)
+    slfo_data["project"] = "SUSE:SLFO"
+    slfo_data["channels"] = [
+        "SUSE:SLFO:1.1.99:PullRequest:166:SLES:x86_64#15.99",
+        "SUSE:SLFO:1.1.99:PullRequest:166:SLES:aarch64#15.99",
+    ]
+    expected_channels = [
+        Repos("SUSE:SLFO", "1.1.99:PullRequest:166:SLES", "x86_64", "15.99"),
+        Repos("SUSE:SLFO", "1.1.99:PullRequest:166:SLES", "aarch64", "15.99"),
+    ]
+    expected_revisions = {
+        ArchVer("aarch64", "15.99"): 12345,
+        ArchVer("x86_64", "15.99"): 12345,
+    }
+    incident = Incident(slfo_data)
+    assert incident.channels == expected_channels
+    assert incident.revisions == expected_revisions
