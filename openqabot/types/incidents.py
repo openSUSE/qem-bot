@@ -81,6 +81,7 @@ class Incidents(BaseConf):
             if (
                 job["flavor"] == flavor
                 and job["arch"] == arch
+                and job["version"] == ver
                 and job["settings"]["REPOHASH"] == revs
             ):
                 return True
