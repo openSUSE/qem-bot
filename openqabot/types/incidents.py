@@ -74,10 +74,10 @@ class Incidents(BaseConf):
         if isinstance(jobs, dict) and "error" in jobs:
             return False
 
+        revs = inc.revisions_with_fallback(arch, ver)
+        if not revs:
+            return False
         for job in jobs:
-            revs = inc.revisions_with_fallback(arch, ver)
-            if not revs:
-                continue
             if (
                 job["flavor"] == flavor
                 and job["arch"] == arch
