@@ -130,3 +130,8 @@ class openQAInterface:
         except RequestError as e:
             log.exception(e)
         return ret
+
+    def get_scheduled_product_stats(self, params):
+        return self.openqa.openqa_request(
+            "GET", "isos/job_stats", params, retries=self.retries
+        )

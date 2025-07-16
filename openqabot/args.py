@@ -78,6 +78,13 @@ def do_sync_aggregate_results(args):
     return syncer()
 
 
+def do_increment_approve(args):
+    from .incrementapprover import IncrementApprover
+
+    approve = IncrementApprover(args)
+    return approve()
+
+
 def do_amqp(args):
     from .amqp import AMQP
 
@@ -232,6 +239,51 @@ def get_parser():
         "aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard"
     )
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
+
+    cmdincrementapprove = commands.add_parser(
+        "increment-approve",
+        help="Approve the specified product increment if tests passed",
+    )
+    cmdincrementapprove.add_argument(
+        "--obs-project",
+        required=False,
+        type=str,
+        default="SUSE:SLFO:Products:SLES:15.99:TEST",
+        help="The project on OBS",
+    )
+    cmdincrementapprove.add_argument(
+        "--distri",
+        required=False,
+        type=str,
+        default="sle",
+        help="The DISTRI parameter of relevant scheduled products on openQA",
+    )
+    cmdincrementapprove.add_argument(
+        "--version",
+        required=False,
+        type=str,
+        default="15.99",
+        help="The VERSION parameter of relevant scheduled products on openQA",
+    )
+    cmdincrementapprove.add_argument(
+        "--flavor",
+        required=False,
+        type=str,
+        default="Online-Increments",
+        help="The FLAVOR parameter of relevant scheduled products on openQA",
+    )
+    cmdincrementapprove.add_argument(
+        "--accepted",
+        action="store_true",
+        help="Consider accepted requests/reviews as well",
+    )
+    cmdincrementapprove.add_argument(
+        "--request-id",
+        required=False,
+        type=int,
+        help="Approve the specified request specifically",
+    )
+    cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
     cmdamqp.add_argument(
