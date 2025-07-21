@@ -108,7 +108,7 @@ def run_approver(caplog, monkeypatch):
 
 
 @responses.activate
-def test_no_openqa_jobs(caplog, fake_no_jobs, monkeypatch):
+def test_skipping_with_no_openqa_jobs(caplog, fake_no_jobs, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -118,7 +118,7 @@ def test_no_openqa_jobs(caplog, fake_no_jobs, monkeypatch):
 
 
 @responses.activate
-def test_pending_openqa_jobs(caplog, fake_pending_jobs, monkeypatch):
+def test_skipping_with_pending_openqa_jobs(caplog, fake_pending_jobs, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -128,7 +128,7 @@ def test_pending_openqa_jobs(caplog, fake_pending_jobs, monkeypatch):
 
 
 @responses.activate
-def test_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, monkeypatch):
+def test_listing_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
@@ -137,7 +137,7 @@ def test_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, monkeypatch):
 
 
 @responses.activate
-def test_only_ok_openqa_jobs(caplog, fake_ok_jobs, monkeypatch):
+def test_approval_if_there_are_only_ok_openqa_jobs(caplog, fake_ok_jobs, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message

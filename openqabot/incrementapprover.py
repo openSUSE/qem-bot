@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+from typing import Any, Dict, List, Tuple, Optional
 from logging import getLogger
 from pprint import pformat
 
@@ -12,6 +13,8 @@ from openqabot.openqa import openQAInterface
 from . import OBS_GROUP, OBS_URL
 
 log = getLogger("bot.increment_approver")
+ok_results = set(("passed", "softfailed"))
+final_states = set(("done", "cancelled"))
 
 
 class IncrementApprover:
@@ -21,8 +24,7 @@ class IncrementApprover:
         self.client = openQAInterface(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def __call__(self) -> int:
-        # find the latest (or the explicitly specified) request on OBS
+    def _find_request_on_obs(self) -> Optional[osc.core.Request]:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
@@ -50,18 +52,20 @@ class IncrementApprover:
                 "Skipping approval, no relevant requests in states "
                 + "/".join(relevant_states)
             )
-            return 0
-        log.debug("Found request %s", relevant_request.id)
+        else:
+            log.debug("Found request %s", relevant_request.id)
+        return relevant_request
 
+    def _request_openqa_job_results(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
         log.debug("Checking openQA job results")
+        args = self.args
         params = {"distri": args.distri, "version": args.version, "flavor": args.flavor}
-        openqa_url = self.client.url.geturl()
         res = self.client.get_scheduled_product_stats(params)
         log.debug("Job statistics:\n%s", pformat(res))
+        return res
 
-        # return early if there are no jobs or jobs are still pending
-        ok_results = set(("passed", "softfailed"))
-        final_states = set(("done", "cancelled"))
+    def _are_openqa_jobs_ready(self, res: Dict[str, Dict[str, Dict[str, Any]]]) -> bool:
+        args = self.args
         actual_states = set(res.keys())
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
@@ -71,17 +75,21 @@ class IncrementApprover:
                 args.version,
                 args.flavor,
             )
-            return 0
+            return False
         if len(pending_states):
             log.info(
                 "Skipping approval, some jobs on openQA are in pending states (%s)",
                 ", ".join(sorted(pending_states)),
             )
-            return 0
+            return False
+        return True
 
-        # count ok jobs, compose list of blocking jobs
-        ok_jobs = 0
-        reasons_to_disapprove = []
+    def _evaluate_openqa_job_results(
+        self, res: Dict[str, Dict[str, Dict[str, Any]]]
+    ) -> Tuple[int, List[str]]:
+        ok_jobs = 0  # # count ok jobs
+        reasons_to_disapprove = []  # compose list of blocking jobs
+        openqa_url = self.client.url.geturl()
         for state in final_states:
             for result, info in res.get(state, {}).items():
                 if result in ok_results:
@@ -93,17 +101,20 @@ class IncrementApprover:
                     reasons_to_disapprove.append(
                         f"The following openQA jobs ended up with result '{result}':\n{job_list}"
                     )
+        return (ok_jobs, reasons_to_disapprove)
 
-        # approve request if all jobs are ok, otherwise log error message with list of blocking jobs
+    def _handle_approval(
+        self, request: osc.core.Request, ok_jobs: int, reasons_to_disapprove: List[str]
+    ) -> int:
         if len(reasons_to_disapprove) == 0:
             message = "All %i jobs on openQA have %s" % (
                 ok_jobs,
                 "/".join(sorted(ok_results)),
             )
-            if not args.dry:
+            if not self.args.dry:
                 osc.core.change_review_state(
                     apiurl=OBS_URL,
-                    reqid=str(relevant_request.id),
+                    reqid=str(request.id),
                     newstate="accepted",
                     by_group=OBS_GROUP,
                     message=message,
@@ -114,3 +125,12 @@ class IncrementApprover:
             )
         log.info(message)
         return 0
+
+    def __call__(self) -> int:
+        request = self._find_request_on_obs()
+        if request is None:
+            return 0
+        res = self._request_openqa_job_results()
+        if not self._are_openqa_jobs_ready(res):
+            return 0
+        return self._handle_approval(request, *(self._evaluate_openqa_job_results(res)))
