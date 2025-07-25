@@ -27,4 +27,4 @@ RUN git clone --depth 1 https://gitlab.suse.de/qa-maintenance/metadata.git
 # Create directory for osc configuration
 RUN mkdir -p /root/.config/osc
 
-ENTRYPOINT ["./bot-ng.py", "-c", "metadata/bot-ng", "-s", "metadata/bot-ng/singlearch.yml"]
+ENTRYPOINT ["./qem-bot.py", "-c", "metadata/qem-bot", "-s", "metadata/qem-bot/singlearch.yml"]

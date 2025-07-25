@@ -10,5 +10,5 @@ setup(
     long_description=open("Readme.md").read(),
     long_description_content_type="text/markdown",
     packages=["openqabot", "openqabot.loader", "openqabot.osclib", "openqabot.types"],
-    scripts=["bot-ng.py", "pc_helper_online.py"],
+    scripts=["qem-bot.py", "pc_helper_online.py"],
 )

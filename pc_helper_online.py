@@ -17,7 +17,7 @@ def main():
 
     Allowing to prove that Public Cloud related logic is actually working without executing
     a lot of code which is unrelated to pc_helper.
-    As input it getting directory with openqabot configuration metadata (same folder as bot-ng )
+    As input it getting directory with openqabot configuration metadata (same folder as qem-bot )
     but processing only variables related to openqabot.pc_helper module
     """
     log = create_logger("pc_helper_online")

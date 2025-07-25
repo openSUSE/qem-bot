@@ -1,7 +1,7 @@
 [![ci](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/openSUSE/qem-bot/branch/master/graph/badge.svg?token=LTQET0ZPBG)](https://codecov.io/gh/openSUSE/qem-bot)
-# bot-ng
-"bot-ng" or "qem-bot" is a tool for scheduling maintenance tests on openQA based
+# qem-bot
+"qem-bot" is a tool for scheduling maintenance tests on openQA based
 on [SMELT](https://tools.io.suse.de/smelt) incidents and Gitea PRs.
 
 It is tightly coupled with
@@ -10,8 +10,8 @@ updates information about incidents and related openQA tests.
 
 ## Usage:
 
-    >>> bot-ng.py --help
-    Usage: bot-ng [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN [-i OPENQA_INSTANCE]
+    >>> qem-bot.py --help
+    Usage: qem-bot [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN [-i OPENQA_INSTANCE]
                   [-s SINGLEARCH] [-r RETRY]
                   {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
                   ...
@@ -120,7 +120,7 @@ can be used.
 
 ### Manual triggering of openQA jobs
 
-bot-ng outputs in info log messages the openqa-cli commands that can be called
+qem-bot outputs in info log messages the openqa-cli commands that can be called
 to manually replicate the openQA job triggering. For example log output
 message might look like:
 
@@ -172,8 +172,8 @@ or `pytest` to execute Python-based unit tests. Run e.g.
 Run `make checkstyle` to check coding style and `make lint` for linting.
 
 Another simple way for at least syntax correctness checks is to just call
-`./bot-ng.py --help` to show the help text if the source can be correctly
-parsed. The next recommended way for testing is to call `bot-ng.py` with the
+`./qem-bot.py --help` to show the help text if the source can be correctly
+parsed. The next recommended way for testing is to call `qem-bot.py` with the
 `--dry` command line parameter in different modes. This might need additional
 data, e.g. "metadata" from https://gitlab.suse.de/qa-maintenance/metadata/ .
 For example with cloning this metadata as well as specifying a fake token
@@ -181,7 +181,7 @@ value that is enough for testing:
 
 ```
 git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
-./bot-ng.py --configs metadata -t 1234 --dry inc-approve
+./qem-bot.py --configs metadata -t 1234 --dry inc-approve
 ```
 
 This should walk over the list of current incidents pending approval.
@@ -210,7 +210,7 @@ The first bot command you want to invoke is one of the `…-sync` commands, e.g.
 the following one to sync Gitea PRs into the dashboard:
 
 ```
-./bot-ng.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
+./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
 ```
 
 The `--fake-data` switch means that it will not actually query Gitea and just
@@ -222,7 +222,7 @@ Gitea as well.
 Then you can trigger some openQA tests specifying some metadata:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' incidents-run
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' incidents-run
 ```
 
 The YAML document containing metadata can look like
@@ -236,7 +236,7 @@ definitions would also generally be possible but hasn't been tried yet.
 Then you can sync back the result of the openQA tests to the dashboard:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-sync-results
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-sync-results
 ```
 
 To fake test results you can use an SQL command like
@@ -253,7 +253,7 @@ You can also finally approve incidents/PRs based on the openQA test results,
 e.g.:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 ./bot-ng.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-approve
+MAIN_OPENQA_DOMAIN=[::1]:9526 ./qem-bot.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-approve
 ```
 
 If you want to approve incidents for real you have to leave out the `--dry` flag
