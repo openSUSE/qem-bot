@@ -4,6 +4,7 @@
 from openqabot.types.incidents import Incidents
 from openqabot.types import Repos, ArchVer
 from unittest import mock
+import responses
 import pytest
 
 
@@ -355,6 +356,7 @@ class MyIncident_5(MyIncident_2):
         return self.revisions[ArchVer(arch, version)]
 
 
+@responses.activate
 def test_gitea_incidents():
     # declare fields of Repos used in this test
     product = "SUSE:SLFO"  # "product" is used to store the name of the codestream in Gitea-based incidents …
