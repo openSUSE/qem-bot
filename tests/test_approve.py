@@ -71,20 +71,21 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(request):
 
 @pytest.fixture(scope="function")
 def fake_openqa_older_jobs_api():
-    responses.add(
-        responses.GET,
+    responses.get(
         re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
-        status=404,
+        json={"data": []},
     )
 
 
 @pytest.fixture(scope="function")
 def fake_dashboard_remarks_api():
-    responses.add(
-        responses.PATCH,
-        f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
-        json=[{}],
-    )
+    return [
+        responses.patch(
+            f"{QEM_DASHBOARD}api/jobs/{job_id}/remarks?text=acceptable_for&incident_number=2",
+            json=[{}],
+        )
+        for job_id in [100001, 100002, 100003, 100004]
+    ]
 
 
 def add_two_passed_response():
@@ -112,21 +113,29 @@ def fake_two_passed_jobs():
 
 @pytest.fixture(scope="function")
 def fake_responses_for_unblocking_incidents_via_openqa_comments(request):
+    params = request.param
+    incident = params["incident"]
     responses.add(
         responses.GET,
         f"{QEM_DASHBOARD}api/jobs/update/20005",
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},
-            {"job_id": 100003, "status": "passed"},
+            {"job_id": 100003, "status": "failed"},
+            {"job_id": 100004, "status": "failed"},
         ],
     )
     add_two_passed_response()
-    responses.add(
-        responses.GET,
-        url="http://instance.qa/api/v1/jobs/100002/comments",
-        json=[{"text": "@review:acceptable_for:incident_%s:foo" % request.param}],
-    )
+    for job_id in params.get("not_acceptable_job_ids", []):
+        responses.get(
+            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
+            json=[{"text": ""}],
+        )
+    for job_id in params.get("acceptable_job_ids", [100002, 100003, 100004]):
+        responses.get(
+            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
+            json=[{"text": f"@review:acceptable_for:incident_{incident}:foo"}],
+        )
 
 
 @pytest.fixture(scope="function")
@@ -555,19 +564,31 @@ def test_one_aggr_failed(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.parametrize(
-    "fake_responses_for_unblocking_incidents_via_openqa_comments", [2], indirect=True
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    [{"incident": 2}],
+    indirect=True,
 )
 def test_approval_unblocked_via_openqa_comment(
     fake_qem,
     fake_responses_for_unblocking_incidents_via_openqa_comments,
     fake_openqa_comment_api,
     fake_dashboard_remarks_api,
+    fake_openqa_older_jobs_api,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "* SUSE:Maintenance:2:200" in messages
+    assert (
+        "* SUSE:Maintenance:2:200" in messages
+    ), "incident approved as all failures are considered acceptable"
+    assert (
+        len(fake_dashboard_remarks_api[0].calls) == 0
+    ), "passing job not marked as acceptable"
+    for index in range(1, 4):
+        assert (
+            fake_dashboard_remarks_api[index].calls[0] in responses.calls
+        ), f"failing job with comment marked as acceptable ({index})"
     assert (
         "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
         in messages
@@ -577,7 +598,58 @@ def test_approval_unblocked_via_openqa_comment(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.parametrize(
-    "fake_responses_for_unblocking_incidents_via_openqa_comments", [22], indirect=True
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    [
+        {
+            "incident": 2,
+            "not_acceptable_job_ids": [100003],
+            "acceptable_job_ids": [100002, 100004],
+        }
+    ],
+    indirect=True,
+)
+def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
+    fake_qem,
+    fake_responses_for_unblocking_incidents_via_openqa_comments,
+    fake_openqa_comment_api,
+    fake_dashboard_remarks_api,
+    fake_openqa_older_jobs_api,
+    caplog,
+):
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+    assert approver() == 0
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert (
+        "* SUSE:Maintenance:2:200" not in messages
+    ), "incident not approved due to one unacceptable failure"
+    assert (
+        len(fake_dashboard_remarks_api[0].calls) == 0
+    ), "passing job not marked as acceptable"
+    assert (
+        fake_dashboard_remarks_api[1].calls[0] in responses.calls
+    ), "failing job with comment marked as acceptable"
+    assert (
+        len(fake_dashboard_remarks_api[2].calls) == 0
+    ), "failing job without comment not marked as acceptable"
+    assert (
+        fake_dashboard_remarks_api[3].calls[0] in responses.calls
+    ), "another failing job with comment marked as acceptable despite previous unacceptable failure"
+    assert (
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
+        in messages
+    )
+    assert (
+        "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment"
+        not in messages
+    ), "log message only present for jobs before unacceptable failure"
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
+@pytest.mark.parametrize(
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    [{"incident": 22}],
+    indirect=True,
 )
 def test_approval_still_blocked_if_openqa_comment_not_relevant(
     fake_qem,
