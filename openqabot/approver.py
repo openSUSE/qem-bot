@@ -281,23 +281,27 @@ class Approver:
         )
         return False
 
-    def job_acceptable(self, inc: int, api: str, res) -> bool:
-        """
-        Check each job if it is acceptable for different reasons.
+    def is_job_passing(self, res: dict) -> bool:
+        return res["status"] == "passed"
 
-        Keep jobs marked as acceptable for one incident by openQA comments.
+    def mark_jobs_as_acceptable_for_incident(self, results: List[dict], inc: int):
+        for res in results:
+            if self.is_job_passing(res):
+                continue
+            job_id = res["job_id"]
+            if self.is_job_marked_acceptable_for_incident(job_id, inc):
+                res["acceptable_for_" + str(inc)] = True
+                self.mark_job_as_acceptable_for_incident(job_id, inc)
 
-        Keep jobs marked as acceptable if are aggregate and were ok in the previous days.
-        """
-        if res["status"] == "passed":
+    def is_job_acceptable(self, inc: int, api: str, res: dict) -> bool:
+        if self.is_job_passing(res):
             return True
         job_id = res["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
-        if self.is_job_marked_acceptable_for_incident(job_id, inc):
+        if res.get("acceptable_for_" + str(inc), False):
             log.info(
                 "Ignoring failed job %s for incident %s due to openQA comment", url, inc
             )
-            self.mark_job_as_acceptable_for_incident(job_id, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
             log.info(
@@ -317,7 +321,8 @@ class Approver:
                 "Job setting %s not found for incident %s"
                 % (str(job_aggr.id), str(inc))
             )
-        return all(self.job_acceptable(inc, api, r) for r in results)
+        self.mark_jobs_as_acceptable_for_incident(results, inc)
+        return all(self.is_job_acceptable(inc, api, r) for r in results)
 
     def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
         res = False
