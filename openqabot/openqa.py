@@ -119,8 +119,8 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=256)
-    def get_older_jobs(self, job_id: int, limit: int):
-        ret = []
+    def get_older_jobs(self, job_id: int, limit: int) -> dict:
+        ret = {"data": []}
         try:
             ret = self.openqa.openqa_request(
                 "GET",

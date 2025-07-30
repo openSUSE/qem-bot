@@ -248,11 +248,12 @@ class Approver:
     def was_ok_before(self, failed_job_id: int, inc: int) -> bool:
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
         jobs = self.client.get_older_jobs(failed_job_id, 20)
-        if jobs == []:
+        data = jobs.get("data", [])
+        if len(data) == 0:
             log.info("Cannot find older jobs for %s", failed_job_id)
             return False
 
-        current_job, older_jobs = jobs["data"][0], jobs["data"][1:]
+        current_job, older_jobs = data[0], data[1:]
         current_build = current_job["build"][:-2]
         try:
             current_build_date = datetime.strptime(current_build, "%Y%m%d")
