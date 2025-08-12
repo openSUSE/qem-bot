@@ -370,6 +370,16 @@ def add_packages_from_files(
             add_packages_from_patchinfo(incident, token, raw_url, dry)
 
 
+def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) -> bool:
+    if len(incident["failed_or_unpublished_packages"]) > 0:
+        log.info("Skipping PR %s, not all packages succeeded and published", number)
+        return False
+    if len(incident["successful_packages"]) < 1:
+        log.info("Skipping PR %s, no packages have been built/published", number)
+        return False
+    return True
+
+
 def make_incident_from_pr(
     pr: Dict[str, Any],
     token: Dict[str, str],
@@ -418,11 +428,9 @@ def make_incident_from_pr(
         if len(incident["channels"]) == 0:
             log.info("Skipping PR %s, no channels found/considered", number)
             return None
-        if (
-            only_successful_builds
-            and len(incident["failed_or_unpublished_packages"]) > 0
+        if only_successful_builds and not is_build_acceptable_and_log_if_not(
+            incident, number
         ):
-            log.info("Skipping PR %s, not all packages succeeded and published", number)
             return None
         add_packages_from_files(incident, token, files, dry)
         if len(incident["packages"]) == 0:

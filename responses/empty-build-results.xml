@@ -1,0 +1,5 @@
+<resultlist>
+  <result project="SUSE:SLFO:1.1.99:PullRequest:124" repository="product" arch="aarch64" state="published">
+    <!-- no packages here -->
+  </result>
+</resultlist>

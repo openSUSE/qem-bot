@@ -77,6 +77,10 @@ def fake_osc_http_get(url: str):
     raise AssertionError("Code tried to query unexpected OSC URL: " + url)
 
 
+def noop_osc_http_get(url: str):
+    return read_xml("empty-build-results")
+
+
 def fake_osc_xml_parse(data: Any):
     return data  # fake_osc_http_get already returns parsed XML so just return that
 
@@ -90,16 +94,21 @@ def fake_get_multibuild_data(obs_project: str):
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
 
-def run_gitea_sync(caplog, monkeypatch):
+def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=True):
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
-    monkeypatch.setattr(osc.core, "http_GET", fake_osc_http_get)
+    if no_build_results:
+        monkeypatch.setattr(osc.core, "http_GET", noop_osc_http_get)
+    else:
+        monkeypatch.setattr(osc.core, "http_GET", fake_osc_http_get)
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(
         openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data
     )
-    args = _namespace(False, False, "123", "456", False, "products/SLFO", True, False)
+    args = _namespace(
+        False, False, "123", "456", False, "products/SLFO", allow_failures, False
+    )
     assert GiteaSync(args)() == 0
 
 
@@ -160,6 +169,15 @@ def test_sync_with_codestream_repo(
     # expect the scminfo from the codestream repo
     assert "f229fea352e8f268960" in incident["scminfo"]
     assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+
+
+@responses.activate
+def test_sync_without_results(
+    caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch
+):
+    run_gitea_sync(caplog, monkeypatch, True, False)
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "Skipping PR 124, no packages have been built/published" in messages
 
 
 def test_extracting_product_name_and_version():
