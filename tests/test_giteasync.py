@@ -17,6 +17,7 @@ from openqabot.loader.gitea import (
     read_utf8,
     read_json,
     read_xml,
+    review_pr,
     get_product_name,
     get_product_name_and_version_from_scmsync,
 )
@@ -54,6 +55,13 @@ def fake_gitea_api(request):
     responses.add(GET, issues_url + "/124/comments", json=read_json("comments-124"))
     responses.add(GET, re.compile(issues_url + r"/.*/comments"), json=[])
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
+
+
+@pytest.fixture(scope="function")
+def fake_gitea_api_post_review_comment(request):
+    url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
+    msg = "@qam-openqa-review: approve\naccepted\nTested commit: 12345"
+    responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
 @pytest.fixture(scope="function")
@@ -190,3 +198,8 @@ def test_extracting_product_name_and_version():
     prod_url = "https://src.suse.de/products/SLES#15.99"
     prod_ver = get_product_name_and_version_from_scmsync(prod_url)
     assert prod_ver == ("SLES", "15.99")
+
+
+@responses.activate
+def test_reviewing_pr(fake_gitea_api_post_review_comment):
+    review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345")
