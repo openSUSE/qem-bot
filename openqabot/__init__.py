@@ -25,3 +25,9 @@ OLDEST_APPROVAL_JOB_DAYS = 6
 # Url of the "main" openQA server, this is only used to decide if the dashboard database should be updated or not;
 # to change the openQA instance to talk to, use -i / --openqa-instance parameter
 OPENQA_URL = os.environ.get("MAIN_OPENQA_DOMAIN", "openqa.suse.de")
+
+# user name of bot account that handles reviews
+# We need to ping this bot account to make reviews and reviews are requested for
+# this account, see
+# https://confluence.suse.com/spaces/~adrianSuSE/pages/1865908580/Group+Review+Bot+Setup#GroupReviewBotSetup-Suggestedgroupnames
+GIT_REVIEW_BOT = os.environ.get("GIT_REVIEW_BOT", OBS_GROUP + "-review")

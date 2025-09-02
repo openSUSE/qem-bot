@@ -16,7 +16,7 @@ import osc.core
 import osc.util.xml
 
 from ..utils import retry10 as requests
-from .. import GITEA, OBS_GROUP, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS
+from .. import GITEA, OBS_GROUP, GIT_REVIEW_BOT, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS
 from ..types import Repos
 
 log = getLogger("bot.loader.gitea")
@@ -157,6 +157,14 @@ def get_name(review: Dict[str, Any], of: str, via: str):
     return entity.get(via, "") if entity is not None else ""
 
 
+def is_review_requested_by(review: Dict[str, Any], users: List[str]):
+    user_specifications = (
+        get_name(review, "user", "login"),  # review via our bot account or review bot
+        get_name(review, "team", "name"),  # review request for team bot is part of
+    )
+    return any(user in user_specifications for user in users)
+
+
 def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     approvals = 0
     changes_requested = 0
@@ -170,10 +178,7 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
             continue
         # accumulate number of reviews per state
         state = review.get("state", "")
-        if OBS_GROUP in (
-            get_name(review, "user", "login"),  # concrete review via our bot account
-            get_name(review, "team", "name"),  # review request for team bot is part of
-        ):
+        if is_review_requested_by(review, [OBS_GROUP, GIT_REVIEW_BOT]):
             reviews_by_qam += 1
             if state == "APPROVED":
                 approvals += 1
