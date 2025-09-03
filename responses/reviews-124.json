@@ -18,9 +18,9 @@
     {
         "id": 3241,
         "user": null,
-        "team": {
+        "user": {
             "id": 49,
-            "name": "qam-openqa",
+            "login": "qam-openqa-review",
             "description": "",
             "organization": null
         },
