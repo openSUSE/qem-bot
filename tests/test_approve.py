@@ -150,10 +150,11 @@ def fake_responses_for_creating_pr_review():
         "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
         json={},
         match=[
-            matchers.urlencoded_params_matcher(
+            matchers.json_params_matcher(
                 {
                     "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
                     "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+                    "comments": [],
                     "event": "APPROVED",
                 }
             )
@@ -384,6 +385,7 @@ def test_403_response(
         raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
+    monkeypatch.setattr(openqabot.loader.gitea, "GIT_REVIEW_BOT", "")
     assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -458,6 +460,7 @@ def test_osc_all_pass(
         pass
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
+    monkeypatch.setattr(openqabot.loader.gitea, "GIT_REVIEW_BOT", "")
     assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Incidents to approve:" in messages, "start of run must be marked explicitly"

@@ -43,7 +43,7 @@ def post_json(
 ) -> Any:
     try:
         url = host + "/api/v1/" + query
-        res = requests.post(url, verify=False, headers=token, data=post_data)
+        res = requests.post(url, verify=False, headers=token, json=post_data)
         if not res.ok:
             log.error("Unable to POST %s: %s", url, res.text)
     except Exception as e:
@@ -76,7 +76,7 @@ def changed_files_url(repo_name: str, number: int):
 
 
 def comments_url(repo_name: str, number: int):
-    # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueRemoveIssueBlocking
+    # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return "repos/%s/issues/%s/comments" % (repo_name, number)
 
 
@@ -143,13 +143,20 @@ def review_pr(
     commit_id: str,
     approve: bool = True,
 ):
-    review_data = {
-        "body": msg,
-        "comments": [],
-        "commit_id": commit_id,
-        "event": "APPROVED" if approve else "REQUEST_CHANGES",
-    }
-    post_json(reviews_url(repo_name, pr_number), token, review_data)
+    if GIT_REVIEW_BOT:
+        review_url = comments_url(repo_name, pr_number)
+        review_cmd = f"@{GIT_REVIEW_BOT}: "
+        review_cmd += "approve" if approve else "decline"
+        review_data = {"body": f"{review_cmd}\n{msg}\nTested commit: {commit_id}"}
+    else:
+        review_url = reviews_url(repo_name, pr_number)
+        review_data = {
+            "body": msg,
+            "comments": [],
+            "commit_id": commit_id,
+            "event": "APPROVED" if approve else "REQUEST_CHANGES",
+        }
+    post_json(review_url, token, review_data)
 
 
 def get_name(review: Dict[str, Any], of: str, via: str):
