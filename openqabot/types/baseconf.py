@@ -8,9 +8,14 @@ from .incident import Incident
 
 class BaseConf(metaclass=ABCMeta):
     def __init__(
-        self, product: str, settings, config  # pylint: disable=unused-argument
+        self,
+        product: str,
+        product_repo: Optional[str],
+        settings,
+        config,  # pylint: disable=unused-argument
     ) -> None:
         self.product = product
+        self.product_repo = product_repo
         self.settings = settings
 
     @abstractmethod

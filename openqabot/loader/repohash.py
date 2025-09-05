@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from hashlib import md5
 from logging import getLogger
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from xml.etree import ElementTree as ET
 
 from requests import ConnectionError, HTTPError
@@ -20,6 +20,7 @@ def get_max_revision(
     repos: List[Tuple[str, str]],
     arch: str,
     project: str,
+    product_name: Optional[str] = None,
 ) -> int:
     max_rev = 0
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
@@ -27,14 +28,15 @@ def get_max_revision(
     for repo in repos:
         # handle URLs for SLFO specifically
         if project == "SLFO":
-            product_name = gitea.get_product_name(repo[1])
-            if product_name not in OBS_PRODUCTS:
-                log.info(
-                    "skipping repo '%s' as product '%s' is not considered",
-                    repo[1],
-                    product_name,
-                )
-                continue
+            if product_name is None:
+                product_name = gitea.get_product_name(repo[1])
+                if product_name not in OBS_PRODUCTS:
+                    log.info(
+                        "skipping repo '%s' as product '%s' is not considered",
+                        repo[1],
+                        product_name,
+                    )
+                    continue
             url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
             log.debug("computing repohash for '%s' via: %s", repo[1], url)
         # openSUSE and SLE incidents have different handling of architecture

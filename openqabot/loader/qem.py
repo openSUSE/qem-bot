@@ -9,7 +9,6 @@ from ..errors import (
     EmptyChannels,
     EmptyPackagesError,
     EmptySettings,
-    NoRepoFoundError,
     NoResultsError,
 )
 from ..types import Data
@@ -42,13 +41,6 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
     for i in incidents:
         try:
             xs.append(Incident(i))
-        except NoRepoFoundError as e:
-            log.info(
-                "Project %s can't calculate repohash of incident %i: %s .. skipping",
-                i["project"],
-                i["number"],
-                e,
-            )
         except EmptyChannels:
             log.info(
                 "Project %s has empty channels - check incident in SMELT", i["project"]

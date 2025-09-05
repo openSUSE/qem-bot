@@ -76,7 +76,8 @@ def test_inc_normal_livepatch(mock_good):
 
 def test_inc_norepo(mock_ex):
     with pytest.raises(NoRepoFoundError):
-        Incident(test_data)
+        inc = Incident(test_data)
+        inc.revisions_with_fallback("x86_64", "15-SP4")
 
 
 def test_inc_nopackage(mock_good):
@@ -136,5 +137,6 @@ def test_slfo_channels_and_revisions(mock_good):
         ArchVer("x86_64", "15.99"): 12345,
     }
     incident = Incident(slfo_data)
+    incident.compute_revisions_for_product_repo(None)
     assert incident.channels == expected_channels
     assert incident.revisions == expected_revisions
