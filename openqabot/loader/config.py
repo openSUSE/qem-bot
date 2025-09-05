@@ -49,11 +49,24 @@ def load_metadata(
             for key in data:
                 if key == "incidents" and not incidents:
                     ret.append(
-                        Incidents(data["product"], settings, data[key], extrasettings)
+                        Incidents(
+                            data["product"],
+                            data.get("product_repo"),
+                            settings,
+                            data[key],
+                            extrasettings,
+                        )
                     )
                 elif key == "aggregate" and not aggregate:
                     try:
-                        ret.append(Aggregate(data["product"], settings, data[key]))
+                        ret.append(
+                            Aggregate(
+                                data["product"],
+                                data.get("product_repo"),
+                                settings,
+                                data[key],
+                            )
+                        )
                     except NoTestIssues:
                         log.warning("No 'test_issues' in %s config", data["product"])
                 else:

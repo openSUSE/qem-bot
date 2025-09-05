@@ -11,7 +11,7 @@ def test_aggregate_constructor():
     config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
-    acc = Aggregate("", None, config)
+    acc = Aggregate("", None, None, config)
 
 
 def test_aggregate_printable():
@@ -22,7 +22,7 @@ def test_aggregate_printable():
     config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
-    acc = Aggregate("hello", None, config)
+    acc = Aggregate("hello", None, None, config)
     assert "<Aggregate product: hello>" == str(acc)
 
 
@@ -35,7 +35,7 @@ def test_aggregate_call():
     config["FLAVOR"] = "None"
     config["archs"] = []
     config["test_issues"] = {}
-    acc = Aggregate("", None, config)
+    acc = Aggregate("", None, None, config)
     res = acc(None, None, None)
     assert res == []
 
@@ -72,7 +72,7 @@ def test_aggregate_call_with_archs(request_mock):
     my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {}
-    acc = Aggregate("", settings={}, config=my_config)
+    acc = Aggregate("", None, settings={}, config=my_config)
     res = acc(incidents=[], token=None, ci_url=None)
     assert res == []
 
@@ -113,7 +113,7 @@ def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatc
     my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
-    acc = Aggregate("", settings={}, config=my_config)
+    acc = Aggregate("", None, settings={}, config=my_config)
     res = acc(
         incidents=[incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")],
         token=None,
@@ -140,7 +140,7 @@ def test_aggregate_call_pc_pint(request_mock, monkeypatch):
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
-    acc = Aggregate("", settings=my_settings, config=my_config)
+    acc = Aggregate("", None, settings=my_settings, config=my_config)
     acc(incidents=[], token=None, ci_url=None)
 
 
@@ -163,7 +163,7 @@ def test_aggregate_call_pc_pint_with_incidents(
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
-    acc = Aggregate("", settings=my_settings, config=my_config)
+    acc = Aggregate("", None, settings=my_settings, config=my_config)
     ret = acc(
         incidents=[incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")],
         token=None,
