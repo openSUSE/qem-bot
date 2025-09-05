@@ -19,8 +19,15 @@ BASE_PRIO = 50
 
 
 class Incidents(BaseConf):
-    def __init__(self, product: str, settings, config, extrasettings: Set[str]) -> None:
-        super().__init__(product, settings, config)
+    def __init__(
+        self,
+        product: str,
+        product_repo: Optional[str],
+        settings,
+        config,
+        extrasettings: Set[str],
+    ) -> None:
+        super().__init__(product, product_repo, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
@@ -90,7 +97,9 @@ class Incidents(BaseConf):
 
     def _make_repo_url(self, inc: Incident, chan: Repos):
         return (
-            gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan)
+            gitea.compute_repo_url_for_job_setting(
+                DOWNLOAD_BASE, chan, self.product_repo
+            )
             if chan.product == "SUSE:SLFO"
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
@@ -156,6 +165,7 @@ class Incidents(BaseConf):
             full_post["openqa"]["RRID"] = inc.rrid
 
         # old bot used variable "REPO_ID"
+        inc.compute_revisions_for_product_repo(self.product_repo)
         revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
         if not revs:
             return None

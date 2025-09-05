@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
@@ -84,10 +84,15 @@ class Incident:
             raise EmptyPackagesError(self.project)
 
         self.emu = incident["emu"]
-        self.revisions = self._rev(self.channels, self.project)
+        self.revisions = None  # lazy-initialized via revisions_with_fallback()
         self.livepatch: bool = self._is_livepatch(self.packages)
 
+    def compute_revisions_for_product_repo(self, product_repo: Optional[str]):
+        self.revisions = self._rev(self.channels, self.project, product_repo)
+
     def revisions_with_fallback(self, arch: str, ver: str):
+        if self.revisions is None:
+            self.compute_revisions_for_product_repo(None)
         try:
             arch_ver = ArchVer(arch, ver)
             # An unversioned SLE12 module will have ArchVer version "12"
@@ -100,7 +105,9 @@ class Incident:
             return None
 
     @staticmethod
-    def _rev(channels: List[Repos], project: str) -> Dict[ArchVer, int]:
+    def _rev(
+        channels: List[Repos], project: str, product_repo: Optional[str]
+    ) -> Dict[ArchVer, int]:
         rev: Dict[ArchVer, int] = {}
         tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
 
@@ -120,7 +127,7 @@ class Incident:
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
-                max_rev = get_max_revision(lrepos, archver.arch, project)
+                max_rev = get_max_revision(lrepos, archver.arch, project, product_repo)
                 if max_rev > 0:
                     rev[archver] = max_rev
 
