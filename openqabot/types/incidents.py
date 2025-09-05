@@ -8,6 +8,7 @@ from .. import QEM_DASHBOARD, GITEA, SMELT_URL
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from ..utils import retry3 as requests
 from ..loader import gitea
+from ..errors import NoRepoFoundError
 from .baseconf import BaseConf
 from .incident import Incident
 
@@ -19,8 +20,15 @@ BASE_PRIO = 50
 
 
 class Incidents(BaseConf):
-    def __init__(self, product: str, settings, config, extrasettings: Set[str]) -> None:
-        super().__init__(product, settings, config)
+    def __init__(
+        self,
+        product: str,
+        product_repo: Optional[str],
+        settings,
+        config,
+        extrasettings: Set[str],
+    ) -> None:
+        super().__init__(product, product_repo, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
@@ -90,7 +98,9 @@ class Incidents(BaseConf):
 
     def _make_repo_url(self, inc: Incident, chan: Repos):
         return (
-            gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan)
+            gitea.compute_repo_url_for_job_setting(
+                DOWNLOAD_BASE, chan, self.product_repo
+            )
             if chan.product == "SUSE:SLFO"
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
@@ -156,6 +166,7 @@ class Incidents(BaseConf):
             full_post["openqa"]["RRID"] = inc.rrid
 
         # old bot used variable "REPO_ID"
+        inc.compute_revisions_for_product_repo(self.product_repo)
         revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
         if not revs:
             return None
@@ -326,10 +337,18 @@ class Incidents(BaseConf):
         for flavor, data in self.flavors.items():
             for arch in data["archs"]:
                 for inc in incidents:
-                    ret.append(
-                        self._handle_incident(
-                            inc, arch, flavor, data, token, ci_url, ignore_onetime
+                    try:
+                        ret.append(
+                            self._handle_incident(
+                                inc, arch, flavor, data, token, ci_url, ignore_onetime
+                            )
                         )
-                    )
+                    except NoRepoFoundError as e:
+                        log.info(
+                            "Project %s can't calculate repohash of incident %i: %s .. skipping",
+                            inc.project,
+                            inc.id,
+                            e,
+                        )
         ret = [r for r in ret if r]
         return ret

@@ -25,7 +25,7 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 @pytest.fixture
 def baseconf_gen():
-    return FakeBaseConf(prod_name, settings, {})
+    return FakeBaseConf(prod_name, None, settings, {})
 
 
 def test_baseconf_init(baseconf_gen):

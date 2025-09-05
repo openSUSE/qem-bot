@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
-from typing import Any, List, Set, Dict, Tuple
+from typing import Any, List, Set, Dict, Tuple, Optional
 import re
 import xml.etree.ElementTree as ET
 
@@ -107,8 +107,12 @@ def compute_repo_url(
     return f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}/repo/{product_name}-{repo[2]}-{arch}/{path}"
 
 
-def compute_repo_url_for_job_setting(base: str, repo: Repos) -> str:
-    product_name = get_product_name(repo.version)
+def compute_repo_url_for_job_setting(
+    base: str, repo: Repos, product_repo: Optional[str]
+) -> str:
+    product_name = (
+        get_product_name(repo.version) if product_repo is None else product_repo
+    )
     return compute_repo_url(
         base,
         product_name,

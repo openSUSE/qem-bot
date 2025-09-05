@@ -1,6 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
+from typing import Optional
+
 from openqabot.types.incidents import Incidents
 from openqabot.types import Repos, ArchVer
 from unittest import mock
@@ -15,7 +17,13 @@ def test_incidents_constructor():
     """
     test_config = {}
     test_config["FLAVOR"] = {}
-    inc = Incidents(product="", settings=None, config=test_config, extrasettings=None)
+    inc = Incidents(
+        product="",
+        product_repo=None,
+        settings=None,
+        config=test_config,
+        extrasettings=None,
+    )
 
 
 def test_incidents_printable():
@@ -25,7 +33,11 @@ def test_incidents_printable():
     test_config = {}
     test_config["FLAVOR"] = {}
     inc = Incidents(
-        product="hello", settings=None, config=test_config, extrasettings=None
+        product="hello",
+        product_repo=None,
+        settings=None,
+        config=test_config,
+        extrasettings=None,
     )
     assert "<Incidents product: hello>" == str(inc)
 
@@ -37,7 +49,13 @@ def test_incidents_call():
     """
     test_config = {}
     test_config["FLAVOR"] = {}
-    inc = Incidents(product="", settings=None, config=test_config, extrasettings=None)
+    inc = Incidents(
+        product="",
+        product_repo=None,
+        settings=None,
+        config=test_config,
+        extrasettings=None,
+    )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
@@ -45,7 +63,13 @@ def test_incidents_call():
 def test_incidents_call_with_flavors():
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": []}}
-    inc = Incidents(product="", settings=None, config=test_config, extrasettings=None)
+    inc = Incidents(
+        product="",
+        product_repo=None,
+        settings=None,
+        config=test_config,
+        extrasettings=None,
+    )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
@@ -66,7 +90,10 @@ class MyIncident_0(object):
         self.ongoing = True
         self.type = "smelt"
 
-    def revisions_with_fallback(self, arch, version):
+    def compute_revisions_for_product_repo(self, product_repo: Optional[str]):
+        pass
+
+    def revisions_with_fallback(self, arch: str, version: str):
         pass
 
 
@@ -75,6 +102,7 @@ def test_incidents_call_with_incidents():
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
         extrasettings=None,
@@ -94,6 +122,7 @@ def test_incidents_call_with_issues():
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
         extrasettings=None,
@@ -139,6 +168,7 @@ def test_incidents_call_with_channels(request_mock):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
         extrasettings=set(),
@@ -165,6 +195,7 @@ def test_incidents_call_with_packages(request_mock):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
         extrasettings=set(),
@@ -198,6 +229,7 @@ def test_incidents_call_with_params_expand(request_mock):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={
             "VERSION": "",
             "DISTRI": None,
@@ -250,6 +282,7 @@ def test_incidents_call_with_params_expand_distri_version(request_mock):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={
             "VERSION": "1.2.3",
             "DISTRI": "IM_A_DISTRI",
@@ -292,6 +325,7 @@ def test_incidents_call_with_params_expand_isolated(request_mock):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={
             "VERSION": "",
             "DISTRI": None,
@@ -323,6 +357,7 @@ def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
 
     inc = Incidents(
         product="",
+        product_repo=None,
         settings={"VERSION": "", "DISTRI": None, "PUBLIC_CLOUD_PINT_QUERY": None},
         config=test_config,
         extrasettings=set(),
@@ -335,7 +370,9 @@ def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
 def test_making_repo_url():
     s = {"VERSION": "", "DISTRI": None}
     c = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
-    incs = Incidents(product="", settings=s, config=c, extrasettings=set())
+    incs = Incidents(
+        product="", product_repo=None, settings=s, config=c, extrasettings=set()
+    )
     inc = MyIncident_0()
     inc.id = 42
     exp_repo_start = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/42/"
@@ -379,7 +416,7 @@ def test_gitea_incidents():
     inc.type = "git"
 
     # compute openQA/dashboard settings for incident and check results
-    incs = Incidents("SLFO", settings, test_config, None)
+    incs = Incidents("SLFO", None, settings, test_config, None)
     incs.singlearch = set()
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = incs(incidents=[inc], token={}, ci_url="", ignore_onetime=False)
