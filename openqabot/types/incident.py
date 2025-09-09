@@ -27,6 +27,7 @@ class Incident:
         self.embargoed = incident["embargoed"]
         self.priority = incident.get("priority")
         self.type = incident.get("type", "smelt")
+        self.arch_filter = None
 
         self.channels = [
             Repos(p, v, a)
@@ -91,7 +92,7 @@ class Incident:
         self, product_repo: Optional[str], product_version: Optional[str]
     ):
         self.revisions = self._rev(
-            self.channels, self.project, product_repo, product_version
+            self.arch_filter, self.channels, self.project, product_repo, product_version
         )
 
     def revisions_with_fallback(self, arch: str, ver: str):
@@ -110,6 +111,7 @@ class Incident:
 
     @staticmethod
     def _rev(
+        arch_filter: Optional[List[str]],
         channels: List[Repos],
         project: str,
         product_repo: Optional[str],
@@ -119,6 +121,8 @@ class Incident:
         tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
 
         for repo in channels:
+            if arch_filter is not None and repo.arch not in arch_filter:
+                continue
             version = repo.version
             v = re.match(version_pattern, repo.version)
             if v:

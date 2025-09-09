@@ -336,8 +336,12 @@ class Incidents(BaseConf):
         ret = []
 
         for flavor, data in self.flavors.items():
-            for arch in data["archs"]:
+            archs = data["archs"]
+            for arch in archs:
                 for inc in incidents:
+                    inc.arch_filter = (
+                        archs  # compute repo hash only for configured archs
+                    )
                     try:
                         ret.append(
                             self._handle_incident(
