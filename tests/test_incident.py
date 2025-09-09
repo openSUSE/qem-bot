@@ -137,6 +137,6 @@ def test_slfo_channels_and_revisions(mock_good):
         ArchVer("x86_64", "15.99"): 12345,
     }
     incident = Incident(slfo_data)
-    incident.compute_revisions_for_product_repo(None)
+    incident.compute_revisions_for_product_repo(None, None)
     assert incident.channels == expected_channels
     assert incident.revisions == expected_revisions

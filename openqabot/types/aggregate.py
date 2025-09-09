@@ -21,9 +21,14 @@ log = getLogger("bot.types.aggregate")
 
 class Aggregate(BaseConf):
     def __init__(
-        self, product: str, product_repo: Optional[str], settings, config
+        self,
+        product: str,
+        product_repo: Optional[str],
+        product_version: Optional[str],
+        settings,
+        config,
     ) -> None:
-        super().__init__(product, product_repo, settings, config)
+        super().__init__(product, product_repo, product_version, settings, config)
         self.flavor = config["FLAVOR"]
         self.archs = config["archs"]
         self.onetime = config.get("onetime", False)

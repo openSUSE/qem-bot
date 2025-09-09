@@ -11,11 +11,13 @@ class BaseConf(metaclass=ABCMeta):
         self,
         product: str,
         product_repo: Optional[str],
+        product_version: Optional[str],
         settings,
         config,  # pylint: disable=unused-argument
     ) -> None:
         self.product = product
         self.product_repo = product_repo
+        self.product_version = product_version
         self.settings = settings
 
     @abstractmethod

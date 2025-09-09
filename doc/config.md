@@ -42,6 +42,7 @@ settings:
 
 * `product` - mandatory and must be unique, no other config file can have the same product. 
 * `product_repo` - optional to use a specific product repo (e.g. `SLES-SAP` or `SLES-HA`) instead of the default derived from the PR (usually `SLES`)
+* `product_version` - optional to override the product version (to use e.g. `16.0` instead of `15.99`)
 * `settings` - mandatory mapping containing `key` : `value` which are used directly in job schedule. From this the pairs `DISTRI` and `VERSION` are mandatory.
 
 ## Aggregate part of the configuration

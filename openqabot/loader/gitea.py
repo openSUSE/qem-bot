@@ -108,15 +108,18 @@ def compute_repo_url(
 
 
 def compute_repo_url_for_job_setting(
-    base: str, repo: Repos, product_repo: Optional[str]
+    base: str, repo: Repos, product_repo: Optional[str], product_version: Optional[str]
 ) -> str:
     product_name = (
         get_product_name(repo.version) if product_repo is None else product_repo
     )
+    product_version = (
+        repo.product_version if product_version is None else product_version
+    )
     return compute_repo_url(
         base,
         product_name,
-        (repo.product, repo.version, repo.product_version),
+        (repo.product, repo.version, product_version),
         repo.arch,
         "",
     )

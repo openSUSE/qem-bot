@@ -87,12 +87,16 @@ class Incident:
         self.revisions = None  # lazy-initialized via revisions_with_fallback()
         self.livepatch: bool = self._is_livepatch(self.packages)
 
-    def compute_revisions_for_product_repo(self, product_repo: Optional[str]):
-        self.revisions = self._rev(self.channels, self.project, product_repo)
+    def compute_revisions_for_product_repo(
+        self, product_repo: Optional[str], product_version: Optional[str]
+    ):
+        self.revisions = self._rev(
+            self.channels, self.project, product_repo, product_version
+        )
 
     def revisions_with_fallback(self, arch: str, ver: str):
         if self.revisions is None:
-            self.compute_revisions_for_product_repo(None)
+            self.compute_revisions_for_product_repo(None, None)
         try:
             arch_ver = ArchVer(arch, ver)
             # An unversioned SLE12 module will have ArchVer version "12"
@@ -106,7 +110,10 @@ class Incident:
 
     @staticmethod
     def _rev(
-        channels: List[Repos], project: str, product_repo: Optional[str]
+        channels: List[Repos],
+        project: str,
+        product_repo: Optional[str],
+        product_version: Optional[str],
     ) -> Dict[ArchVer, int]:
         rev: Dict[ArchVer, int] = {}
         tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
@@ -127,7 +134,9 @@ class Incident:
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
-                max_rev = get_max_revision(lrepos, archver.arch, project, product_repo)
+                max_rev = get_max_revision(
+                    lrepos, archver.arch, project, product_repo, product_version
+                )
                 if max_rev > 0:
                     rev[archver] = max_rev
 

@@ -21,6 +21,7 @@ def get_max_revision(
     arch: str,
     project: str,
     product_name: Optional[str] = None,
+    product_version: Optional[str] = None,
 ) -> int:
     max_rev = 0
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
@@ -37,6 +38,8 @@ def get_max_revision(
                         product_name,
                     )
                     continue
+            if product_version is not None:
+                repo = (repo[0], repo[1], product_version)
             url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
             log.debug("computing repohash for '%s' via: %s", repo[1], url)
         # openSUSE and SLE incidents have different handling of architecture

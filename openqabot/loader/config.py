@@ -52,6 +52,7 @@ def load_metadata(
                         Incidents(
                             data["product"],
                             data.get("product_repo"),
+                            data.get("product_version"),
                             settings,
                             data[key],
                             extrasettings,
@@ -63,6 +64,7 @@ def load_metadata(
                             Aggregate(
                                 data["product"],
                                 data.get("product_repo"),
+                                data.get("product_version"),
                                 settings,
                                 data[key],
                             )
