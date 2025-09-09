@@ -60,7 +60,7 @@ def fake_gitea_api(request):
 @pytest.fixture(scope="function")
 def fake_gitea_api_post_review_comment(request):
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
-    msg = "@qam-openqa-review: approve\naccepted\nTested commit: 12345"
+    msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
