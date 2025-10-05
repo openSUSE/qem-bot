@@ -9,6 +9,7 @@ from itertools import starmap
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
+import requests
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
@@ -79,12 +80,14 @@ class openQAInterface:
         try:
             ret = self.openqa.openqa_request("GET", "jobs/{}/comments".format(job_id), retries=self.retries)
             ret = [{"text": c.get("text", "")} for c in ret]
-        except Exception as e:
+        except RequestError as e:
             (_, _, status_code, *_) = e.args
             if status_code == 404:
                 self.handle_job_not_found(job_id)
             else:
                 log.exception("")
+        except requests.exceptions.RequestException:
+            log.exception("")
         return ret
 
     @lru_cache(maxsize=256)
