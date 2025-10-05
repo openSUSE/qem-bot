@@ -48,25 +48,22 @@ def walk(inc: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
 
 
 def normalize_results(result: str) -> str:
-    if result in {"passed", "softfailed"}:
-        return "passed"
-    if result == "none":
-        return "waiting"
-    if result in {
-        "timeout_exceeded",
-        "incomplete",
-        "obsoleted",
-        "parallel_failed",
-        "skipped",
-        "parallel_restarted",
-        "user_cancelled",
-        "user_restarted",
-    }:
-        return "stopped"
-    if result == "failed":
-        return "failed"
-
-    return "failed"
+    """Normalize openQA result string."""
+    mapping = {
+        "passed": "passed",
+        "softfailed": "passed",
+        "none": "waiting",
+        "timeout_exceeded": "stopped",
+        "incomplete": "stopped",
+        "obsoleted": "stopped",
+        "parallel_failed": "stopped",
+        "skipped": "stopped",
+        "parallel_restarted": "stopped",
+        "user_cancelled": "stopped",
+        "user_restarted": "stopped",
+        "failed": "failed",
+    }
+    return mapping.get(result, "failed")
 
 
 def compare_incident_data(inc: Data, message: dict[str, Any]) -> bool:
