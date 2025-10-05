@@ -21,11 +21,6 @@ def main() -> None:
         log.error("Path %s is not a valid directory with config files", cfg.configs)
         sys.exit(1)
 
-    if not hasattr(cfg, "func"):
-        log.error("Command is required")
-        parser.print_help()
-        sys.exit(1)
-
     if cfg.debug:
         log.setLevel(logging.DEBUG)
 
