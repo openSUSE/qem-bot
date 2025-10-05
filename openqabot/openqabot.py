@@ -61,21 +61,22 @@ class OpenQABot:
             log.info("Would trigger %d products in openQA", len(post))
             for job in post:
                 log.info(job)
+            log.info("End of bot run")
+            return 0
 
-        else:
-            log.info("Triggering %d products in openQA", len(post))
+        log.info("Triggering %d products in openQA", len(post))
 
-            def poster(job: dict[str, Any]) -> None:
-                log.info("Triggering %s", job)
-                try:
-                    self.post_openqa(job["openqa"])
-                except PostOpenQAError:
-                    log.info("POST failed, not updating dashboard")
-                else:
-                    self.post_qem(job["qem"], job["api"])
+        def poster(job: dict[str, Any]) -> None:
+            log.info("Triggering %s", job)
+            try:
+                self.post_openqa(job["openqa"])
+            except PostOpenQAError:
+                log.info("POST failed, not updating dashboard")
+            else:
+                self.post_qem(job["qem"], job["api"])
 
-            with ThreadPoolExecutor() as executor:
-                wait([executor.submit(poster, job) for job in post])
+        with ThreadPoolExecutor() as executor:
+            wait([executor.submit(poster, job) for job in post])
 
         log.info("End of bot run")
 
