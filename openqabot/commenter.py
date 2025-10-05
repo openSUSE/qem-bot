@@ -115,7 +115,10 @@ class Commenter:
                 # workaround for experiments of some QAM devs
                 log.warning("group missing in %s", job["job_id"])
                 continue
-            gl = "{!s}@{!s}".format(Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"]))
+            gl = "{!s}@{!s}".format(
+                Commenter.escape_for_markdown(job["job_group"]),
+                Commenter.escape_for_markdown(job["flavor"]),
+            )
             if gl not in groups:
                 groupurl = osc.core.makeurl(
                     self.client.openqa.baseurl,
@@ -164,7 +167,7 @@ class Commenter:
         return msg.rstrip("\n")
 
     @staticmethod
-    def emd(string: str) -> str:
+    def escape_for_markdown(string: str) -> str:
         return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:
