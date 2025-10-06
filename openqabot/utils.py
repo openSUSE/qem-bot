@@ -84,7 +84,7 @@ def __retry(retries: Optional[int], backoff_factor: float) -> Session:
         max_retries=Retry(
             retries,
             backoff_factor=backoff_factor,
-            status_forcelist=frozenset({404, 403, 413, 429, 503}),
+            status_forcelist=frozenset({403, 413, 429, 503}),
         )
     )
     http = Session()

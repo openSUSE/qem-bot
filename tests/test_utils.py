@@ -100,10 +100,14 @@ if has_registries:
         rsp1 = responses.add(responses.GET, "http://host.some", status=503)
         rsp2 = responses.add(responses.GET, "http://host.some", status=503)
         rsp3 = responses.add(responses.GET, "http://host.some", status=200)
+        rsp4 = responses.add(responses.GET, "http://host.some", status=404)
 
         req = retry3.get("http://host.some")
         assert req.status_code == 200
         assert rsp3.call_count == 1
+        req = retry3.get("http://host.some")
+        assert req.status_code == 404
+        assert rsp4.call_count == 1
 
 
 def test_get_yml_list_single_file_yml(tmp_path):
