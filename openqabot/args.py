@@ -248,7 +248,7 @@ def get_parser():
         "--obs-project",
         required=False,
         type=str,
-        default="SUSE:SLFO:Products:SLES:15.99:TEST",
+        default="SUSE:SLFO:Products:SLES:16.0:TEST",
         help="The project on OBS",
     )
     cmdincrementapprove.add_argument(
