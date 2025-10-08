@@ -151,8 +151,7 @@ class IncrementApprover:
         return 0
 
     def _determine_build_info(self) -> Set[BuildInfo]:
-        # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin,
-        # e.g. https://download.suse.de/download/ibs/SUSE:/SLFO:/Products:/SLES:/16.0:/TEST/product/?jsontable=1
+        # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
         path = self.args.obs_project.replace(":", ":/")
         url = f"{OBS_DOWNLOAD_URL}/{path}/product/?jsontable=1"
         rows = requests.get(url).json().get("data", [])

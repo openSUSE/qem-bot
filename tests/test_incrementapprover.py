@@ -11,7 +11,7 @@ import responses
 
 import openqabot
 from openqabot.openqa import openQAInterface
-from openqabot import OBS_URL, OBS_GROUP
+from openqabot import OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
 from openqabot.loader.gitea import read_json
 from openqabot.incrementapprover import IncrementApprover
 
@@ -70,7 +70,7 @@ def fake_ok_jobs(request):
 def fake_product_repo(request):
     responses.add(
         GET,
-        "http://download.suse.de/ibs/OBS:/PROJECT/product/?jsontable=1",
+        OBS_DOWNLOAD_URL + "/OBS:/PROJECT/product/?jsontable=1",
         json=read_json("test-product-repo"),
     )
 
