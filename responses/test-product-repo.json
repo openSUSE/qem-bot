@@ -1,0 +1,12 @@
+{
+   "data": [
+      {"name": "SLES-16.0-Online-x86_64-Build139.1.spdx.json"},
+      {"name": "SLES-16.0-Online-aarch64-Build139.1.spdx.json"},
+      {"name": "SLES-16.0-Online-s390x-Build139.1.spdx.json"},
+      {"name": "SLES-16.0-Online-ppc64le-Build139.1.spdx.json"},
+      {"name": "SLES-SAP-16.0-Online-x86_64-Build139.1.spdx.json"},
+      {"name": "SLES-SAP-16.0-Online-aarch64-Build139.1.spdx.json"},
+      {"name": "SLES-SAP-16.0-Online-s390x-Build139.1.spdx.json"},
+      {"name": "SLES-SAP-16.0-Online-ppc64le-Build139.1.spdx.json"}
+   ]
+}

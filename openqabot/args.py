@@ -242,46 +242,56 @@ def get_parser():
 
     cmdincrementapprove = commands.add_parser(
         "increment-approve",
-        help="Approve the specified product increment if tests passed",
+        help="Approve the most recent product increment for an OBS project if tests passed",
     )
     cmdincrementapprove.add_argument(
         "--obs-project",
         required=False,
         type=str,
         default="SUSE:SLFO:Products:SLES:16.0:TEST",
-        help="The project on OBS",
+        help="The project on OBS to monitor, schedule jobs for (if --schedule is specified) and approve (if all tests passd)",
     )
     cmdincrementapprove.add_argument(
         "--distri",
         required=False,
         type=str,
-        default="sle",
-        help="The DISTRI parameter of relevant scheduled products on openQA",
+        default="any",
+        help="Monitor and schedule only products with the specified DISTRI parameter",
     )
     cmdincrementapprove.add_argument(
         "--version",
         required=False,
         type=str,
-        default="15.99",
-        help="The VERSION parameter of relevant scheduled products on openQA",
+        default="any",
+        help="Monitor and schedule only products with the specified VERSION parameter",
     )
     cmdincrementapprove.add_argument(
         "--flavor",
         required=False,
         type=str,
-        default="Online-Increments",
-        help="The FLAVOR parameter of relevant scheduled products on openQA",
+        default="any",
+        help="Monitor and schedule only products with the specified FLAVOR parameter",
+    )
+    cmdincrementapprove.add_argument(
+        "--schedule",
+        action="store_true",
+        help="Schedule a new product (if none exists or if the most recent product has no jobs)",
+    )
+    cmdincrementapprove.add_argument(
+        "--reschedule",
+        action="store_true",
+        help="Always schedule a new product (even if one already exists)",
     )
     cmdincrementapprove.add_argument(
         "--accepted",
         action="store_true",
-        help="Consider accepted requests/reviews as well",
+        help="Consider accepted product increment requests as well",
     )
     cmdincrementapprove.add_argument(
         "--request-id",
         required=False,
         type=int,
-        help="Approve the specified request specifically",
+        help="Check/approve the specified request (instead of the most recent one)",
     )
     cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
 

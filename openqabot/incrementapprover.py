@@ -1,7 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, Set, NamedTuple
+import re
 from logging import getLogger
 from pprint import pformat
 
@@ -10,11 +11,25 @@ import osc.core
 
 from openqabot.openqa import openQAInterface
 
-from . import OBS_GROUP, OBS_URL
+from .errors import PostOpenQAError
+from .utils import retry10 as requests
+from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
 
 log = getLogger("bot.increment_approver")
 ok_results = set(("passed", "softfailed"))
 final_states = set(("done", "cancelled"))
+
+
+class BuildInfo(NamedTuple):
+    distri: str
+    product: str
+    version: str
+    flavor: str
+    arch: str
+    build: str
+
+    def __str__(self):
+        return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
 
 class IncrementApprover:
@@ -35,11 +50,11 @@ class IncrementApprover:
                 OBS_GROUP,
                 args.obs_project,
             )
-            requests = osc.core.get_request_list(
+            obs_requests = osc.core.get_request_list(
                 OBS_URL, project=args.obs_project, req_state=relevant_states
             )
             relevant_request = None
-            for request in sorted(requests, reverse=True):
+            for request in sorted(obs_requests, reverse=True):
                 for review in request.reviews:
                     if review.by_group == OBS_GROUP and review.state in relevant_states:
                         relevant_request = request
@@ -54,31 +69,40 @@ class IncrementApprover:
             )
         else:
             log.debug("Found request %s", relevant_request.id)
+            if hasattr(relevant_request.state, "to_xml"):
+                log.debug(relevant_request.to_str())
         return relevant_request
 
-    def _request_openqa_job_results(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
-        log.debug("Checking openQA job results")
-        args = self.args
-        params = {"distri": args.distri, "version": args.version, "flavor": args.flavor}
+    def _request_openqa_job_results(
+        self, build_info: BuildInfo
+    ) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        log.debug("Checking openQA job results for %s", build_info)
+        params = {
+            "distri": build_info.distri,
+            "version": build_info.version,
+            "flavor": build_info.flavor,
+            "arch": build_info.arch,
+            "build": build_info.build,
+        }
         res = self.client.get_scheduled_product_stats(params)
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
-    def _are_openqa_jobs_ready(self, res: Dict[str, Dict[str, Dict[str, Any]]]) -> bool:
-        args = self.args
+    def _check_openqa_jobs(
+        self, res: Dict[str, Dict[str, Dict[str, Any]]], build_info: BuildInfo
+    ) -> Optional[bool]:
         actual_states = set(res.keys())
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
-                "Skipping approval, there are no relevant jobs on openQA for %s-%s-%s",
-                args.distri,
-                args.version,
-                args.flavor,
+                "Skipping approval, there are no relevant jobs on openQA for %s",
+                build_info,
             )
-            return False
+            return None
         if len(pending_states):
             log.info(
-                "Skipping approval, some jobs on openQA are in pending states (%s)",
+                "Skipping approval, some jobs on openQA for %s are in pending states (%s)",
+                build_info,
                 ", ".join(sorted(pending_states)),
             )
             return False
@@ -126,11 +150,72 @@ class IncrementApprover:
         log.info(message)
         return 0
 
+    def _determine_build_info(self) -> Set[BuildInfo]:
+        # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin,
+        # e.g. https://download.suse.de/download/ibs/SUSE:/SLFO:/Products:/SLES:/16.0:/TEST/product/?jsontable=1
+        path = self.args.obs_project.replace(":", ":/")
+        url = f"{OBS_DOWNLOAD_URL}/{path}/product/?jsontable=1"
+        rows = requests.get(url).json().get("data", [])
+        res = set()
+        args = self.args
+        for row in rows:
+            m = re.search(
+                "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json",
+                row.get("name", ""),
+            )
+            if m:
+                product = m.group("product")
+                version = m.group("version")
+                flavor = m.group("flavor") + "-Increments"
+                arch = m.group("arch")
+                build = m.group("build")
+                if product.startswith("SLE"):
+                    distri = "sle"
+                else:
+                    continue  # skip unknown products
+                if (
+                    args.distri in ("any", distri)
+                    and args.flavor in ("any", flavor)
+                    and args.version in ("any", version)
+                ):
+                    res.add(BuildInfo(distri, product, version, flavor, arch, build))
+        return res
+
+    def _schedule_openqa_jobs(self, build_info: BuildInfo) -> int:
+        log.info("Scheduling jobs for %s", build_info)
+        if self.args.dry:
+            return 0
+        try:
+            self.client.post_job(  # create a scheduled product with build info from spdx file
+                {
+                    "DISTRI": build_info.distri,
+                    "VERSION": build_info.version,
+                    "FLAVOR": build_info.flavor,
+                    "ARCH": build_info.arch,
+                    "BUILD": build_info.build,
+                }
+            )
+            return 0
+        except PostOpenQAError:
+            return 1
+
     def __call__(self) -> int:
+        error_count = 0
         request = self._find_request_on_obs()
         if request is None:
-            return 0
-        res = self._request_openqa_job_results()
-        if not self._are_openqa_jobs_ready(res):
-            return 0
-        return self._handle_approval(request, *(self._evaluate_openqa_job_results(res)))
+            return error_count
+        for build_info in self._determine_build_info():
+            res = self._request_openqa_job_results(build_info)
+            if self.args.reschedule:
+                error_count += self._schedule_openqa_jobs(build_info)
+                continue
+            openqa_jobs_ready = self._check_openqa_jobs(res, build_info)
+            if openqa_jobs_ready is None and self.args.schedule:
+                error_count += self._schedule_openqa_jobs(build_info)
+                continue
+            if not openqa_jobs_ready:
+                continue
+            error_count += self._handle_approval(
+                request, *(self._evaluate_openqa_job_results(res))
+            )
+        return error_count
