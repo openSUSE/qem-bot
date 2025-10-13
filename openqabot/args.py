@@ -85,6 +85,13 @@ def do_increment_approve(args):
     return approve()
 
 
+def do_repo_diff_computation(args):
+    from .repodiff import RepoDiff
+
+    repo_diff = RepoDiff(args)
+    return repo_diff()
+
+
 def do_amqp(args):
     from .amqp import AMQP
 
@@ -308,6 +315,31 @@ def get_parser():
         help="The regex used to determine BUILD and other parameters from the file listing",
     )
     cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
+
+    repodiff = commands.add_parser(
+        "repo-diff",
+        help="Computes the diff between two repositories",
+    )
+    repodiff.add_argument(
+        "--repo-a",
+        required=False,
+        type=str,
+        default="SUSE:SLFO:Products:SLES:16.0:TEST/product",
+        help="The first repository",
+    )
+    repodiff.add_argument(
+        "--repo-b",
+        required=False,
+        type=str,
+        default="SUSE:SLFO:Products:SLES:16.0:PUBLISH/product",
+        help="The second repository",
+    )
+    repodiff.add_argument(
+        "--dump-data",
+        action="store_true",
+        help="Dump requested data for later use via --fake-data",
+    )
+    repodiff.set_defaults(func=do_repo_diff_computation, no_config=True)
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
     cmdamqp.add_argument(
