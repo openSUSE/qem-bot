@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://linux.duke.edu/metadata/common" xmlns:rpm="http://linux.duke.edu/metadata/rpm" packages="149298">
+<package type="rpm">
+  <!-- will be considered a new livepatch -->
+  <name>kernel-livepatch-6_12_0-160000_5-default</name>
+  <arch>ppc64le</arch>
+  <version epoch="0" ver="1" rel="160000.4.3"/>
+</package>
+<package type="rpm">
+  <!-- will be ignored as the same version is also in foo-primary.xml -->
+  <name>kernel-livepatch-6_12_0-160000_5-rt</name>
+  <arch>aarch64</arch>
+  <version epoch="0" ver="1" rel="160000.4.3"/>
+</package>
+</metadata>

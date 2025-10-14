@@ -12,6 +12,7 @@ import osc.core
 from openqabot.openqa import openQAInterface
 
 from .errors import PostOpenQAError
+from .repodiff import Package, RepoDiff
 from .utils import retry10 as requests
 from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
 
@@ -38,6 +39,7 @@ class IncrementApprover:
         self.args = args
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
+        self.repo_diff = None
         osc.conf.get_config(override_apiurl=OBS_URL)
 
     def _find_request_on_obs(self) -> Optional[osc.core.Request]:
@@ -191,23 +193,64 @@ class IncrementApprover:
                     res.add(BuildInfo(distri, product, version, flavor, arch, build))
         return res
 
-    def _schedule_openqa_jobs(self, build_info: BuildInfo) -> int:
-        log.info("Scheduling jobs for %s", build_info)
-        if self.args.dry:
-            return 0
-        try:
-            self.client.post_job(  # create a scheduled product with build info from spdx file
+    def _extra_builds_for_kernel_livepatching(
+        self, package_diff: Set[Package], build_info: BuildInfo
+    ) -> List[Dict[str, str]]:
+        extra_builds = []
+        for package in package_diff:
+            m = re.search(
+                "kernel-livepatch-(?P<version>[^\\-]*?-[^\\-]*?)-(?P<kind>.*)",
+                package.name,
+            )
+            if not m:
+                continue
+            extra_build = [build_info.build, "kernel-livepatch"]
+            kernel_version = []
+            kind = m.group("kind")
+            if kind != "default":
+                extra_build.append(kind)
+            kernel_version.append(m.group("version").replace("_", "."))
+            extra_build.extend(kernel_version)
+            extra_builds.append(
                 {
-                    "DISTRI": build_info.distri,
-                    "VERSION": build_info.version,
-                    "FLAVOR": build_info.flavor,
-                    "ARCH": build_info.arch,
-                    "BUILD": build_info.build,
+                    "BUILD": "-".join(extra_build),
+                    "KERNEL_VERSION": "-".join(kernel_version),
+                    "KGRAFT": "1",
                 }
             )
-            return 0
-        except PostOpenQAError:
-            return 1
+        return extra_builds
+
+    def _schedule_openqa_jobs(self, build_info: BuildInfo) -> int:
+        log.info("Scheduling jobs for %s", build_info)
+        base_params = {
+            "DISTRI": build_info.distri,
+            "VERSION": build_info.version,
+            "FLAVOR": build_info.flavor,
+            "ARCH": build_info.arch,
+            "BUILD": build_info.build,
+        }
+        builds = [{}]
+        base_repo = self.args.compute_diff_to
+        if base_repo != "none":
+            if self.repo_diff is None:
+                self.repo_diff = RepoDiff(self.args).compute_diff(
+                    base_repo, self.args.obs_project
+                )[0]
+            relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
+            builds.extend(
+                self._extra_builds_for_kernel_livepatching(relevant_diff, build_info)
+            )
+        error_count = 0
+        for build_params in builds:
+            params = base_params | build_params
+            if self.args.dry:
+                log.info(params)
+                continue
+            try:
+                self.client.post_job(params)
+            except PostOpenQAError:
+                error_count += 1
+        return error_count
 
     def __call__(self) -> int:
         error_count = 0

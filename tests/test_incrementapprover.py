@@ -32,6 +32,8 @@ _namespace = namedtuple(
         "reschedule",
         "build_listing_sub_path",
         "build_regex",
+        "compute_diff_to",
+        "fake_data",
     ),
 )
 
@@ -103,7 +105,9 @@ def fake_change_review_state(
     assert message == "All 2 jobs on openQA have passed/softfailed"
 
 
-def run_approver(caplog, monkeypatch, schedule: bool = False):
+def run_approver(
+    caplog, monkeypatch, schedule: bool = False, compute_diff_to: str = "none"
+):
     jobs = []
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
@@ -128,6 +132,8 @@ def run_approver(caplog, monkeypatch, schedule: bool = False):
         False,
         "product",
         BUILD_REGEX,
+        compute_diff_to,
+        True,
     )
     increment_approver = IncrementApprover(args)
     errors = increment_approver()
@@ -165,6 +171,44 @@ def test_scheduling_with_no_openqa_jobs(
             "BUILD": "139.1",
             "ARCH": arch,
         } in jobs, f"{arch} jobs created"
+
+
+@responses.activate
+def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
+    caplog, fake_no_jobs, fake_product_repo, monkeypatch
+):
+    (errors, jobs) = run_approver(
+        caplog, monkeypatch, schedule=True, compute_diff_to="foo"
+    )
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert (
+        "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
+        in messages
+    )
+    assert errors == 0, "no errors"
+    for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
+        assert {
+            "DISTRI": "sle",
+            "VERSION": "16.0",
+            "FLAVOR": "Online-Increments",
+            "BUILD": "139.1",
+            "ARCH": arch,
+        } in jobs, f"regular {arch} jobs created"
+
+    expected_livepatch_params = {
+        "DISTRI": "sle",
+        "VERSION": "16.0",
+        "FLAVOR": "Online-Increments",
+        "BUILD": "139.1-kernel-livepatch-6.12.0-160000.5",
+        "KERNEL_VERSION": "6.12.0-160000.5",
+        "KGRAFT": "1",
+    }
+    assert (
+        expected_livepatch_params | {"ARCH": "ppc64le"} in jobs
+    ), f"additional kernel livepatch jobs created"
+    assert (
+        expected_livepatch_params | {"ARCH": "aarch64"} not in jobs
+    ), f"additional kernel livepatch jobs only created if package is new"
 
 
 @responses.activate

@@ -1,7 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
-from typing import Any, Dict, List, Optional, Set, NamedTuple
+from collections import defaultdict
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, NamedTuple
 import re
 from logging import getLogger
 import gzip
@@ -38,7 +39,7 @@ class RepoDiff:
     def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Optional[str]:
         for row in rows:
             name = row.get("name", "")
-            m = re.search(".*-primary\\.xml\\.gz", name)
+            m = re.search(".*-primary\\.xml(\\.gz)?", name)
             if m:
                 return name
         return None
@@ -67,13 +68,17 @@ class RepoDiff:
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
             return None
-        repo_data_gz = self._request_and_dump(url + repo_data_file, repo_data_file)
-        repo_data = gzip.decompress(repo_data_gz)
+        repo_data_raw = self._request_and_dump(url + repo_data_file, repo_data_file)
+        repo_data = (
+            gzip.decompress(repo_data_raw)
+            if repo_data_file.endswith(".gz")
+            else repo_data_raw
+        )
         return ET.fromstring(repo_data)
 
-    def _load_packages(self, project) -> Set[Package]:
+    def _load_packages(self, project) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)
-        packages = set()
+        packages_by_arch = defaultdict(set)
         for package in repo_data.findall(package_tag):
             if package.get("type") != "rpm":
                 continue
@@ -83,20 +88,28 @@ class RepoDiff:
             version = version_info.get("ver", "0")
             rel = version_info.get("rel", "0")
             arch = package.find(arch_tag).text
-            packages.add(Package(name, epoch, version, rel, arch))
-        return packages
+            packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
+        return packages_by_arch
 
-    def compute_diff(self, repo_a: str, repo_b: str) -> Set[Package]:
-        packages_a = self._load_packages(repo_a)
-        log.debug("Found %i packages in repo a", len(packages_a))
-        packages_b = self._load_packages(repo_b)
-        log.debug("Found %i packages in repo b", len(packages_b))
-        diff = packages_b - packages_a
-        log.debug("Repo b contains %i packages that are not in repo a", len(diff))
-        return diff
+    def compute_diff(
+        self, repo_a: str, repo_b: str
+    ) -> Tuple[DefaultDict[str, Set[Package]], int]:
+        packages_by_arch_a = self._load_packages(repo_a)
+        packages_by_arch_b = self._load_packages(repo_b)
+        diff_by_arch = defaultdict(set)
+        count = 0
+        for arch, packages_b in packages_by_arch_b.items():
+            packages_a = packages_by_arch_a[arch]
+            log.debug("Found %i packages for %s in repo a", len(packages_a), arch)
+            log.debug("Found %i packages for %s in repo b", len(packages_b), arch)
+            diff = packages_b - packages_a
+            count += len(diff)
+            diff_by_arch[arch] = diff
+        return (diff_by_arch, count)
 
     def __call__(self) -> int:
         args = self.args
-        diff = self.compute_diff(args.repo_a, args.repo_b)
+        diff, count = self.compute_diff(args.repo_a, args.repo_b)
+        log.debug("Repo b contains %i packages that are not in repo a", count)
         log.info(diff)
         return len(diff)

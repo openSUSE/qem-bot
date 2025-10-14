@@ -259,6 +259,13 @@ def get_parser():
         help="The project on OBS to monitor, schedule jobs for (if --schedule is specified) and approve (if all tests passd)",
     )
     cmdincrementapprove.add_argument(
+        "--compute-diff-to",
+        required=False,
+        type=str,
+        default="SUSE:SLFO:Products:SLES:16.0:PUBLISH",
+        help="The project on OBS to compute a package diff to",
+    )
+    cmdincrementapprove.add_argument(
         "--distri",
         required=False,
         type=str,
