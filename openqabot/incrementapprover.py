@@ -18,6 +18,7 @@ from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
 log = getLogger("bot.increment_approver")
 ok_results = set(("passed", "softfailed"))
 final_states = set(("done", "cancelled"))
+default_flavor = "Online-Increments"
 
 
 class BuildInfo(NamedTuple):
@@ -150,28 +151,38 @@ class IncrementApprover:
         log.info(message)
         return 0
 
+    def _map_product_to_openqa_distri(self, product: str) -> Optional[str]:
+        if product.startswith("SLE"):
+            return "sle"
+        if product.startswith("SL-Micro"):
+            return "sle-micro"
+        return None
+
     def _determine_build_info(self) -> Set[BuildInfo]:
         # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
-        path = self.args.obs_project.replace(":", ":/")
-        url = f"{OBS_DOWNLOAD_URL}/{path}/product/?jsontable=1"
+        args = self.args
+        base_path = args.obs_project.replace(":", ":/")
+        sub_path = args.build_listing_sub_path
+        url = f"{OBS_DOWNLOAD_URL}/{base_path}/{sub_path}/?jsontable=1"
+        log.debug("Checking for '%s' files on %s", args.build_regex, url)
         rows = requests.get(url).json().get("data", [])
         res = set()
-        args = self.args
         for row in rows:
-            m = re.search(
-                "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json",
-                row.get("name", ""),
-            )
+            name = row.get("name", "")
+            log.debug("Found file: %s", name)
+            m = re.search(args.build_regex, name)
             if m:
                 product = m.group("product")
+                distri = self._map_product_to_openqa_distri(product)
+                if distri is None:
+                    continue  # skip unknown products
                 version = m.group("version")
-                flavor = m.group("flavor") + "-Increments"
                 arch = m.group("arch")
                 build = m.group("build")
-                if product.startswith("SLE"):
-                    distri = "sle"
-                else:
-                    continue  # skip unknown products
+                try:
+                    flavor = m.group("flavor") + "-Increments"
+                except IndexError:
+                    flavor = default_flavor
                 if (
                     args.distri in ("any", distri)
                     and args.flavor in ("any", flavor)

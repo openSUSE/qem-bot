@@ -3,7 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse
-from . import AMQP_URL, OBS_GROUP
+from . import AMQP_URL, BUILD_REGEX, OBS_GROUP
 
 
 def do_full_schedule(args):
@@ -292,6 +292,20 @@ def get_parser():
         required=False,
         type=int,
         help="Check/approve the specified request (instead of the most recent one)",
+    )
+    cmdincrementapprove.add_argument(
+        "--build-listing-sub-path",
+        required=False,
+        type=str,
+        default="product",
+        help="The sub path of the file listing used to determine BUILD and other parameters",
+    )
+    cmdincrementapprove.add_argument(
+        "--build-regex",
+        required=False,
+        type=str,
+        default=BUILD_REGEX,
+        help="The regex used to determine BUILD and other parameters from the file listing",
     )
     cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
 

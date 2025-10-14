@@ -31,3 +31,5 @@ OPENQA_URL = os.environ.get("MAIN_OPENQA_DOMAIN", "openqa.suse.de")
 # this account, see
 # https://confluence.suse.com/spaces/~adrianSuSE/pages/1865908580/Group+Review+Bot+Setup#GroupReviewBotSetup-Suggestedgroupnames
 GIT_REVIEW_BOT = os.environ.get("GIT_REVIEW_BOT", OBS_GROUP + "-review")
+
+BUILD_REGEX = "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json"

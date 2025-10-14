@@ -11,7 +11,7 @@ import responses
 
 import openqabot
 from openqabot.openqa import openQAInterface
-from openqabot import OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
+from openqabot import BUILD_REGEX, OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
 from openqabot.loader.gitea import read_json
 from openqabot.incrementapprover import IncrementApprover
 
@@ -30,6 +30,8 @@ _namespace = namedtuple(
         "flavor",
         "schedule",
         "reschedule",
+        "build_listing_sub_path",
+        "build_regex",
     ),
 )
 
@@ -124,6 +126,8 @@ def run_approver(caplog, monkeypatch, schedule: bool = False):
         "Online-Increments",
         schedule,
         False,
+        "product",
+        BUILD_REGEX,
     )
     increment_approver = IncrementApprover(args)
     errors = increment_approver()
