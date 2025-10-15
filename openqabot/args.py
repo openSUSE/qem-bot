@@ -120,6 +120,11 @@ def get_parser():
         action="store_true",
         help="Use fake data, do not query data from real services",
     )
+    parser.add_argument(
+        "--dump-data",
+        action="store_true",
+        help="Dump requested data for later use via --fake-data",
+    )
 
     parser.add_argument(
         "-d", "--debug", action="store_true", help="Enable debug output"
@@ -252,24 +257,31 @@ def get_parser():
         help="Approve the most recent product increment for an OBS project if tests passed",
     )
     cmdincrementapprove.add_argument(
-        "--obs-project",
+        "--project-base",
         required=False,
         type=str,
-        default="SUSE:SLFO:Products:SLES:16.0:TEST",
+        default="SUSE:SLFO:Products:SLES:16.0",
+        help="The base for projects on OBS",
+    )
+    cmdincrementapprove.add_argument(
+        "--build-project-suffix",
+        required=False,
+        type=str,
+        default="TEST",
         help="The project on OBS to monitor, schedule jobs for (if --schedule is specified) and approve (if all tests passd)",
     )
     cmdincrementapprove.add_argument(
-        "--compute-diff-to",
+        "--diff-project-suffix",
         required=False,
         type=str,
-        default="SUSE:SLFO:Products:SLES:16.0:PUBLISH",
+        default="PUBLISH/product",
         help="The project on OBS to compute a package diff to",
     )
     cmdincrementapprove.add_argument(
         "--distri",
         required=False,
         type=str,
-        default="any",
+        default="sle",
         help="Monitor and schedule only products with the specified DISTRI parameter",
     )
     cmdincrementapprove.add_argument(
@@ -321,6 +333,20 @@ def get_parser():
         default=BUILD_REGEX,
         help="The regex used to determine BUILD and other parameters from the file listing",
     )
+    cmdincrementapprove.add_argument(
+        "--product-regex",
+        required=False,
+        type=str,
+        default="^SLE.*",
+        help="The regex used to determine what products are relevant",
+    )
+    cmdincrementapprove.add_argument(
+        "--increment-config",
+        required=False,
+        type=Path,
+        default=None,
+        help="Use configuration from the specified YAML document instead of arguments",
+    )
     cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
 
     repodiff = commands.add_parser(
@@ -340,11 +366,6 @@ def get_parser():
         type=str,
         default="SUSE:SLFO:Products:SLES:16.0:PUBLISH/product",
         help="The second repository",
-    )
-    repodiff.add_argument(
-        "--dump-data",
-        action="store_true",
-        help="Dump requested data for later use via --fake-data",
     )
     repodiff.set_defaults(func=do_repo_diff_computation, no_config=True)
 

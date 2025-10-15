@@ -24,7 +24,9 @@ _namespace = namedtuple(
         "openqa_instance",
         "accepted",
         "request_id",
-        "obs_project",
+        "project_base",
+        "build_project_suffix",
+        "diff_project_suffix",
         "distri",
         "version",
         "flavor",
@@ -32,8 +34,9 @@ _namespace = namedtuple(
         "reschedule",
         "build_listing_sub_path",
         "build_regex",
-        "compute_diff_to",
+        "product_regex",
         "fake_data",
+        "increment_config",
     ),
 )
 
@@ -74,7 +77,7 @@ def fake_ok_jobs(request):
 def fake_product_repo(request):
     responses.add(
         GET,
-        OBS_DOWNLOAD_URL + "/OBS:/PROJECT/product/?jsontable=1",
+        OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1",
         json=read_json("test-product-repo"),
     )
 
@@ -87,7 +90,7 @@ def fake_get_request_list(
     url: str, project: str, req_state: List[str]
 ) -> List[osc.core.Request]:
     assert url == OBS_URL
-    assert project == "OBS:PROJECT"
+    assert project == "OBS:PROJECT:TEST"
     req = osc.core.Request()
     req.reqid = 42
     req.state = "review"
@@ -106,7 +109,7 @@ def fake_change_review_state(
 
 
 def run_approver(
-    caplog, monkeypatch, schedule: bool = False, compute_diff_to: str = "none"
+    caplog, monkeypatch, schedule: bool = False, diff_project_suffix: str = "none"
 ):
     jobs = []
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
@@ -125,6 +128,8 @@ def run_approver(
         True,
         None,
         "OBS:PROJECT",
+        "TEST",
+        diff_project_suffix,
         "sle",
         "16.0",
         "Online-Increments",
@@ -132,8 +137,9 @@ def run_approver(
         False,
         "product",
         BUILD_REGEX,
-        compute_diff_to,
+        ".*",
         True,
+        None,
     )
     increment_approver = IncrementApprover(args)
     errors = increment_approver()
@@ -178,7 +184,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     caplog, fake_no_jobs, fake_product_repo, monkeypatch
 ):
     (errors, jobs) = run_approver(
-        caplog, monkeypatch, schedule=True, compute_diff_to="foo"
+        caplog, monkeypatch, schedule=True, diff_project_suffix="PUBLISH/product"
     )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (

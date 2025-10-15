@@ -31,6 +31,7 @@ updates information about incidents and related openQA tests.
         inc-comment         Comment incidents in BuildService
         inc-sync-results    Sync results of openQA incidents jobs to Dashboard
         aggr-sync-results   Sync results of openQA aggregates jobs to Dashboard
+        increment-approve   Approve the most recent product increment for an OBS project if tests passed
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -258,6 +259,28 @@ MAIN_OPENQA_DOMAIN=[::1]:9526 ./qem-bot.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cr
 
 If you want to approve incidents for real you have to leave out the `--dry` flag
 of course. Then a token with write-permissions is required.
+
+---
+
+You can also test the increment approval, e.g.:
+
+```
+./bot-ng.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
+```
+
+In production you should specify the config via `--config`, though. Checkout
+[the config documentation](doc/config.md) for details. It also explains what
+this command does step by step.
+
+The parameter `--request-id 391430` is useful to skip the expensive OBS query
+for finding the most recent request. The parameter `--accepted` is useful if
+there is currently no open request.
+
+The parameter `--diff-project-suffix none` avoids the expensive computation of
+the repo diff which you probably don't want/need unless you are testing that
+specific aspect of the command.
+
+This command doesn't use the dashboard which is therefore not required.
 
 ## License
 

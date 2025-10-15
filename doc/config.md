@@ -131,3 +131,54 @@ incidents:
 * `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values win over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
 
 All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`.
+
+## Structure of product definitions for product increments
+The `increment-approve` command uses a different configuration format than
+described above. The `increment-approve` can be run with its configuration
+specified in form of CLI arguments, see `qem-bot increment-approve -h` for
+details. Alternatively, a config file can be specified via
+`qem-bot increment-approve --increment-config /path/to/config.yaml`. This config
+file can contain one or more increment definitions, e.g.:
+
+```
+increment_definitions:
+- distri: opensuse
+  project_base: openSUSE:Factory
+  build_project_suffix: ToTest
+  diff_project_suffix: PUBLISH/product
+  build_regex: '…'
+  build_listing_sub_path: product
+  product_regex: '^openSUSE-.*'
+- distri: sle
+  …
+```
+
+Note that this example just contains dummy values. As you can see you can
+specify multiple increment definitions, each with their own project on OBS to
+monitor for new increment requests. `qem-bot` will go through all of them. This
+is the sequence for the example configuration above:
+
+1. The OBS project `openSUSE:Factory:ToTest` is checked for open increment
+   requests and only continue with the next steps if there is one.
+2. The `product` subdirectory (as specified via `build_listing_sub_path`) of the
+   download repository is checked for files matching `build_regex` to determine
+   the available `FLAVOR` and `ARCH` values and the `BUILD` number.
+    * The `DISTRI` variable is taken as-is from the config, e.g. here `DISTRI`
+      will always be `opensuse` or `sle`.
+    * The product name is also deduced via `build_regex` and then matched
+      against `product_regex`. The increment definition is only considered when
+      the `product_regex` matches.
+3. A diff between the download repository under `openSUSE:Factory:PUBLISH/product`
+   and `openSUSE:Factory:ToTest/product` is computed to determine additional
+   parameters to create additional scheduled products in openQA, e.g. for
+   testing specific kernel livepatches. If this is not wanted
+   `diff_project_suffix` can be set to `none` to skip this step.
+3. openQA is checked for a scheduled product matching the settings determined in
+   the previous step.
+    * If there is no scheduled product `qem-bot` won't approve the increment
+      request. If `--schedule` is specified a new scheduled product will be
+      created.
+    * If there is a scheduled product `qem-bot` will determine whether all jobs
+      look good and accept the increment request.
+4. `qem-bot` will then go back to step 1 but this time check whatever OBS
+   project has been specified for `sle`.

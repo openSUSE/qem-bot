@@ -6,6 +6,8 @@ import re
 from logging import getLogger
 from pprint import pformat
 
+from ruamel.yaml import YAML  # type: ignore
+
 import osc.conf
 import osc.core
 
@@ -34,27 +36,80 @@ class BuildInfo(NamedTuple):
         return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
 
+class IncrementConfig(NamedTuple):
+    distri: str
+    version: str
+    flavor: str
+    project_base: str
+    build_project_suffix: str
+    diff_project_suffix: str
+    build_listing_sub_path: str
+    build_regex: str
+    product_regex: str
+
+    def _concat_project(self, project: str) -> str:
+        return project if self.project_base == "" else f"{self.project_base}:{project}"
+
+    def build_project(self) -> str:
+        return self._concat_project(self.build_project_suffix)
+
+    def diff_project(self) -> str:
+        return self._concat_project(self.diff_project_suffix)
+
+    @staticmethod
+    def from_config_entry(entry: Dict[str, str]) -> Any:
+        return IncrementConfig(
+            distri=entry["distri"],
+            version=entry.get("version", "any"),
+            flavor=entry.get("flavor", "any"),
+            project_base=entry["project_base"],
+            build_project_suffix=entry["build_project_suffix"],
+            diff_project_suffix=entry["diff_project_suffix"],
+            build_listing_sub_path=entry["build_listing_sub_path"],
+            build_regex=entry["build_regex"],
+            product_regex=entry["product_regex"],
+        )
+
+    @staticmethod
+    def from_config_file(file_path: str) -> List[Any]:
+        return map(
+            IncrementConfig.from_config_entry,
+            YAML(typ="safe").load(file_path)["increment_definitions"],
+        )
+
+    @staticmethod
+    def from_args(args: Namespace) -> List[Any]:
+        if args.increment_config:
+            return IncrementConfig.from_config_file(args.increment_config)
+        field_mapping = map(lambda field: getattr(args, field), IncrementConfig._fields)
+        return [IncrementConfig(*field_mapping)]
+
+
 class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
         self.args = args
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
         self.repo_diff = None
+        self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(self) -> Optional[osc.core.Request]:
+    def _find_request_on_obs(
+        self, config: IncrementConfig
+    ) -> Optional[osc.core.Request]:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
             relevant_states.append("accepted")
         if args.request_id is None:
+            build_project = config.build_project()
             log.debug(
                 "Checking for product increment requests to be reviewed by %s on %s",
                 OBS_GROUP,
-                args.obs_project,
+                build_project,
             )
             obs_requests = osc.core.get_request_list(
-                OBS_URL, project=args.obs_project, req_state=relevant_states
+                OBS_URL, project=build_project, req_state=relevant_states
             )
             relevant_request = None
             for request in sorted(obs_requests, reverse=True):
@@ -153,31 +208,23 @@ class IncrementApprover:
         log.info(message)
         return 0
 
-    def _map_product_to_openqa_distri(self, product: str) -> Optional[str]:
-        if product.startswith("SLE"):
-            return "sle"
-        if product.startswith("SL-Micro"):
-            return "sle-micro"
-        return None
-
-    def _determine_build_info(self) -> Set[BuildInfo]:
+    def _determine_build_info(self, config: IncrementConfig) -> Set[BuildInfo]:
         # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
-        args = self.args
-        base_path = args.obs_project.replace(":", ":/")
-        sub_path = args.build_listing_sub_path
+        base_path = config.build_project().replace(":", ":/")
+        sub_path = config.build_listing_sub_path
         url = f"{OBS_DOWNLOAD_URL}/{base_path}/{sub_path}/?jsontable=1"
-        log.debug("Checking for '%s' files on %s", args.build_regex, url)
+        log.debug("Checking for '%s' files on %s", config.build_regex, url)
         rows = requests.get(url).json().get("data", [])
         res = set()
         for row in rows:
             name = row.get("name", "")
             log.debug("Found file: %s", name)
-            m = re.search(args.build_regex, name)
+            m = re.search(config.build_regex, name)
             if m:
                 product = m.group("product")
-                distri = self._map_product_to_openqa_distri(product)
-                if distri is None:
-                    continue  # skip unknown products
+                if not re.search(config.product_regex, product):
+                    continue  # skip if this config doesn't apply to the product
+                distri = config.distri
                 version = m.group("version")
                 arch = m.group("arch")
                 build = m.group("build")
@@ -186,9 +233,9 @@ class IncrementApprover:
                 except IndexError:
                     flavor = default_flavor
                 if (
-                    args.distri in ("any", distri)
-                    and args.flavor in ("any", flavor)
-                    and args.version in ("any", version)
+                    config.distri in ("any", distri)
+                    and config.flavor in ("any", flavor)
+                    and config.version in ("any", version)
                 ):
                     res.add(BuildInfo(distri, product, version, flavor, arch, build))
         return res
@@ -220,7 +267,9 @@ class IncrementApprover:
             )
         return extra_builds
 
-    def _schedule_openqa_jobs(self, build_info: BuildInfo) -> int:
+    def _schedule_openqa_jobs(
+        self, config: IncrementConfig, build_info: BuildInfo
+    ) -> int:
         log.info("Scheduling jobs for %s", build_info)
         base_params = {
             "DISTRI": build_info.distri,
@@ -230,11 +279,12 @@ class IncrementApprover:
             "BUILD": build_info.build,
         }
         builds = [{}]
-        base_repo = self.args.compute_diff_to
-        if base_repo != "none":
+        if config.diff_project_suffix != "none":
+            diff_project = config.diff_project()
             if self.repo_diff is None:
+                log.debug("Comuting diff to project %s", diff_project)
                 self.repo_diff = RepoDiff(self.args).compute_diff(
-                    base_repo, self.args.obs_project
+                    diff_project, config.build_project() + "/product"
                 )[0]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
             builds.extend(
@@ -252,23 +302,31 @@ class IncrementApprover:
                 error_count += 1
         return error_count
 
-    def __call__(self) -> int:
+    def _process_request_for_config(
+        self, request: Optional[osc.core.Request], config: IncrementConfig
+    ) -> int:
         error_count = 0
-        request = self._find_request_on_obs()
         if request is None:
             return error_count
-        for build_info in self._determine_build_info():
+        for build_info in self._determine_build_info(config):
             res = self._request_openqa_job_results(build_info)
             if self.args.reschedule:
-                error_count += self._schedule_openqa_jobs(build_info)
+                error_count += self._schedule_openqa_jobs(config, build_info)
                 continue
             openqa_jobs_ready = self._check_openqa_jobs(res, build_info)
             if openqa_jobs_ready is None and self.args.schedule:
-                error_count += self._schedule_openqa_jobs(build_info)
+                error_count += self._schedule_openqa_jobs(config, build_info)
                 continue
             if not openqa_jobs_ready:
                 continue
             error_count += self._handle_approval(
                 request, *(self._evaluate_openqa_job_results(res))
             )
+        return error_count
+
+    def __call__(self) -> int:
+        error_count = 0
+        for config in self.config:
+            request = self._find_request_on_obs(config)
+            error_count += self._process_request_for_config(request, config)
         return error_count
