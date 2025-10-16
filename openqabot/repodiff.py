@@ -82,7 +82,7 @@ class RepoDiff:
         repo_data = self._load_repodata(project)
         log.debug("Loading packages for %s", project)
         packages_by_arch = defaultdict(set)
-        for package in repo_data.findall(package_tag):
+        for package in repo_data.iterfind(package_tag):
             if package.get("type") != "rpm":
                 continue
             name = package.find(name_tag).text
