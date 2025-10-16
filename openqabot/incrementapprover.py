@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Optional, Set, NamedTuple
 import re
 from logging import getLogger
@@ -132,24 +133,27 @@ class IncrementApprover:
         return relevant_request
 
     def _request_openqa_job_results(
-        self, build_info: BuildInfo
-    ) -> Dict[str, Dict[str, Dict[str, Any]]]:
+        self, build_info: BuildInfo, params: List[Dict[str, str]]
+    ) -> List[Dict[str, Dict[str, Dict[str, Any]]]]:
         log.debug("Checking openQA job results for %s", build_info)
-        params = {
-            "distri": build_info.distri,
-            "version": build_info.version,
-            "flavor": build_info.flavor,
-            "arch": build_info.arch,
-            "build": build_info.build,
-        }
-        res = self.client.get_scheduled_product_stats(params)
+        query_params = map(
+            lambda p: {
+                "distri": p["DISTRI"],
+                "version": p["VERSION"],
+                "flavor": p["FLAVOR"],
+                "arch": p["ARCH"],
+                "build": p["BUILD"],
+            },
+            params,
+        )
+        res = [self.client.get_scheduled_product_stats(p) for p in query_params]
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
     def _check_openqa_jobs(
-        self, res: Dict[str, Dict[str, Dict[str, Any]]], build_info: BuildInfo
+        self, results: List[Dict[str, Dict[str, Dict[str, Any]]]], build_info: BuildInfo
     ) -> Optional[bool]:
-        actual_states = set(res.keys())
+        actual_states = set(next(res.keys() for res in results))
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
@@ -167,22 +171,33 @@ class IncrementApprover:
         return True
 
     def _evaluate_openqa_job_results(
-        self, res: Dict[str, Dict[str, Dict[str, Any]]]
-    ) -> Tuple[int, List[str]]:
-        ok_jobs = 0  # # count ok jobs
-        reasons_to_disapprove = []  # compose list of blocking jobs
-        openqa_url = self.client.url.geturl()
+        self,
+        results: Dict[str, Dict[str, Dict[str, Any]]],
+        not_ok_jobs: Dict[str, Set[str]],
+    ) -> int:
+        ok_jobs = 0
         for state in final_states:
-            for result, info in res.get(state, {}).items():
+            for result, info in results.get(state, {}).items():
                 if result in ok_results:
                     ok_jobs += 1
                 else:
-                    job_list = "\n".join(
-                        map(lambda id: f" - {openqa_url}/tests/{id}", info["job_ids"])
-                    )
-                    reasons_to_disapprove.append(
-                        f"The following openQA jobs ended up with result '{result}':\n{job_list}"
-                    )
+                    not_ok_jobs[result].update(info["job_ids"])
+        return ok_jobs
+
+    def _evaluate_list_of_openqa_job_results(
+        self, list_of_results: List[Dict[str, Dict[str, Dict[str, Any]]]]
+    ) -> Tuple[int, List[str]]:
+        ok_jobs = 0  # count ok jobs
+        not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
+        openqa_url = self.client.url.geturl()
+        for results in list_of_results:
+            ok_jobs += self._evaluate_openqa_job_results(results, not_ok_jobs)
+        reasons_to_disapprove = []  # compose list of blocking jobs
+        for result, job_ids in not_ok_jobs.items():
+            job_list = "\n".join(map(lambda id: f" - {openqa_url}/tests/{id}", job_ids))
+            reasons_to_disapprove.append(
+                f"The following openQA jobs ended up with result '{result}':\n{job_list}"
+            )
         return (ok_jobs, reasons_to_disapprove)
 
     def _handle_approval(
@@ -267,10 +282,9 @@ class IncrementApprover:
             )
         return extra_builds
 
-    def _schedule_openqa_jobs(
+    def _make_scheduling_parameters(
         self, config: IncrementConfig, build_info: BuildInfo
-    ) -> int:
-        log.info("Scheduling jobs for %s", build_info)
+    ) -> List[Dict[str, str]]:
         base_params = {
             "DISTRI": build_info.distri,
             "VERSION": build_info.version,
@@ -278,7 +292,7 @@ class IncrementApprover:
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
         }
-        builds = [{}]
+        extra_params = [{}]
         if config.diff_project_suffix != "none":
             diff_project = config.diff_project()
             if self.repo_diff is None:
@@ -287,17 +301,22 @@ class IncrementApprover:
                     diff_project, config.build_project() + "/product"
                 )[0]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
-            builds.extend(
+            extra_params.extend(
                 self._extra_builds_for_kernel_livepatching(relevant_diff, build_info)
             )
+        return [*map(lambda p: base_params | p, extra_params)]
+
+    def _schedule_openqa_jobs(
+        self, build_info: BuildInfo, params: List[Dict[str, str]]
+    ) -> int:
+        log.info("Scheduling jobs for %s", build_info)
         error_count = 0
-        for build_params in builds:
-            params = base_params | build_params
+        for p in params:
             if self.args.dry:
-                log.info(params)
+                log.info(p)
                 continue
             try:
-                self.client.post_job(params)
+                self.client.post_job(p)
             except PostOpenQAError:
                 error_count += 1
         return error_count
@@ -309,18 +328,19 @@ class IncrementApprover:
         if request is None:
             return error_count
         for build_info in self._determine_build_info(config):
-            res = self._request_openqa_job_results(build_info)
+            params = self._make_scheduling_parameters(config, build_info)
+            res = self._request_openqa_job_results(build_info, params)
             if self.args.reschedule:
-                error_count += self._schedule_openqa_jobs(config, build_info)
+                error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
             openqa_jobs_ready = self._check_openqa_jobs(res, build_info)
             if openqa_jobs_ready is None and self.args.schedule:
-                error_count += self._schedule_openqa_jobs(config, build_info)
+                error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
             if not openqa_jobs_ready:
                 continue
             error_count += self._handle_approval(
-                request, *(self._evaluate_openqa_job_results(res))
+                request, *(self._evaluate_list_of_openqa_job_results(res))
             )
         return error_count
 
