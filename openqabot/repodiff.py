@@ -55,7 +55,7 @@ class RepoDiff:
                 with open(name, "rb") as binary_file:
                     return binary_file.read()
         resp = requests.get(url)
-        if self.args is not None and self.args.dump_data:
+        if self.args is not None and self.args.dump_data and not self.args.fake_data:
             with open(name, "wb") as output_file:
                 output_file.write(resp.content)
         return resp.json() if as_json else resp.content
