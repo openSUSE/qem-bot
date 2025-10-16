@@ -45,6 +45,7 @@ class RepoDiff:
         return None
 
     def _request_and_dump(self, url: str, name: str, as_json: bool = False):
+        log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
             if as_json:
@@ -74,10 +75,12 @@ class RepoDiff:
             if repo_data_file.endswith(".gz")
             else repo_data_raw
         )
+        log.debug("Parsing %s", repo_data_file)
         return ET.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)
+        log.debug("Loading packages for %s", project)
         packages_by_arch = defaultdict(set)
         for package in repo_data.findall(package_tag):
             if package.get("type") != "rpm":
