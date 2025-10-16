@@ -2,7 +2,17 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, NamedTuple
+from typing import (
+    Any,
+    DefaultDict,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    NamedTuple,
+)
 import re
 from logging import getLogger
 import gzip
@@ -18,6 +28,7 @@ package_tag = ns + "package"
 name_tag = ns + "name"
 version_tag = ns + "version"
 arch_tag = ns + "arch"
+primary_re = re.compile(r".*-primary.xml(?:.gz)?$")
 
 
 class Package(NamedTuple):
@@ -36,13 +47,12 @@ class RepoDiff:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Optional[str]:
-        for row in rows:
-            name = row.get("name", "")
-            m = re.search(".*-primary\\.xml(\\.gz)?", name)
-            if m:
-                return name
-        return None
+    def _find_primary_repodata(
+        self, rows: List[Dict[str, Any]]
+    ) -> Iterator[Optional[str]]:
+        return next(
+            (r["name"] for r in rows if primary_re.search(r.get("name", ""))), None
+        )
 
     def _request_and_dump(self, url: str, name: str, as_json: bool = False):
         log.debug("Requesting %s", url)
