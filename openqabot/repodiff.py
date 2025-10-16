@@ -113,8 +113,12 @@ class RepoDiff:
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
             packages_a = packages_by_arch_a[arch]
-            log.debug("Found %i packages for %s in repo a", len(packages_a), arch)
-            log.debug("Found %i packages for %s in repo b", len(packages_b), arch)
+            log.debug(
+                "Found %i packages for %s in repo %s", len(packages_a), arch, repo_a
+            )
+            log.debug(
+                "Found %i packages for %s in repo %s", len(packages_b), arch, repo_b
+            )
             diff = packages_b - packages_a
             count += len(diff)
             diff_by_arch[arch] = diff
@@ -123,6 +127,11 @@ class RepoDiff:
     def __call__(self) -> int:
         args = self.args
         diff, count = self.compute_diff(args.repo_a, args.repo_b)
-        log.debug("Repo b contains %i packages that are not in repo a", count)
+        log.debug(
+            "Repo %s contains %i packages that are not in repo %s",
+            args.repo_b,
+            count,
+            args.repo_a,
+        )
         log.info(diff)
         return len(diff)
