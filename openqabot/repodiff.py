@@ -59,7 +59,7 @@ class RepoDiff:
                 output_file.write(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project) -> Optional[str]:
+    def _load_repodata(self, project: str) -> Optional[str]:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(
             url + "?jsontable=1", f"repodata-listing-{project}.json", True
@@ -76,7 +76,7 @@ class RepoDiff:
         )
         return ET.fromstring(repo_data)
 
-    def _load_packages(self, project) -> DefaultDict[str, Set[Package]]:
+    def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)
         packages_by_arch = defaultdict(set)
         for package in repo_data.findall(package_tag):
