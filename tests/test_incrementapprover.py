@@ -1,5 +1,6 @@
 from collections import namedtuple
 from typing import Any, List
+from pathlib import Path
 from urllib.parse import urlparse
 import logging
 
@@ -13,7 +14,7 @@ import openqabot
 from openqabot.openqa import openQAInterface
 from openqabot import BUILD_REGEX, OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
 from openqabot.loader.gitea import read_json
-from openqabot.incrementapprover import IncrementApprover
+from openqabot.incrementapprover import IncrementApprover, IncrementConfig
 
 # Fake Namespace for IncrementApprover initialization
 _namespace = namedtuple(
@@ -247,3 +248,25 @@ def test_approval_if_there_are_only_ok_openqa_jobs(
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
+
+
+def test_config_parsing(caplog):
+    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    configs = [*IncrementConfig.from_config_file(path)]
+    assert configs[0].distri == "foo"
+    assert configs[0].version == "any"
+    assert configs[0].flavor == "any"
+    assert configs[0].project_base == "FOO"
+    assert configs[0].build_project_suffix == "TEST"
+    assert configs[0].diff_project_suffix == "PUBLISH/product"
+    assert configs[0].build_listing_sub_path == "product"
+    assert configs[0].build_regex == "some.*regex"
+    assert configs[0].product_regex == "^Foo.*"
+    assert configs[0].build_project() == "FOO:TEST"
+    assert configs[0].diff_project() == "FOO:PUBLISH/product"
+    assert configs[1].distri == "bar"
+    assert configs[1].version == "42"
+    assert configs[1].flavor == "Test-Increments"
+    assert configs[1].project_base == ""
+    assert configs[1].build_project() == "ToTest"
+    assert configs[1].diff_project() == "none"

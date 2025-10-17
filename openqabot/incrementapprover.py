@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Optional, Set, NamedTuple
 import re
 from logging import getLogger
+from pathlib import Path
 from pprint import pformat
 
 from ruamel.yaml import YAML  # type: ignore
@@ -72,7 +73,7 @@ class IncrementConfig(NamedTuple):
         )
 
     @staticmethod
-    def from_config_file(file_path: str) -> List[Any]:
+    def from_config_file(file_path: Path) -> List[Any]:
         return map(
             IncrementConfig.from_config_entry,
             YAML(typ="safe").load(file_path)["increment_definitions"],
