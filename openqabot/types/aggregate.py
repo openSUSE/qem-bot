@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import date
 from itertools import chain
 from logging import getLogger
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from . import ProdVer, Repos
 from .. import DOWNLOAD_BASE, QEM_DASHBOARD, SMELT_URL
@@ -23,7 +23,7 @@ class Aggregate(BaseConf):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[str],
+        product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
         settings,
         config,

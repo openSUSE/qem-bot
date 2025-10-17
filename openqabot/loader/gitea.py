@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
-from typing import Any, List, Set, Dict, Tuple, Optional
+from typing import Any, List, Set, Dict, Tuple, Optional, Union
 import re
 import xml.etree.ElementTree as ET
 
@@ -108,20 +108,28 @@ def compute_repo_url(
 
 
 def compute_repo_url_for_job_setting(
-    base: str, repo: Repos, product_repo: Optional[str], product_version: Optional[str]
+    base: str,
+    repo: Repos,
+    product_repo: Optional[Union[List[str], str]],
+    product_version: Optional[str],
 ) -> str:
-    product_name = (
+    product_names = (
         get_product_name(repo.version) if product_repo is None else product_repo
     )
     product_version = (
         repo.product_version if product_version is None else product_version
     )
-    return compute_repo_url(
-        base,
-        product_name,
-        (repo.product, repo.version, product_version),
-        repo.arch,
-        "",
+    return ",".join(
+        map(
+            lambda p: compute_repo_url(
+                base,
+                p,
+                (repo.product, repo.version, product_version),
+                repo.arch,
+                "",
+            ),
+            product_names if isinstance(product_names, list) else [product_names],
+        )
     )
 
 

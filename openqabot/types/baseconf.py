@@ -1,7 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from abc import ABCMeta, abstractmethod, abstractstaticmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from .incident import Incident
 
@@ -10,7 +10,7 @@ class BaseConf(metaclass=ABCMeta):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[str],
+        product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
         settings,
         config,  # pylint: disable=unused-argument

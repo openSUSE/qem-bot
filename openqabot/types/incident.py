@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union
 
 from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
@@ -89,7 +89,9 @@ class Incident:
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     def compute_revisions_for_product_repo(
-        self, product_repo: Optional[str], product_version: Optional[str]
+        self,
+        product_repo: Optional[Union[List[str], str]],
+        product_version: Optional[str],
     ):
         self.revisions = self._rev(
             self.arch_filter, self.channels, self.project, product_repo, product_version
@@ -114,7 +116,7 @@ class Incident:
         arch_filter: Optional[List[str]],
         channels: List[Repos],
         project: str,
-        product_repo: Optional[str],
+        product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
     ) -> Dict[ArchVer, int]:
         rev: Dict[ArchVer, int] = {}
@@ -138,8 +140,15 @@ class Incident:
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
+                last_product_repo = (
+                    product_repo[-1] if isinstance(product_repo, list) else product_repo
+                )
                 max_rev = get_max_revision(
-                    lrepos, archver.arch, project, product_repo, product_version
+                    lrepos,
+                    archver.arch,
+                    project,
+                    last_product_repo,
+                    product_version,
                 )
                 if max_rev > 0:
                     rev[archver] = max_rev
