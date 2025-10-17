@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import logging
 from copy import deepcopy
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 from pathlib import Path
 
 from requests import Session
@@ -77,6 +77,13 @@ def compare_incident_data(inc: Data, message) -> bool:
         if key in message and getattr(inc, key.lower()) != message[key]:
             return False
     return True
+
+
+def merge_dicts(dict1: Dict[Any, Any], dict2: Dict[Any, Any]) -> Dict[Any, Any]:
+    # return `dict1 | dict2` supporting Python < 3.9 which does not yet support this operator
+    copy = dict1.copy()
+    copy.update(dict2)
+    return copy
 
 
 def __retry(retries: Optional[int], backoff_factor: float) -> Session:

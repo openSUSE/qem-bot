@@ -17,7 +17,7 @@ from openqabot.openqa import openQAInterface
 
 from .errors import PostOpenQAError
 from .repodiff import Package, RepoDiff
-from .utils import retry10 as requests
+from .utils import retry10 as requests, merge_dicts
 from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
 
 log = getLogger("bot.increment_approver")
@@ -305,7 +305,7 @@ class IncrementApprover:
             extra_params.extend(
                 self._extra_builds_for_kernel_livepatching(relevant_diff, build_info)
             )
-        return [*map(lambda p: base_params | p, extra_params)]
+        return [*map(lambda p: merge_dicts(base_params, p), extra_params)]
 
     def _schedule_openqa_jobs(
         self, build_info: BuildInfo, params: List[Dict[str, str]]
