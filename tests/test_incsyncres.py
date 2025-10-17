@@ -55,7 +55,7 @@ def test_clone_dry(get_a_i, caplog):
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url="http://instance.qa/api/v1/jobs?scope=relevant&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
         json=data,
     )
 
@@ -113,7 +113,7 @@ def test_nogroup_dry(get_a_i, caplog):
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url="http://instance.qa/api/v1/jobs?scope=relevant&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
         json=data,
     )
 
@@ -171,7 +171,7 @@ def test_devel_fast_dry(get_a_i, caplog):
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url="http://instance.qa/api/v1/jobs?scope=relevant&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
         json=data,
     )
 
@@ -230,7 +230,7 @@ def test_devel_dry(get_a_i, caplog):
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url="http://instance.qa/api/v1/jobs?scope=relevant&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
         json=data,
     )
 
@@ -295,7 +295,7 @@ def test_passed_dry(get_a_i, caplog):
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url="http://instance.qa/api/v1/jobs?scope=relevant&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
         json=data,
     )
 
