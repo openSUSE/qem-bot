@@ -12,6 +12,7 @@ import pytest
 import responses
 
 from openqabot import QEM_DASHBOARD, OBS_URL
+from openqabot.types import Repos
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     read_utf8,
@@ -20,6 +21,7 @@ from openqabot.loader.gitea import (
     review_pr,
     get_product_name,
     get_product_name_and_version_from_scmsync,
+    compute_repo_url_for_job_setting,
 )
 import openqabot.loader.gitea
 
@@ -203,3 +205,15 @@ def test_extracting_product_name_and_version():
 @responses.activate
 def test_reviewing_pr(fake_gitea_api_post_review_comment):
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345")
+
+
+def test_computing_repo_url():
+    repos = Repos("product", "1.2", "x86_64")
+
+    url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")
+    expected_url = "base/product:/1.2/product/repo/Foo-16.0-x86_64/"
+    assert url == expected_url
+
+    url = compute_repo_url_for_job_setting("base", repos, ["Foo", "Foo-Bar"], "16.0")
+    expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
+    assert url == expected_url

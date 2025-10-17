@@ -23,7 +23,7 @@ class Incidents(BaseConf):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[str],
+        product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
         settings,
         config,
