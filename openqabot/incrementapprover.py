@@ -350,4 +350,5 @@ class IncrementApprover:
         for config in self.config:
             request = self._find_request_on_obs(config)
             error_count += self._process_request_for_config(request, config)
+            self.repo_diff = None
         return error_count
