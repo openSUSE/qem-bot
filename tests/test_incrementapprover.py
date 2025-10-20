@@ -2,6 +2,7 @@ from collections import namedtuple
 from typing import Any, List
 from pathlib import Path
 from urllib.parse import urlparse
+import os
 import logging
 
 from responses import GET, matchers
@@ -110,9 +111,14 @@ def fake_change_review_state(
 
 
 def run_approver(
-    caplog, monkeypatch, schedule: bool = False, diff_project_suffix: str = "none"
+    caplog,
+    monkeypatch,
+    schedule: bool = False,
+    diff_project_suffix: str = "none",
+    test_env_var: str = "",
 ):
     jobs = []
+    os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
     monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
@@ -163,7 +169,10 @@ def test_skipping_with_no_openqa_jobs(
 def test_scheduling_with_no_openqa_jobs(
     caplog, fake_no_jobs, fake_product_repo, monkeypatch
 ):
-    (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True)
+    ci_job_url = "https://some/ci/job/url"
+    (errors, jobs) = run_approver(
+        caplog, monkeypatch, schedule=True, test_env_var=ci_job_url
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -177,6 +186,7 @@ def test_scheduling_with_no_openqa_jobs(
             "FLAVOR": "Online-Increments",
             "BUILD": "139.1",
             "ARCH": arch,
+            "__CI_JOB_URL": ci_job_url,
         } in jobs, f"{arch} jobs created"
 
 

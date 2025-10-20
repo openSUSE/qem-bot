@@ -4,6 +4,7 @@ from argparse import Namespace
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Optional, Set, NamedTuple
 import re
+import os
 from logging import getLogger
 from pathlib import Path
 from pprint import pformat
@@ -283,6 +284,12 @@ class IncrementApprover:
             )
         return extra_builds
 
+    @staticmethod
+    def _populate_params_from_env(params: Dict[str, str], env_var: str):
+        value = os.environ.get(env_var, "")
+        if len(value) > 0:
+            params["__" + env_var] = value
+
     def _make_scheduling_parameters(
         self, config: IncrementConfig, build_info: BuildInfo
     ) -> List[Dict[str, str]]:
@@ -293,6 +300,7 @@ class IncrementApprover:
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
         }
+        IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         extra_params = [{}]
         if config.diff_project_suffix != "none":
             diff_project = config.diff_project()
