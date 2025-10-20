@@ -59,6 +59,10 @@ class IncrementConfig(NamedTuple):
     def diff_project(self) -> str:
         return self._concat_project(self.diff_project_suffix)
 
+    def build_project_url(self) -> str:
+        base_path = self.build_project().replace(":", ":/")
+        return f"{OBS_DOWNLOAD_URL}/{base_path}"
+
     @staticmethod
     def from_config_entry(entry: Dict[str, str]) -> Any:
         return IncrementConfig(
@@ -227,9 +231,9 @@ class IncrementApprover:
 
     def _determine_build_info(self, config: IncrementConfig) -> Set[BuildInfo]:
         # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
-        base_path = config.build_project().replace(":", ":/")
+        build_project_url = config.build_project_url()
         sub_path = config.build_listing_sub_path
-        url = f"{OBS_DOWNLOAD_URL}/{base_path}/{sub_path}/?jsontable=1"
+        url = f"{build_project_url}/{sub_path}/?jsontable=1"
         log.debug("Checking for '%s' files on %s", config.build_regex, url)
         rows = requests.get(url).json().get("data", [])
         res = set()
@@ -293,12 +297,14 @@ class IncrementApprover:
     def _make_scheduling_parameters(
         self, config: IncrementConfig, build_info: BuildInfo
     ) -> List[Dict[str, str]]:
+        repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
             "VERSION": build_info.version,
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
+            "INCIDENT_REPO": config.build_project_url() + repo_sub_path,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         extra_params = [{}]
@@ -307,7 +313,7 @@ class IncrementApprover:
             if self.repo_diff is None:
                 log.debug("Comuting diff to project %s", diff_project)
                 self.repo_diff = RepoDiff(self.args).compute_diff(
-                    diff_project, config.build_project() + "/product"
+                    diff_project, config.build_project() + repo_sub_path
                 )[0]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
             extra_params.extend(

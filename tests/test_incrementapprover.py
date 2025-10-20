@@ -186,6 +186,7 @@ def test_scheduling_with_no_openqa_jobs(
             "FLAVOR": "Online-Increments",
             "BUILD": "139.1",
             "ARCH": arch,
+            "INCIDENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
             "__CI_JOB_URL": ci_job_url,
         } in jobs, f"{arch} jobs created"
 
@@ -203,19 +204,17 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
         in messages
     )
     assert errors == 0, "no errors"
-    for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
-        assert {
-            "DISTRI": "sle",
-            "VERSION": "16.0",
-            "FLAVOR": "Online-Increments",
-            "BUILD": "139.1",
-            "ARCH": arch,
-        } in jobs, f"regular {arch} jobs created"
-
-    expected_livepatch_params = {
+    base_params = {
         "DISTRI": "sle",
         "VERSION": "16.0",
         "FLAVOR": "Online-Increments",
+        "BUILD": "139.1",
+        "INCIDENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
+    }
+    for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
+        assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
+
+    expected_livepatch_params = base_params | {
         "BUILD": "139.1-kernel-livepatch-6.12.0-160000.5",
         "KERNEL_VERSION": "6.12.0-160000.5",
         "KGRAFT": "1",
