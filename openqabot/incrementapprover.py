@@ -83,7 +83,7 @@ class IncrementConfig(NamedTuple):
     def from_config_file(file_path: Path) -> Iterator[Any]:
         return map(
             IncrementConfig.from_config_entry,
-            YAML(typ="safe").load(file_path)["increment_definitions"],
+            YAML(typ="safe").load(file_path)["product_increments"],
         )
 
     @staticmethod

@@ -141,7 +141,7 @@ details. Alternatively, a config file can be specified via
 file can contain one or more increment definitions, e.g.:
 
 ```
-increment_definitions:
+product_increments:
 - distri: opensuse
   project_base: openSUSE:Factory
   build_project_suffix: ToTest

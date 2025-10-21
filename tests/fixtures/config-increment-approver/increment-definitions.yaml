@@ -1,4 +1,4 @@
-increment_definitions:
+product_increments:
 - distri: foo
   project_base: FOO
   build_project_suffix: TEST
