@@ -266,8 +266,8 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog, fake_ok_jobs, fake_pr
 
 
 def test_config_parsing(caplog):
-    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = [*IncrementConfig.from_config_file(path)]
+    path = Path("tests/fixtures/config-increment-approver")
+    configs = [*IncrementConfig.from_config_path(path)]
     assert configs[0].distri == "foo"
     assert configs[0].version == "any"
     assert configs[0].flavor == "any"
@@ -287,3 +287,11 @@ def test_config_parsing(caplog):
     assert configs[1].project_base == ""
     assert configs[1].build_project() == "ToTest"
     assert configs[1].diff_project() == "none"
+
+    path = Path("tests/fixtures/config")
+    caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
+    configs = IncrementConfig.from_config_path(path)
+    assert [*configs] == []
+    messages = [x[-1][0:52] for x in caplog.record_tuples]
+    assert "Unable to load config file 'tests/fixtures/config/01" in messages
+    assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages

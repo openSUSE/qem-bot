@@ -136,7 +136,7 @@ All optional keys can be omitted. By default qem-bot schedules Incidents for any
 The `increment-approve` command uses a different configuration format than
 described above. The `increment-approve` can be run with its configuration
 specified in form of CLI arguments, see `qem-bot increment-approve -h` for
-details. Alternatively, a config file can be specified via
+details. Alternatively, a config file (or directory) can be specified via
 `qem-bot increment-approve --increment-config /path/to/config.yaml`. This config
 file can contain one or more increment definitions, e.g.:
 

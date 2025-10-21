@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from collections import defaultdict
+from itertools import chain
 from typing import Any, Dict, List, Tuple, Iterator, Optional, Set, NamedTuple
 import re
 import os
@@ -18,7 +19,7 @@ from openqabot.openqa import openQAInterface
 
 from .errors import PostOpenQAError
 from .repodiff import Package, RepoDiff
-from .utils import retry10 as requests, merge_dicts
+from .utils import retry10 as requests, get_yml_list, merge_dicts
 from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
 
 log = getLogger("bot.increment_approver")
@@ -87,15 +88,24 @@ class IncrementConfig(NamedTuple):
 
     @staticmethod
     def from_config_file(file_path: Path) -> Iterator[Any]:
-        return map(
-            IncrementConfig.from_config_entry,
-            YAML(typ="safe").load(file_path)["product_increments"],
-        )
+        try:
+            log.info("Reading config file '%s'", file_path)
+            return map(
+                IncrementConfig.from_config_entry,
+                YAML(typ="safe").load(file_path).get("product_increments", []),
+            )
+        except Exception as e:
+            log.info("Unable to load config file '%s': %s", file_path, e)
+            return iter(())
+
+    @staticmethod
+    def from_config_path(file_or_dir_path: Path) -> Iterator[Any]:
+        return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
 
     @staticmethod
     def from_args(args: Namespace) -> List[Any]:
         if args.increment_config:
-            return IncrementConfig.from_config_file(args.increment_config)
+            return IncrementConfig.from_config_path(args.increment_config)
         field_mapping = map(lambda field: getattr(args, field), IncrementConfig._fields)
         return [IncrementConfig(*field_mapping)]
 
