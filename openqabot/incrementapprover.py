@@ -51,6 +51,7 @@ class IncrementConfig(NamedTuple):
     product_regex: str
     packages: List[str] = []
     archs: Set[str] = []
+    settings: Dict[str, str] = {}
     additional_builds: List[Dict[str, str]] = []
 
     def _concat_project(self, project: str) -> str:
@@ -80,6 +81,7 @@ class IncrementConfig(NamedTuple):
             product_regex=entry["product_regex"],
             packages=entry.get("packages", []),
             archs=set(entry.get("archs", [])),
+            settings=entry.get("settings", {}),
             additional_builds=entry.get("additional_builds", []),
         )
 
@@ -257,12 +259,12 @@ class IncrementApprover:
     def _extra_builds_for_package(
         self, package: Package, config: IncrementConfig, build_info: BuildInfo
     ) -> Optional[Dict[str, str]]:
-        for additional_flavor in config.additional_builds:
-            m = re.search(additional_flavor["regex"], package.name)
+        for additional_build in config.additional_builds:
+            m = re.search(additional_build["regex"], package.name)
             if not m:
                 continue
-            extra_build = [build_info.build, additional_flavor["build_suffix"]]
-            extra_params = {"FLAVOR": additional_flavor["flavor"]}
+            extra_build = [build_info.build, additional_build["build_suffix"]]
+            extra_params = {}
             try:
                 kind = m.group("kind")
                 if kind != "default":
@@ -273,10 +275,10 @@ class IncrementApprover:
                 kernel_version = m.group("kernel_version").replace("_", ".")
                 extra_build.append(kernel_version)
                 extra_params["KERNEL_VERSION"] = kernel_version
-                extra_params["KGRAFT"] = "1"
             except IndexError:
                 pass
             extra_params["BUILD"] = "-".join(extra_build)
+            extra_params.update(additional_build["settings"])
             return extra_params
         return None
 
@@ -318,6 +320,7 @@ class IncrementApprover:
             "INCIDENT_REPO": config.build_project_url() + repo_sub_path,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
+        base_params.update(config.settings)
         extra_params = []
         if config.diff_project_suffix != "none":
             diff_project = config.diff_project()
@@ -328,7 +331,9 @@ class IncrementApprover:
                 ]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
             # schedule base params if package filter is empty for matching
-            if len(config.packages) == 0 or IncrementApprover._contains_any_of_the_packages(
+            if len(
+                config.packages
+            ) == 0 or IncrementApprover._contains_any_of_the_packages(
                 relevant_diff, config.packages
             ):
                 extra_params.append({})

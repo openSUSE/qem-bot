@@ -40,6 +40,7 @@ _namespace = namedtuple(
         "increment_config",
         "packages",
         "archs",
+        "settings",
         "additional_builds",
     ),
 )
@@ -148,6 +149,7 @@ def run_approver(
         None,
         [] if config is None else config.packages,
         set() if config is None else config.archs,
+        dict() if config is None else config.settings,
         [] if config is None else config.additional_builds,
     )
     increment_approver = IncrementApprover(args)
@@ -210,6 +212,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
         "FLAVOR": "Online-Increments",
         "BUILD": "139.1",
         "INCIDENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
+        "FOO": "bar",
     }
     for arch in ["x86_64", "aarch64", "ppc64le"]:
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"

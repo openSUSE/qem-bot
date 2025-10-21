@@ -13,13 +13,19 @@ product_increments:
   packages:
   - kernel-source
   - kernel-azure
+  settings:
+    FOO: bar
   additional_builds:
-  - flavor: Base-RT-Updates
-    build_suffix: kernel-livepatch
+  - build_suffix: kernel-livepatch
     regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>rt)'
-  - flavor: Default-qcow-Updates
-    build_suffix: kernel-livepatch
+    settings:
+      FLAVOR: Base-RT-Updates
+      KGRAFT: '1'
+  - build_suffix: kernel-livepatch
     regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>.*)'
+    settings:
+      FLAVOR: Default-qcow-Updates
+      KGRAFT: '1'
 - distri: bar
   version: '42'
   flavor: 'Test-Increments'
