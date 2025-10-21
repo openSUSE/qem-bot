@@ -48,12 +48,11 @@ class Commenter:
             state = "none"
             if any(j["status"] in ["running"] for j in i_jobs + u_jobs):
                 log.info("%s needs to wait a bit longer", inc)
+            elif any(j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs):
+                log.info("There is a failed job for %s", inc)
+                state = "failed"
             else:
-                if any(j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs):
-                    log.info("There is a failed job for %s", inc)
-                    state = "failed"
-                else:
-                    state = "passed"
+                state = "passed"
 
             msg = self.summarize_message(i_jobs + u_jobs)
             self.osc_comment(inc, msg, state)
@@ -96,11 +95,10 @@ class Commenter:
 
         if comment is None:
             log.debug("No comment to replace found")
+        elif not self.dry:
+            self.commentapi.delete(comment["id"])
         else:
-            if not self.dry:
-                self.commentapi.delete(comment["id"])
-            else:
-                log.info("Would delete comment %s", comment["id"])
+            log.info("Would delete comment %s", comment["id"])
 
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
@@ -169,7 +167,7 @@ class Commenter:
 
     def __summarize_one_openqa_job(self, job) -> Optional[str]:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
-        if not job["status"] in ["passed", "failed", "softfailed"]:
+        if job["status"] not in ["passed", "failed", "softfailed"]:
             rstring = job["status"]
             if rstring == "none":
                 return None
