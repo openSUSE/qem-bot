@@ -308,9 +308,9 @@ class IncrementApprover:
             params["__" + env_var] = value
 
     @staticmethod
-    def _contains_any_of_the_packages(
-        package_diff: Set[Package], packages_to_find: List[str]
-    ) -> bool:
+    def _match_packages(package_diff: Set[Package], packages_to_find: List[str]) -> bool:
+        if len(packages_to_find) == 0:
+            return True
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
@@ -338,11 +338,7 @@ class IncrementApprover:
                 ]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
             # schedule base params if package filter is empty for matching
-            if len(
-                config.packages
-            ) == 0 or IncrementApprover._contains_any_of_the_packages(
-                relevant_diff, config.packages
-            ):
+            if IncrementApprover._match_packages(relevant_diff, config.packages):
                 extra_params.append({})
             # schedule additional builds based on changed packages
             extra_params.extend(
