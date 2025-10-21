@@ -25,9 +25,7 @@ def test_apply_pc_tools_image(monkeypatch):
 
 
 def test_apply_publiccloud_pint_image(monkeypatch):
-    monkeypatch.setattr(
-        openqabot.pc_helper, "pint_query", lambda *args, **kwargs: {"images": []}
-    )
+    monkeypatch.setattr(openqabot.pc_helper, "pint_query", lambda *args, **kwargs: {"images": []})
     monkeypatch.setattr(
         openqabot.pc_helper,
         "get_recent_pint_image",
@@ -69,9 +67,7 @@ def test_apply_publiccloud_pint_image(monkeypatch):
     assert "PUBLIC_CLOUD_PINT_REGION" not in settings
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
 
-    monkeypatch.setattr(
-        openqabot.pc_helper, "get_recent_pint_image", lambda *args, **kwargs: None
-    )
+    monkeypatch.setattr(openqabot.pc_helper, "get_recent_pint_image", lambda *args, **kwargs: None)
     settings = {
         "PUBLIC_CLOUD_PINT_QUERY": "test",
         "PUBLIC_CLOUD_PINT_NAME": "test",

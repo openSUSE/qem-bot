@@ -53,10 +53,7 @@ class SMELTSync:
 
     @staticmethod
     def _is_accepted(rr_number) -> bool:
-        return (
-            rr_number["status"]["name"] == "accepted"
-            or rr_number["status"]["name"] == "new"
-        )
+        return rr_number["status"]["name"] == "accepted" or rr_number["status"]["name"] == "new"
 
     @staticmethod
     def _has_qam_review(rr_number) -> bool:

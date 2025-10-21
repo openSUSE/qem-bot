@@ -27,12 +27,8 @@ class SyncRes:
     def normalize_data(cls, data: Data, job):
         ret = {}
         ret["job_id"] = job["id"]
-        ret["incident_settings"] = (
-            data.settings_id if cls.operation == "incident" else None
-        )
-        ret["update_settings"] = (
-            data.settings_id if cls.operation == "aggregate" else None
-        )
+        ret["incident_settings"] = data.settings_id if cls.operation == "incident" else None
+        ret["update_settings"] = data.settings_id if cls.operation == "aggregate" else None
         ret["name"] = job["name"]
         ret["distri"] = data.distri
         ret["group_id"] = job["group_id"]
@@ -47,9 +43,7 @@ class SyncRes:
 
     def _is_in_devel_group(self, data: Data) -> bool:
         return not ALLOW_DEVELOPMENT_GROUPS and (
-            "Devel" in data["group"]
-            or "Test" in data["group"]
-            or self.client.is_devel_group(data["group_id"])
+            "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
         )
 
     def filter_jobs(self, data) -> bool:
@@ -62,9 +56,7 @@ class SyncRes:
             return False
 
         if self._is_in_devel_group(data):
-            log.info(
-                "Ignoring job '%s' in development group '%s'", data["id"], data["group"]
-            )
+            log.info("Ignoring job '%s' in development group '%s'", data["id"], data["group"])
             return False
 
         return True

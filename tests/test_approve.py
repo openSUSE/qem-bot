@@ -216,9 +216,7 @@ def fake_qem(monkeypatch, request):
         }
         return results.get(inc, None)
 
-    monkeypatch.setattr(
-        openqabot.approver, "get_single_incident", f_inc_single_approver
-    )
+    monkeypatch.setattr(openqabot.approver, "get_single_incident", f_inc_single_approver)
     monkeypatch.setattr(openqabot.approver, "get_incidents_approver", f_inc_approver)
     monkeypatch.setattr(openqabot.approver, "get_incident_settings", f_inc_settins)
     monkeypatch.setattr(openqabot.approver, "get_aggregate_settings", f_aggr_settings)
@@ -247,10 +245,7 @@ def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
     approver()
     assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "SUSE:Maintenance:4:400 has at least one failed job in incident tests"
-        in messages
-    )
+    assert "SUSE:Maintenance:4:400 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:4:400" not in messages
@@ -299,14 +294,8 @@ def test_single_incident(fake_qem, caplog):
     approver(incident=1)
     assert len(caplog.records) >= 1, "we rely on log messages"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
-        in messages
-    )
-    assert (
-        "Found failed, not-ignored job http://instance.qa/t100001 for incident 1"
-        in messages
-    )
+    assert "SUSE:Maintenance:1:100 has at least one failed job in incident tests" in messages
+    assert "Found failed, not-ignored job http://instance.qa/t100001 for incident 1" in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:1:100" not in messages
@@ -315,10 +304,7 @@ def test_single_incident(fake_qem, caplog):
     approver(incident=4)
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "SUSE:Maintenance:4:400 has at least one failed job in incident tests"
-        not in messages
-    )
+    assert "SUSE:Maintenance:4:400 has at least one failed job in incident tests" not in messages
     assert "Incidents to approve:" in messages
     assert "End of bot run" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -388,8 +374,7 @@ def test_403_response(
     assert Approver(args)() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
-        "Received 'Not allowed'. Request 100 likely already approved, ignoring"
-        in messages
+        "Received 'Not allowed'. Request 100 likely already approved, ignoring" in messages
     ), "Expected handling of 403 responses logged"
 
 
@@ -405,8 +390,7 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
-        "Received 'Not Found'. Request 100 removed or problem on OBS side: review state"
-        in messages
+        "Received 'Not Found'. Request 100 removed or problem on OBS side: review state" in messages
     ), "Expected handling of 404 responses logged"
 
 
@@ -422,16 +406,13 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
     assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
-        "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side"
-        in messages
+        "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side" in messages
     ), "Expected handling of 500 responses logged"
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_osc_unknown_exception(
-    fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch
-):
+def test_osc_unknown_exception(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*args, **kwds):
@@ -509,14 +490,8 @@ def test_one_incident_failed(
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "SUSE:Maintenance:1:100 has at least one failed job in incident tests"
-        in messages
-    )
-    assert (
-        "Found failed, not-ignored job http://instance.qa/t100001 for incident 1"
-        in messages
-    )
+    assert "SUSE:Maintenance:1:100 has at least one failed job in incident tests" in messages
+    assert "Found failed, not-ignored job http://instance.qa/t100001 for incident 1" in messages
     assert "* SUSE:Maintenance:2:200" in messages
     assert "* SUSE:Maintenance:3:300" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -548,14 +523,8 @@ def test_one_aggr_failed(
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests"
-        in messages
-    )
-    assert (
-        "Found failed, not-ignored job http://instance.qa/t100001 for incident 2"
-        in messages
-    )
+    assert "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests" in messages
+    assert "Found failed, not-ignored job http://instance.qa/t100001 for incident 2" in messages
     assert "* SUSE:Maintenance:1:100" in messages
     assert "* SUSE:Maintenance:3:300" in messages
     assert "* SUSE:Maintenance:4:400" in messages
@@ -581,20 +550,13 @@ def test_approval_unblocked_via_openqa_comment(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "* SUSE:Maintenance:2:200" in messages
-    ), "incident approved as all failures are considered acceptable"
-    assert (
-        len(fake_dashboard_remarks_api[0].calls) == 0
-    ), "passing job not marked as acceptable"
+    assert "* SUSE:Maintenance:2:200" in messages, "incident approved as all failures are considered acceptable"
+    assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
     for index in range(1, 4):
         assert (
             fake_dashboard_remarks_api[index].calls[0] in responses.calls
         ), f"failing job with comment marked as acceptable ({index})"
-    assert (
-        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
-        in messages
-    )
+    assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in messages
 
 
 @responses.activate
@@ -621,28 +583,16 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "* SUSE:Maintenance:2:200" not in messages
-    ), "incident not approved due to one unacceptable failure"
-    assert (
-        len(fake_dashboard_remarks_api[0].calls) == 0
-    ), "passing job not marked as acceptable"
-    assert (
-        fake_dashboard_remarks_api[1].calls[0] in responses.calls
-    ), "failing job with comment marked as acceptable"
-    assert (
-        len(fake_dashboard_remarks_api[2].calls) == 0
-    ), "failing job without comment not marked as acceptable"
+    assert "* SUSE:Maintenance:2:200" not in messages, "incident not approved due to one unacceptable failure"
+    assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
+    assert fake_dashboard_remarks_api[1].calls[0] in responses.calls, "failing job with comment marked as acceptable"
+    assert len(fake_dashboard_remarks_api[2].calls) == 0, "failing job without comment not marked as acceptable"
     assert (
         fake_dashboard_remarks_api[3].calls[0] in responses.calls
     ), "another failing job with comment marked as acceptable despite previous unacceptable failure"
+    assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in messages
     assert (
-        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
-        in messages
-    )
-    assert (
-        "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment"
-        not in messages
+        "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment" not in messages
     ), "log message only present for jobs before unacceptable failure"
 
 
@@ -668,9 +618,7 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-@pytest.mark.parametrize(
-    "fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True
-)
+@pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
 def test_approval_unblocked_via_openqa_older_ok_job(
     fake_qem,
     fake_responses_for_unblocking_incidents_via_older_ok_result,
@@ -689,9 +637,7 @@ def test_approval_unblocked_via_openqa_older_ok_job(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-@pytest.mark.parametrize(
-    "fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True
-)
+@pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
 def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard(
     fake_qem,
     fake_responses_for_unblocking_incidents_via_older_ok_result,
@@ -764,10 +710,7 @@ def test_approval_unblocked_with_various_comment_formats(
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "* SUSE:Maintenance:2:200" in messages
-    assert (
-        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment"
-        in messages
-    )
+    assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in messages
     responses.assert_call_count(
         f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
         1,

@@ -61,9 +61,7 @@ def test_post_job_failed(caplog):
         client.post_job({"foo": "bar"})
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
-    )
+    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
 
 
 @responses.activate
@@ -73,14 +71,9 @@ def test_post_job_passed(caplog, fake_osd_rsp):
     client.post_job({"foo": "bar"})
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
-    )
+    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
     assert len(responses.calls) == 1
-    assert (
-        responses.calls[0].response.headers["User-Agent"]
-        == "python-OpenQA_Client/qem-bot/1.0.0"
-    )
+    assert responses.calls[0].response.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
     assert responses.calls[0].response.json() == {"bar": "foo"}
 
 

@@ -27,9 +27,7 @@ def fake_smelt_api(request):
                             "node": {
                                 "emu": False,
                                 "project": "SUSE:Maintenance:100",
-                                "repositories": {
-                                    "edges": [{"node": {"name": "SUSE:SLE-15:Update"}}]
-                                },
+                                "repositories": {"edges": [{"node": {"name": "SUSE:SLE-15:Update"}}]},
                                 "requestSet": {
                                     "edges": [
                                         {
@@ -40,16 +38,8 @@ def fake_smelt_api(request):
                                                     "edges": [
                                                         {
                                                             "node": {
-                                                                "assignedByGroup": {
-                                                                    "name": request.param[
-                                                                        0
-                                                                    ]
-                                                                },
-                                                                "status": {
-                                                                    "name": request.param[
-                                                                        1
-                                                                    ]
-                                                                },
+                                                                "assignedByGroup": {"name": request.param[0]},
+                                                                "status": {"name": request.param[1]},
                                                             }
                                                         },
                                                     ]
@@ -117,12 +107,8 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
-@pytest.mark.parametrize(
-    "fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True
-)
-def test_no_embragoed_and_priority_value(
-    fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback
-):
+@pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
+def test_no_embragoed_and_priority_value(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(False, "123", False))() == 0
     assert len(responses.calls) == 2

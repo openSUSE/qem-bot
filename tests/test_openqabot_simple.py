@@ -61,9 +61,7 @@ def mock_runtime(monkeypatch):
             pass
 
         def __call__(self, *args, **kwargs):
-            return [
-                {"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}
-            ]
+            return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
     def f_load_metadata(*args, **kwds):
         return [FakeWorker()]
@@ -150,10 +148,7 @@ def test_passed_non_osd(mock_runtime, mock_openqa_passed, caplog):
     assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert (
-        "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard"
-        in messages
-    )
+    assert "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard" in messages
 
 
 @responses.activate

@@ -44,9 +44,7 @@ def main():
                 if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
                     apply_pc_tools_image(settings)
                     if "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" not in settings:
-                        log.error(
-                            "Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from %s", data
-                        )
+                        log.error("Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from %s", data)
                 if "PUBLIC_CLOUD_PINT_QUERY" in settings:
                     apply_publiccloud_pint_image(settings)
                     if "PUBLIC_CLOUD_IMAGE_ID" not in settings:

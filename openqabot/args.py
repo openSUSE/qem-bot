@@ -100,9 +100,7 @@ def do_amqp(args):
 
 
 def get_parser():
-    parser = ArgumentParser(
-        description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot"
-    )
+    parser = ArgumentParser(description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot")
 
     parser.add_argument(
         "-c",
@@ -112,9 +110,7 @@ def get_parser():
         help="Directory or single file with openqabot configuration metadata",
     )
 
-    parser.add_argument(
-        "--dry", action="store_true", help="Dry run, do not post any data"
-    )
+    parser.add_argument("--dry", action="store_true", help="Dry run, do not post any data")
     parser.add_argument(
         "--fake-data",
         action="store_true",
@@ -126,16 +122,10 @@ def get_parser():
         help="Dump requested data for later use via --fake-data",
     )
 
-    parser.add_argument(
-        "-d", "--debug", action="store_true", help="Enable debug output"
-    )
+    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
 
-    parser.add_argument(
-        "-t", "--token", required=True, type=str, help="Token for qem dashboard api"
-    )
-    parser.add_argument(
-        "-g", "--gitea-token", required=False, type=str, help="Token for Gitea api"
-    )
+    parser.add_argument("-t", "--token", required=True, type=str, help="Token for qem dashboard api")
+    parser.add_argument("-g", "--gitea-token", required=False, type=str, help="Token for Gitea api")
 
     parser.add_argument(
         "-i",
@@ -157,9 +147,7 @@ def get_parser():
 
     commands = parser.add_subparsers()
 
-    cmdfull = commands.add_parser(
-        "full-run", help="Full schedule for Maintenance Incidents in openQA"
-    )
+    cmdfull = commands.add_parser("full-run", help="Full schedule for Maintenance Incidents in openQA")
     cmdfull.add_argument(
         "-i",
         "--ignore-onetime",
@@ -180,9 +168,7 @@ def get_parser():
     )
     cmdinc.set_defaults(func=do_incident_schedule)
 
-    cmdupd = commands.add_parser(
-        "updates-run", help="updates only schedule for Maintenance Incidents in openQA"
-    )
+    cmdupd = commands.add_parser("updates-run", help="updates only schedule for Maintenance Incidents in openQA")
     cmdupd.add_argument(
         "-i",
         "--ignore-onetime",
@@ -191,14 +177,10 @@ def get_parser():
     )
     cmdupd.set_defaults(func=do_aggregate_schedule)
 
-    cmdsync = commands.add_parser(
-        "smelt-sync", help="Sync data from SMELT into QEM Dashboard"
-    )
+    cmdsync = commands.add_parser("smelt-sync", help="Sync data from SMELT into QEM Dashboard")
     cmdsync.set_defaults(func=do_sync_smelt)
 
-    cmdgiteasync = commands.add_parser(
-        "gitea-sync", help="Sync data from Gitea into QEM Dashboard"
-    )
+    cmdgiteasync = commands.add_parser("gitea-sync", help="Sync data from Gitea into QEM Dashboard")
     cmdgiteasync.add_argument(
         "--gitea-repo",
         required=False,
@@ -214,14 +196,11 @@ def get_parser():
     cmdgiteasync.add_argument(
         "--consider-unrequested-prs",
         action="store_true",
-        help="Consider PRs where no review from team %s was requested as well"
-        % OBS_GROUP,
+        help="Consider PRs where no review from team %s was requested as well" % OBS_GROUP,
     )
     cmdgiteasync.set_defaults(func=do_sync_gitea)
 
-    cmdappr = commands.add_parser(
-        "inc-approve", help="Approve incidents which passed tests"
-    )
+    cmdappr = commands.add_parser("inc-approve", help="Approve incidents which passed tests")
     cmdappr.add_argument(
         "--all-incidents",
         action="store_true",
@@ -237,19 +216,13 @@ def get_parser():
 
     cmdappr.set_defaults(func=do_approve)
 
-    cmdcomment = commands.add_parser(
-        "inc-comment", help="Comment incidents in BuildService"
-    )
+    cmdcomment = commands.add_parser("inc-comment", help="Comment incidents in BuildService")
     cmdcomment.set_defaults(func=do_comment)
 
-    cmdincsync = commands.add_parser(
-        "inc-sync-results", help="Sync results of openQA incidents jobs to Dashboard"
-    )
+    cmdincsync = commands.add_parser("inc-sync-results", help="Sync results of openQA incidents jobs to Dashboard")
     cmdincsync.set_defaults(func=do_sync_inc_results)
 
-    cmdaggrsync = commands.add_parser(
-        "aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard"
-    )
+    cmdaggrsync = commands.add_parser("aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard")
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
 
     cmdincrementapprove = commands.add_parser(
@@ -370,9 +343,7 @@ def get_parser():
     repodiff.set_defaults(func=do_repo_diff_computation, no_config=True)
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
-    cmdamqp.add_argument(
-        "--url", type=str, default=AMQP_URL, help="the URL of the AMQP server"
-    )
+    cmdamqp.add_argument("--url", type=str, default=AMQP_URL, help="the URL of the AMQP server")
     cmdamqp.set_defaults(func=do_amqp)
 
     return parser

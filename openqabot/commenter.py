@@ -49,9 +49,7 @@ class Commenter:
             if any(j["status"] in ["running"] for j in i_jobs + u_jobs):
                 log.info("%s needs to wait a bit longer", inc)
             else:
-                if any(
-                    j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs
-                ):
+                if any(j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs):
                     log.info("There is a failed job for %s", inc)
                     state = "failed"
                 else:
@@ -117,9 +115,7 @@ class Commenter:
                 # workaround for experiments of some QAM devs
                 log.warning("group missing in %s", job["job_id"])
                 continue
-            gl = "{!s}@{!s}".format(
-                Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"])
-            )
+            gl = "{!s}@{!s}".format(Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"]))
             if gl not in groups:
                 groupurl = osc.core.makeurl(
                     self.client.openqa.baseurl,
@@ -161,9 +157,7 @@ class Commenter:
             if groups[group]["failed"]:
                 infos.append("{:d} tests failed".format(len(groups[group]["failed"])))
             if groups[group]["unfinished"]:
-                infos.append(
-                    "{:d} unfinished tests".format(groups[group]["unfinished"])
-                )
+                infos.append("{:d} unfinished tests".format(groups[group]["unfinished"]))
             msg += "(" + ", ".join(infos) + ")\n"
             for fail in groups[group]["failed"]:
                 msg += fail
@@ -174,10 +168,8 @@ class Commenter:
         return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job) -> Optional[str]:
-        testurl = osc.core.makeurl(
-            self.client.openqa.baseurl, ["tests", str(job["job_id"])]
-        )
-        if job["status"] not in ["passed", "failed", "softfailed"]:
+        testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
+        if not job["status"] in ["passed", "failed", "softfailed"]:
             rstring = job["status"]
             if rstring == "none":
                 return None

@@ -32,14 +32,10 @@ class AMQP(SyncRes):
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py
         self.connection = pika.BlockingConnection(pika.URLParameters(args.url))
         self.channel = self.connection.channel()
-        self.channel.exchange_declare(
-            exchange="pubsub", exchange_type="topic", passive=True, durable=True
-        )
+        self.channel.exchange_declare(exchange="pubsub", exchange_type="topic", passive=True, durable=True)
         result = self.channel.queue_declare("", exclusive=True)
         queue_name = result.method.queue
-        self.channel.queue_bind(
-            exchange="pubsub", queue=queue_name, routing_key="suse.openqa.#"
-        )
+        self.channel.queue_bind(exchange="pubsub", queue=queue_name, routing_key="suse.openqa.#")
         self.channel.basic_consume(queue_name, self.on_message, auto_ack=True)
 
     def __call__(self) -> int:

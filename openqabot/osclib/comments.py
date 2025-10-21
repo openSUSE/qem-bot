@@ -27,16 +27,12 @@ def _comment_as_dict(comment_element):
 
 
 class CommentAPI(object):
-    COMMENT_MARKER_REGEX = re.compile(
-        r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->"
-    )
+    COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
     def __init__(self, apiurl):
         self.apiurl = apiurl
 
-    def _prepare_url(
-        self, request_id=None, project_name=None, package_name=None, query=None
-    ):
+    def _prepare_url(self, request_id=None, project_name=None, package_name=None, query=None):
         """Prepare the URL to get/put comments in OBS.
 
         :param request_id: Request where to refer the comment.
@@ -48,15 +44,11 @@ class CommentAPI(object):
         if request_id:
             url = makeurl(self.apiurl, ["comments", "request", request_id], query)
         elif project_name and package_name:
-            url = makeurl(
-                self.apiurl, ["comments", "package", project_name, package_name], query
-            )
+            url = makeurl(self.apiurl, ["comments", "package", project_name, package_name], query)
         elif project_name:
             url = makeurl(self.apiurl, ["comments", "project", project_name], query)
         else:
-            raise ValueError(
-                "Please, set request_id, project_name or / and package_name to add a comment."
-            )
+            raise ValueError("Please, set request_id, project_name or / and package_name to add a comment.")
         return url
 
     def get_comments(self, request_id=None, project_name=None, package_name=None):
@@ -219,9 +211,7 @@ class CommentAPI(object):
             comments = self.delete_children(comments)
         return True
 
-    def delete_from_where_user(
-        self, user, request_id=None, project_name=None, package_name=None
-    ):
+    def delete_from_where_user(self, user, request_id=None, project_name=None, package_name=None):
         """Remove comments where @user is mentioned.
 
         This method is used to remove notifications when a request is
@@ -232,8 +222,6 @@ class CommentAPI(object):
         :param package_name: Package name where to remove comments.
         :return: Number of comments removed.
         """
-        for comment in list(
-            self.get_comments(request_id, project_name, package_name).values()
-        ):
+        for comment in list(self.get_comments(request_id, project_name, package_name).values()):
             if comment["who"] == user:
                 self.delete(comment["id"])

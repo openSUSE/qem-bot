@@ -47,12 +47,8 @@ class RepoDiff:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(
-        self, rows: List[Dict[str, Any]]
-    ) -> Iterator[Optional[str]]:
-        return next(
-            (r["name"] for r in rows if primary_re.search(r.get("name", ""))), None
-        )
+    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Iterator[Optional[str]]:
+        return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
     def _request_and_dump(self, url: str, name: str, as_json: bool = False):
         log.debug("Requesting %s", url)
@@ -72,19 +68,13 @@ class RepoDiff:
 
     def _load_repodata(self, project: str) -> Optional[str]:
         url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(
-            url + "?jsontable=1", f"repodata-listing-{project}.json", True
-        )
+        repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
             return None
         repo_data_raw = self._request_and_dump(url + repo_data_file, repo_data_file)
-        repo_data = (
-            gzip.decompress(repo_data_raw)
-            if repo_data_file.endswith(".gz")
-            else repo_data_raw
-        )
+        repo_data = gzip.decompress(repo_data_raw) if repo_data_file.endswith(".gz") else repo_data_raw
         log.debug("Parsing %s", repo_data_file)
         return ET.fromstring(repo_data)
 
@@ -104,21 +94,15 @@ class RepoDiff:
             packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
         return packages_by_arch
 
-    def compute_diff(
-        self, repo_a: str, repo_b: str
-    ) -> Tuple[DefaultDict[str, Set[Package]], int]:
+    def compute_diff(self, repo_a: str, repo_b: str) -> Tuple[DefaultDict[str, Set[Package]], int]:
         packages_by_arch_a = self._load_packages(repo_a)
         packages_by_arch_b = self._load_packages(repo_b)
         diff_by_arch = defaultdict(set)
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
             packages_a = packages_by_arch_a[arch]
-            log.debug(
-                "Found %i packages for %s in repo %s", len(packages_a), arch, repo_a
-            )
-            log.debug(
-                "Found %i packages for %s in repo %s", len(packages_b), arch, repo_b
-            )
+            log.debug("Found %i packages for %s in repo %s", len(packages_a), arch, repo_a)
+            log.debug("Found %i packages for %s in repo %s", len(packages_b), arch, repo_b)
             diff = packages_b - packages_a
             count += len(diff)
             diff_by_arch[arch] = diff

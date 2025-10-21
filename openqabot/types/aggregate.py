@@ -38,8 +38,7 @@ class Aggregate(BaseConf):
     def normalize_repos(config):
         try:
             repos = {
-                key: ProdVer(value.split(":")[0], value.split(":")[1])
-                for key, value in config["test_issues"].items()
+                key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
             }
         except KeyError:
             raise NoTestIssues
@@ -101,10 +100,7 @@ class Aggregate(BaseConf):
                         valid_incidents.append(i)
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
-                    if (
-                        Repos(template.product, template.version, issues_arch)
-                        in inc.channels
-                    ):
+                    if Repos(template.product, template.version, issues_arch) in inc.channels:
                         test_incidents[issue].append(inc)
 
             for issue, incs in test_incidents.items():
@@ -120,11 +116,7 @@ class Aggregate(BaseConf):
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
-                sorted(
-                    set(
-                        str(inc) for inc in chain.from_iterable(test_incidents.values())
-                    )
-                )
+                sorted(set(str(inc) for inc in chain.from_iterable(test_incidents.values())))
             )
 
             try:
@@ -152,9 +144,7 @@ class Aggregate(BaseConf):
                 )
                 continue
 
-            if not ignore_onetime and (
-                self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1"
-            ):
+            if not ignore_onetime and (self.onetime and full_post["openqa"]["BUILD"].split("-")[-1] != "1"):
                 continue
 
             settings = self.settings.copy()
@@ -183,19 +173,15 @@ class Aggregate(BaseConf):
             for template, issues in test_repos.items():
                 full_post["openqa"][template] = ",".join(issues)
 
-            full_post["qem"]["incidents"] = [
-                str(inc) for inc in set(full_post["qem"]["incidents"])
-            ]
+            full_post["qem"]["incidents"] = [str(inc) for inc in set(full_post["qem"]["incidents"])]
             if not full_post["qem"]["incidents"]:
                 continue
 
             full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-                f"{QEM_DASHBOARD}incident/{inc}"
-                for inc in set(full_post["qem"]["incidents"])
+                f"{QEM_DASHBOARD}incident/{inc}" for inc in set(full_post["qem"]["incidents"])
             )
             full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-                f"{SMELT_URL}/incident/{inc}"
-                for inc in set(full_post["qem"]["incidents"])
+                f"{SMELT_URL}/incident/{inc}" for inc in set(full_post["qem"]["incidents"])
             )
 
             full_post["qem"]["settings"] = full_post["openqa"]

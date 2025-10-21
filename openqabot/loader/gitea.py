@@ -30,17 +30,13 @@ def make_token_header(token: str) -> Dict[str, str]:
 
 def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
     try:
-        return requests.get(
-            host + "/api/v1/" + query, verify=False, headers=token
-        ).json()
+        return requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
     except Exception as e:
         log.exception(e)
         raise e
 
 
-def post_json(
-    query: str, token: Dict[str, str], post_data: Any, host: str = GITEA
-) -> Any:
+def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
     try:
         url = host + "/api/v1/" + query
         res = requests.post(url, verify=False, headers=token, json=post_data)
@@ -113,12 +109,8 @@ def compute_repo_url_for_job_setting(
     product_repo: Optional[Union[List[str], str]],
     product_version: Optional[str],
 ) -> str:
-    product_names = (
-        get_product_name(repo.version) if product_repo is None else product_repo
-    )
-    product_version = (
-        repo.product_version if product_version is None else product_version
-    )
+    product_names = get_product_name(repo.version) if product_repo is None else product_repo
+    product_version = repo.product_version if product_version is None else product_version
     return ",".join(
         map(
             lambda p: compute_repo_url(
@@ -140,9 +132,7 @@ def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
     page = 1
     while True:
         # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullRequests
-        prs_on_page = get_json(
-            "repos/%s/pulls?state=open&page=%i" % (repo, page), token
-        )
+        prs_on_page = get_json("repos/%s/pulls?state=open&page=%i" % (repo, page), token)
         if not isinstance(prs_on_page, list) or len(prs_on_page) <= 0:
             break
         open_prs.extend(prs_on_page)
@@ -250,9 +240,7 @@ def add_build_result(
                 )
     # read product version from scmsync element, e.g. 15.99
     for scmsync_element in res.findall("scmsync"):
-        (_, product_version) = get_product_name_and_version_from_scmsync(
-            scmsync_element.text
-        )
+        (_, product_version) = get_product_name_and_version_from_scmsync(scmsync_element.text)
         if len(product_version) > 0:
             channel = "#".join([channel, product_version])
             break
@@ -319,12 +307,8 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
         project_match = re.search(".*/project/show/(.*)", url)
         if project_match:
             obs_project = project_match.group(1)
-            relevant_archs = determine_relevant_archs_from_multibuild_info(
-                obs_project, dry
-            )
-            build_info_url = osc.core.makeurl(
-                OBS_URL, ["build", obs_project, "_result"]
-            )
+            relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry)
+            build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
             if dry:
                 build_info = read_xml("build-results-124-" + obs_project)
             else:
@@ -374,22 +358,16 @@ def add_comments_and_referenced_build_results(
             break
 
 
-def add_packages_from_patchinfo(
-    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
-):
+def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool):
     if dry:
         patch_info = read_xml("patch-info")
     else:
-        patch_info = osc.util.xml.xml_fromstring(
-            requests.get(patch_info_url, verify=False, headers=token).text
-        )
+        patch_info = osc.util.xml.xml_fromstring(requests.get(patch_info_url, verify=False, headers=token).text)
     for res in patch_info.findall("package"):
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(
-    incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool
-):
+def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool):
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
@@ -455,9 +433,7 @@ def make_incident_from_pr(
         if len(incident["channels"]) == 0:
             log.info("Skipping PR %s, no channels found/considered", number)
             return None
-        if only_successful_builds and not is_build_acceptable_and_log_if_not(
-            incident, number
-        ):
+        if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
             return None
         add_packages_from_files(incident, token, files, dry)
         if len(incident["packages"]) == 0:

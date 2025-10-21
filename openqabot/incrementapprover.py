@@ -101,9 +101,7 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(
-        self, config: IncrementConfig
-    ) -> Optional[osc.core.Request]:
+    def _find_request_on_obs(self, config: IncrementConfig) -> Optional[osc.core.Request]:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
@@ -115,9 +113,7 @@ class IncrementApprover:
                 OBS_GROUP,
                 build_project,
             )
-            obs_requests = osc.core.get_request_list(
-                OBS_URL, project=build_project, req_state=relevant_states
-            )
+            obs_requests = osc.core.get_request_list(OBS_URL, project=build_project, req_state=relevant_states)
             relevant_request = None
             for request in sorted(obs_requests, reverse=True):
                 for review in request.reviews:
@@ -128,10 +124,7 @@ class IncrementApprover:
             log.debug("Checking specified request %i", args.request_id)
             relevant_request = osc.core.get_request(OBS_URL, str(args.request_id))
         if relevant_request is None:
-            log.info(
-                "Skipping approval, no relevant requests in states "
-                + "/".join(relevant_states)
-            )
+            log.info("Skipping approval, no relevant requests in states " + "/".join(relevant_states))
         else:
             log.debug("Found request %s", relevant_request.id)
             if hasattr(relevant_request.state, "to_xml"):
@@ -201,14 +194,10 @@ class IncrementApprover:
         reasons_to_disapprove = []  # compose list of blocking jobs
         for result, job_ids in not_ok_jobs.items():
             job_list = "\n".join(map(lambda id: f" - {openqa_url}/tests/{id}", job_ids))
-            reasons_to_disapprove.append(
-                f"The following openQA jobs ended up with result '{result}':\n{job_list}"
-            )
+            reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
         return (ok_jobs, reasons_to_disapprove)
 
-    def _handle_approval(
-        self, request: osc.core.Request, ok_jobs: int, reasons_to_disapprove: List[str]
-    ) -> int:
+    def _handle_approval(self, request: osc.core.Request, ok_jobs: int, reasons_to_disapprove: List[str]) -> int:
         if len(reasons_to_disapprove) == 0:
             message = "All %i jobs on openQA have %s" % (
                 ok_jobs,
@@ -223,9 +212,7 @@ class IncrementApprover:
                     message=message,
                 )
         else:
-            message = "Not approving for the following reasons:\n" + "\n".join(
-                reasons_to_disapprove
-            )
+            message = "Not approving for the following reasons:\n" + "\n".join(reasons_to_disapprove)
         log.info(message)
         return 0
 
@@ -294,9 +281,7 @@ class IncrementApprover:
         if len(value) > 0:
             params["__" + env_var] = value
 
-    def _make_scheduling_parameters(
-        self, config: IncrementConfig, build_info: BuildInfo
-    ) -> List[Dict[str, str]]:
+    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> List[Dict[str, str]]:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -312,18 +297,14 @@ class IncrementApprover:
             diff_project = config.diff_project()
             if self.repo_diff is None:
                 log.debug("Comuting diff to project %s", diff_project)
-                self.repo_diff = RepoDiff(self.args).compute_diff(
-                    diff_project, config.build_project() + repo_sub_path
-                )[0]
+                self.repo_diff = RepoDiff(self.args).compute_diff(diff_project, config.build_project() + repo_sub_path)[
+                    0
+                ]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
-            extra_params.extend(
-                self._extra_builds_for_kernel_livepatching(relevant_diff, build_info)
-            )
+            extra_params.extend(self._extra_builds_for_kernel_livepatching(relevant_diff, build_info))
         return [*map(lambda p: merge_dicts(base_params, p), extra_params)]
 
-    def _schedule_openqa_jobs(
-        self, build_info: BuildInfo, params: List[Dict[str, str]]
-    ) -> int:
+    def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:
         log.info("Scheduling jobs for %s", build_info)
         error_count = 0
         for p in params:
@@ -336,9 +317,7 @@ class IncrementApprover:
                 error_count += 1
         return error_count
 
-    def _process_request_for_config(
-        self, request: Optional[osc.core.Request], config: IncrementConfig
-    ) -> int:
+    def _process_request_for_config(self, request: Optional[osc.core.Request], config: IncrementConfig) -> int:
         error_count = 0
         if request is None:
             return error_count
@@ -354,9 +333,7 @@ class IncrementApprover:
                 continue
             if not openqa_jobs_ready:
                 continue
-            error_count += self._handle_approval(
-                request, *(self._evaluate_list_of_openqa_job_results(res))
-            )
+            error_count += self._handle_approval(request, *(self._evaluate_list_of_openqa_job_results(res)))
         return error_count
 
     def __call__(self) -> int:

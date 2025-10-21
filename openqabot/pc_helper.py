@@ -60,22 +60,14 @@ def pint_query(query):
 def apply_publiccloud_pint_image(settings):
     """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
     try:
-        region = (
-            settings["PUBLIC_CLOUD_PINT_REGION"]
-            if "PUBLIC_CLOUD_PINT_REGION" in settings
-            else None
-        )
+        region = settings["PUBLIC_CLOUD_PINT_REGION"] if "PUBLIC_CLOUD_PINT_REGION" in settings else None
         # We need to include active and inactive images. Active images have precedence
         # inactive images are maintained PC images which only receive security updates.
         # See https://www.suse.com/c/suse-public-cloud-image-life-cycle/
         image = None
         for state in ["active", "inactive", "deprecated"]:
-            images = pint_query(f"{settings['PUBLIC_CLOUD_PINT_QUERY']}{state}.json")[
-                "images"
-            ]
-            image = get_recent_pint_image(
-                images, settings["PUBLIC_CLOUD_PINT_NAME"], region, state=state
-            )
+            images = pint_query(f"{settings['PUBLIC_CLOUD_PINT_QUERY']}{state}.json")["images"]
+            image = get_recent_pint_image(images, settings["PUBLIC_CLOUD_PINT_NAME"], region, state=state)
             if image is not None:
                 break
         if image is None:
@@ -138,8 +130,6 @@ def get_recent_pint_image(images, name_regex, region=None, state="active"):
         if (region is not None) and (region != image["region"]):
             continue
         # Get latest one based on 'publishedon'
-        if recentimage is None or is_newer(
-            image["publishedon"], recentimage["publishedon"]
-        ):
+        if recentimage is None or is_newer(image["publishedon"], recentimage["publishedon"]):
             recentimage = image
     return recentimage

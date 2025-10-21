@@ -236,9 +236,7 @@ def test_devel_dry(get_a_i, caplog):
 
     # parent id
     data = [{"parent_id": 9}]
-    responses.add(
-        method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data
-    )
+    responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
     args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
 
@@ -301,9 +299,7 @@ def test_passed_dry(get_a_i, caplog):
 
     # parent id
     data = [{"parent_id": 100}]
-    responses.add(
-        method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data
-    )
+    responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
     args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
 

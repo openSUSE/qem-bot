@@ -14,9 +14,7 @@ from .types import Data
 def create_logger(name: str) -> logging.Logger:
     log = logging.getLogger(name)
     handler = logging.StreamHandler()
-    formatter = logging.Formatter(
-        fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-    )
+    formatter = logging.Formatter(fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     log.addHandler(handler)
     log.setLevel(logging.INFO)
@@ -25,11 +23,7 @@ def create_logger(name: str) -> logging.Logger:
 
 def get_yml_list(path: Path) -> List[Path]:
     """Create a list of YML filenames from a folder or single file path."""
-    return (
-        [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)]
-        if path.is_dir()
-        else [path]
-    )
+    return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
 
 
 def walk(inc):

@@ -16,9 +16,7 @@ OBS_REPO_TYPE = os.environ.get("OBS_REPO_TYPE", "product")
 OBS_PRODUCTS = set(os.environ.get("OBS_PRODUCTS", "SLES").split(","))
 ALLOW_DEVELOPMENT_GROUPS = os.environ.get("QEM_BOT_ALLOW_DEVELOPMENT_GROUPS")
 DEVELOPMENT_PARENT_GROUP_ID = 9
-DOWNLOAD_BASE = os.environ.get(
-    "DOWNLOAD_BASE_URL", "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/"
-)
+DOWNLOAD_BASE = os.environ.get("DOWNLOAD_BASE_URL", "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/")
 AMQP_URL = os.environ.get("AMQP_URL", "amqps://suse:suse@rabbit.suse.de")
 OLDEST_APPROVAL_JOB_DAYS = 6
 
@@ -32,4 +30,6 @@ OPENQA_URL = os.environ.get("MAIN_OPENQA_DOMAIN", "openqa.suse.de")
 # https://confluence.suse.com/spaces/~adrianSuSE/pages/1865908580/Group+Review+Bot+Setup#GroupReviewBotSetup-Suggestedgroupnames
 GIT_REVIEW_BOT = os.environ.get("GIT_REVIEW_BOT", OBS_GROUP + "-review")
 
-BUILD_REGEX = "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json"
+BUILD_REGEX = (
+    "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json"
+)

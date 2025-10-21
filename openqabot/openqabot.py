@@ -26,9 +26,7 @@ class OpenQABot:
 
         extrasettings = get_onearch(args.singlearch)
 
-        self.workers = load_metadata(
-            args.configs, args.disable_aggregates, args.disable_incidents, extrasettings
-        )
+        self.workers = load_metadata(args.configs, args.disable_aggregates, args.disable_incidents, extrasettings)
 
         self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")

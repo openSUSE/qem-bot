@@ -133,9 +133,7 @@ class Approver:
 
         if any(i.withAggregate for i in i_jobs):
             if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-                log.info(
-                    "%s has at least one failed job in aggregate tests", _mi2str(inc)
-                )
+                log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
                 return False
 
         # everything is green --> add incident to approve list
@@ -144,10 +142,7 @@ class Approver:
     def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int):
         try:
             patch(
-                "api/jobs/"
-                + str(job_id)
-                + "/remarks?text=acceptable_for&incident_number="
-                + str(incident_number),
+                "api/jobs/" + str(job_id) + "/remarks?text=acceptable_for&incident_number=" + str(incident_number),
                 headers=self.token,
             )
         except RequestError as e:
@@ -160,9 +155,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(
-            r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL
-        )
+        regex = re.compile(r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL)
         try:
             for comment in self.client.get_job_comments(job_id):
                 sanitized_text = sanitize_comment_text(comment["text"])
@@ -238,10 +231,7 @@ class Approver:
             )
             return False
 
-        log.info(
-            "Ignoring failed aggregate %s and using instead %s for update %s"
-            % (failed_job_id, job["id"], inc)
-        )
+        log.info("Ignoring failed aggregate %s and using instead %s for update %s" % (failed_job_id, job["id"], inc))
         return True
 
     @lru_cache(maxsize=512)
@@ -265,15 +255,11 @@ class Approver:
             return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
-        oldest_build_usable = current_build_date - timedelta(
-            days=OLDEST_APPROVAL_JOB_DAYS
-        )
+        oldest_build_usable = current_build_date - timedelta(days=OLDEST_APPROVAL_JOB_DAYS)
 
         regex = re.compile(r"(.*)Maintenance:/%s/(.*)" % inc)
         for job in older_jobs:
-            was_ok = self._was_older_job_ok(
-                failed_job_id, inc, job, oldest_build_usable, regex
-            )
+            was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
             if was_ok is not None:
                 return was_ok
         log.info(
@@ -300,9 +286,7 @@ class Approver:
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
         if job_result.get("acceptable_for_" + str(inc), False):
-            log.info(
-                "Ignoring failed job %s for incident %s due to openQA comment", url, inc
-            )
+            log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
             log.info(
@@ -318,10 +302,7 @@ class Approver:
     def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
         job_results = get_json(api + str(job_aggr.id), headers=self.token)
         if not job_results:
-            raise NoResultsError(
-                "Job setting %s not found for incident %s"
-                % (str(job_aggr.id), str(inc))
-            )
+            raise NoResultsError("Job setting %s not found for incident %s" % (str(job_aggr.id), str(inc)))
         self.mark_jobs_as_acceptable_for_incident(job_results, inc)
         return all(self.is_job_acceptable(inc, api, r) for r in job_results)
 
@@ -345,11 +326,7 @@ class Approver:
             QEM_DASHBOARD,
         )
         log.info("Accepting review for " + _mi2str(inc))
-        return (
-            self.git_approve(inc, msg)
-            if inc.type == "git"
-            else self.osc_approve(inc, msg)
-        )
+        return self.git_approve(inc, msg) if inc.type == "git" else self.osc_approve(inc, msg)
 
     @staticmethod
     def osc_approve(inc: IncReq, msg: str) -> bool:

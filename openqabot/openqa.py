@@ -40,9 +40,7 @@ class openQAInterface:
             " ".join(["%s=%s" % (k, v) for k, v in settings.items()]),
         )
         try:
-            self.openqa.openqa_request(
-                "POST", "isos", data=settings, retries=self.retries
-            )
+            self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
             log.error("openQA returned %s", e.args[-1])
             log.error("Post failed with %s", pformat(settings))
@@ -79,9 +77,7 @@ class openQAInterface:
     def get_job_comments(self, job_id: int):
         ret = []
         try:
-            ret = self.openqa.openqa_request(
-                "GET", "jobs/%s/comments" % job_id, retries=self.retries
-            )
+            ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
             ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
         except Exception as e:  # pylint: disable=broad-except
             (_, _, status_code, *_) = e.args
@@ -102,9 +98,7 @@ class openQAInterface:
             raise e
 
         # return True as safe option if ret = None
-        return (
-            ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True
-        )  # ID of Development Group
+        return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
     def get_single_job(self, job_id: int):
@@ -132,6 +126,4 @@ class openQAInterface:
         return ret
 
     def get_scheduled_product_stats(self, params):
-        return self.openqa.openqa_request(
-            "GET", "isos/job_stats", params, retries=self.retries
-        )
+        return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

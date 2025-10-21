@@ -31,9 +31,7 @@ class IncResultsSync(SyncRes):
         full = {}
 
         with CT.ThreadPoolExecutor() as executor:
-            future_result = {
-                executor.submit(self.client.get_jobs, f): f for f in incidents
-            }
+            future_result = {executor.submit(self.client.get_jobs, f): f for f in incidents}
             for future in CT.as_completed(future_result):
                 full[future_result[future]] = future.result()
 

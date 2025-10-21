@@ -144,9 +144,7 @@ def test_aggregate_call_pc_pint(request_mock, monkeypatch):
     acc(incidents=[], token=None, ci_url=None)
 
 
-def test_aggregate_call_pc_pint_with_incidents(
-    request_mock, incident_mock, monkeypatch
-):
+def test_aggregate_call_pc_pint_with_incidents(request_mock, incident_mock, monkeypatch):
     """
     Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image
     """

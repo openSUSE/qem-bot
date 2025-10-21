@@ -93,9 +93,7 @@ class MyIncident_0(object):
         self.ongoing = True
         self.type = "smelt"
 
-    def compute_revisions_for_product_repo(
-        self, product_repo: Optional[str], product_version: Optional[str]
-    ):
+    def compute_revisions_for_product_repo(self, product_repo: Optional[str], product_version: Optional[str]):
         pass
 
     def revisions_with_fallback(self, arch: str, version: str):
@@ -197,9 +195,7 @@ class MyIncident_3(MyIncident_2):
 
 def test_incidents_call_with_packages(request_mock):
     test_config = {}
-    test_config["FLAVOR"] = {
-        "AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}
-    }
+    test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}}
 
     inc = Incidents(
         product="",
@@ -398,9 +394,7 @@ def test_making_repo_url():
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE_15.7_x86_64"
     repo = incs._make_repo_url(inc, Repos("openSUSE-SLE", "15.7", "x86_64"))
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE-SLE_15.7"
-    slfo_chan = Repos(
-        "SUSE:SLFO", "SUSE:SLFO:1.1.99:PullRequest:166:SLES", "x86_64", "15.99"
-    )
+    slfo_chan = Repos("SUSE:SLFO", "SUSE:SLFO:1.1.99:PullRequest:166:SLES", "x86_64", "15.99")
     repo = incs._make_repo_url(inc, slfo_chan)
     exp_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/"
     assert repo == exp_repo

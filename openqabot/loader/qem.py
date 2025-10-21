@@ -42,13 +42,9 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
         try:
             xs.append(Incident(i))
         except EmptyChannels:
-            log.info(
-                "Project %s has empty channels - check incident in SMELT", i["project"]
-            )
+            log.info("Project %s has empty channels - check incident in SMELT", i["project"])
         except EmptyPackagesError:
-            log.info(
-                "Project %s has empty packages - check incident in SMELT", i["project"]
-            )
+            log.info("Project %s has empty packages - check incident in SMELT", i["project"])
 
     return xs
 
@@ -82,9 +78,7 @@ def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
-def get_incident_settings(
-    inc: int, token: Dict[str, str], all_incidents: bool = False
-) -> List[JobAggr]:
+def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool = False) -> List[JobAggr]:
     settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
         raise NoResultsError(
@@ -171,9 +165,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
 
     ret = []
     if not settings:
-        raise EmptySettings(
-            f"Product: {data.product} on arch: {data.arch} does not have any settings"
-        )
+        raise EmptySettings(f"Product: {data.product} on arch: {data.arch} does not have any settings")
 
     log.debug("Getting id for %s", pformat(data))
 

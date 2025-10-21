@@ -87,9 +87,7 @@ def fake_osc_get_config(override_apiurl: str):
     assert override_apiurl == OBS_URL
 
 
-def fake_get_request_list(
-    url: str, project: str, req_state: List[str]
-) -> List[osc.core.Request]:
+def fake_get_request_list(url: str, project: str, req_state: List[str]) -> List[osc.core.Request]:
     assert url == OBS_URL
     assert project == "OBS:PROJECT:TEST"
     req = osc.core.Request()
@@ -99,9 +97,7 @@ def fake_get_request_list(
     return [req]
 
 
-def fake_change_review_state(
-    apiurl: str, reqid: str, newstate: str, by_group: str, message: str
-):
+def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str):
     assert apiurl == OBS_URL
     assert reqid == "42"
     assert newstate == "accepted"
@@ -153,9 +149,7 @@ def run_approver(
 
 
 @responses.activate
-def test_skipping_with_no_openqa_jobs(
-    caplog, fake_no_jobs, fake_product_repo, monkeypatch
-):
+def test_skipping_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -165,13 +159,9 @@ def test_skipping_with_no_openqa_jobs(
 
 
 @responses.activate
-def test_scheduling_with_no_openqa_jobs(
-    caplog, fake_no_jobs, fake_product_repo, monkeypatch
-):
+def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
     ci_job_url = "https://some/ci/job/url"
-    (errors, jobs) = run_approver(
-        caplog, monkeypatch, schedule=True, test_env_var=ci_job_url
-    )
+    (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, test_env_var=ci_job_url)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -191,12 +181,8 @@ def test_scheduling_with_no_openqa_jobs(
 
 
 @responses.activate
-def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
-    caplog, fake_no_jobs, fake_product_repo, monkeypatch
-):
-    (errors, jobs) = run_approver(
-        caplog, monkeypatch, schedule=True, diff_project_suffix="PUBLISH/product"
-    )
+def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
+    (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, diff_project_suffix="PUBLISH/product")
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -218,18 +204,14 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
         "KERNEL_VERSION": "6.12.0-160000.5",
         "KGRAFT": "1",
     }
-    assert (
-        expected_livepatch_params | {"ARCH": "ppc64le"} in jobs
-    ), "additional kernel livepatch jobs created"
+    assert expected_livepatch_params | {"ARCH": "ppc64le"} in jobs, f"additional kernel livepatch jobs created"
     assert (
         expected_livepatch_params | {"ARCH": "aarch64"} not in jobs
     ), "additional kernel livepatch jobs only created if package is new"
 
 
 @responses.activate
-def test_skipping_with_pending_openqa_jobs(
-    caplog, fake_pending_jobs, fake_product_repo, monkeypatch
-):
+def test_skipping_with_pending_openqa_jobs(caplog, fake_pending_jobs, fake_product_repo, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -239,9 +221,7 @@ def test_skipping_with_pending_openqa_jobs(
 
 
 @responses.activate
-def test_listing_not_ok_openqa_jobs(
-    caplog, fake_not_ok_jobs, fake_product_repo, monkeypatch
-):
+def test_listing_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, fake_product_repo, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
@@ -250,9 +230,7 @@ def test_listing_not_ok_openqa_jobs(
 
 
 @responses.activate
-def test_approval_if_there_are_only_ok_openqa_jobs(
-    caplog, fake_ok_jobs, fake_product_repo, monkeypatch
-):
+def test_approval_if_there_are_only_ok_openqa_jobs(caplog, fake_ok_jobs, fake_product_repo, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message

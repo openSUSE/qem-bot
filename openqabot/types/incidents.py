@@ -65,9 +65,7 @@ class Incidents(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(
-        token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str
-    ) -> bool:
+    def _is_scheduled_job(token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
             jobs = requests.get(
@@ -99,9 +97,7 @@ class Incidents(BaseConf):
 
     def _make_repo_url(self, inc: Incident, chan: Repos):
         return (
-            gitea.compute_repo_url_for_job_setting(
-                DOWNLOAD_BASE, chan, self.product_repo, self.product_version
-            )
+            gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan, self.product_repo, self.product_version)
             if chan.product == "SUSE:SLFO"
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
@@ -183,9 +179,7 @@ class Incidents(BaseConf):
                 "#".join((channel.version, channel.product_version)),
                 arch,
             )
-            f_channel = Repos(
-                channel.product, channel.version, arch, channel.product_version
-            )
+            f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
             if channel.product == "SLFO":
                 for inc_channel in inc.channels:
                     if (
@@ -212,9 +206,7 @@ class Incidents(BaseConf):
             if set(issue_dict.keys()).isdisjoint(data["required_issues"]):
                 return None
 
-        if not ignore_onetime and self._is_scheduled_job(
-            token, inc, arch, self.settings["VERSION"], flavor
-        ):
+        if not ignore_onetime and self._is_scheduled_job(token, inc, arch, self.settings["VERSION"], flavor):
             log.info(
                 "not scheduling: Flavor: %s, version: %s incident: %s , arch: %s  - exists in openQA",
                 flavor,
@@ -286,8 +278,7 @@ class Incidents(BaseConf):
 
         # add custom vars to job settings
         if "params_expand" in data and any(
-            forbidden_key in data["params_expand"]
-            for forbidden_key in ["DISTRI", "VERSION"]
+            forbidden_key in data["params_expand"] for forbidden_key in ["DISTRI", "VERSION"]
         ):
             log.error(
                 "flavor:%s ignored as DISTRI and VERSION not allowed in params_expand",
@@ -339,15 +330,9 @@ class Incidents(BaseConf):
             archs = data["archs"]
             for arch in archs:
                 for inc in incidents:
-                    inc.arch_filter = (
-                        archs  # compute repo hash only for configured archs
-                    )
+                    inc.arch_filter = archs  # compute repo hash only for configured archs
                     try:
-                        ret.append(
-                            self._handle_incident(
-                                inc, arch, flavor, data, token, ci_url, ignore_onetime
-                            )
-                        )
+                        ret.append(self._handle_incident(inc, arch, flavor, data, token, ci_url, ignore_onetime))
                     except NoRepoFoundError as e:
                         log.info(
                             "Project %s can't calculate repohash of incident %i: %s .. skipping",

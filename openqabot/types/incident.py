@@ -19,11 +19,7 @@ class Incident:
         self.id = incident["number"]
         self.rrid = f"{self.project}:{self.rr}" if self.rr else None
         self.staging = not incident["inReview"]
-        self.ongoing = (
-            incident["isActive"]
-            and incident["inReviewQAM"]
-            and not incident["approved"]
-        )
+        self.ongoing = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
         self.embargoed = incident["embargoed"]
         self.priority = incident.get("priority")
         self.type = incident.get("type", "smelt")
@@ -33,11 +29,7 @@ class Incident:
             Repos(p, v, a)
             for p, v, a in (
                 val
-                for val in (
-                    r.split(":")[2:]
-                    for r in incident["channels"]
-                    if r.startswith("SUSE:Updates")
-                )
+                for val in (r.split(":")[2:] for r in incident["channels"] if r.startswith("SUSE:Updates"))
                 if len(val) == 3
             )
             if p != "SLE-Module-Development-Tools-OBS"
@@ -48,22 +40,14 @@ class Incident:
             Repos(p, v, "x86_64")
             for p, v in (
                 val
-                for val in (
-                    r.split(":")[2:]
-                    for r in (
-                        i for i in incident["channels"] if i.startswith("SUSE:Updates")
-                    )
-                )
+                for val in (r.split(":")[2:] for r in (i for i in incident["channels"] if i.startswith("SUSE:Updates")))
                 if len(val) == 2
             )
         ]
         # add channels for Gitea-based incidents
         self.channels += [
             Repos(":".join(val[0:2]), ":".join(val[2:-1]), *(val[-1].split("#")))
-            for val in (
-                r.split(":")
-                for r in (i for i in incident["channels"] if i.startswith("SUSE:SLFO"))
-            )
+            for val in (r.split(":") for r in (i for i in incident["channels"] if i.startswith("SUSE:SLFO")))
             if len(val) > 3
         ]
 
@@ -71,10 +55,7 @@ class Incident:
         self.channels = [
             chan
             for chan in self.channels
-            if not (
-                chan.product == "SLE-Module-SUSE-Manager-Server"
-                and chan.arch == "aarch64"
-            )
+            if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
         ]
 
         if not self.channels:
@@ -93,9 +74,7 @@ class Incident:
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
     ):
-        self.revisions = self._rev(
-            self.arch_filter, self.channels, self.project, product_repo, product_version
-        )
+        self.revisions = self._rev(self.arch_filter, self.channels, self.project, product_repo, product_version)
 
     def revisions_with_fallback(self, arch: str, ver: str):
         if self.revisions is None:
@@ -140,9 +119,7 @@ class Incident:
 
         if tmpdict:
             for archver, lrepos in tmpdict.items():
-                last_product_repo = (
-                    product_repo[-1] if isinstance(product_repo, list) else product_repo
-                )
+                last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
                 max_rev = get_max_revision(
                     lrepos,
                     archver.arch,
@@ -176,9 +153,7 @@ class Incident:
                 or package.startswith("kernel-azure")
             ):
                 return False
-            if package.startswith("kgraft-patch-") or package.startswith(
-                "kernel-livepatch"
-            ):
+            if package.startswith("kgraft-patch-") or package.startswith("kernel-livepatch"):
                 kgraft = True
 
         return kgraft
