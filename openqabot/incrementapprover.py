@@ -311,11 +311,8 @@ class IncrementApprover:
     def _contains_any_of_the_packages(
         package_diff: Set[Package], packages_to_find: List[str]
     ) -> bool:
-        names_of_changed_packages = set(map(lambda p: p.name, package_diff))
-        for package in packages_to_find:
-            if package in names_of_changed_packages:
-                return True
-        return False
+        names_of_changed_packages = {p.name for p in package_diff}
+        return any(package in names_of_changed_packages for package in packages_to_find)
 
     def _make_scheduling_parameters(
         self, config: IncrementConfig, build_info: BuildInfo
