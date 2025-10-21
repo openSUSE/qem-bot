@@ -102,7 +102,7 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # pylint: disable=too-many-return-statements
+    def _handle_incident(  # noqa: PLR0911 # pylint: disable=too-many-return-statements
         self,
         inc: Incident,
         arch,

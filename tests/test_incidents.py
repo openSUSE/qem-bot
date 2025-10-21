@@ -10,8 +10,7 @@ import pytest
 
 
 def test_incidents_constructor():
-    """
-    What is the bare minimal set of arguments
+    """What is the bare minimal set of arguments
     needed by the constructor?
     """
     test_config = {}
@@ -27,9 +26,7 @@ def test_incidents_constructor():
 
 
 def test_incidents_printable():
-    """
-    Try the printable
-    """
+    """Try the printable"""
     test_config = {}
     test_config["FLAVOR"] = {}
     inc = Incidents(
@@ -44,8 +41,7 @@ def test_incidents_printable():
 
 
 def test_incidents_call():
-    """
-    What is the bare minimal set of arguments
+    """What is the bare minimal set of arguments
     needed by the callable?
     """
     test_config = {}
@@ -78,9 +74,7 @@ def test_incidents_call_with_flavors():
 
 
 class MyIncident_0(object):
-    """
-    The simpler possible implementation of Incident class
-    """
+    """The simpler possible implementation of Incident class"""
 
     def __init__(self):
         self.id = None
@@ -138,8 +132,7 @@ def test_incidents_call_with_issues():
 
 @pytest.fixture
 def request_mock(monkeypatch):
-    """
-    Aggregate is using requests to get old jobs
+    """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
     is harcoded to [{}]
@@ -210,8 +203,7 @@ def test_incidents_call_with_packages(request_mock):
 
 
 def test_incidents_call_with_params_expand(request_mock):
-    """
-    Product configuration has 4 settings.
+    """Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
     The only flavor is using params_expand.
     Set of setting in product and flavor:
@@ -253,9 +245,7 @@ def test_incidents_call_with_params_expand(request_mock):
 
 
 def test_incidents_call_with_params_expand_distri_version(request_mock):
-    """
-    DISTRI and VERSION settings cannot be changed using params_expand.
-    """
+    """DISTRI and VERSION settings cannot be changed using params_expand."""
     test_config = {}
     test_config["FLAVOR"] = {
         "AAA": {
@@ -306,8 +296,7 @@ def test_incidents_call_with_params_expand_distri_version(request_mock):
 
 
 def test_incidents_call_with_params_expand_isolated(request_mock):
-    """
-    Product configuration has 4 settings.
+    """Product configuration has 4 settings.
     Incident configuration has 2 flavors.
     Only the first flavor is using params_expand, the other is not.
     Test that POST for the second exactly and only contains the product settings.

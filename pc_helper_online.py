@@ -12,8 +12,7 @@ from openqabot.utils import create_logger, get_yml_list
 
 
 def main():
-    """
-    Run Public Cloud helper with online access for testing purposes.
+    """Run Public Cloud helper with online access for testing purposes.
 
     Allowing to prove that Public Cloud related logic is actually working without executing
     a lot of code which is unrelated to pc_helper.

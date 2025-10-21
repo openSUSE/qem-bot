@@ -10,8 +10,7 @@ log = getLogger("openqabot.pc_helper")
 
 
 def get_latest_tools_image(query):
-    """
-    Get latest tools image.
+    """Get latest tools image.
 
     'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
     in openQA. A query is supposed to look like this "https://openqa.suse.de/group_overview/276.json" to get
@@ -26,8 +25,7 @@ def get_latest_tools_image(query):
 
 
 def apply_pc_tools_image(settings):
-    """
-    Apply the PC tools image in settings.
+    """Apply the PC tools image in settings.
 
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
     PUBLIC_CLOUD_TOOLS_IMAGE_BASE
@@ -49,8 +47,7 @@ def apply_pc_tools_image(settings):
 
 @lru_cache(maxsize=None)
 def pint_query(query):
-    """
-    Perform a pint query.
+    """Perform a pint query.
 
     Successive queries are cached
     """
@@ -78,7 +75,7 @@ def apply_publiccloud_pint_image(settings):
     except BaseException as e:
         log_error = "PUBLIC_CLOUD_PINT_QUERY handling failed"
         if "PUBLIC_CLOUD_PINT_NAME" in settings:
-            log_error += f' for {settings["PUBLIC_CLOUD_PINT_NAME"]}'
+            log_error += f" for {settings['PUBLIC_CLOUD_PINT_NAME']}"
         log.warning("{%s: %s", log_error, e)
         settings["PUBLIC_CLOUD_IMAGE_ID"] = None
     finally:
@@ -96,8 +93,7 @@ def apply_publiccloud_pint_image(settings):
 
 
 def get_recent_pint_image(images, name_regex, region=None, state="active"):
-    """
-    Get most recent PINT image.
+    """Get most recent PINT image.
 
     From the given set of images (received json from pint),
     get the latest one that matches the given criteria:

@@ -111,8 +111,7 @@ if has_registries:
 
 
 def test_get_yml_list_single_file_yml(tmp_path):
-    """
-    Create a folder with a single .yml file
+    """Create a folder with a single .yml file
     Call the function with the path of the file
     The expected behavior is the function to return
     a single element list with the file Path
@@ -141,9 +140,7 @@ def test_get_yml_list_folder_with_single_file_yml(tmp_path):
 
 
 def test_get_yml_list_folder_with_multiple_files(tmp_path):
-    """
-    Create a folder with 10 files in it, 5 has a valid extension
-    """
+    """Create a folder with 10 files in it, 5 has a valid extension"""
     d = tmp_path / "it_is_a_folder"
     d.mkdir()
     for ext in ("txt", "yml", "yaml"):
