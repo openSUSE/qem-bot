@@ -149,14 +149,35 @@ product_increments:
   build_regex: '…'
   build_listing_sub_path: product
   product_regex: '^openSUSE-.*'
+  settings:
+    FOO: bar
+  archs:
+  - aarch64
+  - x86_64
+  packages:
+  - foo
+  - bar
+  additional_builds:
+  - build_suffix: kernel-livepatch
+    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>rt)'
+    settings:
+      FLAVOR: Base-RT-Updates
+      KGRAFT: '1'
+  - build_suffix: …
+    regex: …
+    settings:
+      …
 - distri: sle
   …
 ```
 
 Note that this example just contains dummy values. As you can see you can
 specify multiple increment definitions, each with their own project on OBS to
-monitor for new increment requests. `qem-bot` will go through all of them. This
-is the sequence for the example configuration above:
+monitor for new increment requests. The fields `archs` and `packages` allow
+filtering similar to what is possible for incidents.
+
+`qem-bot` will go through all listed product increment. This is the sequence for
+the example configuration above:
 
 1. The OBS project `openSUSE:Factory:ToTest` is checked for open increment
    requests and only continue with the next steps if there is one.
@@ -169,16 +190,21 @@ is the sequence for the example configuration above:
       against `product_regex`. The increment definition is only considered when
       the `product_regex` matches.
 3. A diff between the download repository under `openSUSE:Factory:PUBLISH/product`
-   and `openSUSE:Factory:ToTest/product` is computed to determine additional
-   parameters to create additional scheduled products in openQA, e.g. for
-   testing specific kernel livepatches. If this is not wanted
+   and `openSUSE:Factory:ToTest/product` is computed. If this is not wanted
    `diff_project_suffix` can be set to `none` to skip this step.
-3. openQA is checked for a scheduled product matching the settings determined in
+    * The regexes specified under `additional_builds` are matched against
+      packages which have changed in the product increment. For each match an
+      additional scheduled product with the specified `build_suffix` and
+      `settings`. For instance, here an additional scheduled product with
+      settings like `BUILD=1234-kernel-livepatch` and `FLAVOR=Base-RT-Updates`
+      would be created if a package like `kernel-livepatch-6_12_0-160000_5-rt`
+      is added/changed by the product increment.
+4. openQA is checked for a scheduled product matching the settings determined in
    the previous step.
     * If there is no scheduled product `qem-bot` won't approve the increment
       request. If `--schedule` is specified a new scheduled product will be
       created.
     * If there is a scheduled product `qem-bot` will determine whether all jobs
       look good and accept the increment request.
-4. `qem-bot` will then go back to step 1 but this time check whatever OBS
+5. `qem-bot` will then go back to step 1 but this time check whatever OBS
    project has been specified for `sle`.
