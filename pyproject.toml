@@ -45,6 +45,7 @@ extend-select =[
     "RUF",
     "ARG",
     "ANN",
+    "S",
 ]
 
 ignore = [
@@ -82,6 +83,7 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
     "B019",
+    "S101",
 ]
 
 [tool.ruff.format]
