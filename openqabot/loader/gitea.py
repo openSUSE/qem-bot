@@ -527,7 +527,5 @@ def get_incidents_from_open_prs(
             )
             for pr in open_prs
         ]
-        for future in CT.as_completed(future_inc):
-            incidents.append(future.result())
-
-    return [inc for inc in incidents if inc]
+        incidents = (future.result() for future in CT.as_completed(future_inc))
+        return [inc for inc in incidents if inc]

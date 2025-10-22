@@ -183,10 +183,7 @@ class CommentAPI(object):
         :param comments dict of id->comment dict
         :return same hash without the deleted comments
         """
-        parents = []
-        for comment in list(comments.values()):
-            if comment["parent"]:
-                parents.append(comment["parent"])
+        parents = [comment["parent"] for comment in comments.values() if comment["parent"]]
 
         for comment in list(comments.values()):
             if comment["id"] not in parents:

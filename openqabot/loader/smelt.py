@@ -178,12 +178,7 @@ def get_incident(incident: int):
 
 
 def get_incidents(active: Set[int]) -> List[Any]:
-    incidents = []
-
     with CT.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
-
-        for future in CT.as_completed(future_inc):
-            incidents.append(future.result())
-
-    return [inc for inc in incidents if inc]
+        incidents = (future.result() for future in CT.as_completed(future_inc))
+        return [inc for inc in incidents if inc]
