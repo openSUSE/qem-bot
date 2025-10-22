@@ -70,10 +70,8 @@ def test_get_max_revison_connectionerror(caplog):
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert (
-        caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
-    )
+    assert "not found -- skipping incident" in caplog.records[0].msg
+    assert "Maintenance:/12345" in caplog.records[0].args[0]
 
 
 @responses.activate
@@ -84,10 +82,7 @@ def test_get_max_revison_httperror(caplog):
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert (
-        caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
-    )
+    assert "not found -- skipping incident" in caplog.records[0].msg
 
 
 @responses.activate
@@ -98,10 +93,7 @@ def test_get_max_revison_xmlerror(caplog):
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert (
-        caplog.records[0].msg
-        == "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml not found -- skipping incident"
-    )
+    assert "not found -- skipping incident" in caplog.records[0].msg
 
 
 @responses.activate

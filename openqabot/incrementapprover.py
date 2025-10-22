@@ -77,7 +77,7 @@ class IncrementApprover:
             log.debug("Checking specified request %i", args.request_id)
             relevant_request = osc.core.get_request(OBS_URL, str(args.request_id))
         if relevant_request is None:
-            log.info("Skipping approval, no relevant requests in states " + "/".join(relevant_states))
+            log.info("Skipping approval, no relevant requests in states %s", "/".join(relevant_states))
         else:
             log.debug("Found request %s", relevant_request.id)
             if hasattr(relevant_request.state, "to_xml"):

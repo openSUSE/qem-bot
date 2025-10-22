@@ -211,8 +211,9 @@ class Approver:
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered"
-                % (failed_job_id, inc)
+                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered",
+                failed_job_id,
+                inc,
             )
             return False
 
@@ -224,19 +225,22 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test"
-                % (failed_job_id, inc)
+                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test",
+                failed_job_id,
+                inc,
             )
             return False
 
         if not self.validate_job_qam(job["id"]):
             log.info(
-                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request"
-                % (failed_job_id, job["id"], inc)
+                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request",
+                failed_job_id,
+                job["id"],
+                inc,
             )
             return False
 
-        log.info("Ignoring failed aggregate %s and using instead %s for update %s" % (failed_job_id, job["id"], inc))
+        log.info("Ignoring failed aggregate %s and using instead %s for update %s", failed_job_id, job["id"], inc)
         return True
 
     @lru_cache(maxsize=512)
@@ -268,8 +272,9 @@ class Approver:
             if was_ok is not None:
                 return was_ok
         log.info(
-            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate."
-            % (failed_job_id, inc)
+            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate.",
+            failed_job_id,
+            inc,
         )
         return False
 
@@ -330,7 +335,7 @@ class Approver:
             OBS_GROUP,
             QEM_DASHBOARD,
         )
-        log.info("Accepting review for " + _mi2str(inc))
+        log.info("Accepting review for %s", _mi2str(inc))
         return self.git_approve(inc, msg) if inc.type == "git" else self.osc_approve(inc, msg)
 
     @staticmethod

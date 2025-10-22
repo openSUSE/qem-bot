@@ -37,6 +37,7 @@ extend-select =[
     "A",
     "DTZ",
     "LOG",
+    "G",
 ]
 
 ignore = [
