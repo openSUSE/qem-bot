@@ -1,4 +1,5 @@
 [project]
+name = "qem-bot"
 requires-python = ">=3.6"
 
 [tool.ruff]
@@ -42,6 +43,7 @@ extend-select =[
     "PERF",
     "PGH",
     "ARG",
+    "RUF",
 ]
 
 ignore = [

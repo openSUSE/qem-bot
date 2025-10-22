@@ -13,7 +13,7 @@ class BaseConf(metaclass=ABCMeta):
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
         settings,
-        _config,  # noqa: ARG002 Consider to remove and adapt code
+        _config,  # Consider to remove and adapt code
     ) -> None:
         self.product = product
         self.product_repo = product_repo

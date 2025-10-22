@@ -1,10 +1,11 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, NamedTuple, Set
+from typing import Any, Dict, Iterator, List, Set
 
 from ruamel.yaml import YAML
 
@@ -14,7 +15,8 @@ from ..utils import get_yml_list
 log = getLogger("bot.increment_config")
 
 
-class IncrementConfig(NamedTuple):
+@dataclass
+class IncrementConfig:
     distri: str
     version: str
     flavor: str
@@ -24,10 +26,10 @@ class IncrementConfig(NamedTuple):
     build_listing_sub_path: str
     build_regex: str
     product_regex: str
-    packages: List[str] = []
-    archs: Set[str] = []
-    settings: Dict[str, str] = {}
-    additional_builds: List[Dict[str, str]] = []
+    packages: List[str] = field(default_factory=list)
+    archs: Set[str] = field(default_factory=set)
+    settings: Dict[str, str] = field(default_factory=dict)
+    additional_builds: List[Dict[str, str]] = field(default_factory=list)
 
     def _concat_project(self, project: str) -> str:
         return project if self.project_base == "" else f"{self.project_base}:{project}"
@@ -80,5 +82,23 @@ class IncrementConfig(NamedTuple):
     def from_args(args: Namespace) -> List[Any]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
-        field_mapping = (getattr(args, field) for field in IncrementConfig._fields)
-        return [IncrementConfig(*field_mapping)]
+        # Create a dictionary of arguments for IncrementConfig
+        config_args = {
+            field_name: getattr(args, field_name)
+            for field_name in [
+                "distri",
+                "version",
+                "flavor",
+                "project_base",
+                "build_project_suffix",
+                "diff_project_suffix",
+                "build_listing_sub_path",
+                "build_regex",
+                "product_regex",
+                "packages",
+                "archs",
+                "settings",
+                "additional_builds",
+            ]
+        }
+        return [IncrementConfig(**config_args)]
