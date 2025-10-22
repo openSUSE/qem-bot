@@ -18,7 +18,7 @@ fake_job_done = fake_method("suse.openqa.job.done")
 
 
 @responses.activate
-def test_handling_incident(caplog):
+def test_handling_incident(caplog) -> None:
     # define response for get_incident_settings_data
     data = [
         {
@@ -77,7 +77,7 @@ def test_handling_incident(caplog):
 
 
 @responses.activate
-def test_handling_aggregate(caplog):
+def test_handling_aggregate(caplog) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 

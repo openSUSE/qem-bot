@@ -44,6 +44,7 @@ extend-select =[
     "DOC",
     "RUF",
     "ARG",
+    "ANN",
 ]
 
 ignore = [

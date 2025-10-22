@@ -31,7 +31,7 @@ class Incidents(BaseConf):
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Incidents product: {self.product}>"
 
     @staticmethod

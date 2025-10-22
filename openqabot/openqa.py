@@ -50,7 +50,7 @@ class openQAInterface:
             log.error("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
 
-    def handle_job_not_found(self, job_id: int):
+    def handle_job_not_found(self, job_id: int) -> None:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 

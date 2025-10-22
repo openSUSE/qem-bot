@@ -148,7 +148,7 @@ class Approver:
         # everything is green --> add incident to approve list
         return True
 
-    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int):
+    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int) -> None:
         try:
             patch(
                 "api/jobs/" + str(job_id) + "/remarks?text=acceptable_for&incident_number=" + str(incident_number),
@@ -282,7 +282,7 @@ class Approver:
         )
         return False
 
-    def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int):
+    def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int) -> None:
         for job_result in job_results:
             if is_job_passing(job_result):
                 continue
