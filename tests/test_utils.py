@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 import responses
 from openqabot.utils import get_yml_list, normalize_results, retry3, walk
 
+log = logging.getLogger(__name__)
 # responses versions older than
 # https://github.com/getsentry/responses/releases/tag/0.17.0
 # do not have "registries" so we need to skip on older versions
@@ -18,7 +20,7 @@ try:
 except ImportError as e:
     import logging
 
-    logging.info(str(e) + ": Likely older python version")
+    log.info(str(e) + ": Likely older python version")
 
 
 def test_normalize_results():
