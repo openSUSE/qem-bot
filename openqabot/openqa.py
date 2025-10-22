@@ -43,12 +43,11 @@ class openQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
-            log.error("openQA returned %s", e.args[-1])
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("openQA returned %s", e.args[-1])
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
-            log.exception(e)
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
 
     def handle_job_not_found(self, job_id: int) -> None:
@@ -69,9 +68,9 @@ class openQAInterface:
         ret = None
         try:
             ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("")
+            raise
         return ret
 
     @lru_cache(maxsize=512)
@@ -85,7 +84,7 @@ class openQAInterface:
             if status_code == 404:
                 self.handle_job_not_found(job_id)
             else:
-                log.exception(e)
+                log.exception("")
         return ret
 
     @lru_cache(maxsize=256)
@@ -94,9 +93,9 @@ class openQAInterface:
 
         try:
             ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("")
+            raise
 
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
@@ -109,8 +108,8 @@ class openQAInterface:
                 "GET",
                 "jobs/%s" % job_id,
             )["job"]
-        except RequestError as e:
-            log.exception(e)
+        except RequestError:
+            log.exception("")
         return ret
 
     @lru_cache(maxsize=256)
@@ -122,8 +121,8 @@ class openQAInterface:
                 "/tests/%s/ajax?previous_limit=%s&next_limit=0" % (job_id, limit),
                 retries=self.retries,
             )
-        except RequestError as e:
-            log.exception(e)
+        except RequestError:
+            log.exception("")
         return ret
 
     def get_scheduled_product_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:

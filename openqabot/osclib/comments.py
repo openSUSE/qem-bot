@@ -25,6 +25,16 @@ def _comment_as_dict(comment_element: etree.Element) -> Dict[str, Any]:
     }
 
 
+class OscCommentsValueError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Please, set request_id, project_name or / and package_name to add a comment.")
+
+
+class OscCommentsEmptyError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Empty comment.")
+
+
 class CommentAPI(object):
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
@@ -53,7 +63,7 @@ class CommentAPI(object):
         elif project_name:
             url = makeurl(self.apiurl, ["comments", "project", project_name], query)
         else:
-            raise ValueError("Please, set request_id, project_name or / and package_name to add a comment.")
+            raise OscCommentsValueError
         return url
 
     def get_comments(
@@ -140,7 +150,7 @@ class CommentAPI(object):
         :return: Comment id.
         """
         if not comment:
-            raise ValueError("Empty comment.")
+            raise OscCommentsEmptyError
 
         comment = self.truncate(comment.strip())
 

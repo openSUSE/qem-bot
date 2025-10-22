@@ -116,7 +116,7 @@ def test_get_max_revison_exception(caplog: LogCaptureFixture) -> None:
     with pytest.raises(BufferError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert str(caplog.records[0].msg) == "other error"
+    assert caplog.records[0].exc_info[0] is BufferError
 
 
 def test_merge_repohash() -> None:

@@ -30,22 +30,14 @@ def make_token_header(token: str) -> Dict[str, str]:
 
 
 def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
-    try:
-        return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
-    except Exception as e:
-        log.exception(e)
-        raise e
+    return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
 def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
-    try:
-        url = host + "/api/v1/" + query
-        res = retried_requests.post(url, verify=False, headers=token, json=post_data)
-        if not res.ok:
-            log.error("Unable to POST %s: %s", url, res.text)
-    except Exception as e:
-        log.exception(e)
-        raise e
+    url = host + "/api/v1/" + query
+    res = retried_requests.post(url, verify=False, headers=token, json=post_data)
+    if not res.ok:
+        log.error("Unable to POST %s: %s", url, res.text)
 
 
 def read_utf8(name: str) -> str:
@@ -502,9 +494,8 @@ def make_incident_from_pr(
             log.info("Skipping PR %s, no packages found/considered", number)
             return None
 
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Unable to process PR %s", pr.get("number", "?"))
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Unable to process PR %s", pr.get("number", "?"))
         return None
     return incident
 

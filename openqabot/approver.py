@@ -343,8 +343,8 @@ class Approver:
             )
         except HTTPError as e:
             return _handle_http_error(e, inc)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("")
             return False
 
         return True
@@ -359,7 +359,7 @@ class Approver:
                 msg,
                 inc.scm_info,
             )
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("")
             return False
         return True
