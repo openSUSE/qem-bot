@@ -20,7 +20,7 @@ try:
 except ImportError as e:
     import logging
 
-    log.info(str(e) + ": Likely older python version")
+    log.info("%s: Likely older python version", e)
 
 
 def test_normalize_results():
