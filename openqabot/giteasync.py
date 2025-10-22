@@ -38,7 +38,7 @@ class GiteaSync:
         log.info("Starting to sync incidents from Gitea to dashboard")
 
         data = self.incidents
-        log.info("Updating info about %s incidents", str(len(data)))
+        log.info("Updating info about %s incidents", len(data))
         log.debug("Data: %s", pformat(data))
 
         if self.dry:

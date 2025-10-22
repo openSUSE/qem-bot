@@ -6,6 +6,7 @@ import re
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
+from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import lxml.etree as ET
@@ -55,15 +56,11 @@ class RepoDiff:
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
             if as_json:
-                with open(name, "r", encoding="utf8") as json_file:
-                    return json.loads(json_file.read())
-            else:
-                with open(name, "rb") as binary_file:
-                    return binary_file.read()
+                return json.loads(Path(name).read_text(encoding="utf8"))
+            return Path(name).read_bytes()
         resp = retried_requests.get(url)
         if self.args is not None and self.args.dump_data and not self.args.fake_data:
-            with open(name, "wb") as output_file:
-                output_file.write(resp.content)
+            Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
     def _load_repodata(self, project: str) -> Optional[ET.Element]:

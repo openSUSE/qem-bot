@@ -23,7 +23,7 @@ class SMELTSync:
         log.info("Starting to sync incidents from smelt to dashboard")
 
         data = self._create_list(self.incidents)
-        log.info("Updating info about %s incidents", str(len(data)))
+        log.info("Updating info about %s incidents", len(data))
         log.debug("Data: %s", pformat(data))
 
         if self.dry:
@@ -36,7 +36,7 @@ class SMELTSync:
         valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
-        rr = sorted(request_set, key=itemgetter("requestId"), reverse=True)[0]
+        rr = max(request_set, key=itemgetter("requestId"))
         return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
@@ -61,7 +61,7 @@ class SMELTSync:
             return False
         rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
         review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-        return bool(review) and review[0]["status"]["name"] in ("review", "new")
+        return bool(review) and review[0]["status"]["name"] in {"review", "new"}
 
     @classmethod
     def _create_record(cls, inc: Dict[str, Any]) -> Dict[str, Any]:

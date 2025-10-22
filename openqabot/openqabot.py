@@ -66,7 +66,7 @@ class OpenQABot:
             log.info("Triggering %d products in openQA", len(post))
 
             def poster(job: Dict[str, Any]) -> None:
-                log.info("Triggering %s", str(job))
+                log.info("Triggering %s", job)
                 try:
                     self.post_openqa(job["openqa"])
                 except PostOpenQAError:

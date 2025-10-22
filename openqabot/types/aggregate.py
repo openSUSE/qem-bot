@@ -55,7 +55,7 @@ class Aggregate(BaseConf):
         if build.startswith(today) and repohash == old_repohash:
             raise SameBuildExists
 
-        counter = int(build.split("-")[-1]) + 1 if build.startswith(today) else 1
+        counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
     def __call__(  # noqa: C901

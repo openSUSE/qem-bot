@@ -66,7 +66,7 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(
     )
     responses.add(
         responses.GET,
-        re.compile("http://instance.qa/api/v1/jobs/.*"),
+        re.compile(r"http://instance.qa/api/v1/jobs/.*"),
         json={
             "job": {
                 "settings": {
@@ -161,14 +161,12 @@ def fake_responses_for_creating_pr_review() -> None:
         "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
         json={},
         match=[
-            matchers.json_params_matcher(
-                {
-                    "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
-                    "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
-                    "comments": [],
-                    "event": "APPROVED",
-                }
-            )
+            matchers.json_params_matcher({
+                "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
+                "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+                "comments": [],
+                "event": "APPROVED",
+            })
         ],
     )
 

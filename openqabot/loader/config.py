@@ -86,10 +86,10 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            log.info("Skipping invalid config %s - empty config", str(p))
+            log.info("Skipping invalid config %s - empty config", p)
             continue
         if not isinstance(data, dict):
-            log.info("Skipping invalid config %s - invalid format", str(p))
+            log.info("Skipping invalid config %s - invalid format", p)
             continue
 
         try:
@@ -98,7 +98,7 @@ def read_products(path: Path) -> List[Data]:
             version = data["settings"]["VERSION"]
             product = data["product"]
         except KeyError as e:
-            log.info("Skipping config %s with no %s settings", str(p), str(e))
+            log.info("Skipping config %s with no %s settings", p, e)
             continue
 
         ret.extend(Data(0, 0, flavor, arch, distri, version, "", product) for arch in data["aggregate"]["archs"])

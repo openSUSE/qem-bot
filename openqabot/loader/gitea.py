@@ -6,6 +6,7 @@ import re
 import urllib.error
 from functools import lru_cache
 from logging import getLogger
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import osc.conf
@@ -42,13 +43,11 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
 
 
 def read_utf8(name: str) -> str:
-    with open("responses/%s" % name, "r", encoding="utf8") as utf8:
-        return utf8.read()
+    return Path("responses/%s" % name).read_text(encoding="utf8")
 
 
 def read_json(name: str) -> Any:
-    with open("responses/%s.json" % name, "r", encoding="utf8") as json_file:
-        return json.loads(json_file.read())
+    return json.loads(Path("responses/%s.json" % name).read_text(encoding="utf8"))
 
 
 def read_xml(name: str) -> etree.ElementTree:
@@ -71,12 +70,12 @@ def comments_url(repo_name: str, number: int) -> str:
 
 
 def get_product_name(obs_project: str) -> str:
-    product_match = re.search(".*:PullRequest:\\d+:(.*)", obs_project)
+    product_match = re.search(r".*:PullRequest:\d+:(.*)", obs_project)
     return product_match.group(1) if product_match else ""
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, str]:
-    m = re.search(".*/products/(.*)#([\\d\\.]{2,6})$", scmsync_url)
+    m = re.search(r".*/products/(.*)#([\d\.]{2,6})$", scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
 
@@ -201,7 +200,7 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
             elif state == "REQUEST_REVIEW":
                 pending_qam += 1
                 review_requested += 1
-        elif state in ("PENDING", "REQUEST_REVIEW"):
+        elif state in {"PENDING", "REQUEST_REVIEW"}:
             pending += 1
     incident["approved"] = approvals > 0 and changes_requested + review_requested == 0
     incident["inReview"] = pending + pending_qam > 0
@@ -220,7 +219,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             name = entry["name"]
             if not name.startswith(start):
                 continue
-            parts = filter(lambda x: re.search("[.\\d]+", x), name[len(start) :].split("-"))
+            parts = filter(lambda x: re.search(r"[.\d]+", x), name[len(start) :].split("-"))
             version = next(parts, "")
             if len(version) > 0:
                 return version
@@ -258,7 +257,7 @@ def add_channel_for_build_result(
     return channel
 
 
-def add_build_result(
+def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     incident: Dict[str, Any],
     res: Any,
     projects: Set[str],
@@ -335,14 +334,14 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     for flavor in flavors:
         if flavor.startswith(product_prefix):
             arch = flavor[prefix_len:]
-            if arch in ("x86_64", "aarch64", "ppc64le", "s390x"):
+            if arch in {"x86_64", "aarch64", "ppc64le", "s390x"}:
                 relevant_archs.add(arch)
-    log.debug("Relevant archs for %s: %s", obs_project, str(sorted(relevant_archs)))
+    log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
 
 def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
-    if OBS_REPO_TYPE != "" and res.get("repository") != OBS_REPO_TYPE:
+    if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
     return arch == "local" or relevant_archs is None or arch in relevant_archs
@@ -355,7 +354,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: boo
     failed_packages = set()
     projects = set()
     for url in obs_urls:
-        project_match = re.search(".*/project/show/(.*)", url)
+        project_match = re.search(r".*/project/show/(.*)", url)
         if project_match:
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
@@ -410,7 +409,7 @@ def add_comments_and_referenced_build_results(
         body = comment["body"]
         user_name = comment["user"]["username"]
         if user_name == "autogits_obs_staging_bot":
-            add_build_results(incident, re.findall("https://[^ ]*", body), dry=dry)
+            add_build_results(incident, re.findall(r"https://[^ ]*", body), dry=dry)
             break
 
 
