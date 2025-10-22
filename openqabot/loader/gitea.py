@@ -125,11 +125,16 @@ def compute_repo_url_for_job_setting(
     )
 
 
-def get_open_prs(token: Dict[str, str], repo: str, dry: bool) -> List[Any]:
+def get_open_prs(token: Dict[str, str], repo: str, dry: bool, number: Optional[int]) -> List[Any]:
     if dry:
         return read_json("pulls")
     open_prs = []
     page = 1
+    if number is not None:
+        pr = get_json(f"repos/{repo}/pulls/{number}", token)
+        log.debug("PR %i: %s", number, pr)
+        open_prs.append(pr)
+        return open_prs
     while True:
         # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullRequests
         prs_on_page = get_json("repos/%s/pulls?state=open&page=%i" % (repo, page), token)
@@ -307,6 +312,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
         project_match = re.search(".*/project/show/(.*)", url)
         if project_match:
             obs_project = project_match.group(1)
+            log.debug("Checking OBS project %s", obs_project)
             relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry)
             build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
             if dry:
@@ -376,11 +382,13 @@ def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], fil
 
 
 def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) -> bool:
-    if len(incident["failed_or_unpublished_packages"]) > 0:
-        log.info("Skipping PR %s, not all packages succeeded and published", number)
+    failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
+    if failed_or_unpublished_packages > 0:
+        log.info("Skipping PR %i, not all packages succeeded and published", number)
         return False
     if len(incident["successful_packages"]) < 1:
-        log.info("Skipping PR %s, no packages have been built/published", number)
+        info = "Skipping PR %i, no packages have been built/published (there are %i failed/unpublished packages)"
+        log.info(info, number, failed_or_unpublished_packages)
         return False
     return True
 

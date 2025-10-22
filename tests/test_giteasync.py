@@ -37,6 +37,7 @@ _namespace = namedtuple(
         "gitea_repo",
         "allow_build_failures",
         "consider_unrequested_prs",
+        "pr_number",
     ),
 )
 
@@ -114,7 +115,7 @@ def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=T
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
-    args = _namespace(False, False, "123", "456", False, "products/SLFO", allow_failures, False)
+    args = _namespace(False, False, "123", "456", False, "products/SLFO", allow_failures, False, None)
     assert GiteaSync(args)() == 0
 
 
@@ -177,7 +178,8 @@ def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyb
 def test_sync_without_results(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
     run_gitea_sync(caplog, monkeypatch, True, False)
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Skipping PR 124, no packages have been built/published" in messages
+    m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
+    assert m in messages
 
 
 def test_extracting_product_name_and_version():

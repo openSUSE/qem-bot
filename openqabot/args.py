@@ -198,6 +198,13 @@ def get_parser():
         action="store_true",
         help="Consider PRs where no review from team %s was requested as well" % OBS_GROUP,
     )
+    cmdgiteasync.add_argument(
+        "--pr-number",
+        required=False,
+        type=int,
+        default=None,
+        help="Only consider the specified PR (for manual debugging)",
+    )
     cmdgiteasync.set_defaults(func=do_sync_gitea)
 
     cmdappr = commands.add_parser("inc-approve", help="Approve incidents which passed tests")
