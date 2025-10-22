@@ -108,7 +108,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     if "error" in data:
         raise ValueError
 
-    ret = [
+    return [
         Data(
             number,
             d["id"],
@@ -121,7 +121,6 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
         )
         for d in data
     ]
-    return ret
 
 
 def get_incident_results(inc: int, token: Dict[str, str]):

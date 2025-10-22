@@ -29,6 +29,7 @@ extend-select =[
     "PIE",
     "T20",
     "RSE",
+    "RET",
 ]
 
 ignore = [
