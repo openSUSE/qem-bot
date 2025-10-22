@@ -42,6 +42,7 @@ extend-select =[
     "PERF",
     "PGH",
     "DOC",
+    "RUF",
 ]
 
 ignore = [
