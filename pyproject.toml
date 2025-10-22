@@ -1,3 +1,6 @@
+[project]
+requires-python = ">=3.6"
+
 [tool.ruff]
 line-length = 120
 
