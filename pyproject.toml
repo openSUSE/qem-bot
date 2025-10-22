@@ -24,6 +24,7 @@ extend-select =[
     "T10",
     "FIX",
     "ISC",
+    "ICN",
 ]
 
 ignore = [
