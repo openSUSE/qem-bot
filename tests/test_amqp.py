@@ -12,7 +12,13 @@ from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url", "gitea_token"])
-args = namespace(True, "ToKeN", urlparse("http://instance.qa"), None, None)
+args = namespace(
+    dry=True,
+    token="ToKeN",  # noqa: S106
+    openqa_instance=urlparse("http://instance.qa"),
+    url=None,
+    gitea_token=None,
+)
 amqp = AMQP(args)
 
 fake_method = namedtuple("Method", ["routing_key"])

@@ -74,7 +74,7 @@ def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
-def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool = False) -> List[JobAggr]:
+def get_incident_settings(inc: int, token: Dict[str, str], *, all_incidents: bool = False) -> List[JobAggr]:
     settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
         raise NoResultsError(
@@ -88,7 +88,7 @@ def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool =
             rrid = rrid[-1]
             settings = [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
 
-    return [JobAggr(i["id"], False, i["withAggregate"]) for i in settings]
+    return [JobAggr(i["id"], aggregate=False, withAggregate=i["withAggregate"]) for i in settings]
 
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
@@ -120,7 +120,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
 
 def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
     try:
-        settings = get_incident_settings(inc, token)
+        settings = get_incident_settings(inc, token, all_incidents=False)
     except NoResultsError as e:
         raise e
 
@@ -148,7 +148,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
     last_build = settings[0]["build"][:-2]
-    return [JobAggr(i["id"], True, False) for i in settings if last_build in i["build"]]
+    return [JobAggr(i["id"], aggregate=True, withAggregate=False) for i in settings if last_build in i["build"]]
 
 
 def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[Data]:

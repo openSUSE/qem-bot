@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
 import os
 from collections import namedtuple
@@ -117,6 +119,7 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
 def prepare_approver(
     caplog: LogCaptureFixture,
     monkeypatch: MonkeyPatch,
+    *,
     schedule: bool = False,
     reschedule: bool = False,
     diff_project_suffix: str = "none",
@@ -129,28 +132,28 @@ def prepare_approver(
     monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     args = _namespace(
-        False,
-        "not-secret",
-        urlparse("http://openqa-instance"),
-        True,
-        None,
-        "OBS:PROJECT",
-        "TEST",
-        diff_project_suffix,
-        "sle",
-        "16.0",
-        "Online-Increments",
-        schedule,
-        reschedule,
-        "product",
-        BUILD_REGEX,
-        ".*",
-        True,
-        None,
-        [] if config is None else config.packages,
-        set() if config is None else config.archs,
-        {} if config is None else config.settings,
-        [] if config is None else config.additional_builds,
+        dry=False,
+        token="not-secret",
+        openqa_instance=urlparse("http://openqa-instance"),
+        accepted=True,
+        request_id=None,
+        project_base="OBS:PROJECT",
+        build_project_suffix="TEST",
+        diff_project_suffix=diff_project_suffix,
+        distri="sle",
+        version="16.0",
+        flavor="Online-Increments",
+        schedule=schedule,
+        reschedule=reschedule,
+        build_listing_sub_path="product",
+        build_regex=BUILD_REGEX,
+        product_regex=".*",
+        fake_data=True,
+        increment_config=None,
+        packages=[] if config is None else config.packages,
+        archs=set() if config is None else config.archs,
+        settings={} if config is None else config.settings,
+        additional_builds=[] if config is None else config.additional_builds,
     )
     return IncrementApprover(args)
 
@@ -158,6 +161,7 @@ def prepare_approver(
 def run_approver(
     caplog: LogCaptureFixture,
     monkeypatch: MonkeyPatch,
+    *,
     schedule: bool = False,
     reschedule: bool = False,
     diff_project_suffix: str = "none",
@@ -171,7 +175,13 @@ def run_approver(
         lambda _self, data: jobs.append(data),
     )
     increment_approver = prepare_approver(
-        caplog, monkeypatch, schedule, reschedule, diff_project_suffix, test_env_var, config
+        caplog,
+        monkeypatch,
+        schedule=schedule,
+        reschedule=reschedule,
+        diff_project_suffix=diff_project_suffix,
+        test_env_var=test_env_var,
+        config=config,
     )
     errors = increment_approver()
     return (errors, jobs)

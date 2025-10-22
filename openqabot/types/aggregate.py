@@ -63,6 +63,7 @@ class Aggregate(BaseConf):
         incidents: List[Incident],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool = False,
     ) -> List[Dict[str, Any]]:
         ret = []

@@ -111,7 +111,7 @@ class Approver:
 
     def _approvable(self, inc: IncReq) -> bool:
         try:
-            i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
+            i_jobs = get_incident_settings(inc.inc, self.token, all_incidents=self.all_incidents)
         except NoResultsError as e:
             log.info(e)
             return False

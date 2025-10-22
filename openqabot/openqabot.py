@@ -27,7 +27,12 @@ class OpenQABot:
 
         extrasettings = get_onearch(args.singlearch)
 
-        self.workers = load_metadata(args.configs, args.disable_aggregates, args.disable_incidents, extrasettings)
+        self.workers = load_metadata(
+            args.configs,
+            aggregate=args.disable_aggregates,
+            incidents=args.disable_incidents,
+            extrasettings=extrasettings,
+        )
 
         self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")
@@ -58,7 +63,7 @@ class OpenQABot:
         log.info("Starting bot mainloop")
         post: List[Dict[str, Any]] = []
         for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
+            post += worker(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
 
         if self.dry:
             log.info("Would trigger %d products in openQA", len(post))

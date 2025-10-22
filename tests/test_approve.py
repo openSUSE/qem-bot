@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import io
 import logging
 import re
@@ -27,7 +29,9 @@ _namespace = namedtuple(
     ("dry", "token", "all_incidents", "openqa_instance", "incident", "gitea_token"),
 )
 openqa_instance_url = urlparse("http://instance.qa")
-args = _namespace(False, "123", False, openqa_instance_url, None, None)
+args = _namespace(
+    dry=False, token="123", all_incidents=False, openqa_instance=openqa_instance_url, incident=None, gitea_token=None
+)
 
 
 @pytest.fixture(scope="function")
@@ -194,21 +198,21 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
-    def f_inc_settins(inc: int, _token: str, _all_inc: bool) -> List[JobAggr]:
+    def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> List[JobAggr]:
         if "inc" in request.param:
             raise NoResultsError("No results for settings")
         results = {
-            1: [JobAggr(i, False, True) for i in range(1000, 1010)],
-            2: [JobAggr(i, False, True) for i in range(2000, 2010)],
+            1: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(1000, 1010)],
+            2: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(2000, 2010)],
             3: [
-                JobAggr(3000, False, False),
-                JobAggr(3001, False, False),
-                JobAggr(3002, False, True),
-                JobAggr(3002, False, False),
-                JobAggr(3003, False, True),
+                JobAggr(3000, aggregate=False, withAggregate=False),
+                JobAggr(3001, aggregate=False, withAggregate=False),
+                JobAggr(3002, aggregate=False, withAggregate=True),
+                JobAggr(3002, aggregate=False, withAggregate=False),
+                JobAggr(3003, aggregate=False, withAggregate=True),
             ],
-            4: [JobAggr(i, False, False) for i in range(4000, 4010)],
-            5: [JobAggr(i, False, False) for i in range(5000, 5010)],
+            4: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(4000, 4010)],
+            5: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(5000, 5010)],
         }
         return results.get(inc)
 
@@ -218,9 +222,9 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
         results = {
             5: [],
             4: [],
-            1: [JobAggr(i, True, False) for i in range(10000, 10010)],
-            2: [JobAggr(i, True, False) for i in range(20000, 20010)],
-            3: [JobAggr(i, True, False) for i in range(30000, 30010)],
+            1: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(10000, 10010)],
+            2: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(20000, 20010)],
+            3: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(30000, 30010)],
         }
         return results.get(inc)
 
@@ -239,7 +243,14 @@ def f_osconf(monkeypatch: MonkeyPatch) -> None:
 
 
 def approver(incident: int = 0) -> int:
-    args = _namespace(True, "123", False, openqa_instance_url, incident, None)
+    args = _namespace(
+        dry=True,
+        token="123",
+        all_incidents=False,
+        openqa_instance=openqa_instance_url,
+        incident=incident,
+        gitea_token=None,
+    )
     approver = Approver(args)
     approver.client.retries = 0
     return approver()

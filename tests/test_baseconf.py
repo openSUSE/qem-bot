@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+
 from typing import Any, Dict, List, Optional
 
 import pytest
@@ -15,6 +16,7 @@ class FakeBaseConf(BaseConf):
         _incidents: List[Incident],
         _token: Dict[str, str],
         _ci_url: Optional[str],
+        *,
         _ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
         return [{"foo": "bar"}]

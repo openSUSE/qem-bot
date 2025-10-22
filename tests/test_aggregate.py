@@ -90,13 +90,13 @@ def incident_mock() -> Callable[..., Any]:
         product_version: str = ""
 
     class MockIncident:
-        def __init__(self, repo: Repos, embargoed: bool) -> None:
+        def __init__(self, repo: Repos, *, embargoed: bool) -> None:
             self.livepatch = None
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
 
-    def _func(product: str, version: str, arch: str, embargoed: bool = False) -> MockIncident:
+    def _func(product: str, version: str, arch: str, *, embargoed: bool = False) -> MockIncident:
         repo = Repos(product=product, version=version, arch=arch)
         return MockIncident(repo, embargoed=embargoed)
 
