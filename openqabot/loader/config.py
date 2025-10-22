@@ -4,7 +4,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import List, Set, Union
 
-from ruamel.yaml import YAML  # type: ignore
+from ruamel.yaml import YAML
 
 from ..errors import NoTestIssues
 from ..types import Data
