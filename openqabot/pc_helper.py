@@ -35,7 +35,7 @@ def apply_pc_tools_image(settings):
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
                 settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
             )
-    except BaseException as e:
+    except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             log_error += f" PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
@@ -72,7 +72,7 @@ def apply_publiccloud_pint_image(settings):
         settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
-    except BaseException as e:
+    except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log_error = "PUBLIC_CLOUD_PINT_QUERY handling failed"
         if "PUBLIC_CLOUD_PINT_NAME" in settings:
             log_error += f" for {settings['PUBLIC_CLOUD_PINT_NAME']}"

@@ -229,7 +229,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             version = next(parts, "")
             if len(version) > 0:
                 return version
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log.warning("Unable to read product version from '%s': %s", url, e)
     return version
 
@@ -326,7 +326,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool) -
     else:
         try:
             multibuild_data = get_multibuild_data(obs_project)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
             log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
             return None
 

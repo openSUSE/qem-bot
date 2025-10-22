@@ -68,7 +68,7 @@ class IncrementConfig(NamedTuple):
                 IncrementConfig.from_config_entry,
                 YAML(typ="safe").load(file_path).get("product_increments", []),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
             log.info("Unable to load config file '%s': %s", file_path, e)
             return iter(())
 
