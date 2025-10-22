@@ -6,7 +6,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, NamedTuple, Set
 
-from ruamel.yaml import YAML  # type: ignore
+from ruamel.yaml import YAML
 
 from .. import OBS_DOWNLOAD_URL
 from ..utils import get_yml_list
