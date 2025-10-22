@@ -1,20 +1,19 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import json
+import re
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
 from typing import Dict, Sequence
 
-import json
-import re
 import pika
 
+from .approver import Approver
+from .loader.qem import get_incident_settings_data
 from .syncres import SyncRes
 from .types import Data
-from .loader.qem import get_incident_settings_data
 from .utils import compare_incident_data
-from .approver import Approver
-
 
 log = getLogger("bot.amqp")
 build_inc_regex = re.compile(r":(\d+):.*")

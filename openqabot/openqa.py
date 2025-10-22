@@ -1,17 +1,17 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from functools import lru_cache
 import logging
+from functools import lru_cache
 from pprint import pformat
-from urllib.parse import ParseResult
 from typing import Dict
+from urllib.parse import ParseResult
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
 from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
-from .loader.qem import update_job
 from .errors import PostOpenQAError
+from .loader.qem import update_job
 from .types import Data
 
 log = logging.getLogger("bot.openqa")

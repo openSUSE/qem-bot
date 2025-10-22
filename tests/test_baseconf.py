@@ -1,7 +1,8 @@
+from typing import Any, Dict, List, Optional
+
 import pytest
 
 from openqabot.types.baseconf import BaseConf, Incident
-from typing import Any, Dict, List, Optional
 
 
 class FakeBaseConf(BaseConf):

@@ -1,29 +1,29 @@
+import logging
+import re
 from collections import namedtuple
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
-import logging
-import re
 
-from responses import GET, matchers
 import osc.conf
 import osc.core
 import pytest
-import responses
 
-from openqabot import QEM_DASHBOARD, OBS_URL, OBS_DOWNLOAD_URL
-from openqabot.types import Repos
+import openqabot.loader.gitea
+import responses
+from openqabot import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
-    read_utf8,
-    read_json,
-    read_xml,
-    review_pr,
+    compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
-    compute_repo_url_for_job_setting,
+    read_json,
+    read_utf8,
+    read_xml,
+    review_pr,
 )
-import openqabot.loader.gitea
+from openqabot.types import Repos
+from responses import GET, matchers
 
 # Fake Namespace for GiteaSync initialization
 _namespace = namedtuple(

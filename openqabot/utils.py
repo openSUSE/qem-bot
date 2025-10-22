@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: MIT
 import logging
 from copy import deepcopy
-from typing import Any, Dict, Optional, List
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
 from .types import Data
 
 

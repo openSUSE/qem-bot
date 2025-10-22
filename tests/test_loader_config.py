@@ -1,5 +1,5 @@
-from pathlib import Path
 import logging
+from pathlib import Path
 
 from openqabot.loader.config import get_onearch, load_metadata, read_products
 from openqabot.types import Data

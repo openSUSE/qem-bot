@@ -1,10 +1,11 @@
-from collections import namedtuple
-import logging
 import json
+import logging
+from collections import namedtuple
 from urllib.parse import urlparse
+
 import responses
-from openqabot.amqp import AMQP
 from openqabot import QEM_DASHBOARD
+from openqabot.amqp import AMQP
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url", "gitea_token"])
 args = namespace(True, "ToKeN", urlparse("http://instance.qa"), None, None)

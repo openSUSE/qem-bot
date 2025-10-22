@@ -1,26 +1,26 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import gzip
+import json
+import re
+import xml.etree.ElementTree as ET
 from argparse import Namespace
 from collections import defaultdict
+from logging import getLogger
 from typing import (
     Any,
     DefaultDict,
     Dict,
     Iterator,
     List,
+    NamedTuple,
     Optional,
     Set,
     Tuple,
-    NamedTuple,
 )
-import re
-from logging import getLogger
-import gzip
-import json
-import xml.etree.ElementTree as ET
 
-from .utils import retry10 as requests
 from . import OBS_DOWNLOAD_URL
+from .utils import retry10 as requests
 
 log = getLogger("bot.repo_diff")
 ns = "{http://linux.duke.edu/metadata/common}"

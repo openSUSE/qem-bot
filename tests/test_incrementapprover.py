@@ -1,20 +1,20 @@
-from collections import namedtuple
-from typing import Optional, List
-from pathlib import Path
-from urllib.parse import urlparse
-import os
 import logging
+import os
+from collections import namedtuple
+from pathlib import Path
+from typing import List, Optional
+from urllib.parse import urlparse
 
-from responses import GET
 import osc.conf
 import osc.core
 import pytest
-import responses
 
 import openqabot
-from openqabot import BUILD_REGEX, OBS_URL, OBS_DOWNLOAD_URL, OBS_GROUP
-from openqabot.loader.gitea import read_json
+import responses
+from openqabot import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover, IncrementConfig
+from openqabot.loader.gitea import read_json
+from responses import GET
 
 # Fake Namespace for IncrementApprover initialization
 _namespace = namedtuple(

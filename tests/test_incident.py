@@ -2,10 +2,10 @@ from copy import deepcopy
 
 import pytest
 
-from openqabot.errors import NoRepoFoundError, EmptyPackagesError, EmptyChannels
-from openqabot.types import Repos, ArchVer
-from openqabot.types.incident import Incident
 import openqabot.types.incident
+from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.types import ArchVer, Repos
+from openqabot.types.incident import Incident
 
 test_data = {
     "approved": False,

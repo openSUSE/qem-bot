@@ -3,14 +3,14 @@
 import concurrent.futures as CT
 from logging import getLogger
 from typing import Any, List, Set
-from jsonschema import validate, ValidationError
 
 import urllib3
 import urllib3.exceptions
+from jsonschema import ValidationError, validate
 
 from .. import SMELT
-from ..utils import walk
 from ..utils import retry10 as requests
+from ..utils import walk
 
 log = getLogger("bot.loader.smelt")
 

@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-from . import ArchVer, Repos
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
+from . import ArchVer, Repos
 
 log = getLogger("bot.types.incident")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")

@@ -1,7 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
 import concurrent.futures as CT
+from argparse import Namespace
 from logging import getLogger
 from typing import List
 

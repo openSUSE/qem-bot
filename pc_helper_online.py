@@ -6,7 +6,9 @@
 
 from argparse import ArgumentParser
 from pathlib import Path
+
 from ruamel.yaml import YAML
+
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import create_logger, get_yml_list
 

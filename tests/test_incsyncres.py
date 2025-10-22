@@ -1,11 +1,13 @@
-from collections import namedtuple
 import logging
+from collections import namedtuple
 from urllib.parse import urlparse
+
 import pytest
-import responses
+
 import openqabot.incsyncres
-from openqabot.incsyncres import IncResultsSync
+import responses
 from openqabot import QEM_DASHBOARD
+from openqabot.incsyncres import IncResultsSync
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 

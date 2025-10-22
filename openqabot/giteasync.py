@@ -5,8 +5,8 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any, Dict, List
 
+from .loader.gitea import get_incidents_from_open_prs, get_open_prs, make_token_header
 from .loader.qem import update_incidents
-from .loader.gitea import make_token_header, get_open_prs, get_incidents_from_open_prs
 
 log = getLogger("bot.giteasync")
 

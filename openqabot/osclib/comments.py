@@ -1,13 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: GPL-2.0+
-from datetime import datetime
 import re
+from datetime import datetime
 from xml.etree import ElementTree as ET
 
-from osc.core import http_DELETE
-from osc.core import http_GET
-from osc.core import http_POST
-from osc.core import makeurl
+from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
 
 def _comment_as_dict(comment_element):

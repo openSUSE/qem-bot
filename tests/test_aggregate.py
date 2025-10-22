@@ -1,5 +1,6 @@
-from openqabot.types.aggregate import Aggregate
 import pytest
+
+from openqabot.types.aggregate import Aggregate
 
 
 def test_aggregate_constructor():

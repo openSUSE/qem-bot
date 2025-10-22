@@ -1,24 +1,25 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
-from functools import lru_cache
-from logging import getLogger
-from typing import Dict, List, Pattern, Optional
-from urllib.error import HTTPError
-from urllib.parse import urlparse
-from datetime import timedelta, datetime
 import re
 import string
+from argparse import Namespace
+from datetime import datetime, timedelta
+from functools import lru_cache
+from logging import getLogger
+from typing import Dict, List, Optional, Pattern
+from urllib.error import HTTPError
+from urllib.parse import urlparse
 
 import osc.conf
 import osc.core
-
 from openqa_client.exceptions import RequestError
+
+from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
-from openqabot.dashboard import get_json, patch
 
-from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, QEM_DASHBOARD, OLDEST_APPROVAL_JOB_DAYS
+from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, OLDEST_APPROVAL_JOB_DAYS, QEM_DASHBOARD
+from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
     IncReq,
     JobAggr,
@@ -27,7 +28,6 @@ from .loader.qem import (
     get_incidents_approver,
     get_single_incident,
 )
-from .loader.gitea import make_token_header, review_pr
 
 log = getLogger("bot.approver")
 

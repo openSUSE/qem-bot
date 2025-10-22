@@ -1,4 +1,6 @@
 import re
+
+import openqabot.pc_helper
 import responses
 from openqabot.pc_helper import (
     apply_pc_tools_image,
@@ -6,7 +8,6 @@ from openqabot.pc_helper import (
     get_latest_tools_image,
     get_recent_pint_image,
 )
-import openqabot.pc_helper
 
 
 def test_apply_pc_tools_image(monkeypatch):

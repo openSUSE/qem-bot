@@ -1,8 +1,9 @@
-import pytest
-import responses
 from pathlib import Path
 
-from openqabot.utils import walk, normalize_results, retry3, get_yml_list
+import pytest
+
+import responses
+from openqabot.utils import get_yml_list, normalize_results, retry3, walk
 
 # responses versions older than
 # https://github.com/getsentry/responses/releases/tag/0.17.0

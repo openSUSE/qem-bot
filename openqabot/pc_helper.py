@@ -1,8 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import re
 from functools import lru_cache
 from logging import getLogger
-import re
 
 from .utils import retry5 as requests
 

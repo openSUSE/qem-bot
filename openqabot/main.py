@@ -3,8 +3,8 @@
 import logging
 import sys
 
-from .utils import create_logger
 from .args import get_parser
+from .utils import create_logger
 
 
 def main() -> None:

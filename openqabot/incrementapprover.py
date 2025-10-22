@@ -1,26 +1,26 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import os
+import re
 from argparse import Namespace
 from collections import defaultdict
 from itertools import chain
-from typing import Any, Dict, List, Tuple, Iterator, Optional, Set, NamedTuple
-import re
-import os
 from logging import getLogger
 from pathlib import Path
 from pprint import pformat
-
-from ruamel.yaml import YAML  # type: ignore
+from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Set, Tuple
 
 import osc.conf
 import osc.core
+from ruamel.yaml import YAML  # type: ignore
 
 from openqabot.openqa import openQAInterface
 
+from . import OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from .errors import PostOpenQAError
 from .repodiff import Package, RepoDiff
-from .utils import retry10 as requests, get_yml_list, merge_dicts
-from . import OBS_GROUP, OBS_URL, OBS_DOWNLOAD_URL
+from .utils import get_yml_list, merge_dicts
+from .utils import retry10 as requests
 
 log = getLogger("bot.increment_approver")
 ok_results = set(("passed", "softfailed"))

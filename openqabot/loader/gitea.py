@@ -1,24 +1,23 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
-from functools import lru_cache
-from logging import getLogger
-from typing import Any, List, Set, Dict, Tuple, Optional, Union
+import json
 import re
 import xml.etree.ElementTree as ET
+from functools import lru_cache
+from logging import getLogger
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import json
-import urllib3
-import urllib3.exceptions
-
-from osc.core import MultibuildFlavorResolver
 import osc.conf
 import osc.core
 import osc.util.xml
+import urllib3
+import urllib3.exceptions
+from osc.core import MultibuildFlavorResolver
 
-from ..utils import retry10 as requests
-from .. import GITEA, OBS_GROUP, GIT_REVIEW_BOT, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS, OBS_DOWNLOAD_URL
+from .. import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
 from ..types import Repos
+from ..utils import retry10 as requests
 
 log = getLogger("bot.loader.gitea")
 

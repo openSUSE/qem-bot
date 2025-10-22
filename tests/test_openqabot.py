@@ -2,8 +2,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
-import pytest
 import sys
+
+import pytest
 
 from openqabot.main import main  # SUT
 

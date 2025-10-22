@@ -1,21 +1,21 @@
-from collections import namedtuple
+import io
 import logging
 import re
+from collections import namedtuple
+from typing import Dict, List
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
-import io
 import osc.conf
 import osc.core
 import pytest
-import responses
-from responses import matchers
-from typing import Dict, List
 
 import openqabot.approver
-from openqabot.approver import Approver, QEM_DASHBOARD
+import responses
+from openqabot.approver import QEM_DASHBOARD, Approver
 from openqabot.errors import NoResultsError
 from openqabot.loader.qem import IncReq, JobAggr
+from responses import matchers
 
 # Fake Namespace for Approver initialization
 _namespace = namedtuple(

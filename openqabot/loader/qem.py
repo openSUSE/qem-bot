@@ -4,7 +4,9 @@ from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
 from typing import Dict, List, NamedTuple, Sequence
-from openqabot.dashboard import get_json, put, patch
+
+from openqabot.dashboard import get_json, patch, put
+
 from ..errors import (
     EmptyChannels,
     EmptyPackagesError,

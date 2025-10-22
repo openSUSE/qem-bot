@@ -3,10 +3,11 @@
 
 from typing import Optional
 
-from openqabot.types.incidents import Incidents
-from openqabot.types import Repos, ArchVer
-import responses
 import pytest
+
+import responses
+from openqabot.types import ArchVer, Repos
+from openqabot.types.incidents import Incidents
 
 
 def test_incidents_constructor():

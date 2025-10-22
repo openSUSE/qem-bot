@@ -1,14 +1,14 @@
-from collections import namedtuple
 import logging
 import re
+from collections import namedtuple
 
-from responses import matchers
 import pytest
-import responses
 
 import openqabot.smeltsync
-from openqabot.smeltsync import SMELTSync
+import responses
 from openqabot import QEM_DASHBOARD, SMELT
+from openqabot.smeltsync import SMELTSync
+from responses import matchers
 
 # Fake Namespace for SyncRes initialization
 _namespace = namedtuple("Namespace", ("dry", "token", "retry"))

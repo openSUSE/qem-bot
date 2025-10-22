@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from typing import Dict
+
 import requests as req
 
 from . import QEM_DASHBOARD

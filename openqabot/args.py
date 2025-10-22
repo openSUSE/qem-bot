@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from urllib.parse import urlparse
+
 from . import AMQP_URL, BUILD_REGEX, OBS_GROUP
 
 

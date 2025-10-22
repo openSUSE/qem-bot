@@ -1,15 +1,15 @@
-from collections import namedtuple
 import logging
+from collections import namedtuple
 from typing import Dict
-from urllib.parse import urlparse, ParseResult
+from urllib.parse import ParseResult, urlparse
 
 import pytest
-import responses
 
-from openqabot import QEM_DASHBOARD
-from openqabot.openqabot import OpenQABot
 import openqabot.openqabot
+import responses
+from openqabot import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
+from openqabot.openqabot import OpenQABot
 
 Namespace = namedtuple(
     "Namespace",

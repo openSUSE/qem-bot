@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from hashlib import md5
 from logging import getLogger
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
 from requests import ConnectionError, HTTPError

@@ -1,10 +1,11 @@
 import logging
 
-import openqabot.loader.repohash as rp
 import pytest
+from requests import ConnectionError, HTTPError
+
+import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
-from requests import ConnectionError, HTTPError
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"

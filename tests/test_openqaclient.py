@@ -4,12 +4,12 @@ from collections import namedtuple
 from urllib.parse import urlparse
 
 import pytest
-import responses
-from responses import matchers
 
+import responses
+from openqabot import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
-from openqabot import QEM_DASHBOARD
+from responses import matchers
 
 _args = namedtuple("Args", ("openqa_instance", "token"))
 
