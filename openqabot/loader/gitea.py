@@ -3,7 +3,6 @@
 import concurrent.futures as CT
 import json
 import re
-import xml.etree.ElementTree as ET
 from functools import lru_cache
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -13,6 +12,8 @@ import osc.core
 import osc.util.xml
 import urllib3
 import urllib3.exceptions
+from defusedxml import ElementTree
+from defusedxml.ElementTree import parse
 from osc.core import MultibuildFlavorResolver
 
 from .. import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
@@ -57,8 +58,8 @@ def read_json(name: str) -> Any:
         return json.loads(json_file.read())
 
 
-def read_xml(name: str) -> ET.ElementTree:
-    return ET.parse("responses/%s.xml" % name)
+def read_xml(name: str) -> ElementTree:
+    return parse("responses/%s.xml" % name)
 
 
 def reviews_url(repo_name: str, number: int) -> str:
