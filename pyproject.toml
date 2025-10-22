@@ -32,6 +32,7 @@ extend-select =[
     "RET",
     "SLF",
     "FURB",
+    "EXE",
 ]
 
 ignore = [
