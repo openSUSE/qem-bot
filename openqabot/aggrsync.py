@@ -4,7 +4,6 @@ from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger
 
-from .errors import EmptySettings
 from .loader.config import read_products
 from .loader.qem import get_aggregate_settings_data
 from .syncres import SyncRes
@@ -22,11 +21,7 @@ class AggregateResultsSync(SyncRes):
     def __call__(self) -> int:
         update_setting = []
         for product in self.product:
-            try:
-                update_setting += get_aggregate_settings_data(self.token, product)
-            except EmptySettings as e:
-                log.info(e)
-                continue
+            update_setting += get_aggregate_settings_data(self.token, product)
 
         job_results = {}
         with ThreadPoolExecutor() as executor:

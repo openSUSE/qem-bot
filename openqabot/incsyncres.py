@@ -23,10 +23,7 @@ class IncResultsSync(SyncRes):
         incidents: List[Data] = []
 
         for inc in self.active:
-            try:
-                incidents += get_incident_settings_data(self.token, inc)
-            except ValueError:
-                continue
+            incidents += get_incident_settings_data(self.token, inc)
 
         full = {}
 

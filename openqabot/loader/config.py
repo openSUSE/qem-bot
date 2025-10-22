@@ -101,8 +101,7 @@ def read_products(path: Path) -> List[Data]:
             log.info("Skipping config %s with no %s settings", str(p), str(e))
             continue
 
-        for arch in data["aggregate"]["archs"]:
-            ret.append(Data(0, 0, flavor, arch, distri, version, "", product))
+        ret.extend(Data(0, 0, flavor, arch, distri, version, "", product) for arch in data["aggregate"]["archs"])
 
     return ret
 

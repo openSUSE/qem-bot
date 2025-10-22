@@ -8,9 +8,6 @@ from typing import Dict, List, NamedTuple, Sequence
 from openqabot.dashboard import get_json, patch, put
 
 from ..errors import (
-    EmptyChannels,
-    EmptyPackagesError,
-    EmptySettings,
     NoResultsError,
 )
 from ..types import Data
@@ -41,12 +38,9 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
 
     xs = []
     for i in incidents:
-        try:
-            xs.append(Incident(i))
-        except EmptyChannels:
-            log.info("Project %s has empty channels - check incident in SMELT", i["project"])
-        except EmptyPackagesError:
-            log.info("Project %s has empty packages - check incident in SMELT", i["project"])
+        incident = Incident.create(i)
+        if incident:
+            xs.append(incident)
 
     return xs
 
@@ -106,7 +100,8 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
         raise e
 
     if "error" in data:
-        raise ValueError
+        log.warning("Incident %s contains error: %s", number, data["error"])
+        return []
 
     return [
         Data(
@@ -164,28 +159,26 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
         log.exception(e)
         raise e
 
-    ret = []
     if not settings:
-        raise EmptySettings(f"Product: {data.product} on arch: {data.arch} does not have any settings")
+        log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
+        return []
 
     log.debug("Getting id for %s", pformat(data))
 
     # use last three schedule
-    for s in settings[:3]:
-        ret.append(
-            Data(
-                0,
-                s["id"],
-                data.flavor,
-                data.arch,
-                data.distri,
-                data.version,
-                s["build"],
-                data.product,
-            )
+    return [
+        Data(
+            0,
+            s["id"],
+            data.flavor,
+            data.arch,
+            data.distri,
+            data.version,
+            s["build"],
+            data.product,
         )
-
-    return ret
+        for s in settings[:3]
+    ]
 
 
 def get_aggregate_results(inc: int, token: Dict[str, str]):
