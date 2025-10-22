@@ -13,7 +13,7 @@ class BaseConf(metaclass=ABCMeta):
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
         settings,
-        config,  # pylint: disable=unused-argument
+        _config,  # noqa: ARG002 Consider to remove and adapt code
     ) -> None:
         self.product = product
         self.product_repo = product_repo

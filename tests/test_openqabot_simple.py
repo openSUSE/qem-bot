@@ -47,10 +47,10 @@ def mock_openqa_passed(monkeypatch):
 @pytest.fixture
 def mock_openqa_exception(monkeypatch):
     class FakeClient:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             pass
 
-        def post_job(self, *args, **kwargs):
+        def post_job(self, *_args, **_kwargs):
             raise PostOpenQAError
 
     monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
@@ -59,30 +59,31 @@ def mock_openqa_exception(monkeypatch):
 @pytest.fixture
 def mock_runtime(monkeypatch):
     class FakeWorker:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *_args, **_kwargs):
             pass
 
-        def __call__(self, *args, **kwargs):
+        def __call__(self, *_args, **_kwargs):
             return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
-    def f_load_metadata(*args, **kwds):
+    def f_load_metadata(*_args, **_kwds):
         return [FakeWorker()]
 
     monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
 
-    def f_get_incidents(*args, **kwds):
+    def f_get_incidents(*_args, **_kwds):
         return [123]
 
     monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
-    def f_get_onearch(*args, **kwds):
+    def f_get_onearch(*_args, **_kwds):
         return set()
 
     monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)
 
 
 @responses.activate
-def test_passed(mock_runtime, mock_openqa_passed, caplog):
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_passed(caplog):
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,
@@ -106,7 +107,8 @@ def test_passed(mock_runtime, mock_openqa_passed, caplog):
 
 
 @responses.activate
-def test_dry(mock_runtime, mock_openqa_passed, caplog):
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_dry(caplog):
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         True,
@@ -129,7 +131,8 @@ def test_dry(mock_runtime, mock_openqa_passed, caplog):
 
 
 @responses.activate
-def test_passed_non_osd(mock_runtime, mock_openqa_passed, caplog):
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_passed_non_osd(caplog):
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,
@@ -154,7 +157,8 @@ def test_passed_non_osd(mock_runtime, mock_openqa_passed, caplog):
 
 
 @responses.activate
-def test_passed_post_osd_failed(mock_runtime, mock_openqa_exception, caplog):
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_exception")
+def test_passed_post_osd_failed(caplog):
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,

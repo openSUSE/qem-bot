@@ -10,15 +10,15 @@ from openqabot.types.baseconf import BaseConf, Incident
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        incidents: List[Incident],
-        token: Dict[str, str],
-        ci_url: Optional[str],
-        ignore_onetime: bool,
+        _incidents: List[Incident],
+        _token: Dict[str, str],
+        _ci_url: Optional[str],
+        _ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(config):
+    def normalize_repos(_config):
         pass
 
 

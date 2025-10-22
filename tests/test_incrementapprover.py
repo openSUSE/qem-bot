@@ -54,17 +54,17 @@ openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 
 
 @pytest.fixture(scope="function")
-def fake_no_jobs(request):
+def fake_no_jobs():
     responses.add(GET, openqa_url, json={})
 
 
 @pytest.fixture(scope="function")
-def fake_pending_jobs(request):
+def fake_pending_jobs():
     responses.add(GET, openqa_url, json={"scheduled": {}, "running": {}})
 
 
 @pytest.fixture(scope="function")
-def fake_not_ok_jobs(request):
+def fake_not_ok_jobs():
     responses.add(
         GET,
         openqa_url,
@@ -73,7 +73,7 @@ def fake_not_ok_jobs(request):
 
 
 @pytest.fixture(scope="function")
-def fake_ok_jobs(request):
+def fake_ok_jobs():
     responses.add(
         GET,
         openqa_url,
@@ -82,7 +82,7 @@ def fake_ok_jobs(request):
 
 
 @pytest.fixture(scope="function")
-def fake_product_repo(request):
+def fake_product_repo():
     responses.add(
         GET,
         OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1",
@@ -94,7 +94,7 @@ def fake_osc_get_config(override_apiurl: str):
     assert override_apiurl == OBS_URL
 
 
-def fake_get_request_list(url: str, project: str, req_state: List[str]) -> List[osc.core.Request]:
+def fake_get_request_list(url: str, project: str, **_kwargs) -> List[osc.core.Request]:
     assert url == OBS_URL
     assert project == "OBS:PROJECT:TEST"
     req = osc.core.Request()
@@ -129,7 +129,7 @@ def run_approver(
     monkeypatch.setattr(
         openqabot.openqa.openQAInterface,
         "post_job",
-        lambda self, data: jobs.append(data),
+        lambda _self, data: jobs.append(data),
     )
     args = _namespace(
         False,
@@ -161,7 +161,8 @@ def run_approver(
 
 
 @responses.activate
-def test_skipping_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+def test_skipping_with_no_openqa_jobs(caplog, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -171,7 +172,8 @@ def test_skipping_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, m
 
 
 @responses.activate
-def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+def test_scheduling_with_no_openqa_jobs(caplog, monkeypatch):
     ci_job_url = "https://some/ci/job/url"
     (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, test_env_var=ci_job_url)
     messages = [x[-1] for x in caplog.record_tuples]
@@ -193,7 +195,8 @@ def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo,
 
 
 @responses.activate
-def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, monkeypatch):
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     config = next(IncrementConfig.from_config_file(path))
     (errors, jobs) = run_approver(
@@ -243,7 +246,8 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
 
 
 @responses.activate
-def test_skipping_with_pending_openqa_jobs(caplog, fake_pending_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
+def test_skipping_with_pending_openqa_jobs(caplog, monkeypatch):
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -253,7 +257,8 @@ def test_skipping_with_pending_openqa_jobs(caplog, fake_pending_jobs, fake_produ
 
 
 @responses.activate
-def test_listing_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
+def test_listing_not_ok_openqa_jobs(caplog, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
@@ -262,7 +267,8 @@ def test_listing_not_ok_openqa_jobs(caplog, fake_not_ok_jobs, fake_product_repo,
 
 
 @responses.activate
-def test_approval_if_there_are_only_ok_openqa_jobs(caplog, fake_ok_jobs, fake_product_repo, monkeypatch):
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
+def test_approval_if_there_are_only_ok_openqa_jobs(caplog, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message

@@ -63,8 +63,8 @@ def fake_smelt_api(request):
 
 
 @pytest.fixture(scope="function")
-def fake_qem(monkeypatch, request):
-    def f_active_inc(*args):
+def fake_qem(monkeypatch):
+    def f_active_inc(*_args):
         return ["100"]
 
     monkeypatch.setattr(openqabot.smeltsync, "get_active_incidents", f_active_inc)
@@ -90,7 +90,8 @@ def fake_dashboard_replyback():
     [["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
-def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
+@pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
+def test_sync_qam_inreview(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(False, "123", False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
@@ -110,7 +111,8 @@ def test_sync_qam_inreview(fake_qem, caplog, fake_smelt_api, fake_dashboard_repl
 @responses.activate
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
-def test_no_embragoed_and_priority_value(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
+@pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
+def test_no_embragoed_and_priority_value(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(False, "123", False))() == 0
     assert len(responses.calls) == 2
@@ -127,7 +129,8 @@ def test_no_embragoed_and_priority_value(fake_qem, caplog, fake_smelt_api, fake_
     [["qam-openqa", "accepted", "new", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
-def test_sync_approved(fake_qem, caplog, fake_smelt_api, fake_dashboard_replyback):
+@pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
+def test_sync_approved(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(False, "123", False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
