@@ -13,6 +13,7 @@ extend-select =[
     "TD", # https://docs.astral.sh/ruff/rules/#flake8-todos-td
     "W",
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
+    "ERA",
 ]
 
 ignore = [
