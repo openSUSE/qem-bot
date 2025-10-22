@@ -50,7 +50,7 @@ class AMQP(SyncRes):
             log.info("Closing AMQP connection")
             self.connection.close()
 
-    def on_message(self, unused_channel, method, unused_properties, body) -> None:
+    def on_message(self, unused_channel, method, unused_properties, body) -> None:  # noqa: ARG002 Unused method argument
         message = json.loads(body)
         if method.routing_key == "suse.openqa.job.done" and "BUILD" in message:
             match = build_inc_regex.match(message["BUILD"])
@@ -95,5 +95,5 @@ class AMQP(SyncRes):
         approve = Approver(self.args, inc_nr)
         approve()
 
-    def handle_aggregate(self, unused_build: str, unused_message) -> None:
+    def handle_aggregate(self, unused_build: str, unused_message) -> None:  # noqa: ARG002 Unused method argument
         return

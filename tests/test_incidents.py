@@ -145,7 +145,7 @@ def request_mock(monkeypatch):
         def json():
             return [{"flavor": None}]
 
-    def mock_get(*args, **kwargs):
+    def mock_get(*_args, **_kwargs):
         return MockResponse()
 
     monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
@@ -157,11 +157,12 @@ class MyIncident_2(MyIncident_1):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, arch, version):
+    def revisions_with_fallback(self, _arch, _version):
         return True
 
 
-def test_incidents_call_with_channels(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_with_channels():
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -183,11 +184,12 @@ class MyIncident_3(MyIncident_2):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, requires):
+    def contains_package(self, _requires):
         return True
 
 
-def test_incidents_call_with_packages(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_with_packages():
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}}
 
@@ -203,7 +205,8 @@ def test_incidents_call_with_packages(request_mock):
     assert len(res) == 1
 
 
-def test_incidents_call_with_params_expand(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_with_params_expand():
     """Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
     The only flavor is using params_expand.
@@ -245,7 +248,8 @@ def test_incidents_call_with_params_expand(request_mock):
     assert res[0]["openqa"]["SOMETHING_NEW"] == "something flavor specific"
 
 
-def test_incidents_call_with_params_expand_distri_version(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_with_params_expand_distri_version():
     """DISTRI and VERSION settings cannot be changed using params_expand."""
     test_config = {}
     test_config["FLAVOR"] = {
@@ -296,7 +300,8 @@ def test_incidents_call_with_params_expand_distri_version(request_mock):
     assert res[0]["openqa"]["SOMETHING"] == "flavor win"
 
 
-def test_incidents_call_with_params_expand_isolated(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_with_params_expand_isolated():
     """Product configuration has 4 settings.
     Incident configuration has 2 flavors.
     Only the first flavor is using params_expand, the other is not.
@@ -344,13 +349,14 @@ class MyIncident_4(MyIncident_3):
         self.embargoed = False
 
 
-def test_incidents_call_public_cloud_pint_query(request_mock, monkeypatch):
+@pytest.mark.usefixtures("request_mock")
+def test_incidents_call_public_cloud_pint_query(monkeypatch):
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
     monkeypatch.setattr(
         "openqabot.types.incidents.apply_publiccloud_pint_image",
-        lambda *args, **kwargs: {"PUBLIC_CLOUD_IMAGE_ID": 1234},
+        lambda *_args, **_kwargs: {"PUBLIC_CLOUD_IMAGE_ID": 1234},
     )
 
     inc = Incidents(

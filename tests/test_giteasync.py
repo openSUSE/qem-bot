@@ -45,7 +45,7 @@ _namespace = namedtuple(
 
 
 @pytest.fixture(scope="function")
-def fake_gitea_api(request):
+def fake_gitea_api():
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
     issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
@@ -63,7 +63,7 @@ def fake_gitea_api(request):
 
 
 @pytest.fixture(scope="function")
-def fake_gitea_api_post_review_comment(request):
+def fake_gitea_api_post_review_comment():
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
     msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
@@ -97,7 +97,7 @@ def fake_osc_http_get(url: str):
     raise AssertionError("Code tried to query unexpected OSC URL: " + url)
 
 
-def noop_osc_http_get(url: str):
+def noop_osc_http_get(_url: str):
     return read_xml("empty-build-results")
 
 
@@ -129,7 +129,8 @@ def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=T
 
 
 @responses.activate
-def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+@pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
+def test_sync_with_product_repo(caplog, monkeypatch):
     run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -163,9 +164,8 @@ def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback
 
 
 @responses.activate
-def test_sync_with_product_version_from_repo_listing(
-    caplog, fake_gitea_api, fake_repo, fake_dashboard_replyback, monkeypatch
-):
+@pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback")
+def test_sync_with_product_version_from_repo_listing(caplog, monkeypatch):
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(caplog, monkeypatch)
 
@@ -180,7 +180,8 @@ def test_sync_with_product_version_from_repo_listing(
 
 
 @responses.activate
-def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+@pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
+def test_sync_with_codestream_repo(caplog, monkeypatch):
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
     run_gitea_sync(caplog, monkeypatch)
@@ -201,7 +202,8 @@ def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyb
 
 
 @responses.activate
-def test_sync_without_results(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+@pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
+def test_sync_without_results(caplog, monkeypatch):
     run_gitea_sync(caplog, monkeypatch, True, False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
@@ -221,7 +223,8 @@ def test_extracting_product_name_and_version():
 
 
 @responses.activate
-def test_reviewing_pr(fake_gitea_api_post_review_comment):
+@pytest.mark.usefixtures("fake_gitea_api_post_review_comment")
+def test_reviewing_pr():
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345")
 
 

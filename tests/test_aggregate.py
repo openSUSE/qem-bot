@@ -53,7 +53,7 @@ def request_mock(monkeypatch):
         def json():
             return [{}]
 
-    def mock_get(*args, **kwargs):
+    def mock_get(*_args, **_kwargs):
         return MockResponse()
 
     monkeypatch.setattr(
@@ -62,7 +62,8 @@ def request_mock(monkeypatch):
     )
 
 
-def test_aggregate_call_with_archs(request_mock):
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_with_archs():
     """Configure an archs to enter in the function main loop"""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -74,7 +75,7 @@ def test_aggregate_call_with_archs(request_mock):
 
 
 @pytest.fixture
-def incident_mock(monkeypatch):
+def incident_mock():
     """Simulate an incident class, reimplementing it in the simplest
     possible way that is accepted by Aggregate
     """
@@ -100,7 +101,8 @@ def incident_mock(monkeypatch):
     return _func
 
 
-def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatch):
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_with_test_issues(incident_mock):
     """Test with a valid incident"""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -115,10 +117,11 @@ def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatc
     assert len(res) == 1
 
 
-def test_aggregate_call_pc_pint(request_mock, monkeypatch):
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_pc_pint(monkeypatch):
     """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
-    def mockreturn(settings):
+    def mockreturn(_settings):
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
 
     monkeypatch.setattr(
@@ -135,10 +138,11 @@ def test_aggregate_call_pc_pint(request_mock, monkeypatch):
     acc(incidents=[], token=None, ci_url=None)
 
 
-def test_aggregate_call_pc_pint_with_incidents(request_mock, incident_mock, monkeypatch):
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_pc_pint_with_incidents(incident_mock, monkeypatch):
     """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
-    def mockreturn(settings):
+    def mockreturn(_settings):
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
 
     monkeypatch.setattr(

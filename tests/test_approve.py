@@ -165,7 +165,7 @@ def fake_responses_for_creating_pr_review():
 
 @pytest.fixture(scope="function")
 def fake_qem(monkeypatch, request):
-    def f_inc_approver(*args):
+    def f_inc_approver(*_args):
         return [
             IncReq(1, 100),
             IncReq(2, 200),
@@ -180,7 +180,7 @@ def fake_qem(monkeypatch, request):
             ),
         ]
 
-    def f_inc_single_approver(token: Dict[str, str], i: int) -> List[IncReq]:
+    def f_inc_single_approver(_token: Dict[str, str], i: int) -> List[IncReq]:
         return [f_inc_approver()[i - 1]]
 
     # Inc 1 needs aggregates
@@ -188,7 +188,7 @@ def fake_qem(monkeypatch, request):
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
-    def f_inc_settins(inc, token, all_inc):
+    def f_inc_settins(inc, _token, _all_inc):
         if "inc" in request.param:
             raise NoResultsError("No results for settings")
         results = {
@@ -206,7 +206,7 @@ def fake_qem(monkeypatch, request):
         }
         return results.get(inc)
 
-    def f_aggr_settings(inc, token):
+    def f_aggr_settings(inc, _token):
         if "aggr" in request.param:
             raise NoResultsError("No results for settings")
         results = {
@@ -226,7 +226,7 @@ def fake_qem(monkeypatch, request):
 
 @pytest.fixture
 def f_osconf(monkeypatch):
-    def fake(*args, **kwds):
+    def fake(*_args, **_kwds):
         pass
 
     monkeypatch.setattr(osc.conf, "get_config", fake)
@@ -242,7 +242,8 @@ def approver(incident=None):
 @responses.activate
 @pytest.mark.xfail(reason="Bug in responses")
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+def test_no_jobs(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     approver()
     assert len(caplog.records) == 42
@@ -255,7 +256,8 @@ def test_no_jobs(fake_qem, fake_two_passed_jobs, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_single_incident(fake_qem, caplog):
+@pytest.mark.usefixtures("fake_qem")
+def test_single_incident(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     responses.add(
         responses.GET,
@@ -314,7 +316,8 @@ def test_single_incident(fake_qem, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+def test_all_passed(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
@@ -329,7 +332,8 @@ def test_all_passed(fake_qem, fake_two_passed_jobs, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["aggr"], indirect=True)
-def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+def test_inc_passed_aggr_without_results(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
@@ -345,7 +349,8 @@ def test_inc_passed_aggr_without_results(fake_qem, fake_two_passed_jobs, caplog)
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["inc"], indirect=True)
-def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+def test_inc_without_results(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
@@ -358,17 +363,14 @@ def test_inc_without_results(fake_qem, fake_two_passed_jobs, caplog):
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_403_response(
-    fake_qem,
-    fake_two_passed_jobs,
-    fake_responses_for_creating_pr_review,
-    f_osconf,
     caplog,
     monkeypatch,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    def f_osc_core(*args, **kwds):
+    def f_osc_core(*_args, **_kwds):
         raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
@@ -382,10 +384,11 @@ def test_403_response(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+def test_404_response(caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    def f_osc_core(*args, **kwds):
+    def f_osc_core(*_args, **_kwds):
         raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
@@ -398,10 +401,11 @@ def test_404_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+def test_500_response(caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    def f_osc_core(*args, **kwds):
+    def f_osc_core(*_args, **_kwds):
         raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
@@ -414,10 +418,11 @@ def test_500_response(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypa
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-def test_osc_unknown_exception(fake_qem, fake_two_passed_jobs, f_osconf, caplog, monkeypatch):
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+def test_osc_unknown_exception(caplog, monkeypatch):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    def f_osc_core(*args, **kwds):
+    def f_osc_core(*_args, **_kwds):
         raise Exception("Fake OBS exception")
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
@@ -428,17 +433,14 @@ def test_osc_unknown_exception(fake_qem, fake_two_passed_jobs, f_osconf, caplog,
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
+@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_osc_all_pass(
-    fake_qem,
-    fake_two_passed_jobs,
-    fake_responses_for_creating_pr_review,
-    f_osconf,
     caplog,
     monkeypatch,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    def f_osc_core(*args, **kwds):
+    def f_osc_core(*_args, **_kwds):
         pass
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
@@ -480,12 +482,14 @@ def fake_incident_1_failed_2_passed(request):
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.parametrize("fake_incident_1_failed_2_passed", [1005], indirect=True)
+@pytest.mark.usefixtures(
+    "fake_qem",
+    "fake_incident_1_failed_2_passed",
+    "fake_two_passed_jobs",
+    "fake_openqa_comment_api",
+    "fake_responses_updating_job",
+)
 def test_one_incident_failed(
-    fake_qem,
-    fake_incident_1_failed_2_passed,
-    fake_two_passed_jobs,
-    fake_openqa_comment_api,
-    fake_responses_updating_job,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -503,11 +507,13 @@ def test_one_incident_failed(
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
+@pytest.mark.usefixtures(
+    "fake_qem",
+    "fake_openqa_comment_api",
+    "fake_responses_updating_job",
+    "fake_openqa_older_jobs_api",
+)
 def test_one_aggr_failed(
-    fake_qem,
-    fake_openqa_comment_api,
-    fake_responses_updating_job,
-    fake_openqa_older_jobs_api,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -541,13 +547,15 @@ def test_one_aggr_failed(
     [{"incident": 2}],
     indirect=True,
 )
+@pytest.mark.usefixtures(
+    "fake_qem",
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    "fake_openqa_comment_api",
+    "fake_openqa_older_jobs_api",
+)
 def test_approval_unblocked_via_openqa_comment(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_openqa_comments,
-    fake_openqa_comment_api,
-    fake_dashboard_remarks_api,
-    fake_openqa_older_jobs_api,
     caplog,
+    fake_dashboard_remarks_api,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -574,13 +582,15 @@ def test_approval_unblocked_via_openqa_comment(
     ],
     indirect=True,
 )
+@pytest.mark.usefixtures(
+    "fake_qem",
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    "fake_openqa_comment_api",
+    "fake_openqa_older_jobs_api",
+)
 def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_openqa_comments,
-    fake_openqa_comment_api,
-    fake_dashboard_remarks_api,
-    fake_openqa_older_jobs_api,
     caplog,
+    fake_dashboard_remarks_api,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -605,11 +615,13 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     [{"incident": 22}],
     indirect=True,
 )
+@pytest.mark.usefixtures(
+    "fake_qem",
+    "fake_responses_for_unblocking_incidents_via_openqa_comments",
+    "fake_openqa_comment_api",
+    "fake_openqa_older_jobs_api",
+)
 def test_approval_still_blocked_if_openqa_comment_not_relevant(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_openqa_comments,
-    fake_openqa_comment_api,
-    fake_openqa_older_jobs_api,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -621,9 +633,8 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
+@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_unblocked_via_openqa_older_ok_job(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_older_ok_result,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -640,9 +651,8 @@ def test_approval_unblocked_via_openqa_older_ok_job(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
+@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_older_ok_result,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -663,9 +673,8 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
     [2222],
     indirect=True,
 )
+@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(
-    fake_qem,
-    fake_responses_for_unblocking_incidents_via_older_ok_result,
     caplog,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -685,12 +694,10 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(
         "\x0c@review:acceptable_for:incident_2:foo",  # Non-printable character
     ],
 )
+@pytest.mark.usefixtures("fake_qem", "fake_openqa_older_jobs_api", "fake_dashboard_remarks_api")
 def test_approval_unblocked_with_various_comment_formats(
-    fake_qem,
     comment_text,
     caplog,
-    fake_openqa_older_jobs_api,
-    fake_dashboard_remarks_api,
 ):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 

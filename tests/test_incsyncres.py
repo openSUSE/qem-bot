@@ -16,14 +16,15 @@ namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
 @pytest.fixture
 def get_a_i(monkeypatch):
-    def fake(*args):
+    def fake(*_args):
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
 
 
 @responses.activate
-def test_clone_dry(get_a_i, caplog):
+@pytest.mark.usefixtures("get_a_i")
+def test_clone_dry(caplog):
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -82,7 +83,8 @@ def test_clone_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_nogroup_dry(get_a_i, caplog):
+@pytest.mark.usefixtures("get_a_i")
+def test_nogroup_dry(caplog):
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -139,7 +141,8 @@ def test_nogroup_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_devel_fast_dry(get_a_i, caplog):
+@pytest.mark.usefixtures("get_a_i")
+def test_devel_fast_dry(caplog):
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -198,7 +201,8 @@ def test_devel_fast_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_devel_dry(get_a_i, caplog):
+@pytest.mark.usefixtures("get_a_i")
+def test_devel_dry(caplog):
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -261,7 +265,8 @@ def test_devel_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_passed_dry(get_a_i, caplog):
+@pytest.mark.usefixtures("get_a_i")
+def test_passed_dry(caplog):
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data

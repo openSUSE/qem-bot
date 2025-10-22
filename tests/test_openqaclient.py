@@ -17,7 +17,7 @@ _args = namedtuple("Args", ("openqa_instance", "token"))
 
 
 @pytest.fixture(scope="function")
-def fake_osd_rsp(request):
+def fake_osd_rsp():
     def reply_callback(request):
         return (200, request.headers, b'{"bar":"foo"}')
 
@@ -67,7 +67,8 @@ def test_post_job_failed(caplog):
 
 
 @responses.activate
-def test_post_job_passed(caplog, fake_osd_rsp):
+@pytest.mark.usefixtures("fake_osd_rsp")
+def test_post_job_passed(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
     client.post_job({"foo": "bar"})
@@ -80,7 +81,8 @@ def test_post_job_passed(caplog, fake_osd_rsp):
 
 
 @responses.activate
-def test_handle_job_not_found(caplog, fake_responses_failing_job_update):
+@pytest.mark.usefixtures("fake_responses_failing_job_update")
+def test_handle_job_not_found(caplog):
     client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
     client.handle_job_not_found(42)
     messages = [x[-1] for x in caplog.record_tuples]
