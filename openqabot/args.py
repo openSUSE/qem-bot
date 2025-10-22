@@ -10,8 +10,8 @@ from . import AMQP_URL, BUILD_REGEX, OBS_GROUP
 def do_full_schedule(args):
     from .openqabot import OpenQABot
 
-    setattr(args, "disable_incidents", False)
-    setattr(args, "disable_aggregates", False)
+    args.disable_incidents = False
+    args.disable_aggregates = False
 
     bot = OpenQABot(args)
     return bot()
@@ -20,8 +20,8 @@ def do_full_schedule(args):
 def do_incident_schedule(args):
     from .openqabot import OpenQABot
 
-    setattr(args, "disable_incidents", False)
-    setattr(args, "disable_aggregates", True)
+    args.disable_incidents = False
+    args.disable_aggregates = True
 
     bot = OpenQABot(args)
     return bot()
@@ -30,8 +30,8 @@ def do_incident_schedule(args):
 def do_aggregate_schedule(args):
     from .openqabot import OpenQABot
 
-    setattr(args, "disable_aggregates", False)
-    setattr(args, "disable_incidents", True)
+    args.disable_aggregates = False
+    args.disable_incidents = True
 
     bot = OpenQABot(args)
     return bot()

@@ -39,8 +39,8 @@ class Aggregate(BaseConf):
             repos = {
                 key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
             }
-        except KeyError:
-            raise NoTestIssues
+        except KeyError as e:
+            raise NoTestIssues from e
 
         return repos
 
