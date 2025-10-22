@@ -5,12 +5,12 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
-from requests import ConnectionError, HTTPError
+import requests
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
 from ..errors import NoRepoFoundError
-from ..utils import retry5 as requests
+from ..utils import retry5 as retried_requests
 from . import gitea
 
 log = getLogger("bot.loader.repohash")
@@ -49,12 +49,12 @@ def get_max_revision(
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
-            root = ET.fromstring(requests.get(url).text)
+            root = ET.fromstring(retried_requests.get(url).text)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
             ET.ParseError,
-            ConnectionError,
-            HTTPError,
+            requests.ConnectionError,
+            requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
             log.info("%s not found -- skipping incident" % url)

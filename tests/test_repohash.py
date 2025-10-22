@@ -3,7 +3,7 @@
 import logging
 
 import pytest
-from requests import ConnectionError, HTTPError
+import requests
 
 import openqabot.loader.repohash as rp
 import responses
@@ -65,7 +65,7 @@ def test_get_max_revison_3():
 @responses.activate
 def test_get_max_revison_connectionerror(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response(ConnectionError("Failed"))
+    add_sles_sled_response(requests.ConnectionError("Failed"))
 
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
@@ -79,7 +79,7 @@ def test_get_max_revison_connectionerror(caplog):
 @responses.activate
 def test_get_max_revison_httperror(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
-    add_sles_sled_response(HTTPError("Failed"))
+    add_sles_sled_response(requests.HTTPError("Failed"))
 
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)

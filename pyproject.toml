@@ -34,6 +34,7 @@ extend-select =[
     "FURB",
     "EXE",
     "BLE",
+    "A",
 ]
 
 ignore = [
