@@ -54,3 +54,7 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
 ]
+
+[tool.ruff.format]
+# Enable reformatting of code snippets in docstrings.
+docstring-code-format = true
