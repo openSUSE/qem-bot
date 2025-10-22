@@ -6,6 +6,13 @@ increment_definitions:
   build_listing_sub_path: product
   build_regex: 'some.*regex'
   product_regex: '^Foo.*'
+  additional_builds:
+  - flavor: Base-RT-Updates
+    build_suffix: kernel-livepatch
+    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>rt)'
+  - flavor: Default-qcow-Updates
+    build_suffix: kernel-livepatch
+    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>.*)'
 - distri: bar
   version: '42'
   flavor: 'Test-Increments'

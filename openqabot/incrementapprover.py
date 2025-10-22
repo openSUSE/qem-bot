@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Optional, Set, NamedTuple
+from typing import Any, Dict, List, Tuple, Iterator, Optional, Set, NamedTuple
 import re
 import os
 from logging import getLogger
@@ -49,6 +49,7 @@ class IncrementConfig(NamedTuple):
     build_listing_sub_path: str
     build_regex: str
     product_regex: str
+    additional_builds: List[Dict[str, str]] = []
 
     def _concat_project(self, project: str) -> str:
         return project if self.project_base == "" else f"{self.project_base}:{project}"
@@ -75,10 +76,11 @@ class IncrementConfig(NamedTuple):
             build_listing_sub_path=entry["build_listing_sub_path"],
             build_regex=entry["build_regex"],
             product_regex=entry["product_regex"],
+            additional_builds=entry.get("additional_builds", []),
         )
 
     @staticmethod
-    def from_config_file(file_path: Path) -> List[Any]:
+    def from_config_file(file_path: Path) -> Iterator[Any]:
         return map(
             IncrementConfig.from_config_entry,
             YAML(typ="safe").load(file_path)["increment_definitions"],
@@ -248,32 +250,40 @@ class IncrementApprover:
                     res.add(BuildInfo(distri, product, version, flavor, arch, build))
         return res
 
-    def _extra_builds_for_kernel_livepatching(
-        self, package_diff: Set[Package], build_info: BuildInfo
-    ) -> List[Dict[str, str]]:
-        extra_builds = []
-        for package in package_diff:
-            m = re.search(
-                "kernel-livepatch-(?P<version>[^\\-]*?-[^\\-]*?)-(?P<kind>.*)",
-                package.name,
-            )
+    def _extra_builds_for_package(
+        self, package: Package, config: IncrementConfig, build_info: BuildInfo
+    ) -> Optional[Dict[str, str]]:
+        for additional_flavor in config.additional_builds:
+            m = re.search(additional_flavor["regex"], package.name)
             if not m:
                 continue
-            extra_build = [build_info.build, "kernel-livepatch"]
-            kernel_version = []
-            kind = m.group("kind")
-            if kind != "default":
-                extra_build.append(kind)
-            kernel_version.append(m.group("version").replace("_", "."))
-            extra_build.extend(kernel_version)
-            extra_builds.append(
-                {
-                    "BUILD": "-".join(extra_build),
-                    "KERNEL_VERSION": "-".join(kernel_version),
-                    "KGRAFT": "1",
-                }
-            )
-        return extra_builds
+            extra_build = [build_info.build, additional_flavor["build_suffix"]]
+            extra_params = {"FLAVOR": additional_flavor["flavor"]}
+            try:
+                kind = m.group("kind")
+                if kind != "default":
+                    extra_build.append(kind)
+            except IndexError:
+                pass
+            try:
+                kernel_version = m.group("kernel_version").replace("_", ".")
+                extra_build.append(kernel_version)
+                extra_params["KERNEL_VERSION"] = kernel_version
+                extra_params["KGRAFT"] = "1"
+            except IndexError:
+                pass
+            extra_params["BUILD"] = "-".join(extra_build)
+            return extra_params
+        return None
+
+    def _extra_builds_for_additional_builds(
+        self, package_diff: Set[Package], config: IncrementConfig, build_info: BuildInfo
+    ) -> List[Dict[str, str]]:
+        def handle_package(p):
+            return self._extra_builds_for_package(p, config, build_info)
+
+        extra_builds = map(handle_package, package_diff)
+        return [*filter(lambda b: b is not None, extra_builds)]
 
     @staticmethod
     def _populate_params_from_env(params: Dict[str, str], env_var: str):
@@ -301,7 +311,7 @@ class IncrementApprover:
                     0
                 ]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
-            extra_params.extend(self._extra_builds_for_kernel_livepatching(relevant_diff, build_info))
+            extra_params.extend(self._extra_builds_for_additional_builds(relevant_diff, config, build_info))
         return [*map(lambda p: merge_dicts(base_params, p), extra_params)]
 
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:

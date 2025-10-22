@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import List
+from typing import Dict, List
 from pathlib import Path
 from urllib.parse import urlparse
 import os
@@ -38,6 +38,7 @@ _namespace = namedtuple(
         "product_regex",
         "fake_data",
         "increment_config",
+        "additional_builds",
     ),
 )
 
@@ -111,6 +112,7 @@ def run_approver(
     schedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
+    additional_builds: List[Dict[str, str]] = [],
 ):
     jobs = []
     os.environ["CI_JOB_URL"] = test_env_var
@@ -142,6 +144,7 @@ def run_approver(
         ".*",
         True,
         None,
+        additional_builds,
     )
     increment_approver = IncrementApprover(args)
     errors = increment_approver()
@@ -182,7 +185,16 @@ def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo,
 
 @responses.activate
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
-    (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, diff_project_suffix="PUBLISH/product")
+    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    config = next(IncrementConfig.from_config_file(path))
+    additional_builds = config.additional_builds
+    (errors, jobs) = run_approver(
+        caplog,
+        monkeypatch,
+        schedule=True,
+        diff_project_suffix="PUBLISH/product",
+        additional_builds=additional_builds,
+    )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -200,11 +212,21 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
 
     expected_livepatch_params = base_params | {
+        "FLAVOR": "Default-qcow-Updates",
         "BUILD": "139.1-kernel-livepatch-6.12.0-160000.5",
         "KERNEL_VERSION": "6.12.0-160000.5",
         "KGRAFT": "1",
     }
-    assert expected_livepatch_params | {"ARCH": "ppc64le"} in jobs, f"additional kernel livepatch jobs created"
+    expected_livepatch_rt_params = expected_livepatch_params | {
+        "FLAVOR": "Base-RT-Updates",
+        "BUILD": "139.1-kernel-livepatch-rt-6.12.0-160000.5",
+    }
+    assert (
+        expected_livepatch_params | {"ARCH": "ppc64le"} in jobs
+    ), f"additional kernel livepatch jobs of default flavor created"
+    assert (
+        expected_livepatch_rt_params | {"ARCH": "ppc64le"} in jobs
+    ), f"additional kernel livepatch jobs of RT flavor created"
     assert (
         expected_livepatch_params | {"ARCH": "aarch64"} not in jobs
     ), "additional kernel livepatch jobs only created if package is new"
