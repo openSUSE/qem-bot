@@ -61,7 +61,7 @@ def get_max_revision(
             raise NoRepoFoundError from e
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
         if cs is None:
             log.error("%s's revision is None", url)
