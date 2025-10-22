@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
+from functools import lru_cache
 from logging import getLogger
 from typing import Any, List, Set, Dict, Tuple, Optional, Union
 import re
@@ -16,7 +17,7 @@ import osc.core
 import osc.util.xml
 
 from ..utils import retry10 as requests
-from .. import GITEA, OBS_GROUP, GIT_REVIEW_BOT, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS
+from .. import GITEA, OBS_GROUP, GIT_REVIEW_BOT, OBS_URL, OBS_REPO_TYPE, OBS_PRODUCTS, OBS_DOWNLOAD_URL
 from ..types import Repos
 
 log = getLogger("bot.loader.gitea")
@@ -214,6 +215,55 @@ def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
     return reviews_by_qam
 
 
+@lru_cache(maxsize=512)
+def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
+    project_path = project.replace(":", ":/")
+    url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
+    start = f"{product_name}-"
+    version = ""
+    try:
+        for entry in requests.get(url).json()["data"]:
+            name = entry["name"]
+            if not name.startswith(start):
+                continue
+            parts = filter(lambda x: re.search("[.\\d]+", x), name[len(start) :].split("-"))
+            version = next(parts, "")
+            if len(version) > 0:
+                return version
+    except Exception as e:
+        log.warning("Unable to read product version from '%s': %s", url, e)
+    return version
+
+
+def add_channel_for_build_result(
+    project: str, arch: str, product_name: str, res: Any, projects: Set[str]
+) -> Tuple[str, bool]:
+    channel = ":".join([project, arch])
+    if arch == "local":
+        return channel
+
+    # read product version from scmsync element if possible, e.g. 15.99
+    product_version = ""
+    for scmsync_element in res.findall("scmsync"):
+        (_, product_version) = get_product_name_and_version_from_scmsync(scmsync_element.text)
+        if len(product_version) > 0:
+            break
+
+    # read product version from directory listing if the project is for a concrete product
+    if len(product_name) != 0 and len(product_version) == 0 and product_name in OBS_PRODUCTS:
+        product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
+
+    # append product version to channel if known; otherwise skip channel if this is for a concrete product
+    if len(product_version) > 0:
+        channel = "#".join([channel, product_version])
+    elif len(product_name) > 0:
+        log.warning("Unable to determine product version for build result %s:%s, not adding channel", project, arch)
+        return channel
+
+    projects.add(channel)
+    return channel
+
+
 def add_build_result(
     incident: Dict[str, Any],
     res: Any,
@@ -226,7 +276,6 @@ def add_build_result(
     project = res.get("project")
     product_name = get_product_name(project)
     arch = res.get("arch")
-    channel = ":".join([project, arch])
     # read Git hash from scminfo element
     scm_info_key = "scminfo_" + product_name if len(product_name) != 0 else "scminfo"
     for scminfo_element in res.findall("scminfo"):
@@ -243,16 +292,11 @@ def add_build_result(
                     found_scminfo,
                     existing_scminfo,
                 )
-    # read product version from scmsync element, e.g. 15.99
-    for scmsync_element in res.findall("scmsync"):
-        (_, product_version) = get_product_name_and_version_from_scmsync(scmsync_element.text)
-        if len(product_version) > 0:
-            channel = "#".join([channel, product_version])
-            break
-    projects.add(channel)
-    # require only relevant projects to be built/published
+    # add channel for this build result
+    channel = add_channel_for_build_result(project, arch, product_name, res, projects)
     if product_name not in OBS_PRODUCTS:
         return
+    # require only relevant projects to be built/published
     if state != "published":
         unpublished_repos.add(channel)
         return

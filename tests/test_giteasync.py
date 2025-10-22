@@ -11,7 +11,7 @@ import osc.core
 import pytest
 import responses
 
-from openqabot import QEM_DASHBOARD, OBS_URL
+from openqabot import QEM_DASHBOARD, OBS_URL, OBS_DOWNLOAD_URL
 from openqabot.types import Repos
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
@@ -78,6 +78,13 @@ def fake_dashboard_replyback():
         callback=reply_callback,
         match=[matchers.query_param_matcher({"type": "git"})],
     )
+
+
+@pytest.fixture(scope="function")
+def fake_repo():
+    url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
+    listing = Path("responses/test-product-repo.json").read_bytes()
+    responses.add(GET, url, body=listing)
 
 
 def fake_osc_http_get(url: str):
@@ -151,6 +158,23 @@ def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback
     # expect the scminfo from the product repo of the configured product
     assert "18bfa2a23fb7985d5d0" in incident["scminfo"]
     assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+
+
+@responses.activate
+def test_sync_with_product_version_from_repo_listing(
+    caplog, fake_gitea_api, fake_repo, fake_dashboard_replyback, monkeypatch
+):
+    monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
+    run_gitea_sync(caplog, monkeypatch)
+
+    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+    incident = responses.calls[-1].response.json()[0]
+    channels = incident["channels"]
+    for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
+        channel = "#".join([":".join((expected_repo, arch)), "16.0"])  # the 16.0 comes from repo listing
+        assert channel in channels
+    requests_to_download_repo = [r for r in responses.calls if r.request.url.startswith(OBS_DOWNLOAD_URL)]
+    assert len(requests_to_download_repo) == 1
 
 
 @responses.activate
