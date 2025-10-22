@@ -6,6 +6,13 @@ product_increments:
   build_listing_sub_path: product
   build_regex: 'some.*regex'
   product_regex: '^Foo.*'
+  archs:
+  - aarch64
+  - ppc64le
+  - x86_64
+  packages:
+  - kernel-source
+  - kernel-azure
   additional_builds:
   - flavor: Base-RT-Updates
     build_suffix: kernel-livepatch

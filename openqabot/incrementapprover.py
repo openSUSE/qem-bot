@@ -49,6 +49,8 @@ class IncrementConfig(NamedTuple):
     build_listing_sub_path: str
     build_regex: str
     product_regex: str
+    packages: List[str] = []
+    archs: Set[str] = []
     additional_builds: List[Dict[str, str]] = []
 
     def _concat_project(self, project: str) -> str:
@@ -76,6 +78,8 @@ class IncrementConfig(NamedTuple):
             build_listing_sub_path=entry["build_listing_sub_path"],
             build_regex=entry["build_regex"],
             product_regex=entry["product_regex"],
+            packages=entry.get("packages", []),
+            archs=set(entry.get("archs", [])),
             additional_builds=entry.get("additional_builds", []),
         )
 
@@ -154,7 +158,7 @@ class IncrementApprover:
     def _check_openqa_jobs(
         self, results: List[Dict[str, Dict[str, Dict[str, Any]]]], build_info: BuildInfo
     ) -> Optional[bool]:
-        actual_states = set(next(res.keys() for res in results))
+        actual_states = set(next((res.keys() for res in results), []))
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
@@ -291,7 +295,19 @@ class IncrementApprover:
         if len(value) > 0:
             params["__" + env_var] = value
 
-    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> List[Dict[str, str]]:
+    @staticmethod
+    def _contains_any_of_the_packages(
+        package_diff: Set[Package], packages_to_find: List[str]
+    ) -> bool:
+        names_of_changed_packages = set(map(lambda p: p.name, package_diff))
+        for package in packages_to_find:
+            if package in names_of_changed_packages:
+                return True
+        return False
+
+    def _make_scheduling_parameters(
+        self, config: IncrementConfig, build_info: BuildInfo
+    ) -> List[Dict[str, str]]:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -302,7 +318,7 @@ class IncrementApprover:
             "INCIDENT_REPO": config.build_project_url() + repo_sub_path,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
-        extra_params = [{}]
+        extra_params = []
         if config.diff_project_suffix != "none":
             diff_project = config.diff_project()
             if self.repo_diff is None:
@@ -311,7 +327,20 @@ class IncrementApprover:
                     0
                 ]
             relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
-            extra_params.extend(self._extra_builds_for_additional_builds(relevant_diff, config, build_info))
+            # schedule base params if package filter is empty for matching
+            if len(config.packages) == 0 or IncrementApprover._contains_any_of_the_packages(
+                relevant_diff, config.packages
+            ):
+                extra_params.append({})
+            # schedule additional builds based on changed packages
+            extra_params.extend(
+                self._extra_builds_for_additional_builds(
+                    relevant_diff, config, build_info
+                )
+            )
+        else:
+            # schedule always just base params if not computing the package diff
+            extra_params.append({})
         return [*map(lambda p: merge_dicts(base_params, p), extra_params)]
 
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:
@@ -332,6 +361,8 @@ class IncrementApprover:
         if request is None:
             return error_count
         for build_info in self._determine_build_info(config):
+            if len(config.archs) > 0 and build_info.arch not in config.archs:
+                continue
             params = self._make_scheduling_parameters(config, build_info)
             res = self._request_openqa_job_results(build_info, params)
             if self.args.reschedule:

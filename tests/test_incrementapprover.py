@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Dict, List
+from typing import Dict, Optional, List
 from pathlib import Path
 from urllib.parse import urlparse
 import os
@@ -38,6 +38,8 @@ _namespace = namedtuple(
         "product_regex",
         "fake_data",
         "increment_config",
+        "packages",
+        "archs",
         "additional_builds",
     ),
 )
@@ -112,7 +114,7 @@ def run_approver(
     schedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
-    additional_builds: List[Dict[str, str]] = [],
+    config: Optional[IncrementConfig] = None,
 ):
     jobs = []
     os.environ["CI_JOB_URL"] = test_env_var
@@ -144,7 +146,9 @@ def run_approver(
         ".*",
         True,
         None,
-        additional_builds,
+        [] if config is None else config.packages,
+        set() if config is None else config.archs,
+        [] if config is None else config.additional_builds,
     )
     increment_approver = IncrementApprover(args)
     errors = increment_approver()
@@ -187,13 +191,12 @@ def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo,
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo, monkeypatch):
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     config = next(IncrementConfig.from_config_file(path))
-    additional_builds = config.additional_builds
     (errors, jobs) = run_approver(
         caplog,
         monkeypatch,
         schedule=True,
         diff_project_suffix="PUBLISH/product",
-        additional_builds=additional_builds,
+        config=config,
     )
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -208,8 +211,9 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
         "BUILD": "139.1",
         "INCIDENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
     }
-    for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
+    for arch in ["x86_64", "aarch64", "ppc64le"]:
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
+    assert base_params | {"ARCH": "s390x"} not in jobs, "s390x filtered out"
 
     expected_livepatch_params = base_params | {
         "FLAVOR": "Default-qcow-Updates",
@@ -270,6 +274,8 @@ def test_config_parsing(caplog):
     assert configs[0].build_listing_sub_path == "product"
     assert configs[0].build_regex == "some.*regex"
     assert configs[0].product_regex == "^Foo.*"
+    assert configs[0].archs == {"x86_64", "aarch64", "ppc64le"}
+    assert configs[0].packages == ["kernel-source", "kernel-azure"]
     assert configs[0].build_project() == "FOO:TEST"
     assert configs[0].diff_project() == "FOO:PUBLISH/product"
     assert configs[1].distri == "bar"
