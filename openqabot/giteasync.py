@@ -17,7 +17,9 @@ class GiteaSync:
         self.fake_data: bool = args.fake_data
         self.dashboard_token: Dict[str, str] = {"Authorization": "Token " + args.token}
         self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
-        self.open_prs: List[Any] = get_open_prs(self.gitea_token, args.gitea_repo, self.fake_data, args.pr_number)
+        self.open_prs: List[Any] = get_open_prs(
+            self.gitea_token, args.gitea_repo, dry=self.fake_data, number=args.pr_number
+        )
         log.info(
             "Loaded %i active PRs/incidents from %s",
             len(self.open_prs),
@@ -26,9 +28,9 @@ class GiteaSync:
         self.incidents = get_incidents_from_open_prs(
             self.open_prs,
             self.gitea_token,
-            not args.allow_build_failures,
-            not args.consider_unrequested_prs,
-            self.fake_data,
+            only_successful_builds=not args.allow_build_failures,
+            only_requested_prs=not args.consider_unrequested_prs,
+            dry=self.fake_data,
         )
         self.retry = args.retry
 

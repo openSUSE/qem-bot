@@ -126,7 +126,7 @@ def compute_repo_url_for_job_setting(
     )
 
 
-def get_open_prs(token: Dict[str, str], repo: str, dry: bool, number: Optional[int]) -> List[Any]:
+def get_open_prs(token: Dict[str, str], repo: str, *, dry: bool, number: Optional[int]) -> List[Any]:
     if dry:
         return read_json("pulls")
     open_prs = []
@@ -152,6 +152,7 @@ def review_pr(
     pr_number: int,
     msg: str,
     commit_id: str,
+    *,
     approve: bool = True,
 ) -> None:
     if GIT_REVIEW_BOT:
@@ -315,7 +316,7 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool) -> Set[str]:
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> Set[str]:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
     if product_name == "":
@@ -354,7 +355,7 @@ def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) -> None:
+def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: bool) -> None:
     successful_packages = set()
     unpublished_repos = set()
     failed_packages = set()
@@ -364,7 +365,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) 
         if project_match:
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
-            relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry)
+            relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
             build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
             if dry:
                 build_info = read_xml("build-results-124-" + obs_project)
@@ -403,18 +404,19 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) 
 def add_comments_and_referenced_build_results(
     incident: Dict[str, Any],
     comments: List[Any],
+    *,
     dry: bool,
 ) -> None:
     for comment in reversed(comments):
         body = comment["body"]
         user_name = comment["user"]["username"]
         if user_name == "autogits_obs_staging_bot":
-            add_build_results(incident, re.findall("https://[^ ]*", body), dry)
+            add_build_results(incident, re.findall("https://[^ ]*", body), dry=dry)
             break
 
 
 def add_packages_from_patchinfo(
-    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, *, dry: bool
 ) -> None:
     if dry:
         patch_info = read_xml("patch-info")
@@ -424,12 +426,12 @@ def add_packages_from_patchinfo(
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool) -> None:
+def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], *, dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
         if file_name == "_patchinfo" and raw_url is not None:
-            add_packages_from_patchinfo(incident, token, raw_url, dry)
+            add_packages_from_patchinfo(incident, token, raw_url, dry=dry)
 
 
 def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) -> bool:
@@ -447,6 +449,7 @@ def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) ->
 def make_incident_from_pr(
     pr: Dict[str, Any],
     token: Dict[str, str],
+    *,
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
@@ -488,13 +491,13 @@ def make_incident_from_pr(
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
             log.info("Skipping PR %s, no reviews by %s", number, OBS_GROUP)
             return None
-        add_comments_and_referenced_build_results(incident, comments, dry)
+        add_comments_and_referenced_build_results(incident, comments, dry=dry)
         if len(incident["channels"]) == 0:
             log.info("Skipping PR %s, no channels found/considered", number)
             return None
         if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
             return None
-        add_packages_from_files(incident, token, files, dry)
+        add_packages_from_files(incident, token, files, dry=dry)
         if len(incident["packages"]) == 0:
             log.info("Skipping PR %s, no packages found/considered", number)
             return None
@@ -509,6 +512,7 @@ def make_incident_from_pr(
 def get_incidents_from_open_prs(
     open_prs: List[Dict[str, Any]],
     token: Dict[str, str],
+    *,
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
@@ -524,9 +528,9 @@ def get_incidents_from_open_prs(
                 make_incident_from_pr,
                 pr,
                 token,
-                only_successful_builds,
-                only_requested_prs,
-                dry,
+                only_successful_builds=only_successful_builds,
+                only_requested_prs=only_requested_prs,
+                dry=dry,
             )
             for pr in open_prs
         ]

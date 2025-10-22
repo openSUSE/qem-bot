@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
 from collections import namedtuple
 from typing import Any, Dict, List, NoReturn, Set
@@ -88,14 +90,14 @@ def mock_runtime(monkeypatch: MonkeyPatch) -> None:
 def test_passed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -113,14 +115,14 @@ def test_passed(caplog: LogCaptureFixture) -> None:
 def test_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        True,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=True,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -137,14 +139,14 @@ def test_dry(caplog: LogCaptureFixture) -> None:
 def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.opensuse.org"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.opensuse.org"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -163,14 +165,14 @@ def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
 def test_passed_post_osd_failed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
