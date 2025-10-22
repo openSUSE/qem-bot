@@ -62,7 +62,7 @@ class Aggregate(BaseConf):
         counter = int(build.split("-")[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
-    def __call__(
+    def __call__(  # noqa: C901
         self,
         incidents: List[Incident],
         token: Dict[str, str],
