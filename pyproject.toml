@@ -39,6 +39,7 @@ extend-select =[
     "LOG",
     "G",
     "C90",
+    "PERF",
 ]
 
 ignore = [
