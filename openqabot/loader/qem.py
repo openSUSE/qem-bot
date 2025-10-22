@@ -57,7 +57,7 @@ def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
     except Exception as e:
         log.exception(e)
         raise e
-    return list(set([i["number"] for i in data]))
+    return list({i["number"] for i in data})
 
 
 def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:

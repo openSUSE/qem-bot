@@ -83,7 +83,7 @@ class Aggregate(BaseConf):
             issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
             # only testing queue and not livepatch
-            valid_incidents = list()
+            valid_incidents = []
             for i in incidents:
                 if not any((i.livepatch, i.staging)):
                     # if filtering embargoed updates is on
@@ -115,7 +115,7 @@ class Aggregate(BaseConf):
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
-                sorted(set(str(inc) for inc in chain.from_iterable(test_incidents.values())))
+                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())})
             )
 
             try:
