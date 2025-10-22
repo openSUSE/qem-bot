@@ -61,7 +61,7 @@ class SyncRes:
 
         return True
 
-    def post_result(self, result):
+    def post_result(self, result) -> None:
         log.debug(
             "Posting results of %s job %s with status %s",
             self.operation,

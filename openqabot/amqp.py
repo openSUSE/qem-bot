@@ -45,7 +45,7 @@ class AMQP(SyncRes):
         self.stop()
         return 0
 
-    def stop(self):
+    def stop(self) -> None:
         if self.connection:
             log.info("Closing AMQP connection")
             self.connection.close()

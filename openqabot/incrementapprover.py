@@ -34,7 +34,7 @@ class BuildInfo(NamedTuple):
     arch: str
     build: str
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
     def string_with_params(self, params: Dict[str, str]) -> str:
@@ -237,7 +237,7 @@ class IncrementApprover:
         return [*filter(lambda b: b is not None, extra_builds)]
 
     @staticmethod
-    def _populate_params_from_env(params: Dict[str, str], env_var: str):
+    def _populate_params_from_env(params: Dict[str, str], env_var: str) -> None:
         value = os.environ.get(env_var, "")
         if len(value) > 0:
             params["__" + env_var] = value

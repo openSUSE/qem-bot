@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: MIT
 import logging
 from collections import namedtuple
-from typing import Dict
+from typing import Any, Dict, List, NoReturn, Set
 from urllib.parse import ParseResult, urlparse
 
 import pytest
+from _pytest.logging import LogCaptureFixture
+from pytest import MonkeyPatch
 
 import openqabot.openqabot
 import responses
@@ -29,53 +31,53 @@ Namespace = namedtuple(
 
 
 @pytest.fixture
-def mock_openqa_passed(monkeypatch):
+def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, args):
+        def __init__(self, args: Any) -> None:
             self.url: ParseResult = args.openqa_instance
             self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
-        def __bool__(self):
+        def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
 
-        def post_job(self, *args, **kwargs):
+        def post_job(self, *args: Any, **kwargs: Any) -> None:
             pass
 
     monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
 
 
 @pytest.fixture
-def mock_openqa_exception(monkeypatch):
+def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, *_args, **_kwargs):
+        def __init__(self, *_args, **_kwargs) -> None:
             pass
 
-        def post_job(self, *_args, **_kwargs):
+        def post_job(self, *_args, **_kwargs) -> NoReturn:
             raise PostOpenQAError
 
     monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
 
 
 @pytest.fixture
-def mock_runtime(monkeypatch):
+def mock_runtime(monkeypatch: MonkeyPatch) -> None:
     class FakeWorker:
-        def __init__(self, *_args, **_kwargs):
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def __call__(self, *_args, **_kwargs):
+        def __call__(self, *_args: Any, **_kwargs: Any) -> List[Dict[str, Any]]:
             return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
-    def f_load_metadata(*_args, **_kwds):
+    def f_load_metadata(*_args: Any, **_kwds: Any) -> List[FakeWorker]:
         return [FakeWorker()]
 
     monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
 
-    def f_get_incidents(*_args, **_kwds):
+    def f_get_incidents(*_args: Any, **_kwds: Any) -> List[int]:
         return [123]
 
     monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
-    def f_get_onearch(*_args, **_kwds):
+    def f_get_onearch(*_args: Any, **_kwds: Any) -> Set[Any]:
         return set()
 
     monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)
@@ -83,7 +85,7 @@ def mock_runtime(monkeypatch):
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed(caplog):
+def test_passed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,
@@ -108,7 +110,7 @@ def test_passed(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_dry(caplog):
+def test_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         True,
@@ -132,7 +134,7 @@ def test_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed_non_osd(caplog):
+def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,
@@ -158,7 +160,7 @@ def test_passed_non_osd(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_exception")
-def test_passed_post_osd_failed(caplog):
+def test_passed_post_osd_failed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         False,

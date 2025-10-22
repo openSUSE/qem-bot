@@ -18,7 +18,7 @@ class FakeBaseConf(BaseConf):
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(_config):
+    def normalize_repos(_config) -> None:
         pass
 
 
@@ -31,12 +31,12 @@ def baseconf_gen():
     return FakeBaseConf(prod_name, None, None, settings, {})
 
 
-def test_baseconf_init(baseconf_gen):
+def test_baseconf_init(baseconf_gen) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
 
 
-def test_is_embargoed(baseconf_gen):
+def test_is_embargoed(baseconf_gen) -> None:
     assert baseconf_gen.filter_embargoed("None")
 
     baseconf_gen.settings["PUBLIC_CLOUD_SOMETHING"] = ""

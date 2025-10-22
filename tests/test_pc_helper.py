@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 import re
 
+from pytest import MonkeyPatch
+
 import openqabot.pc_helper
 import responses
 from openqabot.pc_helper import (
@@ -12,7 +14,7 @@ from openqabot.pc_helper import (
 )
 
 
-def test_apply_pc_tools_image(monkeypatch):
+def test_apply_pc_tools_image(monkeypatch: MonkeyPatch) -> None:
     known_return = "test"
     monkeypatch.setattr(
         openqabot.pc_helper,
@@ -27,7 +29,7 @@ def test_apply_pc_tools_image(monkeypatch):
     assert "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" not in settings
 
 
-def test_apply_publiccloud_pint_image(monkeypatch):
+def test_apply_publiccloud_pint_image(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.pc_helper, "pint_query", lambda *_args, **_kwargs: {"images": []})
     monkeypatch.setattr(
         openqabot.pc_helper,
@@ -86,7 +88,7 @@ def test_apply_publiccloud_pint_image(monkeypatch):
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
 
 
-def test_get_recent_pint_image():
+def test_get_recent_pint_image() -> None:
     images = []
     ret = get_recent_pint_image(images, "test")
     assert ret is None
@@ -135,7 +137,7 @@ def test_get_recent_pint_image():
 
 
 @responses.activate
-def test_get_latest_tools_image():
+def test_get_latest_tools_image() -> None:
     responses.add(
         responses.GET,
         re.compile(r"http://url/.*"),

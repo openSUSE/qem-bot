@@ -6,6 +6,7 @@ from collections import namedtuple
 from urllib.parse import urlparse
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 import responses
 from openqabot import QEM_DASHBOARD
@@ -17,7 +18,7 @@ _args = namedtuple("Args", ("openqa_instance", "token"))
 
 
 @pytest.fixture(scope="function")
-def fake_osd_rsp():
+def fake_osd_rsp() -> None:
     def reply_callback(request):
         return (200, request.headers, b'{"bar":"foo"}')
 
@@ -29,7 +30,7 @@ def fake_osd_rsp():
 
 
 @pytest.fixture(scope="function")
-def fake_responses_failing_job_update():
+def fake_responses_failing_job_update() -> None:
     responses.add(
         responses.PATCH,
         f"{QEM_DASHBOARD}api/jobs/42",
@@ -46,7 +47,7 @@ def fake_responses_failing_job_update():
     )
 
 
-def test_bool():
+def test_bool() -> None:
     false_address = urlparse("http://fake.openqa.site")
     true_address = urlparse("https://openqa.suse.de")
 
@@ -55,7 +56,7 @@ def test_bool():
 
 
 @responses.activate
-def test_post_job_failed(caplog):
+def test_post_job_failed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
     client.retries = 0
@@ -68,7 +69,7 @@ def test_post_job_failed(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("fake_osd_rsp")
-def test_post_job_passed(caplog):
+def test_post_job_passed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
     client.post_job({"foo": "bar"})
@@ -82,7 +83,7 @@ def test_post_job_passed(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
-def test_handle_job_not_found(caplog):
+def test_handle_job_not_found(caplog: LogCaptureFixture) -> None:
     client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
     client.handle_job_not_found(42)
     messages = [x[-1] for x in caplog.record_tuples]

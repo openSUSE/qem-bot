@@ -61,17 +61,17 @@ def read_xml(name: str) -> Any:
     return ET.parse("responses/%s.xml" % name)
 
 
-def reviews_url(repo_name: str, number: int):
+def reviews_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
     return "repos/%s/pulls/%s/reviews" % (repo_name, number)
 
 
-def changed_files_url(repo_name: str, number: int):
+def changed_files_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
     return "repos/%s/pulls/%s/files" % (repo_name, number)
 
 
-def comments_url(repo_name: str, number: int):
+def comments_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return "repos/%s/issues/%s/comments" % (repo_name, number)
 
@@ -152,7 +152,7 @@ def review_pr(
     msg: str,
     commit_id: str,
     approve: bool = True,
-):
+) -> None:
     if GIT_REVIEW_BOT:
         review_url = comments_url(repo_name, pr_number)
         review_cmd = f"@{GIT_REVIEW_BOT}: "
@@ -270,7 +270,7 @@ def add_build_result(
     successful_packages: Set[str],
     unpublished_repos: Set[str],
     failed_packages: Set[str],
-):
+) -> None:
     state = res.get("state")
     project = res.get("project")
     product_name = get_product_name(project)
@@ -353,7 +353,7 @@ def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
+def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) -> None:
     successful_packages = set()
     unpublished_repos = set()
     failed_packages = set()
@@ -403,7 +403,7 @@ def add_comments_and_referenced_build_results(
     incident: Dict[str, Any],
     comments: List[Any],
     dry: bool,
-):
+) -> None:
     for comment in reversed(comments):
         body = comment["body"]
         user_name = comment["user"]["username"]
@@ -412,7 +412,9 @@ def add_comments_and_referenced_build_results(
             break
 
 
-def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool):
+def add_packages_from_patchinfo(
+    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+) -> None:
     if dry:
         patch_info = read_xml("patch-info")
     else:
@@ -421,7 +423,7 @@ def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str],
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool):
+def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")

@@ -45,7 +45,7 @@ class Aggregate(BaseConf):
 
         return repos
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Aggregate product: {self.product}>"
 
     @staticmethod

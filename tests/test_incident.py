@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from copy import deepcopy
+from typing import NoReturn
 
 import pytest
 
@@ -33,23 +34,23 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch):
-    def fake(*_args, **_kwargs):
+def mock_good(monkeypatch) -> None:
+    def fake(*_args, **_kwargs) -> int:
         return 12345
 
     monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
 
 
 @pytest.fixture
-def mock_ex(monkeypatch):
-    def fake(*_args, **_kwargs):
+def mock_ex(monkeypatch) -> None:
+    def fake(*_args, **_kwargs) -> NoReturn:
         raise NoRepoFoundError
 
     monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_normal():
+def test_inc_normal() -> None:
     inc = Incident(test_data)
 
     assert not inc.livepatch
@@ -70,7 +71,7 @@ def test_inc_normal():
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_normal_livepatch():
+def test_inc_normal_livepatch() -> None:
     modified_data = deepcopy(test_data)
     modified_data["packages"] = ["kernel-livepatch"]
     inc = Incident(modified_data)
@@ -79,14 +80,14 @@ def test_inc_normal_livepatch():
 
 
 @pytest.mark.usefixtures("mock_ex")
-def test_inc_norepo():
+def test_inc_norepo() -> None:
     with pytest.raises(NoRepoFoundError):
         inc = Incident(test_data)
         inc.revisions_with_fallback("x86_64", "15-SP4")
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_nopackage():
+def test_inc_nopackage() -> None:
     bad_data = deepcopy(test_data)
     bad_data["packages"] = []
     with pytest.raises(EmptyPackagesError):
@@ -94,7 +95,7 @@ def test_inc_nopackage():
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_nochannels():
+def test_inc_nochannels() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = []
     with pytest.raises(EmptyChannels):
@@ -102,7 +103,7 @@ def test_inc_nochannels():
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_nochannels2():
+def test_inc_nochannels2() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = [
         "SUSE:SLE-15-SP4:Update",
@@ -114,7 +115,7 @@ def test_inc_nochannels2():
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_inc_revisions():
+def test_inc_revisions() -> None:
     incident = Incident(test_data)
     assert incident.revisions_with_fallback("x86_64", "15-SP4")
     assert incident.revisions_with_fallback("aarch64", "15-SP4")
@@ -131,7 +132,7 @@ def test_inc_revisions():
 
 
 @pytest.mark.usefixtures("mock_good")
-def test_slfo_channels_and_revisions():
+def test_slfo_channels_and_revisions() -> None:
     slfo_data = deepcopy(test_data)
     slfo_data["project"] = "SUSE:SLFO"
     slfo_data["channels"] = [
