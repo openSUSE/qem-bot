@@ -50,7 +50,7 @@ class RepoDiff:
             return zstandard.decompress(repo_data_raw)
         return repo_data_raw
 
-    def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
+    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
@@ -68,7 +68,11 @@ class RepoDiff:
 
     def _load_repodata(self, project: str) -> Optional[ET.Element]:
         url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
+        repo_data_listing = self._request_and_dump(
+            url + "?jsontable=1",
+            f"repodata-listing-{project}.json",
+            as_json=True,
+        )
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:

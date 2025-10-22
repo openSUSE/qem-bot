@@ -108,6 +108,7 @@ class Incidents(BaseConf):
         data: Dict[str, Any],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool,
     ) -> Optional[Dict[str, Any]]:
         if inc.type == "git" and not inc.ongoing:
@@ -325,6 +326,7 @@ class Incidents(BaseConf):
         incidents: List[Incident],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool,
     ) -> List[Optional[Dict[str, Any]]]:
         ret = []
@@ -335,7 +337,17 @@ class Incidents(BaseConf):
                 for inc in incidents:
                     inc.arch_filter = archs  # compute repo hash only for configured archs
                     try:
-                        ret.append(self._handle_incident(inc, arch, flavor, data, token, ci_url, ignore_onetime))
+                        ret.append(
+                            self._handle_incident(
+                                inc,
+                                arch,
+                                flavor,
+                                data,
+                                token,
+                                ci_url,
+                                ignore_onetime=ignore_onetime,
+                            )
+                        )
                     except NoRepoFoundError as e:
                         log.info(
                             "Project %s can't calculate repohash of incident %i: %s .. skipping",
