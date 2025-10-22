@@ -33,6 +33,7 @@ extend-select =[
     "SLF",
     "FURB",
     "EXE",
+    "BLE",
 ]
 
 ignore = [
