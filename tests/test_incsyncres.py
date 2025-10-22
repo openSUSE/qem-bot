@@ -66,7 +66,7 @@ def test_clone_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -124,7 +124,7 @@ def test_nogroup_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -182,7 +182,7 @@ def test_devel_fast_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -245,7 +245,7 @@ def test_devel_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -308,7 +308,7 @@ def test_passed_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 

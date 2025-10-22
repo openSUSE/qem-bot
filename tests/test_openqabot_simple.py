@@ -87,14 +87,14 @@ def mock_runtime(monkeypatch: MonkeyPatch) -> None:
 def test_passed(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -111,14 +111,14 @@ def test_passed(mock_runtime: None, mock_openqa_passed: None, caplog: LogCapture
 def test_dry(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        True,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=True,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -134,14 +134,14 @@ def test_dry(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFix
 def test_passed_non_osd(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.opensuse.org"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.opensuse.org"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -159,14 +159,14 @@ def test_passed_non_osd(mock_runtime: None, mock_openqa_passed: None, caplog: Lo
 def test_passed_post_osd_failed(mock_runtime: None, mock_openqa_exception: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
