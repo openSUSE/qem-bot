@@ -79,6 +79,10 @@ def sanitize_comment_text(
     return text.strip()
 
 
+def is_job_passing(job_result: dict) -> bool:
+    return job_result["status"] == "passed"
+
+
 class Approver:
     def __init__(self, args: Namespace, single_incident=None) -> None:
         self.dry = args.dry
@@ -278,12 +282,9 @@ class Approver:
         )
         return False
 
-    def is_job_passing(self, job_result: dict) -> bool:
-        return job_result["status"] == "passed"
-
     def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int):
         for job_result in job_results:
-            if self.is_job_passing(job_result):
+            if is_job_passing(job_result):
                 continue
             job_id = job_result["job_id"]
             if self.is_job_marked_acceptable_for_incident(job_id, inc):
@@ -291,7 +292,7 @@ class Approver:
                 self.mark_job_as_acceptable_for_incident(job_id, inc)
 
     def is_job_acceptable(self, inc: int, api: str, job_result: dict) -> bool:
-        if self.is_job_passing(job_result):
+        if is_job_passing(job_result):
             return True
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
