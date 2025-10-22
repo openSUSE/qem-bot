@@ -106,7 +106,7 @@ class Commenter:
             log.info("Would write comment to request %s", inc)
             log.debug(pformat(msg))
 
-    def summarize_message(self, jobs) -> str:
+    def summarize_message(self, jobs) -> str:  # noqa: C901
         groups = {}
         for job in jobs:
             if "job_group" not in job:
