@@ -21,6 +21,7 @@ extend-select =[
     "B",
     "SIM",
     "C4",
+    "T10",
 ]
 
 ignore = [
