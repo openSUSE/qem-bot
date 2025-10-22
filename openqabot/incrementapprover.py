@@ -146,7 +146,7 @@ class IncrementApprover:
             ok_jobs += self._evaluate_openqa_job_results(results, not_ok_jobs)
         reasons_to_disapprove = []  # compose list of blocking jobs
         for result, job_ids in not_ok_jobs.items():
-            job_list = "\n".join((f" - {openqa_url}/tests/{id}" for id in job_ids))
+            job_list = "\n".join((f" - {openqa_url}/tests/{i}" for i in job_ids))
             reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
         return (ok_jobs, reasons_to_disapprove)
 
