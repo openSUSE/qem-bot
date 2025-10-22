@@ -44,11 +44,11 @@ class openQAInterface:
         except RequestError as e:
             log.error("openQA returned %s", e.args[-1])
             log.error("Post failed with %s", pformat(settings))
-            raise PostOpenQAError
+            raise PostOpenQAError from e
         except Exception as e:
             log.exception(e)
             log.error("Post failed with %s", pformat(settings))
-            raise PostOpenQAError
+            raise PostOpenQAError from e
 
     def handle_job_not_found(self, job_id: int):
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
