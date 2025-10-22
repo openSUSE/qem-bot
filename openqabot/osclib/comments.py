@@ -3,8 +3,8 @@
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
-from xml.etree import ElementTree as ET
 
+from defusedxml.etree import ElementTree as ET
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
 from ..utc import UTC

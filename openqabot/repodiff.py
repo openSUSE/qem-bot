@@ -27,7 +27,7 @@ try:
 
     log.info("Using lxml for XML parsing when computing repo diff")
 except ImportError:
-    import xml.etree.ElementTree as ET
+    import defusedxml.ElementTree as ET
 
     log.warning("Using built-in XML parsing when computing repo diff")
 

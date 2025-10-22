@@ -7,6 +7,7 @@ RUN zypper ar https://download.opensuse.org/repositories/SUSE:/CA/openSUSE_Tumbl
         ca-certificates-suse \
         git \
         openssh-clients \
+        python3-defusedxml \
         python3-jsonschema \
         python3-openqa_client \
         python3-osc \

@@ -14,6 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "dataclasses",
+    "defusedxml",
     "osc",
     "openqa-client",
     "pika",
@@ -91,6 +92,7 @@ extend-select =[
     "ARG",
     "RUF",
     "ANN",
+    "S", # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
 ]
 
 ignore = [
@@ -129,6 +131,7 @@ ignore = [
     "PLW0129", # assert-on-string-literal
     "B019",
     "ANN401", # any-type
+    "S101",
 ]
 
 [tool.ruff.format]
