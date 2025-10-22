@@ -19,7 +19,7 @@ from responses import matchers
 _args = namedtuple("Args", ("openqa_instance", "token"))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_osd_rsp(request: FixtureRequest) -> None:
     def reply_callback(request: FixtureRequest) -> Tuple[int, Dict[str, str], bytes]:
         return (200, request.headers, b'{"bar":"foo"}')
@@ -31,7 +31,7 @@ def fake_osd_rsp(request: FixtureRequest) -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_failing_job_update() -> None:
     responses.add(
         responses.PATCH,

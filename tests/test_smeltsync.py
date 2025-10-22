@@ -19,7 +19,7 @@ from responses import matchers
 _namespace = namedtuple("Namespace", ("dry", "token", "retry"))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_smelt_api(request: FixtureRequest) -> None:
     responses.add(
         responses.GET,
@@ -65,7 +65,7 @@ def fake_smelt_api(request: FixtureRequest) -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
     def f_active_inc(*args: Any) -> List[str]:
         return ["100"]
@@ -73,7 +73,7 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
     monkeypatch.setattr(openqabot.smeltsync, "get_active_incidents", f_active_inc)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_replyback() -> None:
     def reply_callback(request: FixtureRequest) -> Tuple[int, List[Any], bytes]:
         return (200, [], request.body)

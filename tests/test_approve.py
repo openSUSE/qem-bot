@@ -30,7 +30,7 @@ openqa_instance_url = urlparse("http://instance.qa")
 args = _namespace(False, "123", False, openqa_instance_url, None, None)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_unblocking_incidents_via_older_ok_result(
     request: FixtureRequest,
 ) -> None:
@@ -74,7 +74,7 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_openqa_older_jobs_api() -> None:
     responses.get(
         re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
@@ -82,7 +82,7 @@ def fake_openqa_older_jobs_api() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_remarks_api() -> List[responses.BaseResponse]:
     return [
         responses.patch(
@@ -101,7 +101,7 @@ def add_two_passed_response() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_openqa_comment_api() -> None:
     responses.add(
         responses.GET,
@@ -111,12 +111,12 @@ def fake_openqa_comment_api() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_two_passed_jobs() -> None:
     add_two_passed_response()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_unblocking_incidents_via_openqa_comments(
     request: FixtureRequest,
 ) -> None:
@@ -145,12 +145,12 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_updating_job() -> None:
     responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_creating_pr_review() -> None:
     responses.add(
         responses.POST,
@@ -169,7 +169,7 @@ def fake_responses_for_creating_pr_review() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
     def f_inc_approver(*args: Any) -> List[IncReq]:
         return [
@@ -487,7 +487,7 @@ def test_osc_all_pass(
     assert len(responses.calls) == 76
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_incident_1_failed_2_passed(request: FixtureRequest) -> None:
     responses.add(
         responses.GET,

@@ -55,17 +55,17 @@ ReviewState = namedtuple("ReviewState", ("state", "by_group"))
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_no_jobs(request: FixtureRequest) -> None:
     responses.add(GET, openqa_url, json={})
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_pending_jobs(request: FixtureRequest) -> None:
     responses.add(GET, openqa_url, json={"scheduled": {}, "running": {}})
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_not_ok_jobs(request: FixtureRequest) -> None:
     responses.add(
         GET,
@@ -74,7 +74,7 @@ def fake_not_ok_jobs(request: FixtureRequest) -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_ok_jobs(request: FixtureRequest) -> None:
     responses.add(
         GET,
@@ -83,7 +83,7 @@ def fake_ok_jobs(request: FixtureRequest) -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_product_repo(request: FixtureRequest) -> None:
     responses.add(
         GET,
