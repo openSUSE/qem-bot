@@ -1,7 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import datetime
 from collections import defaultdict
-from datetime import date
 from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
@@ -14,6 +14,11 @@ from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
+
+try:
+    from datetime import UTC
+except ImportError:  # python <3.11 compatibility
+    from datetime.timezone import utc as UTC
 
 log = getLogger("bot.types.aggregate")
 
@@ -49,7 +54,7 @@ class Aggregate(BaseConf):
 
     @staticmethod
     def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
-        today = date.today().strftime("%Y%m%d")
+        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
 
         if build.startswith(today) and repohash == old_repohash:
             raise SameBuildExists
