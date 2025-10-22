@@ -52,9 +52,9 @@ class OpenQABot:
                 res.status_code,
                 res.json().get("id", "No id?"),
             )
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("")
+            raise
 
     def post_openqa(self, data: Dict[str, Any]) -> None:
         self.openqa.post_job(data)

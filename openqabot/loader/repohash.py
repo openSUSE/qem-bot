@@ -59,9 +59,9 @@ def get_max_revision(
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
             log.info("%s not found -- skipping incident", url)
             raise NoRepoFoundError from e
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("")
+            raise
 
         if cs is None:
             log.error("%s's revision is None", url)

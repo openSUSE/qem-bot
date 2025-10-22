@@ -31,14 +31,14 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("")
             continue
 
         try:
             settings = data.get("settings")
         except AttributeError:
-            log.error("The YAML file '%s' contains no valid data for bot settings.", p)
+            log.warning("The YAML file '%s' contains no valid data for bot settings. Ignoring", p)
             continue
 
         if "product" not in data:
@@ -111,8 +111,8 @@ def get_onearch(path: Path) -> Set[str]:
 
     try:
         data = loader.load(path)
-    except Exception as e:  # pylint: disable=broad-except
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("")
         return set()
 
     return set(data)

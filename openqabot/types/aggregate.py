@@ -126,8 +126,8 @@ class Aggregate(BaseConf):
                     params={"product": self.product, "arch": arch},
                     headers=token,
                 )
-            except Exception as e:  # pylint: disable=broad-except
-                log.exception(e)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("")
                 old_jobs = None
 
             old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
