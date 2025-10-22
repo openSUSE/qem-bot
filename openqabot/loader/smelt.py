@@ -129,7 +129,7 @@ def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
         return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def get_active_incidents() -> Set[int]:
@@ -170,7 +170,7 @@ def get_incident(incident: int) -> Optional[Dict[str, Any]]:
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Unknown error for incident %s", incident)
+        log.exception("Unknown error for incident %s", incident)
         log.exception(e)
         return None
 

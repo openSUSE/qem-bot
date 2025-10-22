@@ -33,7 +33,7 @@ def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
         return requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
@@ -44,7 +44,7 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
             log.error("Unable to POST %s: %s", url, res.text)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def read_utf8(name: str) -> str:
@@ -499,7 +499,7 @@ def make_incident_from_pr(
             return None
 
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Unable to process PR %s", pr.get("number", "?"))
+        log.exception("Unable to process PR %s", pr.get("number", "?"))
         log.exception(e)
         return None
     return incident

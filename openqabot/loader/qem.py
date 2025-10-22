@@ -50,7 +50,7 @@ def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
         data = get_json("api/incidents", headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
     return list({i["number"] for i in data})
 
 
@@ -97,7 +97,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
         data = get_json("api/incident_settings/" + f"{number}", headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
     if "error" in data:
         log.warning("Incident %s contains error: %s", number, data["error"])
@@ -121,8 +121,8 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
 def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
     try:
         settings = get_incident_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    except NoResultsError:
+        raise
 
     ret = []
     for job_aggr in settings:
@@ -131,7 +131,7 @@ def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]
             ret += data
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 
@@ -157,7 +157,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[D
         settings = get_json(url, headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
     if not settings:
         log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
@@ -184,8 +184,8 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[D
 def get_aggregate_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
     try:
         settings = get_aggregate_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    except NoResultsError:
+        raise
 
     ret = []
     for job_aggr in settings:
@@ -194,7 +194,7 @@ def get_aggregate_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any
             ret += data
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 

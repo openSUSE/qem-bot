@@ -49,7 +49,7 @@ class OpenQABot:
             )
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
     def post_openqa(self, data: Dict[str, Any]) -> None:
         self.openqa.post_job(data)

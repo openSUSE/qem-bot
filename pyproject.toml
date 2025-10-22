@@ -50,6 +50,7 @@ extend-select =[
     "ANN",
     "S",
     "FBT",
+    "TRY",
 ]
 
 ignore = [

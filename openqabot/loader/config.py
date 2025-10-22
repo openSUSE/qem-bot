@@ -38,7 +38,7 @@ def load_metadata(
         try:
             settings = data.get("settings")
         except AttributeError:
-            log.error("The YAML file '%s' contains no valid data for bot settings.", p)
+            log.exception("The YAML file '%s' contains no valid data for bot settings.", p)
             continue
 
         if "product" not in data:
