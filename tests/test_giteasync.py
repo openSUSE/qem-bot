@@ -4,7 +4,6 @@
 
 import logging
 import re
-import xml.etree.ElementTree as ET
 from collections import namedtuple
 from pathlib import Path
 from typing import Any, Tuple
@@ -30,6 +29,12 @@ from openqabot.loader.gitea import (
 )
 from openqabot.types import Repos
 from responses import GET, matchers
+
+try:
+    import lxml.etree as ET
+except ImportError:
+    import defusedxml.ElementTree as ET
+
 
 # Fake Namespace for GiteaSync initialization
 _namespace = namedtuple(
@@ -231,7 +236,7 @@ def test_sync_without_results(caplog: LogCaptureFixture, monkeypatch: MonkeyPatc
 
 
 def test_extracting_product_name_and_version() -> None:
-    assert get_product_name("1.1.99:PullRequest:166") == ""
+    assert not get_product_name("1.1.99:PullRequest:166")
     assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
 
     slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"

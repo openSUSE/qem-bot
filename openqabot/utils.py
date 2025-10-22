@@ -46,11 +46,11 @@ def walk(inc: Union[List[Any], Dict[str, Any]]) -> Union[List[Any], Dict[str, An
 
 
 def normalize_results(result: str) -> str:
-    if result in ("passed", "softfailed"):
+    if result in {"passed", "softfailed"}:
         return "passed"
     if result == "none":
         return "waiting"
-    if result in (
+    if result in {
         "timeout_exceeded",
         "incomplete",
         "obsoleted",
@@ -59,7 +59,7 @@ def normalize_results(result: str) -> str:
         "parallel_restarted",
         "user_cancelled",
         "user_restarted",
-    ):
+    }:
         return "stopped"
     if result == "failed":
         return "failed"

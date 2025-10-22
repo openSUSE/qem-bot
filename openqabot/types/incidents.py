@@ -18,7 +18,7 @@ BASE_PRIO = 50
 
 
 class Incidents(BaseConf):
-    def __init__(
+    def __init__(  # noqa: PLR0917 too-many-positional-arguments
         self,
         product: str,
         product_repo: Optional[Union[List[str], str]],
@@ -100,7 +100,7 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # noqa: PLR0911,C901 # pylint: disable=too-many-return-statements
+    def _handle_incident(  # noqa: PLR0911,C901, PLR0917
         self,
         inc: Incident,
         arch: str,
@@ -192,7 +192,7 @@ class Incidents(BaseConf):
                             if len(channel.product_version) > 0
                             else inc_channel.version.startswith(channel.version)
                         )
-                        and channel.product_version in ("", inc_channel.product_version)
+                        and channel.product_version in {"", inc_channel.product_version}
                         and inc_channel.arch == arch
                     ):
                         issue_dict[issue] = inc
@@ -222,20 +222,15 @@ class Incidents(BaseConf):
             "Kernel" in flavor
             and not inc.livepatch
             and not flavor.endswith("Azure")
-            and set(issue_dict.keys()).isdisjoint(
-                {
-                    "OS_TEST_ISSUES",  # standard product dir
-                    "LTSS_TEST_ISSUES",  # LTSS product dir
-                    "BASE_TEST_ISSUES",  # GA product dir SLE15+
-                    "RT_TEST_ISSUES",  # realtime kernel
-                    "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                }
-            )
+            and set(issue_dict.keys()).isdisjoint({
+                "OS_TEST_ISSUES",  # standard product dir
+                "LTSS_TEST_ISSUES",  # LTSS product dir
+                "BASE_TEST_ISSUES",  # GA product dir SLE15+
+                "RT_TEST_ISSUES",  # realtime kernel
+                "COCO_TEST_ISSUES",  # Confidential Computing kernel
+            })
         ):
-            log.warning(
-                "Kernel incident %s doesn't have product repository",
-                str(inc),
-            )
+            log.warning("Kernel incident %s doesn't have product repository", inc)
             return None
 
         for key, value in issue_dict.items():

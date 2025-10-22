@@ -52,6 +52,7 @@ find = {}
 [tool.ruff]
 line-length = 120
 exclude = ['metadata']
+preview = true
 
 [tool.ruff.lint]
 # E, F: Standard pycodestyle and Pyflakes (default flake8)
@@ -134,6 +135,7 @@ ignore = [
     "B019",
     "ANN401", # any-type
     "S101",
+    "PLR6301", # no-self-use
 ]
 
 [tool.ruff.format]

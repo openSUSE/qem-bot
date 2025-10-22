@@ -107,7 +107,7 @@ def get_recent_pint_image(
     Get the latest one based on 'publishedon'
     """
     name = re.compile(name_regex)
-    if region == "":
+    if not region:
         region = None
     recentimage = None
 

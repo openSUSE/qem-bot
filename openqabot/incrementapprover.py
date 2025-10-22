@@ -205,9 +205,9 @@ class IncrementApprover:
                 except IndexError:
                     flavor = default_flavor
                 if (
-                    config.distri in ("any", distri)
-                    and config.flavor in ("any", flavor)
-                    and config.version in ("any", version)
+                    config.distri in {"any", distri}
+                    and config.flavor in {"any", flavor}
+                    and config.version in {"any", version}
                 ):
                     res.add(BuildInfo(distri, product, version, flavor, arch, build))
         return res
