@@ -1,3 +1,5 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 from typing import Any, Dict, List, Optional
 
 import pytest

@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
 
 from setuptools import setup
 
