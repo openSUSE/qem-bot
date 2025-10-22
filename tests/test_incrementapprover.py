@@ -152,7 +152,7 @@ def run_approver(
         None,
         [] if config is None else config.packages,
         set() if config is None else config.archs,
-        dict() if config is None else config.settings,
+        {} if config is None else config.settings,
         [] if config is None else config.additional_builds,
     )
     increment_approver = IncrementApprover(args)

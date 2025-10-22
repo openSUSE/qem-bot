@@ -21,8 +21,8 @@ from .utils import merge_dicts
 from .utils import retry10 as requests
 
 log = getLogger("bot.increment_approver")
-ok_results = set(("passed", "softfailed"))
-final_states = set(("done", "cancelled"))
+ok_results = {"passed", "softfailed"}
+final_states = {"done", "cancelled"}
 default_flavor = "Online-Increments"
 
 
@@ -81,15 +81,15 @@ class IncrementApprover:
         self, build_info: BuildInfo, params: List[Dict[str, str]]
     ) -> List[Dict[str, Dict[str, Dict[str, Any]]]]:
         log.debug("Checking openQA job results for %s", build_info)
-        query_params = map(
-            lambda p: {
+        query_params = (
+            {
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
                 "flavor": p["FLAVOR"],
                 "arch": p["ARCH"],
                 "build": p["BUILD"],
-            },
-            params,
+            }
+            for p in params
         )
         res = [self.client.get_scheduled_product_stats(p) for p in query_params]
         log.debug("Job statistics:\n%s", pformat(res))
@@ -139,7 +139,7 @@ class IncrementApprover:
             ok_jobs += self._evaluate_openqa_job_results(results, not_ok_jobs)
         reasons_to_disapprove = []  # compose list of blocking jobs
         for result, job_ids in not_ok_jobs.items():
-            job_list = "\n".join(map(lambda id: f" - {openqa_url}/tests/{id}", job_ids))
+            job_list = "\n".join((f" - {openqa_url}/tests/{id}" for id in job_ids))
             reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
         return (ok_jobs, reasons_to_disapprove)
 
@@ -271,7 +271,7 @@ class IncrementApprover:
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
-        return [*map(lambda p: merge_dicts(base_params, p), extra_params)]
+        return [*(merge_dicts(base_params, p) for p in extra_params)]
 
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:
         log.info("Scheduling jobs for %s", build_info)

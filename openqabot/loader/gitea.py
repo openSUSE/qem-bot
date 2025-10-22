@@ -112,15 +112,15 @@ def compute_repo_url_for_job_setting(
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     return ",".join(
-        map(
-            lambda p: compute_repo_url(
+        (
+            compute_repo_url(
                 base,
                 p,
                 (repo.product, repo.version, product_version),
                 repo.arch,
                 "",
-            ),
-            product_names if isinstance(product_names, list) else [product_names],
+            )
+            for p in (product_names if isinstance(product_names, list) else [product_names])
         )
     )
 

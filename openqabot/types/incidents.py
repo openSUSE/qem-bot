@@ -222,15 +222,13 @@ class Incidents(BaseConf):
             and not inc.livepatch
             and not flavor.endswith("Azure")
             and set(issue_dict.keys()).isdisjoint(
-                set(
-                    [
-                        "OS_TEST_ISSUES",  # standard product dir
-                        "LTSS_TEST_ISSUES",  # LTSS product dir
-                        "BASE_TEST_ISSUES",  # GA product dir SLE15+
-                        "RT_TEST_ISSUES",  # realtime kernel
-                        "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                    ]
-                )
+                {
+                    "OS_TEST_ISSUES",  # standard product dir
+                    "LTSS_TEST_ISSUES",  # LTSS product dir
+                    "BASE_TEST_ISSUES",  # GA product dir SLE15+
+                    "RT_TEST_ISSUES",  # realtime kernel
+                    "COCO_TEST_ISSUES",  # Confidential Computing kernel
+                }
             )
         ):
             log.warning(
