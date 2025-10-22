@@ -303,6 +303,13 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool) -
     return relevant_archs
 
 
+def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
+    if OBS_REPO_TYPE != "" and res.get("repository") != OBS_REPO_TYPE:
+        return False
+    arch = res.get("arch")
+    return arch == "local" or relevant_archs is None or arch in relevant_archs
+
+
 def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
     successful_packages = set()
     unpublished_repos = set()
@@ -320,9 +327,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
             else:
                 build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
             for res in build_info.getroot().findall("result"):
-                if OBS_REPO_TYPE != "" and res.get("repository") != OBS_REPO_TYPE:
-                    continue
-                if relevant_archs is not None and res.get("arch") not in relevant_archs:
+                if not is_build_result_relevant(res, relevant_archs):
                     continue
                 add_build_result(
                     incident,
