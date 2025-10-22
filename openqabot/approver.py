@@ -29,6 +29,12 @@ from .loader.qem import (
     get_single_incident,
 )
 
+try:
+    from datetime import UTC
+except ImportError:  # python <3.11 compatibility
+    from datetime.timezone import utc as UTC
+
+
 log = getLogger("bot.approver")
 
 
@@ -194,7 +200,7 @@ class Approver:
     ) -> Optional[bool]:
         job_build = job["build"][:-2]
         try:
-            job_build_date = datetime.strptime(job_build, "%Y%m%d")
+            job_build_date = datetime.strptime(job_build, "%Y%m%d").astimezone(UTC)
         except (ValueError, TypeError):
             log.info(
                 "Could not parse build date %s. Won't consider this job as alternative for approval.",
@@ -245,7 +251,7 @@ class Approver:
         current_job, older_jobs = data[0], data[1:]
         current_build = current_job["build"][:-2]
         try:
-            current_build_date = datetime.strptime(current_build, "%Y%m%d")
+            current_build_date = datetime.strptime(current_build, "%Y%m%d").astimezone(UTC)
         except (ValueError, TypeError):
             log.info(
                 "Could not parse build date %s. Won't try to look at older jobs for approval.",
