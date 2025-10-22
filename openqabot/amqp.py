@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import contextlib
 import json
 import re
 from argparse import Namespace
@@ -39,10 +40,8 @@ class AMQP(SyncRes):
 
     def __call__(self) -> int:
         log.info("AMQP listening started")
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             self.channel.start_consuming()
-        except KeyboardInterrupt:
-            pass
         self.stop()
         return 0
 

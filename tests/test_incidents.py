@@ -38,7 +38,7 @@ def test_incidents_printable():
         config=test_config,
         extrasettings=None,
     )
-    assert "<Incidents product: hello>" == str(inc)
+    assert str(inc) == "<Incidents product: hello>"
 
 
 def test_incidents_call():

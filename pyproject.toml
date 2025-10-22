@@ -19,6 +19,7 @@ extend-select =[
     "I", # https://docs.astral.sh/ruff/rules/#isort-i
     "ERA",
     "B",
+    "SIM",
 ]
 
 ignore = [

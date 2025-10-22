@@ -279,7 +279,7 @@ def add_build_result(
     scm_info_key = "scminfo_" + product_name if len(product_name) != 0 else "scminfo"
     for scminfo_element in res.findall("scminfo"):
         found_scminfo = scminfo_element.text
-        existing_scminfo = incident.get(scm_info_key, None)
+        existing_scminfo = incident.get(scm_info_key)
         if len(found_scminfo) > 0:
             if existing_scminfo is None or found_scminfo == existing_scminfo:
                 incident[scm_info_key] = found_scminfo

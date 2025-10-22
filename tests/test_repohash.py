@@ -121,8 +121,8 @@ def test_get_max_revison_exception(caplog):
     with pytest.raises(BufferError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "other error" == str(caplog.records[0].msg)
+    assert str(caplog.records[0].msg) == "other error"
 
 
 def test_merge_repohash():
-    assert "c7e84e227cb118dbe1fa7d49b3e55fc3" == rp.merge_repohash(["a", "b", "c"])
+    assert rp.merge_repohash(["a", "b", "c"]) == "c7e84e227cb118dbe1fa7d49b3e55fc3"

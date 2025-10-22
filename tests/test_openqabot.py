@@ -10,6 +10,6 @@ from openqabot.main import main  # SUT
 
 
 def test_help():
-    sys.argv += "--help".split()
+    sys.argv += ["--help"]
     with pytest.raises(SystemExit):
         main()
