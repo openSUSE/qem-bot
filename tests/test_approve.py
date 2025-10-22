@@ -204,7 +204,7 @@ def fake_qem(monkeypatch, request):
             4: [JobAggr(i, False, False) for i in range(4000, 4010)],
             5: [JobAggr(i, False, False) for i in range(5000, 5010)],
         }
-        return results.get(inc, None)
+        return results.get(inc)
 
     def f_aggr_settings(inc, token):
         if "aggr" in request.param:
@@ -216,7 +216,7 @@ def fake_qem(monkeypatch, request):
             2: [JobAggr(i, True, False) for i in range(20000, 20010)],
             3: [JobAggr(i, True, False) for i in range(30000, 30010)],
         }
-        return results.get(inc, None)
+        return results.get(inc)
 
     monkeypatch.setattr(openqabot.approver, "get_single_incident", f_inc_single_approver)
     monkeypatch.setattr(openqabot.approver, "get_incidents_approver", f_inc_approver)

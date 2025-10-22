@@ -146,13 +146,15 @@ class Incidents(BaseConf):
         if inc.staging:
             return None
 
-        if "packages" in data and data["packages"] is not None:
-            if not inc.contains_package(data["packages"]):
-                return None
+        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
+            return None
 
-        if "excluded_packages" in data and data["excluded_packages"] is not None:
-            if inc.contains_package(data["excluded_packages"]):
-                return None
+        if (
+            "excluded_packages" in data
+            and data["excluded_packages"] is not None
+            and inc.contains_package(data["excluded_packages"])
+        ):
+            return None
 
         if inc.livepatch:
             full_post["openqa"]["KGRAFT"] = "1"
@@ -202,9 +204,8 @@ class Incidents(BaseConf):
             log.debug("No channels in %s for %s on %s", inc.id, flavor, arch)
             return None
 
-        if "required_issues" in data:
-            if set(issue_dict.keys()).isdisjoint(data["required_issues"]):
-                return None
+        if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
+            return None
 
         if not ignore_onetime and self._is_scheduled_job(token, inc, arch, self.settings["VERSION"], flavor):
             log.info(
@@ -216,8 +217,11 @@ class Incidents(BaseConf):
             )
             return None
 
-        if "Kernel" in flavor and not inc.livepatch and not flavor.endswith("Azure"):
-            if set(issue_dict.keys()).isdisjoint(
+        if (
+            "Kernel" in flavor
+            and not inc.livepatch
+            and not flavor.endswith("Azure")
+            and set(issue_dict.keys()).isdisjoint(
                 set(
                     [
                         "OS_TEST_ISSUES",  # standard product dir
@@ -227,12 +231,13 @@ class Incidents(BaseConf):
                         "COCO_TEST_ISSUES",  # Confidential Computing kernel
                     ]
                 )
-            ):
-                log.warning(
-                    "Kernel incident %s doesn't have product repository",
-                    str(inc),
-                )
-                return None
+            )
+        ):
+            log.warning(
+                "Kernel incident %s doesn't have product repository",
+                str(inc),
+            )
+            return None
 
         for key, value in issue_dict.items():
             full_post["openqa"][key] = str(value.id)

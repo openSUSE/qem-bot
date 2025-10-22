@@ -70,7 +70,7 @@ def test_clone_dry(get_a_i, caplog):
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert [
+    assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
@@ -78,7 +78,7 @@ def test_clone_dry(get_a_i, caplog):
         "build='123', product='')",
         "Job '1234' already has a clone, ignoring",
         "End of bot run",
-    ] == messages
+    ]
 
 
 @responses.activate
@@ -128,14 +128,14 @@ def test_nogroup_dry(get_a_i, caplog):
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert [
+    assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
         "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
         "build='123', product='')",
         "End of bot run",
-    ] == messages
+    ]
 
 
 @responses.activate
@@ -186,7 +186,7 @@ def test_devel_fast_dry(get_a_i, caplog):
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert [
+    assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
@@ -194,7 +194,7 @@ def test_devel_fast_dry(get_a_i, caplog):
         "build='123', product='')",
         "Ignoring job '1234' in development group 'Devel FakeGroup'",
         "End of bot run",
-    ] == messages
+    ]
 
 
 @responses.activate
@@ -249,7 +249,7 @@ def test_devel_dry(get_a_i, caplog):
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert [
+    assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
@@ -257,7 +257,7 @@ def test_devel_dry(get_a_i, caplog):
         "build='123', product='')",
         "Ignoring job '1234' in development group 'FakeGroup'",
         "End of bot run",
-    ] == messages
+    ]
 
 
 @responses.activate
@@ -312,7 +312,7 @@ def test_passed_dry(get_a_i, caplog):
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert [
+    assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
         "Getting openQA tests results for Data(incident=100, settings_id=110, "
@@ -333,4 +333,4 @@ def test_passed_dry(get_a_i, caplog):
         " 'version': '13.3'}",
         "Dry run -- data in dashboard untouched",
         "End of bot run",
-    ] == messages
+    ]

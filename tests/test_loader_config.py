@@ -23,7 +23,7 @@ def test_load_metadata_aggregate(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     result = load_metadata(__root__, False, True, set())
 
-    assert "<Aggregate product: SOME15SP3>" == str(result[0])
+    assert str(result[0]) == "<Aggregate product: SOME15SP3>"
 
     messages = sorted([m[-1] for m in caplog.record_tuples])
     assert "Skipping invalid config" in messages[3]
@@ -43,7 +43,7 @@ def test_load_metadata_incidents(caplog):
 
     result = load_metadata(__root__, True, False, set())
 
-    assert "<Incidents product: SOME15SP3>" == str(result[0])
+    assert str(result[0]) == "<Incidents product: SOME15SP3>"
 
     messages = [m[-1] for m in caplog.record_tuples if m[-1].startswith("Skipping")]
     assert "Skipping invalid config" in messages[0]
@@ -55,8 +55,8 @@ def test_load_metadata_all(caplog):
     result = load_metadata(__root__, False, False, set())
 
     assert len(result) == 2
-    assert "<Aggregate product: SOME15SP3>" == str(result[0])
-    assert "<Incidents product: SOME15SP3>" == str(result[1])
+    assert str(result[0]) == "<Aggregate product: SOME15SP3>"
+    assert str(result[1]) == "<Incidents product: SOME15SP3>"
 
     messages = sorted([m[-1] for m in caplog.record_tuples])
     assert "Skipping invalid config" in messages[3]

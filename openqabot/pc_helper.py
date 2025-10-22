@@ -57,7 +57,7 @@ def pint_query(query):
 def apply_publiccloud_pint_image(settings):
     """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
     try:
-        region = settings["PUBLIC_CLOUD_PINT_REGION"] if "PUBLIC_CLOUD_PINT_REGION" in settings else None
+        region = settings.get("PUBLIC_CLOUD_PINT_REGION", None)
         # We need to include active and inactive images. Active images have precedence
         # inactive images are maintained PC images which only receive security updates.
         # See https://www.suse.com/c/suse-public-cloud-image-life-cycle/

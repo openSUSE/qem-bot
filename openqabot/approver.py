@@ -131,10 +131,9 @@ class Approver:
             log.info("%s has at least one failed job in incident tests", _mi2str(inc))
             return False
 
-        if any(i.withAggregate for i in i_jobs):
-            if not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-                log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
-                return False
+        if any(i.withAggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
+            log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
+            return False
 
         # everything is green --> add incident to approve list
         return True

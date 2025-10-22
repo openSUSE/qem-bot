@@ -23,7 +23,7 @@ def test_aggregate_printable():
     config["archs"] = None
     config["test_issues"] = {}
     acc = Aggregate("hello", None, None, None, config)
-    assert "<Aggregate product: hello>" == str(acc)
+    assert str(acc) == "<Aggregate product: hello>"
 
 
 def test_aggregate_call():
