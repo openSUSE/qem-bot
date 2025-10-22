@@ -314,9 +314,7 @@ class IncrementApprover:
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
-    def _make_scheduling_parameters(
-        self, config: IncrementConfig, build_info: BuildInfo
-    ) -> List[Dict[str, str]]:
+    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> List[Dict[str, str]]:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -341,11 +339,7 @@ class IncrementApprover:
             if IncrementApprover._match_packages(relevant_diff, config.packages):
                 extra_params.append({})
             # schedule additional builds based on changed packages
-            extra_params.extend(
-                self._extra_builds_for_additional_builds(
-                    relevant_diff, config, build_info
-                )
-            )
+            extra_params.extend(self._extra_builds_for_additional_builds(relevant_diff, config, build_info))
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
