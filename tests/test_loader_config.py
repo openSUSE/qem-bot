@@ -23,7 +23,7 @@ def test_singlearch_error() -> None:
 
 def test_load_metadata_aggregate(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
-    result = load_metadata(__root__, False, True, set())
+    result = load_metadata(__root__, aggregate=False, incidents=True, extrasettings=set())
 
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
 
@@ -35,7 +35,7 @@ def test_load_metadata_aggregate(caplog: LogCaptureFixture) -> None:
 def test_load_metadata_aggregate_file(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     file_path = Path(__file__).parent / "fixtures/config/05_normal.yml"
-    result = load_metadata(file_path, False, True, set())
+    result = load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
 
     assert "<Aggregate product: SOME15SP3>" in str(result[0])
 
@@ -43,7 +43,7 @@ def test_load_metadata_aggregate_file(caplog: LogCaptureFixture) -> None:
 def test_load_metadata_incidents(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
-    result = load_metadata(__root__, True, False, set())
+    result = load_metadata(__root__, aggregate=True, incidents=False, extrasettings=set())
 
     assert str(result[0]) == "<Incidents product: SOME15SP3>"
 
@@ -54,7 +54,7 @@ def test_load_metadata_incidents(caplog: LogCaptureFixture) -> None:
 def test_load_metadata_all(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
-    result = load_metadata(__root__, False, False, set())
+    result = load_metadata(__root__, aggregate=False, incidents=False, extrasettings=set())
 
     assert len(result) == 2
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"

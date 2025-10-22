@@ -119,7 +119,10 @@ def fake_get_multibuild_data(obs_project: str) -> str:
 
 
 def run_gitea_sync(
-    caplog: LogCaptureFixture, monkeypatch: MonkeyPatch, no_build_results: bool = False, allow_failures: bool = True
+    caplog: LogCaptureFixture,
+    monkeypatch: MonkeyPatch,
+    no_build_results: bool = False,
+    allow_failures: bool = True,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
@@ -130,7 +133,17 @@ def run_gitea_sync(
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
-    args = _namespace(False, False, "123", "456", False, "products/SLFO", allow_failures, False, None)
+    args = _namespace(
+        dry=False,
+        fake_data=False,
+        token="123",
+        gitea_token="456",
+        retry=False,
+        gitea_repo="products/SLFO",
+        allow_build_failures=allow_failures,
+        consider_unrequested_prs=False,
+        pr_number=None,
+    )
     assert GiteaSync(args)() == 0
 
 
@@ -210,7 +223,7 @@ def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: Monke
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
 def test_sync_without_results(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
-    run_gitea_sync(caplog, monkeypatch, True, False)
+    run_gitea_sync(caplog, monkeypatch, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages

@@ -49,6 +49,7 @@ extend-select =[
     "RUF",
     "ANN",
     "S",
+    "FBT",
 ]
 
 ignore = [

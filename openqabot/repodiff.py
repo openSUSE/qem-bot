@@ -67,7 +67,9 @@ class RepoDiff:
 
     def _load_repodata(self, project: str) -> Optional[ET.Element]:
         url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
+        repo_data_listing = self._request_and_dump(
+            url + "?jsontable=1", f"repodata-listing-{project}.json", as_json=True
+        )
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
