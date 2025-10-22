@@ -23,6 +23,7 @@ extend-select =[
     "C4",
     "T10",
     "FIX",
+    "ISC",
 ]
 
 ignore = [
