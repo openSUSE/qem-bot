@@ -5,7 +5,7 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
-from requests import ConnectionError, HTTPError
+from requests import ConnectionError, HTTPError  # noqa: A004
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS

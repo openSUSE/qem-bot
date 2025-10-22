@@ -3,7 +3,7 @@
 import logging
 
 import pytest
-from requests import ConnectionError, HTTPError
+from requests import ConnectionError, HTTPError  # noqa: A004
 
 import openqabot.loader.repohash as rp
 import responses
