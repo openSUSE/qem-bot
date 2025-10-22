@@ -186,5 +186,4 @@ def get_incidents(active: Set[int]) -> List[Any]:
         for future in CT.as_completed(future_inc):
             incidents.append(future.result())
 
-    incidents = [inc for inc in incidents if inc]
-    return incidents
+    return [inc for inc in incidents if inc]

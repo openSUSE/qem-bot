@@ -343,5 +343,4 @@ class Incidents(BaseConf):
                             inc.id,
                             e,
                         )
-        ret = [r for r in ret if r]
-        return ret
+        return [r for r in ret if r]
