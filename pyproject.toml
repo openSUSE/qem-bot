@@ -8,6 +8,7 @@ requires-python = ">=3.6"
 [tool.ruff]
 line-length = 120
 exclude = ['metadata']
+preview = true
 
 [tool.ruff.lint]
 # E, F: Standard pycodestyle and Pyflakes (default flake8)
@@ -51,6 +52,7 @@ extend-select =[
     "S",
     "FBT",
     "TRY",
+    "DOC",
 ]
 
 ignore = [
