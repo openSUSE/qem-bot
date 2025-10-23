@@ -322,7 +322,7 @@ class IncrementApprover:
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
-            "INCIDENT_REPO": config.build_project_url() + repo_sub_path,
+            "INCREMENT_REPO": config.build_project_url() + repo_sub_path,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config.settings)
