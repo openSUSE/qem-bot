@@ -14,8 +14,9 @@ import pytest
 import openqabot
 import responses
 from openqabot import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
-from openqabot.incrementapprover import IncrementApprover, IncrementConfig
+from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
+from openqabot.loader.incrementconfig import IncrementConfig
 from responses import GET
 
 # Fake Namespace for IncrementApprover initialization
@@ -268,6 +269,7 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog, fake_ok_jobs, fake_pr
 
 
 def test_config_parsing(caplog):
+    caplog.set_level(logging.DEBUG, logger="bot.increment_config")
     path = Path("tests/fixtures/config-increment-approver")
     configs = [*IncrementConfig.from_config_path(path)]
     assert configs[0].distri == "foo"
