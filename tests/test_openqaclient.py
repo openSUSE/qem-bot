@@ -3,12 +3,12 @@
 import logging
 import re
 from collections import namedtuple
-from typing import Any, List, Tuple
+from typing import Dict, Tuple
 from urllib.parse import urlparse
 
-import osc
 import pytest
 from _pytest.logging import LogCaptureFixture
+from pytest import FixtureRequest
 
 import responses
 from openqabot import QEM_DASHBOARD
@@ -19,10 +19,10 @@ from responses import matchers
 _args = namedtuple("Args", ("openqa_instance", "token"))
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_osd_rsp() -> None:
-    def reply_callback(request: osc.core.Request) -> Tuple[int, List[Any], bytes]:
-        return (200, request.headers, b'{"bar":"foo"}')
+    def reply_callback(_request: FixtureRequest) -> Tuple[int, Dict[str, str], bytes]:
+        return (200, _request.headers, b'{"bar":"foo"}')
 
     responses.add_callback(
         responses.POST,
@@ -31,7 +31,7 @@ def fake_osd_rsp() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_failing_job_update() -> None:
     responses.add(
         responses.PATCH,

@@ -13,6 +13,7 @@ from urllib.parse import urljoin
 import osc.conf
 import osc.core
 import pytest
+from _pytest.logging import LogCaptureFixture
 from pytest import LogCaptureFixture, MonkeyPatch
 
 import openqabot.loader.gitea
@@ -48,7 +49,7 @@ _namespace = namedtuple(
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_gitea_api() -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
@@ -66,14 +67,14 @@ def fake_gitea_api() -> None:
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_gitea_api_post_review_comment() -> None:
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
     msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_replyback() -> None:
     def reply_callback(request: Any) -> Tuple[int, list, Any]:
         return (200, [], request.body)
@@ -86,7 +87,7 @@ def fake_dashboard_replyback() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_repo() -> None:
     url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
