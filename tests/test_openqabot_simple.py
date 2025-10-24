@@ -7,7 +7,6 @@ from urllib.parse import ParseResult, urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot.openqabot
 import responses
@@ -31,9 +30,9 @@ Namespace = namedtuple(
 
 
 @pytest.fixture
-def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, args: Any) -> None:
+        def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
             self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
@@ -47,7 +46,7 @@ def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
@@ -59,7 +58,7 @@ def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_runtime(monkeypatch: MonkeyPatch) -> None:
+def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeWorker:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
@@ -67,24 +66,26 @@ def mock_runtime(monkeypatch: MonkeyPatch) -> None:
         def __call__(self, *args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
             return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
-    def f_load_metadata(*args: Any, **kwds: Any) -> List[FakeWorker]:
+    def f_load_metadata(*_args: Any, **_kwds: Any) -> List[FakeWorker]:
         return [FakeWorker()]
 
     monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
 
-    def f_get_incidents(*args: Any, **kwds: Any) -> List[int]:
+    def f_get_incidents(*_args: Any, **_kwds: Any) -> List[int]:
         return [123]
 
     monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
-    def f_get_onearch(*args: Any, **kwds: Any) -> Set[Any]:
+    def f_get_onearch(*_args: Any, **_kwds: Any) -> Set[Any]:
         return set()
 
     monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)
 
 
 @responses.activate
-def test_passed(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
+def test_passed(
+    _mock_runtime: None, _mock_openqa_passed: None, caplog: LogCaptureFixture
+) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,
@@ -108,7 +109,7 @@ def test_passed(mock_runtime: None, mock_openqa_passed: None, caplog: LogCapture
 
 
 @responses.activate
-def test_dry(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
+def test_dry(_mock_runtime: None, _mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=True,
@@ -131,7 +132,9 @@ def test_dry(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFix
 
 
 @responses.activate
-def test_passed_non_osd(mock_runtime: None, mock_openqa_passed: None, caplog: LogCaptureFixture) -> None:
+def test_passed_non_osd(
+    _mock_runtime: None, _mock_openqa_passed: None, caplog: LogCaptureFixture
+) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,
@@ -152,11 +155,16 @@ def test_passed_non_osd(mock_runtime: None, mock_openqa_passed: None, caplog: Lo
     assert len(messages) == 7
     assert "1 incidents loaded from qem dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard" in messages
+    assert (
+        "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard"
+        in messages
+    )
 
 
 @responses.activate
-def test_passed_post_osd_failed(mock_runtime: None, mock_openqa_exception: None, caplog: LogCaptureFixture) -> None:
+def test_passed_post_osd_failed(
+    _mock_runtime: None, _mock_openqa_exception: None, caplog: LogCaptureFixture
+) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,

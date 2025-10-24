@@ -264,7 +264,7 @@ def test_devel_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_passed_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
+def test_passed_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
