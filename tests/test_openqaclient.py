@@ -20,7 +20,7 @@ class Args(NamedTuple):
     token: str
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_osd_rsp() -> None:
     responses.add(
         responses.POST,
@@ -30,7 +30,7 @@ def fake_osd_rsp() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_failing_job_update() -> None:
     responses.add(
         responses.PATCH,

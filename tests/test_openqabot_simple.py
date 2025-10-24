@@ -8,7 +8,6 @@ from urllib.parse import ParseResult, urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot.openqabot
 import responses
@@ -29,9 +28,9 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, args: Any) -> None:
+        def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
             self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
 
@@ -45,7 +44,7 @@ def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -57,7 +56,7 @@ def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_runtime(monkeypatch: MonkeyPatch) -> None:
+def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass

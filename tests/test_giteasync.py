@@ -11,7 +11,6 @@ from urllib.parse import urljoin
 import osc.conf
 import osc.core
 import pytest
-from pytest import LogCaptureFixture, MonkeyPatch
 
 import openqabot.loader.gitea
 import responses
@@ -47,7 +46,7 @@ class Namespace(NamedTuple):
     pr_number: int
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_gitea_api() -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
@@ -65,14 +64,14 @@ def fake_gitea_api() -> None:
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_gitea_api_post_review_comment() -> None:
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
     msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_replyback() -> None:
     def reply_callback(request: Any) -> Tuple[int, list, Any]:
         return (200, [], request.body)
@@ -85,7 +84,7 @@ def fake_dashboard_replyback() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_repo() -> None:
     url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
@@ -118,8 +117,8 @@ def fake_get_multibuild_data(obs_project: str) -> str:
 
 
 def run_gitea_sync(
-    caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
     *,
     no_build_results: bool = False,
     allow_failures: bool = True,
@@ -149,7 +148,7 @@ def run_gitea_sync(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_product_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_product_repo(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -184,7 +183,9 @@ def test_sync_with_product_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPa
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback")
-def test_sync_with_product_version_from_repo_listing(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_product_version_from_repo_listing(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(caplog, monkeypatch)
 
@@ -200,7 +201,7 @@ def test_sync_with_product_version_from_repo_listing(caplog: LogCaptureFixture, 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_codestream_repo(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
     run_gitea_sync(caplog, monkeypatch)
@@ -222,7 +223,7 @@ def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: Monke
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_without_results(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_without_results(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_gitea_sync(caplog, monkeypatch, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"

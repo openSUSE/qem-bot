@@ -44,7 +44,7 @@ def test_normalize_results() -> None:
 
 
 @pytest.mark.parametrize(
-    "data,result",
+    ("data", "result"),
     [
         ([], []),
         ({}, {}),
