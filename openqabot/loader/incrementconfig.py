@@ -38,9 +38,9 @@ class IncrementConfig(NamedTuple):
     def diff_project(self) -> str:
         return self._concat_project(self.diff_project_suffix)
 
-    def build_project_url(self) -> str:
+    def build_project_url(self, base_url: str = OBS_DOWNLOAD_URL) -> str:
         base_path = self.build_project().replace(":", ":/")
-        return f"{OBS_DOWNLOAD_URL}/{base_path}"
+        return f"{base_url}/{base_path}"
 
     @staticmethod
     def from_config_entry(entry: Dict[str, str]) -> Any:

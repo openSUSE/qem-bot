@@ -187,7 +187,7 @@ def test_scheduling_with_no_openqa_jobs(caplog, fake_no_jobs, fake_product_repo,
             "FLAVOR": "Online-Increments",
             "BUILD": "139.1",
             "ARCH": arch,
-            "INCREMENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
+            "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
             "__CI_JOB_URL": ci_job_url,
         } in jobs, f"{arch} jobs created"
 
@@ -214,7 +214,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(caplog, fake_n
         "VERSION": "16.0",
         "FLAVOR": "Online-Increments",
         "BUILD": "139.1",
-        "INCREMENT_REPO": "http://download.suse.de/ibs/OBS:/PROJECT:/TEST/product",
+        "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "FOO": "bar",
     }
     for arch in ["x86_64", "aarch64", "ppc64le"]:

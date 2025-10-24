@@ -13,7 +13,7 @@ import osc.core
 
 from openqabot.openqa import openQAInterface
 
-from . import OBS_GROUP, OBS_URL
+from . import DOWNLOAD_BASE, OBS_GROUP, OBS_URL
 from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff
@@ -250,7 +250,7 @@ class IncrementApprover:
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
-            "INCREMENT_REPO": config.build_project_url() + repo_sub_path,
+            "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config.settings)

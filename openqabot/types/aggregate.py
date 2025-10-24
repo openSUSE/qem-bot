@@ -6,7 +6,7 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from .. import DOWNLOAD_BASE, QEM_DASHBOARD, SMELT_URL
+from .. import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from ..dashboard import get_json
 from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
@@ -107,11 +107,11 @@ class Aggregate(BaseConf):
                 for inc in incs:
                     if self.test_issues[issue].product.startswith("openSUSE"):
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
                         )
                     else:
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_BASE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(

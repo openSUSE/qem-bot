@@ -3,7 +3,7 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from .. import GITEA, QEM_DASHBOARD, SMELT_URL
+from .. import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
 from ..errors import NoRepoFoundError
 from ..loader import gitea
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
@@ -14,8 +14,6 @@ from .incident import Incident
 
 log = getLogger("bot.types.incidents")
 
-DOWNLOAD_BASE = "http://%REPO_MIRROR_HOST%/ibs"
-DOWNLOAD_MAINTENANCE = DOWNLOAD_BASE + "/SUSE:/Maintenance:/"
 BASE_PRIO = 50
 
 
