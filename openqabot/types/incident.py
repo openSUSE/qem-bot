@@ -147,13 +147,9 @@ class Incident:
         kgraft = False
 
         for package in packages:
-            if (
-                package.startswith("kernel-default")
-                or package.startswith("kernel-source")
-                or package.startswith("kernel-azure")
-            ):
+            if package.startswith(("kernel-default", "kernel-source", "kernel-azure")):
                 return False
-            if package.startswith("kgraft-patch-") or package.startswith("kernel-livepatch"):
+            if package.startswith(("kgraft-patch-", "kernel-livepatch")):
                 kgraft = True
 
         return kgraft

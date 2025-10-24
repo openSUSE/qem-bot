@@ -13,14 +13,13 @@ def _comment_as_dict(comment_element):
     :param comment_element: XML element that store a comment.
     :returns: A Python dictionary object.
     """
-    comment = {
+    return {
         "who": comment_element.get("who"),
         "when": datetime.strptime(comment_element.get("when"), "%Y-%m-%d %H:%M:%S %Z"),
         "id": comment_element.get("id"),
         "parent": comment_element.get("parent", None),
         "comment": comment_element.text,
     }
-    return comment
 
 
 class CommentAPI(object):

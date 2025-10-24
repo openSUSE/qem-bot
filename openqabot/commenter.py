@@ -46,9 +46,9 @@ class Commenter:
                 continue
 
             state = "none"
-            if any(j["status"] in ["running"] for j in i_jobs + u_jobs):
+            if any(j["status"] in ("running") for j in i_jobs + u_jobs):
                 log.info("%s needs to wait a bit longer", inc)
-            elif any(j["status"] not in ["passed", "softfailed"] for j in i_jobs + u_jobs):
+            elif any(j["status"] not in ("passed", "softfailed") for j in i_jobs + u_jobs):
                 log.info("There is a failed job for %s", inc)
                 state = "failed"
             else:
@@ -135,12 +135,12 @@ class Commenter:
 
             job_summary = self.__summarize_one_openqa_job(job)
             if job_summary is None:
-                groups[gl]["unfinished"] = groups[gl]["unfinished"] + 1
+                groups[gl]["unfinished"] += 1
                 continue
 
             # None vs ''
             if not job_summary:
-                groups[gl]["passed"] = groups[gl]["passed"] + 1
+                groups[gl]["passed"] += 1
                 continue
 
             # if there is something to report, hold the request

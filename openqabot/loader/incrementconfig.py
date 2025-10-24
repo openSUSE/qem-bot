@@ -80,5 +80,5 @@ class IncrementConfig(NamedTuple):
     def from_args(args: Namespace) -> List[Any]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
-        field_mapping = map(lambda field: getattr(args, field), IncrementConfig._fields)
+        field_mapping = (getattr(args, field) for field in IncrementConfig._fields)
         return [IncrementConfig(*field_mapping)]

@@ -20,6 +20,18 @@ extend-select =[
     "ERA",
     "B",
     "SIM",
+    "C4",
+    "T10",
+    "FIX",
+    "ISC",
+    "ICN",
+    "INP",
+    "PIE",
+    "T20",
+    "RSE",
+    "RET",
+    "SLF",
+    "FURB",
 ]
 
 ignore = [
