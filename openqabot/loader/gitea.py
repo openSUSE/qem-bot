@@ -112,15 +112,15 @@ def compute_repo_url_for_job_setting(
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     return ",".join(
-        map(
-            lambda p: compute_repo_url(
+        (
+            compute_repo_url(
                 base,
                 p,
                 (repo.product, repo.version, product_version),
                 repo.arch,
                 "",
-            ),
-            product_names if isinstance(product_names, list) else [product_names],
+            )
+            for p in (product_names if isinstance(product_names, list) else [product_names])
         )
     )
 
@@ -229,7 +229,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             version = next(parts, "")
             if len(version) > 0:
                 return version
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.warning("Unable to read product version from '%s': %s", url, e)
     return version
 
@@ -326,7 +326,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool) -
     else:
         try:
             multibuild_data = get_multibuild_data(obs_project)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
             return None
 
@@ -527,8 +527,5 @@ def get_incidents_from_open_prs(
             )
             for pr in open_prs
         ]
-        for future in CT.as_completed(future_inc):
-            incidents.append(future.result())
-
-    incidents = [inc for inc in incidents if inc]
-    return incidents
+        incidents = (future.result() for future in CT.as_completed(future_inc))
+        return [inc for inc in incidents if inc]

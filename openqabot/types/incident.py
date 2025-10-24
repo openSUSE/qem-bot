@@ -69,6 +69,17 @@ class Incident:
         self.revisions = None  # lazy-initialized via revisions_with_fallback()
         self.livepatch: bool = self._is_livepatch(self.packages)
 
+    @classmethod
+    def create(cls, incident_data: Dict) -> Optional["Incident"]:
+        try:
+            return cls(incident_data)
+        except EmptyChannels:
+            log.info("Project %s has empty channels - check incident in SMELT", incident_data.get("project"))
+            return None
+        except EmptyPackagesError:
+            log.info("Project %s has empty packages - check incident in SMELT", incident_data.get("project"))
+            return None
+
     def compute_revisions_for_product_repo(
         self,
         product_repo: Optional[Union[List[str], str]],
@@ -147,13 +158,9 @@ class Incident:
         kgraft = False
 
         for package in packages:
-            if (
-                package.startswith("kernel-default")
-                or package.startswith("kernel-source")
-                or package.startswith("kernel-azure")
-            ):
+            if package.startswith(("kernel-default", "kernel-source", "kernel-azure")):
                 return False
-            if package.startswith("kgraft-patch-") or package.startswith("kernel-livepatch"):
+            if package.startswith(("kgraft-patch-", "kernel-livepatch")):
                 kgraft = True
 
         return kgraft

@@ -5,7 +5,7 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
-from requests import ConnectionError, HTTPError
+from requests import ConnectionError, HTTPError  # noqa: A004
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
@@ -57,7 +57,7 @@ def get_max_revision(
             HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("%s not found -- skipping incident" % url)
+            log.info("%s not found -- skipping incident", url)
             raise NoRepoFoundError from e
         except Exception as e:
             log.exception(e)

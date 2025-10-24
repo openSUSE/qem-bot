@@ -50,7 +50,7 @@ def main():
                     apply_publiccloud_pint_image(settings)
                     if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
                         log.error("Failed to get PUBLIC_CLOUD_IMAGE_ID from %s", data)
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:  # noqa: PERF203  # pylint: disable=broad-except
             log.exception(e)
             continue
 
