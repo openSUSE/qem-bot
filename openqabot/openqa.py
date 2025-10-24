@@ -42,15 +42,15 @@ class openQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
-            log.error("openQA returned %s", e.args[-1])
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("openQA returned %s", e.args[-1])
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
             log.exception(e)
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
 
-    def handle_job_not_found(self, job_id: int):
+    def handle_job_not_found(self, job_id: int) -> None:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
@@ -70,7 +70,7 @@ class openQAInterface:
             ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         return ret
 
     @lru_cache(maxsize=512)
@@ -78,7 +78,7 @@ class openQAInterface:
         ret = []
         try:
             ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
-            ret = list(map(lambda c: {"text": c.get("text", "")}, ret))
+            ret = [{"text": c.get("text", "")} for c in ret]
         except Exception as e:  # pylint: disable=broad-except
             (_, _, status_code, *_) = e.args
             if status_code == 404:
@@ -95,7 +95,7 @@ class openQAInterface:
             ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group

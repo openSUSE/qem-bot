@@ -6,6 +6,11 @@ from xml.etree import ElementTree as ET
 
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
+try:
+    from datetime import UTC
+except ImportError:  # python <3.11 compatibility
+    from datetime.timezone import utc as UTC
+
 
 def _comment_as_dict(comment_element):
     """Convert an XML element comment into a dictionary.
@@ -13,20 +18,19 @@ def _comment_as_dict(comment_element):
     :param comment_element: XML element that store a comment.
     :returns: A Python dictionary object.
     """
-    comment = {
+    return {
         "who": comment_element.get("who"),
-        "when": datetime.strptime(comment_element.get("when"), "%Y-%m-%d %H:%M:%S %Z"),
+        "when": datetime.strptime(comment_element.get("when"), "%Y-%m-%d %H:%M:%S %Z").astimezone(UTC),
         "id": comment_element.get("id"),
         "parent": comment_element.get("parent", None),
         "comment": comment_element.text,
     }
-    return comment
 
 
 class CommentAPI(object):
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
-    def __init__(self, apiurl):
+    def __init__(self, apiurl) -> None:
         self.apiurl = apiurl
 
     def _prepare_url(self, request_id=None, project_name=None, package_name=None, query=None):
@@ -179,10 +183,7 @@ class CommentAPI(object):
         :param comments dict of id->comment dict
         :return same hash without the deleted comments
         """
-        parents = []
-        for comment in list(comments.values()):
-            if comment["parent"]:
-                parents.append(comment["parent"])
+        parents = [comment["parent"] for comment in comments.values() if comment["parent"]]
 
         for comment in list(comments.values()):
             if comment["id"] not in parents:
@@ -195,7 +196,7 @@ class CommentAPI(object):
 
         return comments
 
-    def delete_from(self, request_id=None, project_name=None, package_name=None):
+    def delete_from(self, request_id=None, project_name=None, package_name=None) -> bool:
         """Remove the comments related with a request, project or package.
 
         :param request_id: Request where to remove comments.
@@ -208,7 +209,7 @@ class CommentAPI(object):
             comments = self.delete_children(comments)
         return True
 
-    def delete_from_where_user(self, user, request_id=None, project_name=None, package_name=None):
+    def delete_from_where_user(self, user, request_id=None, project_name=None, package_name=None) -> None:
         """Remove comments where @user is mentioned.
 
         This method is used to remove notifications when a request is

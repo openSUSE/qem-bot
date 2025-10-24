@@ -8,9 +8,6 @@ from typing import Dict, List, NamedTuple, Sequence
 from openqabot.dashboard import get_json, patch, put
 
 from ..errors import (
-    EmptyChannels,
-    EmptyPackagesError,
-    EmptySettings,
     NoResultsError,
 )
 from ..types import Data
@@ -41,12 +38,9 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
 
     xs = []
     for i in incidents:
-        try:
-            xs.append(Incident(i))
-        except EmptyChannels:
-            log.info("Project %s has empty channels - check incident in SMELT", i["project"])
-        except EmptyPackagesError:
-            log.info("Project %s has empty packages - check incident in SMELT", i["project"])
+        incident = Incident.create(i)
+        if incident:
+            xs.append(incident)
 
     return xs
 
@@ -56,8 +50,8 @@ def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
         data = get_json("api/incidents", headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
-    return list(set([i["number"] for i in data]))
+        raise
+    return list({i["number"] for i in data})
 
 
 def get_incidents_approver(token: Dict[str, str]) -> List[IncReq]:
@@ -103,12 +97,13 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
         data = get_json("api/incident_settings/" + f"{number}", headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
     if "error" in data:
-        raise ValueError
+        log.warning("Incident %s contains error: %s", number, data["error"])
+        return []
 
-    ret = [
+    return [
         Data(
             number,
             d["id"],
@@ -121,14 +116,13 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
         )
         for d in data
     ]
-    return ret
 
 
 def get_incident_results(inc: int, token: Dict[str, str]):
     try:
         settings = get_incident_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    except NoResultsError:
+        raise
 
     ret = []
     for job_aggr in settings:
@@ -137,7 +131,7 @@ def get_incident_results(inc: int, token: Dict[str, str]):
             ret += data
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 
@@ -163,37 +157,35 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
         settings = get_json(url, headers=token)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
-    ret = []
     if not settings:
-        raise EmptySettings(f"Product: {data.product} on arch: {data.arch} does not have any settings")
+        log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
+        return []
 
     log.debug("Getting id for %s", pformat(data))
 
     # use last three schedule
-    for s in settings[:3]:
-        ret.append(
-            Data(
-                0,
-                s["id"],
-                data.flavor,
-                data.arch,
-                data.distri,
-                data.version,
-                s["build"],
-                data.product,
-            )
+    return [
+        Data(
+            0,
+            s["id"],
+            data.flavor,
+            data.arch,
+            data.distri,
+            data.version,
+            s["build"],
+            data.product,
         )
-
-    return ret
+        for s in settings[:3]
+    ]
 
 
 def get_aggregate_results(inc: int, token: Dict[str, str]):
     try:
         settings = get_aggregate_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    except NoResultsError:
+        raise
 
     ret = []
     for job_aggr in settings:
@@ -201,7 +193,7 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
             data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 

@@ -48,7 +48,7 @@ class OpenQABot:
             )
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
     def post_openqa(self, data) -> None:
         self.openqa.post_job(data)
@@ -67,7 +67,7 @@ class OpenQABot:
         else:
             log.info("Triggering %d products in openQA", len(post))
 
-            def poster(job):
+            def poster(job) -> None:
                 log.info("Triggering %s", str(job))
                 try:
                     self.post_openqa(job["openqa"])

@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
@@ -9,7 +8,7 @@ import pytest
 from openqabot.main import main  # SUT
 
 
-def test_help():
+def test_help() -> None:
     sys.argv += ["--help"]
     with pytest.raises(SystemExit):
         main()

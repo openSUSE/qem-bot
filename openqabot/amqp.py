@@ -21,6 +21,10 @@ build_inc_regex = re.compile(r":(\d+):.*")
 build_agg_regex = re.compile(r"\d{8}-\d+")
 
 
+def handle_aggregate(unused_build: str, unused_message) -> None:
+    return
+
+
 class AMQP(SyncRes):
     def __init__(self, args: Namespace) -> None:
         super().__init__(args)
@@ -45,7 +49,7 @@ class AMQP(SyncRes):
         self.stop()
         return 0
 
-    def stop(self):
+    def stop(self) -> None:
         if self.connection:
             log.info("Closing AMQP connection")
             self.connection.close()
@@ -64,7 +68,7 @@ class AMQP(SyncRes):
                 build_nr = match.group(0)
                 log.debug("Received AMQP message: %s", pformat(message))
                 log.info("Aggregate build %s done", build_nr)
-                return self.handle_aggregate(build_nr, message)
+                return handle_aggregate(build_nr, message)
         return None
 
     def handle_incident(self, inc_nr: int, message) -> None:
@@ -94,6 +98,3 @@ class AMQP(SyncRes):
         # Try to approve incident
         approve = Approver(self.args, inc_nr)
         approve()
-
-    def handle_aggregate(self, unused_build: str, unused_message) -> None:
-        return

@@ -44,8 +44,8 @@ _namespace = namedtuple(
 )
 
 
-@pytest.fixture(scope="function")
-def fake_gitea_api(request):
+@pytest.fixture
+def fake_gitea_api(request) -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
     issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
@@ -62,15 +62,15 @@ def fake_gitea_api(request):
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 
 
-@pytest.fixture(scope="function")
-def fake_gitea_api_post_review_comment(request):
+@pytest.fixture
+def fake_gitea_api_post_review_comment(request) -> None:
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
     msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
-@pytest.fixture(scope="function")
-def fake_dashboard_replyback():
+@pytest.fixture
+def fake_dashboard_replyback() -> None:
     def reply_callback(request):
         return (200, [], request.body)
 
@@ -82,8 +82,8 @@ def fake_dashboard_replyback():
     )
 
 
-@pytest.fixture(scope="function")
-def fake_repo():
+@pytest.fixture
+def fake_repo() -> None:
     url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
     responses.add(GET, url, body=listing)
@@ -105,7 +105,7 @@ def fake_osc_xml_parse(data: Any):
     return data  # fake_osc_http_get already returns parsed XML so just return that
 
 
-def fake_osc_get_config(override_apiurl: str):
+def fake_osc_get_config(override_apiurl: str) -> None:
     assert override_apiurl == OBS_URL
 
 
@@ -114,7 +114,7 @@ def fake_get_multibuild_data(obs_project: str):
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
 
-def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=True):
+def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=True) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
     if no_build_results:
@@ -129,7 +129,7 @@ def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=T
 
 
 @responses.activate
-def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch) -> None:
     run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -165,7 +165,7 @@ def test_sync_with_product_repo(caplog, fake_gitea_api, fake_dashboard_replyback
 @responses.activate
 def test_sync_with_product_version_from_repo_listing(
     caplog, fake_gitea_api, fake_repo, fake_dashboard_replyback, monkeypatch
-):
+) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(caplog, monkeypatch)
 
@@ -180,7 +180,7 @@ def test_sync_with_product_version_from_repo_listing(
 
 
 @responses.activate
-def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
     run_gitea_sync(caplog, monkeypatch)
@@ -201,14 +201,14 @@ def test_sync_with_codestream_repo(caplog, fake_gitea_api, fake_dashboard_replyb
 
 
 @responses.activate
-def test_sync_without_results(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch):
+def test_sync_without_results(caplog, fake_gitea_api, fake_dashboard_replyback, monkeypatch) -> None:
     run_gitea_sync(caplog, monkeypatch, True, False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages
 
 
-def test_extracting_product_name_and_version():
+def test_extracting_product_name_and_version() -> None:
     assert get_product_name("1.1.99:PullRequest:166") == ""
     assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
 
@@ -221,11 +221,11 @@ def test_extracting_product_name_and_version():
 
 
 @responses.activate
-def test_reviewing_pr(fake_gitea_api_post_review_comment):
+def test_reviewing_pr(fake_gitea_api_post_review_comment) -> None:
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345")
 
 
-def test_computing_repo_url():
+def test_computing_repo_url() -> None:
     repos = Repos("product", "1.2", "x86_64")
 
     url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")

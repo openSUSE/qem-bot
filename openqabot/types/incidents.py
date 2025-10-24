@@ -31,7 +31,7 @@ class Incidents(BaseConf):
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Incidents product: {self.product}>"
 
     @staticmethod
@@ -100,7 +100,7 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # noqa: PLR0911 # pylint: disable=too-many-return-statements
+    def _handle_incident(  # noqa: PLR0911,C901 # pylint: disable=too-many-return-statements
         self,
         inc: Incident,
         arch,
@@ -222,15 +222,13 @@ class Incidents(BaseConf):
             and not inc.livepatch
             and not flavor.endswith("Azure")
             and set(issue_dict.keys()).isdisjoint(
-                set(
-                    [
-                        "OS_TEST_ISSUES",  # standard product dir
-                        "LTSS_TEST_ISSUES",  # LTSS product dir
-                        "BASE_TEST_ISSUES",  # GA product dir SLE15+
-                        "RT_TEST_ISSUES",  # realtime kernel
-                        "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                    ]
-                )
+                {
+                    "OS_TEST_ISSUES",  # standard product dir
+                    "LTSS_TEST_ISSUES",  # LTSS product dir
+                    "BASE_TEST_ISSUES",  # GA product dir SLE15+
+                    "RT_TEST_ISSUES",  # realtime kernel
+                    "COCO_TEST_ISSUES",  # Confidential Computing kernel
+                }
             )
         ):
             log.warning(
@@ -345,5 +343,4 @@ class Incidents(BaseConf):
                             inc.id,
                             e,
                         )
-        ret = [r for r in ret if r]
-        return ret
+        return [r for r in ret if r]

@@ -5,7 +5,7 @@ import pytest
 from openqabot.types.aggregate import Aggregate
 
 
-def test_aggregate_constructor():
+def test_aggregate_constructor() -> None:
     """What is the bare minimal set of arguments
     needed by the constructor?
     """
@@ -16,7 +16,7 @@ def test_aggregate_constructor():
     Aggregate("", None, None, None, config)
 
 
-def test_aggregate_printable():
+def test_aggregate_printable() -> None:
     """Try the printable"""
     config = {}
     config["FLAVOR"] = "None"
@@ -26,7 +26,7 @@ def test_aggregate_printable():
     assert str(acc) == "<Aggregate product: hello>"
 
 
-def test_aggregate_call():
+def test_aggregate_call() -> None:
     """What is the bare minimal set of arguments
     needed by the callable?
     """
@@ -40,7 +40,7 @@ def test_aggregate_call():
 
 
 @pytest.fixture
-def request_mock(monkeypatch):
+def request_mock(monkeypatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -62,7 +62,7 @@ def request_mock(monkeypatch):
     )
 
 
-def test_aggregate_call_with_archs(request_mock):
+def test_aggregate_call_with_archs(request_mock) -> None:
     """Configure an archs to enter in the function main loop"""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -87,7 +87,7 @@ def incident_mock(monkeypatch):
         product_version: str = ""
 
     class MockIncident:
-        def __init__(self, repo, embargoed):
+        def __init__(self, repo, embargoed) -> None:
             self.livepatch = None
             self.staging = None
             self.channels = [repo]
@@ -100,7 +100,7 @@ def incident_mock(monkeypatch):
     return _func
 
 
-def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatch):
+def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatch) -> None:
     """Test with a valid incident"""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -115,7 +115,7 @@ def test_aggregate_call_with_test_issues(request_mock, incident_mock, monkeypatc
     assert len(res) == 1
 
 
-def test_aggregate_call_pc_pint(request_mock, monkeypatch):
+def test_aggregate_call_pc_pint(request_mock, monkeypatch) -> None:
     """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
     def mockreturn(settings):
@@ -135,7 +135,7 @@ def test_aggregate_call_pc_pint(request_mock, monkeypatch):
     acc(incidents=[], token=None, ci_url=None)
 
 
-def test_aggregate_call_pc_pint_with_incidents(request_mock, incident_mock, monkeypatch):
+def test_aggregate_call_pc_pint_with_incidents(request_mock, incident_mock, monkeypatch) -> None:
     """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
     def mockreturn(settings):

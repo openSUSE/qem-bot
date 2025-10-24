@@ -20,6 +20,34 @@ extend-select =[
     "ERA",
     "B",
     "SIM",
+    "C4",
+    "T10",
+    "FIX",
+    "ISC",
+    "ICN",
+    "INP",
+    "PIE",
+    "T20",
+    "RSE",
+    "RET",
+    "SLF",
+    "FURB",
+    "EXE",
+    "BLE",
+    "A",
+    "DTZ",
+    "LOG",
+    "G",
+    "C90",
+    "PERF",
+    "PGH",
+    "DOC",
+    "RUF",
+    "ARG",
+    "ANN",
+    "S",
+    "FBT",
+    "TRY",
 ]
 
 ignore = [
@@ -57,6 +85,7 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
     "B019",
+    "S101",
 ]
 
 [tool.ruff.format]

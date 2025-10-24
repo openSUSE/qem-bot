@@ -129,7 +129,7 @@ def get_json(query: str, host: str = SMELT) -> dict:
         return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def get_active_incidents() -> Set[int]:
@@ -170,7 +170,7 @@ def get_incident(incident: int):
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Unknown error for incident %s", incident)
+        log.exception("Unknown error for incident %s", incident)
         log.exception(e)
         return None
 
@@ -178,13 +178,7 @@ def get_incident(incident: int):
 
 
 def get_incidents(active: Set[int]) -> List[Any]:
-    incidents = []
-
     with CT.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
-
-        for future in CT.as_completed(future_inc):
-            incidents.append(future.result())
-
-    incidents = [inc for inc in incidents if inc]
-    return incidents
+        incidents = (future.result() for future in CT.as_completed(future_inc))
+        return [inc for inc in incidents if inc]

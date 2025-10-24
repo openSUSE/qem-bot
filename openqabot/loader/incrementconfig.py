@@ -6,7 +6,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, NamedTuple, Set
 
-from ruamel.yaml import YAML  # type: ignore
+from ruamel.yaml import YAML
 
 from .. import OBS_DOWNLOAD_URL
 from ..utils import get_yml_list
@@ -68,7 +68,7 @@ class IncrementConfig(NamedTuple):
                 IncrementConfig.from_config_entry,
                 YAML(typ="safe").load(file_path).get("product_increments", []),
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.info("Unable to load config file '%s': %s", file_path, e)
             return iter(())
 
@@ -80,5 +80,5 @@ class IncrementConfig(NamedTuple):
     def from_args(args: Namespace) -> List[Any]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
-        field_mapping = map(lambda field: getattr(args, field), IncrementConfig._fields)
+        field_mapping = (getattr(args, field) for field in IncrementConfig._fields)
         return [IncrementConfig(*field_mapping)]

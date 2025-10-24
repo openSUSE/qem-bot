@@ -33,7 +33,7 @@ def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
         return requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
@@ -44,7 +44,7 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
             log.error("Unable to POST %s: %s", url, res.text)
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
 def read_utf8(name: str) -> Any:
@@ -61,17 +61,17 @@ def read_xml(name: str) -> Any:
     return ET.parse("responses/%s.xml" % name)
 
 
-def reviews_url(repo_name: str, number: int):
+def reviews_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
     return "repos/%s/pulls/%s/reviews" % (repo_name, number)
 
 
-def changed_files_url(repo_name: str, number: int):
+def changed_files_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
     return "repos/%s/pulls/%s/files" % (repo_name, number)
 
 
-def comments_url(repo_name: str, number: int):
+def comments_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return "repos/%s/issues/%s/comments" % (repo_name, number)
 
@@ -112,15 +112,15 @@ def compute_repo_url_for_job_setting(
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     return ",".join(
-        map(
-            lambda p: compute_repo_url(
+        (
+            compute_repo_url(
                 base,
                 p,
                 (repo.product, repo.version, product_version),
                 repo.arch,
                 "",
-            ),
-            product_names if isinstance(product_names, list) else [product_names],
+            )
+            for p in (product_names if isinstance(product_names, list) else [product_names])
         )
     )
 
@@ -152,7 +152,7 @@ def review_pr(
     msg: str,
     commit_id: str,
     approve: bool = True,
-):
+) -> None:
     if GIT_REVIEW_BOT:
         review_url = comments_url(repo_name, pr_number)
         review_cmd = f"@{GIT_REVIEW_BOT}: "
@@ -229,7 +229,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             version = next(parts, "")
             if len(version) > 0:
                 return version
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log.warning("Unable to read product version from '%s': %s", url, e)
     return version
 
@@ -270,7 +270,7 @@ def add_build_result(
     successful_packages: Set[str],
     unpublished_repos: Set[str],
     failed_packages: Set[str],
-):
+) -> None:
     state = res.get("state")
     project = res.get("project")
     product_name = get_product_name(project)
@@ -326,7 +326,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, dry: bool) -
     else:
         try:
             multibuild_data = get_multibuild_data(obs_project)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
             return None
 
@@ -353,7 +353,7 @@ def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
+def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) -> None:
     successful_packages = set()
     unpublished_repos = set()
     failed_packages = set()
@@ -403,7 +403,7 @@ def add_comments_and_referenced_build_results(
     incident: Dict[str, Any],
     comments: List[Any],
     dry: bool,
-):
+) -> None:
     for comment in reversed(comments):
         body = comment["body"]
         user_name = comment["user"]["username"]
@@ -412,7 +412,9 @@ def add_comments_and_referenced_build_results(
             break
 
 
-def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool):
+def add_packages_from_patchinfo(
+    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+) -> None:
     if dry:
         patch_info = read_xml("patch-info")
     else:
@@ -421,7 +423,7 @@ def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str],
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool):
+def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
@@ -497,7 +499,7 @@ def make_incident_from_pr(
             return None
 
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Unable to process PR %s", pr.get("number", "?"))
+        log.exception("Unable to process PR %s", pr.get("number", "?"))
         log.exception(e)
         return None
     return incident
@@ -527,8 +529,5 @@ def get_incidents_from_open_prs(
             )
             for pr in open_prs
         ]
-        for future in CT.as_completed(future_inc):
-            incidents.append(future.result())
-
-    incidents = [inc for inc in incidents if inc]
-    return incidents
+        incidents = (future.result() for future in CT.as_completed(future_inc))
+        return [inc for inc in incidents if inc]

@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: MIT
 import logging
 from collections import namedtuple
+from typing import Any, List
 from urllib.parse import urlparse
 
 import pytest
+from _pytest.logging import LogCaptureFixture
+from pytest import MonkeyPatch
 
 import openqabot.incsyncres
 import responses
@@ -15,15 +18,15 @@ namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
 
 @pytest.fixture
-def get_a_i(monkeypatch):
-    def fake(*args):
+def get_a_i(monkeypatch: MonkeyPatch) -> None:
+    def fake(*args: Any) -> List[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
 
 
 @responses.activate
-def test_clone_dry(get_a_i, caplog):
+def test_clone_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -63,7 +66,7 @@ def test_clone_dry(get_a_i, caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -82,7 +85,7 @@ def test_clone_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_nogroup_dry(get_a_i, caplog):
+def test_nogroup_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -121,7 +124,7 @@ def test_nogroup_dry(get_a_i, caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -139,7 +142,7 @@ def test_nogroup_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_devel_fast_dry(get_a_i, caplog):
+def test_devel_fast_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -179,7 +182,7 @@ def test_devel_fast_dry(get_a_i, caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -198,7 +201,7 @@ def test_devel_fast_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_devel_dry(get_a_i, caplog):
+def test_devel_dry(get_a_i: None, caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -242,7 +245,7 @@ def test_devel_dry(get_a_i, caplog):
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -261,7 +264,7 @@ def test_devel_dry(get_a_i, caplog):
 
 
 @responses.activate
-def test_passed_dry(get_a_i, caplog):
+def test_passed_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -305,7 +308,7 @@ def test_passed_dry(get_a_i, caplog):
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 

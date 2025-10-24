@@ -4,7 +4,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import List, Set, Union
 
-from ruamel.yaml import YAML  # type: ignore
+from ruamel.yaml import YAML
 
 from ..errors import NoTestIssues
 from ..types import Data
@@ -38,7 +38,7 @@ def load_metadata(
         try:
             settings = data.get("settings")
         except AttributeError:
-            log.error("The YAML file '%s' contains no valid data for bot settings.", p)
+            log.exception("The YAML file '%s' contains no valid data for bot settings.", p)
             continue
 
         if "product" not in data:
@@ -101,8 +101,7 @@ def read_products(path: Path) -> List[Data]:
             log.info("Skipping config %s with no %s settings", str(p), str(e))
             continue
 
-        for arch in data["aggregate"]["archs"]:
-            ret.append(Data(0, 0, flavor, arch, distri, version, "", product))
+        ret.extend(Data(0, 0, flavor, arch, distri, version, "", product) for arch in data["aggregate"]["archs"])
 
     return ret
 
