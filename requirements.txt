@@ -4,3 +4,4 @@ pika
 requests
 ruamel.yaml
 jsonschema
+lxml

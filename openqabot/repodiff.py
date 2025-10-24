@@ -3,7 +3,6 @@
 import gzip
 import json
 import re
-import xml.etree.ElementTree as ET
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
@@ -29,6 +28,16 @@ name_tag = ns + "name"
 version_tag = ns + "version"
 arch_tag = ns + "arch"
 primary_re = re.compile(r".*-primary.xml(?:.gz)?$")
+
+
+try:
+    import lxml.etree as ET
+
+    log.info("Using lxml for XML parsing when computing repo diff")
+except ImportError:
+    import xml.etree.ElementTree as ET
+
+    log.warning("Using built-in XML parsing when computing repo diff")
 
 
 class Package(NamedTuple):
