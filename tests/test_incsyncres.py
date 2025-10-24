@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot.incsyncres
 import responses
@@ -23,7 +22,7 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def get_a_i(monkeypatch: MonkeyPatch) -> None:
+def get_a_i(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any) -> List[int]:
         return [100]
 

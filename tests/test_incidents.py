@@ -4,7 +4,6 @@
 from typing import Any, Dict, List, Optional
 
 import pytest
-from pytest import MonkeyPatch
 
 import responses
 from openqabot.types import ArchVer, Repos
@@ -133,7 +132,7 @@ def test_incidents_call_with_issues() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch: MonkeyPatch) -> None:
+def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -351,7 +350,7 @@ class MyIncident_4(MyIncident_3):
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_public_cloud_pint_query(monkeypatch: MonkeyPatch) -> None:
+def test_incidents_call_public_cloud_pint_query(monkeypatch: pytest.MonkeyPatch) -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 

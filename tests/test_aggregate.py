@@ -3,7 +3,6 @@
 from typing import Any, Callable, Dict, List, NamedTuple
 
 import pytest
-from pytest import MonkeyPatch
 
 from openqabot.types.aggregate import Aggregate
 
@@ -43,7 +42,7 @@ def test_aggregate_call() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch: MonkeyPatch) -> None:
+def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -120,7 +119,7 @@ def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any]) -> N
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint(monkeypatch: MonkeyPatch) -> None:
+def test_aggregate_call_pc_pint(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
     def mockreturn(_settings: Any) -> Dict[str, str]:
@@ -141,7 +140,9 @@ def test_aggregate_call_pc_pint(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint_with_incidents(incident_mock: Callable[..., Any], monkeypatch: MonkeyPatch) -> None:
+def test_aggregate_call_pc_pint_with_incidents(
+    incident_mock: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
     def mockreturn(_settings: Any) -> Dict[str, str]:
