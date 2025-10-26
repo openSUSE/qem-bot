@@ -3,7 +3,7 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -27,7 +27,7 @@ def get_yml_list(path: Path) -> List[Path]:
     return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
 
 
-def walk(inc):
+def walk(inc: Union[List[Any], Dict[str, Any]]) -> Union[List[Any], Dict[str, Any]]:
     if isinstance(inc, list):
         for i, j in enumerate(inc):
             inc[i] = walk(j)
@@ -67,7 +67,7 @@ def normalize_results(result: str) -> str:
     return "failed"
 
 
-def compare_incident_data(inc: Data, message) -> bool:
+def compare_incident_data(inc: Data, message: Dict[str, Any]) -> bool:
     for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION"):
         if key in message and getattr(inc, key.lower()) != message[key]:
             return False
