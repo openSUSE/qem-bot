@@ -5,6 +5,8 @@ import logging
 from collections import namedtuple
 from urllib.parse import urlparse
 
+from _pytest.logging import LogCaptureFixture
+
 import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
@@ -18,7 +20,7 @@ fake_job_done = fake_method("suse.openqa.job.done")
 
 
 @responses.activate
-def test_handling_incident(caplog) -> None:
+def test_handling_incident(caplog: LogCaptureFixture) -> None:
     # define response for get_incident_settings_data
     data = [
         {
@@ -77,7 +79,7 @@ def test_handling_incident(caplog) -> None:
 
 
 @responses.activate
-def test_handling_aggregate(caplog) -> None:
+def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 
