@@ -1,6 +1,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from typing import Any, Callable, Dict, List, NamedTuple
+
 import pytest
+from pytest import MonkeyPatch
 
 from openqabot.types.aggregate import Aggregate
 
@@ -40,7 +43,7 @@ def test_aggregate_call() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch) -> None:
+def request_mock(monkeypatch: MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -50,10 +53,10 @@ def request_mock(monkeypatch) -> None:
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
-        def json():
+        def json() -> List[Dict[str, Any]]:
             return [{}]
 
-    def mock_get(*_args, **_kwargs):
+    def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr(
@@ -75,11 +78,10 @@ def test_aggregate_call_with_archs() -> None:
 
 
 @pytest.fixture
-def incident_mock():
+def incident_mock() -> Callable[..., Any]:
     """Simulate an incident class, reimplementing it in the simplest
     possible way that is accepted by Aggregate
     """
-    from typing import NamedTuple
 
     class Repos(NamedTuple):
         product: str
@@ -88,13 +90,13 @@ def incident_mock():
         product_version: str = ""
 
     class MockIncident:
-        def __init__(self, repo, embargoed) -> None:
+        def __init__(self, repo: Repos, embargoed: bool) -> None:
             self.livepatch = None
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
 
-    def _func(product, version, arch, embargoed=False):
+    def _func(product: str, version: str, arch: str, embargoed: bool = False) -> MockIncident:
         repo = Repos(product=product, version=version, arch=arch)
         return MockIncident(repo, embargoed=embargoed)
 
@@ -102,7 +104,7 @@ def incident_mock():
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_with_test_issues(incident_mock) -> None:
+def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any]) -> None:
     """Test with a valid incident"""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -118,10 +120,10 @@ def test_aggregate_call_with_test_issues(incident_mock) -> None:
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint(monkeypatch) -> None:
+def test_aggregate_call_pc_pint(monkeypatch: MonkeyPatch) -> None:
     """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
-    def mockreturn(_settings):
+    def mockreturn(_settings: Any) -> Dict[str, str]:
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
 
     monkeypatch.setattr(
@@ -139,10 +141,10 @@ def test_aggregate_call_pc_pint(monkeypatch) -> None:
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint_with_incidents(incident_mock, monkeypatch) -> None:
+def test_aggregate_call_pc_pint_with_incidents(incident_mock: Callable[..., Any], monkeypatch: MonkeyPatch) -> None:
     """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
 
-    def mockreturn(_settings):
+    def mockreturn(_settings: Any) -> Dict[str, str]:
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
 
     monkeypatch.setattr(
