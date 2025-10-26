@@ -12,6 +12,7 @@ ruff:
 
 .PHONY: tidy
 tidy:
+	ruff check --fix
 	ruff format
 
 .PHONY: test-with-coverage
