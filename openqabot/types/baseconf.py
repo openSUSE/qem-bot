@@ -12,8 +12,8 @@ class BaseConf(metaclass=ABCMeta):
         product: str,
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
-        settings,
-        _config,  # Consider to remove and adapt code
+        settings: Dict[str, Any],
+        _config: Dict[str, Any],  # Consider to remove and adapt code
     ) -> None:
         self.product = product
         self.product_repo = product_repo
@@ -31,7 +31,7 @@ class BaseConf(metaclass=ABCMeta):
         pass
 
     @abstractstaticmethod
-    def normalize_repos(config):
+    def normalize_repos(config: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
     def filter_embargoed(self, flavor: str) -> bool:
