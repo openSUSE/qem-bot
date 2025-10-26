@@ -230,7 +230,7 @@ class IncrementApprover:
     def _extra_builds_for_additional_builds(
         self, package_diff: Set[Package], config: IncrementConfig, build_info: BuildInfo
     ) -> List[Dict[str, str]]:
-        def handle_package(p):
+        def handle_package(p: Package) -> Optional[Dict[str, str]]:
             return self._extra_builds_for_package(p, config, build_info)
 
         extra_builds = map(handle_package, package_diff)
