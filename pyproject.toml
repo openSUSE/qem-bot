@@ -47,6 +47,7 @@ extend-select =[
     "PGH",
     "ARG",
     "RUF",
+    "ANN",
 ]
 
 ignore = [
