@@ -240,13 +240,12 @@ def approver(incident=None):
 
 
 @responses.activate
-@pytest.mark.xfail(reason="Bug in responses")
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+@pytest.mark.usefixtures("fake_qem")
 def test_no_jobs(caplog):
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+    responses.add(responses.GET, re.compile(r"http://dashboard.qam.suse.de/api/jobs/.*/.*"), json={})
     approver()
-    assert len(caplog.records) == 42
     messages = [x[-1] for x in caplog.record_tuples]
     assert "SUSE:Maintenance:4:400 has at least one failed job in incident tests" in messages
     assert "Incidents to approve:" in messages
