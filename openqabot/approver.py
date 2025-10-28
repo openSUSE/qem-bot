@@ -66,16 +66,14 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
     return False
 
 
-def sanitize_comment_text(
-    text,
-):
+def sanitize_comment_text(text: str) -> str:
     text = "".join(x for x in text if x in string.printable)
     text = text.replace("\r", " ").replace("\n", " ")
     return text.strip()
 
 
 class Approver:
-    def __init__(self, args: Namespace, single_incident=None) -> None:
+    def __init__(self, args: Namespace, single_incident: Optional[int] = None) -> None:
         self.dry = args.dry
         self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
         if single_incident is None:
