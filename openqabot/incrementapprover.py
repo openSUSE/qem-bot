@@ -50,7 +50,7 @@ class IncrementApprover:
         self.args = args
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
-        self.repo_diff = None
+        self.repo_diff = {}
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
@@ -263,13 +263,15 @@ class IncrementApprover:
         base_params.update(config.settings)
         extra_params = []
         if config.diff_project_suffix != "none":
+            build_project = config.build_project() + repo_sub_path
             diff_project = config.diff_project()
-            if self.repo_diff is None:
+            diff_key = ":".join([build_project, diff_project])
+            repo_diff = self.repo_diff.get(diff_key)
+            if repo_diff is None:
                 log.debug("Comuting diff to project %s", diff_project)
-                self.repo_diff = RepoDiff(self.args).compute_diff(diff_project, config.build_project() + repo_sub_path)[
-                    0
-                ]
-            relevant_diff = self.repo_diff[build_info.arch] | self.repo_diff["noarch"]
+                repo_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
+                self.repo_diff[diff_key] = repo_diff
+            relevant_diff = repo_diff[build_info.arch] | repo_diff["noarch"]
             # schedule base params if package filter is empty for matching
             if IncrementApprover._match_packages(relevant_diff, config.packages):
                 extra_params.append({})
@@ -319,5 +321,4 @@ class IncrementApprover:
         for config in self.config:
             request = self._find_request_on_obs(config)
             error_count += self._process_request_for_config(request, config)
-            self.repo_diff = None
         return error_count
