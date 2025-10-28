@@ -47,7 +47,7 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
         raise e
 
 
-def read_utf8(name: str) -> Any:
+def read_utf8(name: str) -> str:
     with open("responses/%s" % name, "r", encoding="utf8") as utf8:
         return utf8.read()
 
@@ -57,7 +57,7 @@ def read_json(name: str) -> Any:
         return json.loads(json_file.read())
 
 
-def read_xml(name: str) -> Any:
+def read_xml(name: str) -> ET.ElementTree:
     return ET.parse("responses/%s.xml" % name)
 
 
@@ -169,12 +169,12 @@ def review_pr(
     post_json(review_url, token, review_data)
 
 
-def get_name(review: Dict[str, Any], of: str, via: str):
+def get_name(review: Dict[str, Any], of: str, via: str) -> str:
     entity = review.get(of)
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: Dict[str, Any], users: List[str]):
+def is_review_requested_by(review: Dict[str, Any], users: List[str]) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -229,7 +229,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             version = next(parts, "")
             if len(version) > 0:
                 return version
-    except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
+    except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
         log.warning("Unable to read product version from '%s': %s", url, e)
     return version
 
@@ -309,7 +309,7 @@ def add_build_result(
             failed_packages.add(status.get("package"))
 
 
-def get_multibuild_data(obs_project: str):
+def get_multibuild_data(obs_project: str) -> str:
     r = MultibuildFlavorResolver(OBS_URL, obs_project, "000productcompose")
     return r.get_multibuild_data()
 
@@ -449,7 +449,7 @@ def make_incident_from_pr(
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-):
+) -> Optional[Dict[str, Any]]:
     log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
@@ -506,12 +506,12 @@ def make_incident_from_pr(
 
 
 def get_incidents_from_open_prs(
-    open_prs: Set[int],
+    open_prs: List[Dict[str, Any]],
     token: Dict[str, str],
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> List[Any]:
+) -> List[Dict[str, Any]]:
     incidents = []
 
     # configure osc to be able to request build info from OBS
