@@ -37,6 +37,13 @@ class BuildInfo(NamedTuple):
     def __str__(self):
         return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
+    def string_with_params(self, params: Dict[str, str]) -> str:
+        version = params.get("VERSION", self.version)
+        flavor = params.get("FLAVOR", self.flavor)
+        arch = params.get("ARCH", self.arch)
+        build = params.get("BUILD", self.build)
+        return f"{self.product}v{version} build {build}@{arch} of flavor {flavor}"
+
 
 class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
@@ -96,14 +103,14 @@ class IncrementApprover:
         return res
 
     def _check_openqa_jobs(
-        self, results: List[Dict[str, Dict[str, Dict[str, Any]]]], build_info: BuildInfo
+        self, results: List[Dict[str, Dict[str, Dict[str, Any]]]], build_info: BuildInfo, params: List[Dict[str, str]]
     ) -> Optional[bool]:
         actual_states = set(next((res.keys() for res in results), []))
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
                 "Skipping approval, there are no relevant jobs on openQA for %s",
-                build_info,
+                build_info.string_with_params(params[0] if len(params) > 0 else {}),
             )
             return None
         if len(pending_states):
@@ -274,9 +281,9 @@ class IncrementApprover:
         return [*(merge_dicts(base_params, p) for p in extra_params)]
 
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:
-        log.info("Scheduling jobs for %s", build_info)
         error_count = 0
         for p in params:
+            log.info("Scheduling jobs for %s", build_info.string_with_params(p))
             if self.args.dry:
                 log.info(p)
                 continue
@@ -298,7 +305,7 @@ class IncrementApprover:
             if self.args.reschedule:
                 error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
-            openqa_jobs_ready = self._check_openqa_jobs(res, build_info)
+            openqa_jobs_ready = self._check_openqa_jobs(res, build_info, params)
             if openqa_jobs_ready is None and self.args.schedule:
                 error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
