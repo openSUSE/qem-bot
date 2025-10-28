@@ -4,6 +4,7 @@ from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger
 from os import environ
+from typing import Any, Dict, List
 
 from openqabot.dashboard import put
 
@@ -31,7 +32,7 @@ class OpenQABot:
         self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")
 
-    def post_qem(self, data, api) -> None:
+    def post_qem(self, data: Dict[str, Any], api: str) -> None:
         if not self.openqa:
             log.warning(
                 "No valid openQA configuration specified: '%s' not posted to dashboard",
@@ -50,12 +51,12 @@ class OpenQABot:
             log.exception(e)
             raise e
 
-    def post_openqa(self, data) -> None:
+    def post_openqa(self, data: Dict[str, Any]) -> None:
         self.openqa.post_job(data)
 
-    def __call__(self):
+    def __call__(self) -> int:
         log.info("Starting bot mainloop")
-        post = []
+        post: List[Dict[str, Any]] = []
         for worker in self.workers:
             post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
 
@@ -67,7 +68,7 @@ class OpenQABot:
         else:
             log.info("Triggering %d products in openQA", len(post))
 
-            def poster(job) -> None:
+            def poster(job: Dict[str, Any]) -> None:
                 log.info("Triggering %s", str(job))
                 try:
                     self.post_openqa(job["openqa"])
