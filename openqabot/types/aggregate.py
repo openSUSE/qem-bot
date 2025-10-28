@@ -11,14 +11,10 @@ from ..dashboard import get_json
 from ..errors import NoTestIssues, SameBuildExists
 from ..loader.repohash import merge_repohash
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from ..utc import UTC
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
-
-try:
-    from datetime import UTC
-except ImportError:  # python <3.11 compatibility
-    from datetime.timezone import utc as UTC
 
 log = getLogger("bot.types.aggregate")
 

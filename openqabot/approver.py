@@ -28,12 +28,7 @@ from .loader.qem import (
     get_incidents_approver,
     get_single_incident,
 )
-
-try:
-    from datetime import UTC
-except ImportError:  # python <3.11 compatibility
-    from datetime.timezone import utc as UTC
-
+from .utc import UTC
 
 log = getLogger("bot.approver")
 
