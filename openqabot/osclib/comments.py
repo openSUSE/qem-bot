@@ -6,10 +6,7 @@ from xml.etree import ElementTree as ET
 
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
-try:
-    from datetime import UTC
-except ImportError:  # python <3.11 compatibility
-    from datetime.timezone import utc as UTC
+from ..utc import UTC
 
 
 def _comment_as_dict(comment_element):
