@@ -3,7 +3,8 @@
 from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, List, Optional, Union
 
-from .. import DEPRIORITIZE_LIMIT
+from openqabot import DEPRIORITIZE_LIMIT
+
 from .incident import Incident
 
 

@@ -8,9 +8,10 @@ import requests
 from defusedxml import ElementTree as ET
 from requests.exceptions import RetryError
 
-from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
-from ..errors import NoRepoFoundError
-from ..utils import retry5 as retried_requests
+from openqabot import OBS_DOWNLOAD_URL, OBS_PRODUCTS
+from openqabot.errors import NoRepoFoundError
+from openqabot.utils import retry5 as retried_requests
+
 from . import gitea
 
 log = getLogger("bot.loader.repohash")

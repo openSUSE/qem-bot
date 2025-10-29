@@ -17,9 +17,9 @@ from defusedxml import ElementTree
 from defusedxml.ElementTree import parse
 from osc.core import MultibuildFlavorResolver
 
-from .. import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
-from ..types import Repos
-from ..utils import retry10 as requests
+from openqabot import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
+from openqabot.types import Repos
+from openqabot.utils import retry10 as requests
 
 log = getLogger("bot.loader.gitea")
 

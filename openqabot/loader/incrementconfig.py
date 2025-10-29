@@ -10,8 +10,8 @@ from typing import Dict, Iterator, List, Set
 
 from ruamel.yaml import YAML
 
-from .. import OBS_DOWNLOAD_URL
-from ..utils import get_yml_list
+from openqabot import OBS_DOWNLOAD_URL
+from openqabot.utils import get_yml_list
 
 log = getLogger("bot.increment_config")
 

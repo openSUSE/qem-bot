@@ -6,11 +6,11 @@ from typing import List, Set, Union
 
 from ruamel.yaml import YAML
 
-from ..errors import NoTestIssues
-from ..types import Data
-from ..types.aggregate import Aggregate
-from ..types.incidents import Incidents
-from ..utils import get_yml_list
+from openqabot.errors import NoTestIssues
+from openqabot.types import Data
+from openqabot.types.aggregate import Aggregate
+from openqabot.types.incidents import Incidents
+from openqabot.utils import get_yml_list
 
 log = getLogger("bot.loader.config")
 
