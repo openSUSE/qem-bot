@@ -101,6 +101,7 @@ extend-select =[
     "COM", # https://docs.astral.sh/ruff/rules/#flake8-commas-com
     "CPY", # https://docs.astral.sh/ruff/rules/#flake8-copyright-cpy
     "EM", # https://docs.astral.sh/ruff/rules/#flake8-errmsg-em
+    "INT", # https://docs.astral.sh/ruff/rules/#flake8-gettext-int
 ]
 
 ignore = [
