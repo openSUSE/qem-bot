@@ -3,8 +3,7 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from collections import namedtuple
-from typing import Any, Dict, List, NoReturn, Set
+from typing import Any, Dict, List, NamedTuple, NoReturn, Set
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -17,19 +16,16 @@ from openqabot import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqabot import OpenQABot
 
-Namespace = namedtuple(
-    "Namespace",
-    [
-        "dry",
-        "ignore_onetime",
-        "token",
-        "singlearch",
-        "openqa_instance",
-        "configs",
-        "disable_aggregates",
-        "disable_incidents",
-    ],
-)
+
+class Namespace(NamedTuple):
+    dry: bool
+    ignore_onetime: bool
+    token: str
+    singlearch: str
+    openqa_instance: str
+    configs: str
+    disable_aggregates: bool
+    disable_incidents: bool
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import json
 import logging
-from collections import namedtuple
+from typing import NamedTuple
 from urllib.parse import urlparse
 
 from _pytest.logging import LogCaptureFixture
@@ -11,8 +11,16 @@ import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
 
-namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url", "gitea_token"])
-args = namespace(
+
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
+    url: str
+    gitea_token: str
+
+
+args = Namespace(
     dry=True,
     token="ToKeN",  # noqa: S106
     openqa_instance=urlparse("http://instance.qa"),
@@ -21,8 +29,12 @@ args = namespace(
 )
 amqp = AMQP(args)
 
-fake_method = namedtuple("Method", ["routing_key"])
-fake_job_done = fake_method("suse.openqa.job.done")
+
+class FakeMethod(NamedTuple):
+    routing_key: str
+
+
+fake_job_done = FakeMethod("suse.openqa.job.done")
 
 
 @responses.activate

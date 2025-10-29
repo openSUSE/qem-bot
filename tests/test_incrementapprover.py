@@ -4,9 +4,8 @@
 
 import logging
 import os
-from collections import namedtuple
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, NamedTuple, Optional, Tuple
 from urllib.parse import urlparse
 
 import osc.conf
@@ -23,37 +22,39 @@ from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
 from responses import GET
 
+
 # Fake Namespace for IncrementApprover initialization
-_namespace = namedtuple(
-    "Namespace",
-    (
-        "dry",
-        "token",
-        "openqa_instance",
-        "accepted",
-        "request_id",
-        "project_base",
-        "build_project_suffix",
-        "diff_project_suffix",
-        "distri",
-        "version",
-        "flavor",
-        "schedule",
-        "reschedule",
-        "build_listing_sub_path",
-        "build_regex",
-        "product_regex",
-        "fake_data",
-        "increment_config",
-        "packages",
-        "archs",
-        "settings",
-        "additional_builds",
-    ),
-)
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
+    accepted: bool
+    request_id: int
+    project_base: str
+    build_project_suffix: str
+    diff_project_suffix: str
+    distri: str
+    version: str
+    flavor: str
+    schedule: bool
+    reschedule: bool
+    build_listing_sub_path: str
+    build_regex: str
+    product_regex: str
+    fake_data: bool
+    increment_config: str
+    packages: list
+    archs: set
+    settings: dict
+    additional_builds: list
+
 
 # define fake data
-ReviewState = namedtuple("ReviewState", ("state", "by_group"))
+class ReviewState(NamedTuple):
+    state: str
+    by_group: str
+
+
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 
 
@@ -131,7 +132,7 @@ def prepare_approver(
     monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
     monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
-    args = _namespace(
+    args = Namespace(
         dry=False,
         token="not-secret",
         openqa_instance=urlparse("http://openqa-instance"),
@@ -375,8 +376,13 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
 
 
 def test_config_parsing_from_args() -> None:
-    minimal_ns = namedtuple("Namespace", ("increment_config", "distri", "version", "flavor"))
-    config = IncrementConfig.from_args(minimal_ns(None, "sle", "16.0", "Online-Increments"))
+    class MinimalNs(NamedTuple):
+        increment_config: str
+        distri: str
+        version: str
+        flavor: str
+
+    config = IncrementConfig.from_args(MinimalNs(None, "sle", "16.0", "Online-Increments"))
     assert len(config) == 1
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"

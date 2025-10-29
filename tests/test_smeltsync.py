@@ -18,7 +18,7 @@ from openqabot.smeltsync import SMELTSync
 from responses import matchers
 
 # Fake Namespace for SyncRes initialization
-_namespace = namedtuple("Namespace", ("dry", "token", "retry"))
+_namespace = namedtuple("Namespace", ("dry", "token", "retry"))  # noqa: PYI024
 
 
 @pytest.fixture(scope="function")
