@@ -6,7 +6,7 @@ from argparse import Namespace
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
@@ -17,7 +17,7 @@ log = getLogger("bot.smeltsync")
 class SMELTSync:
     def __init__(self, args: Namespace) -> None:
         self.dry: bool = args.dry
-        self.token: Dict[str, str] = {"Authorization": "Token " + args.token}
+        self.token: dict[str, str] = {"Authorization": "Token " + args.token}
         self.incidents = get_incidents(get_active_incidents())
         self.retry = args.retry
 
@@ -34,7 +34,7 @@ class SMELTSync:
         return update_incidents(self.token, data, retry=self.retry)
 
     @staticmethod
-    def _review_rrequest(request_set: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
         valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
@@ -42,31 +42,31 @@ class SMELTSync:
         return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
-    def _is_inreview(rr_number: Dict[str, Any]) -> bool:
-        if rr_number["reviewSet"]:
+    def _is_inreview(rr_number: dict[str, Any]) -> bool:
+        if rr_number["reviewset"]:
             return rr_number["status"]["name"] == "review"
         return False
 
     @staticmethod
-    def _is_revoked(rr_number: Dict[str, Any]) -> bool:
-        if rr_number["reviewSet"]:
+    def _is_revoked(rr_number: dict[str, Any]) -> bool:
+        if rr_number["reviewset"]:
             return rr_number["status"]["name"] == "revoked"
         return False
 
     @staticmethod
-    def _is_accepted(rr_number: Dict[str, Any]) -> bool:
+    def _is_accepted(rr_number: dict[str, Any]) -> bool:
         return rr_number["status"]["name"] == "accepted" or rr_number["status"]["name"] == "new"
 
     @staticmethod
-    def _has_qam_review(rr_number: Dict[str, Any]) -> bool:
-        if not rr_number["reviewSet"]:
+    def _has_qam_review(rr_number: dict[str, Any]) -> bool:
+        if not rr_number["reviewset"]:
             return False
-        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+        rr = (r for r in rr_number["reviewset"] if r["assignedByGroup"])
         review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
         return bool(review) and review[0]["status"]["name"] in {"review", "new"}
 
     @classmethod
-    def _create_record(cls, inc: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_record(cls, inc: dict[str, Any]) -> dict[str, Any]:
         incident = {}
         incident["isActive"] = True
 
@@ -103,5 +103,5 @@ class SMELTSync:
         return incident
 
     @classmethod
-    def _create_list(cls, incidents: List[Any]) -> List[Dict[str, Any]]:
+    def _create_list(cls, incidents: list[Any]) -> list[dict[str, Any]]:
         return [cls._create_record(inc) for inc in incidents]

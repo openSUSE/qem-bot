@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
@@ -12,12 +12,12 @@ from openqabot.types.baseconf import BaseConf, Incident
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        _incidents: List[Incident],
-        _token: Dict[str, str],
-        _ci_url: Optional[str],
+        _incidents: list[Incident],
+        _token: dict[str, str],
+        _ci_url: str | None,
         *,
         _ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return [{"foo": "bar"}]
 
     @staticmethod

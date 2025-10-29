@@ -6,7 +6,7 @@ import datetime
 from collections import defaultdict
 from itertools import chain
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from openqabot import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
@@ -26,10 +26,10 @@ class Aggregate(BaseConf):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-        settings: Dict[str, Any],
-        config: Dict[str, Any],
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+        settings: dict[str, Any],
+        config: dict[str, Any],
     ) -> None:
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavor = config["FLAVOR"]
@@ -38,7 +38,7 @@ class Aggregate(BaseConf):
         self.test_issues = self.normalize_repos(config)
 
     @staticmethod
-    def normalize_repos(config: Dict[str, Any]) -> Dict[str, ProdVer]:
+    def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
         try:
             repos = {
                 key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
@@ -63,16 +63,16 @@ class Aggregate(BaseConf):
 
     def __call__(  # noqa: C901
         self,
-        incidents: List[Incident],
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        incidents: list[Incident],
+        token: dict[str, str],
+        ci_url: str | None,
         *,
         ignore_onetime: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         ret = []
 
         for arch in self.archs:
-            full_post: Dict["str", Any] = {}
+            full_post: dict[str, Any] = {}
             full_post["openqa"] = {}
             full_post["qem"] = {}
             full_post["qem"]["incidents"] = []

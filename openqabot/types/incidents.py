@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
 from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
 from openqabot.errors import NoRepoFoundError
@@ -24,11 +24,11 @@ class Incidents(BaseConf):
     def __init__(  # noqa: PLR0917 too-many-positional-arguments
         self,
         product: str,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-        settings: Dict[str, Any],
-        config: Dict[str, Any],
-        extrasettings: Set[str],
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+        settings: dict[str, Any],
+        config: dict[str, Any],
+        extrasettings: set[str],
     ) -> None:
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
@@ -44,7 +44,7 @@ class Incidents(BaseConf):
         return ProdVer(channel_parts[0], *version_parts)
 
     @staticmethod
-    def normalize_repos(config: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
         ret = {}
         for flavor, data in config.items():
             ret[flavor] = {}
@@ -60,13 +60,13 @@ class Incidents(BaseConf):
         return ret
 
     @staticmethod
-    def _repo_osuse(chan: Repos) -> Union[Tuple[str, str, str], Tuple[str, str]]:
+    def _repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
         if chan.product == "openSUSE-SLE":
             return chan.product, chan.version
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
+    def _is_scheduled_job(token: dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
             jobs = retried_requests.get(
@@ -108,12 +108,12 @@ class Incidents(BaseConf):
         inc: Incident,
         arch: str,
         flavor: str,
-        data: Dict[str, Any],
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        data: dict[str, Any],
+        token: dict[str, str],
+        ci_url: str | None,
         *,
         ignore_onetime: bool,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         if inc.type == "git" and not inc.ongoing:
             log.info(
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
@@ -128,7 +128,7 @@ class Incidents(BaseConf):
                 inc.id,
             )
             return None
-        full_post: Dict[str, Any] = {}
+        full_post: dict[str, Any] = {}
         full_post["api"] = "api/incident_settings"
         full_post["qem"] = {}
         full_post["openqa"] = {}
@@ -321,12 +321,12 @@ class Incidents(BaseConf):
 
     def __call__(
         self,
-        incidents: List[Incident],
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        incidents: list[Incident],
+        token: dict[str, str],
+        ci_url: str | None,
         *,
         ignore_onetime: bool,
-    ) -> List[Optional[Dict[str, Any]]]:
+    ) -> list[dict[str, Any] | None]:
         ret = []
 
         for flavor, data in self.flavors.items():

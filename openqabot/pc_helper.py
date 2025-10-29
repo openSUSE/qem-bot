@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import re
-from functools import lru_cache
+from functools import cache
 from logging import getLogger
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .utils import retry5 as retried_requests
 
 log = getLogger("openqabot.pc_helper")
 
 
-def get_latest_tools_image(query: str) -> Optional[str]:
+def get_latest_tools_image(query: str) -> str | None:
     """Get latest tools image.
 
     'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
@@ -27,7 +27,7 @@ def get_latest_tools_image(query: str) -> Optional[str]:
     return None
 
 
-def apply_pc_tools_image(settings: Dict[str, Any]) -> Dict[str, Any]:
+def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
     """Apply the PC tools image in settings.
 
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
@@ -48,8 +48,8 @@ def apply_pc_tools_image(settings: Dict[str, Any]) -> Dict[str, Any]:
     return settings
 
 
-@lru_cache(maxsize=None)
-def pint_query(query: str) -> Dict[str, Any]:
+@cache
+def pint_query(query: str) -> dict[str, Any]:
     """Perform a pint query.
 
     Successive queries are cached
@@ -57,7 +57,7 @@ def pint_query(query: str) -> Dict[str, Any]:
     return retried_requests.get(query).json()
 
 
-def apply_publiccloud_pint_image(settings: Dict[str, Any]) -> Dict[str, Any]:
+def apply_publiccloud_pint_image(settings: dict[str, Any]) -> dict[str, Any]:
     """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
     try:
         region = settings.get("PUBLIC_CLOUD_PINT_REGION")
@@ -94,11 +94,11 @@ def apply_publiccloud_pint_image(settings: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_recent_pint_image(
-    images: List[Dict[str, Any]],
+    images: list[dict[str, Any]],
     name_regex: str,
-    region: Optional[str] = None,
+    region: str | None = None,
     state: str = "active",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Get most recent PINT image.
 
     From the given set of images (received json from pint),

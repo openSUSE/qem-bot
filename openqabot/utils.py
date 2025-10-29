@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -24,12 +24,12 @@ def create_logger(name: str) -> logging.Logger:
     return log
 
 
-def get_yml_list(path: Path) -> List[Path]:
+def get_yml_list(path: Path) -> list[Path]:
     """Create a list of YML filenames from a folder or single file path."""
     return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
 
 
-def walk(inc: Union[List[Any], Dict[str, Any]]) -> Union[List[Any], Dict[str, Any]]:
+def walk(inc: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
     if isinstance(inc, list):
         for i, j in enumerate(inc):
             inc[i] = walk(j)
@@ -69,21 +69,21 @@ def normalize_results(result: str) -> str:
     return "failed"
 
 
-def compare_incident_data(inc: Data, message: Dict[str, Any]) -> bool:
+def compare_incident_data(inc: Data, message: dict[str, Any]) -> bool:
     for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION"):
         if key in message and getattr(inc, key.lower()) != message[key]:
             return False
     return True
 
 
-def merge_dicts(dict1: Dict[Any, Any], dict2: Dict[Any, Any]) -> Dict[Any, Any]:
+def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     # return `dict1 | dict2` supporting Python < 3.9 which does not yet support this operator
     copy = dict1.copy()
     copy.update(dict2)
     return copy
 
 
-def __retry(retries: Optional[int], backoff_factor: float) -> Session:
+def __retry(retries: int | None, backoff_factor: float) -> Session:
     adapter = HTTPAdapter(
         max_retries=Retry(
             retries,

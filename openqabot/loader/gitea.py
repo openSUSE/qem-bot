@@ -9,7 +9,7 @@ from concurrent import futures
 from functools import lru_cache
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
@@ -21,23 +21,25 @@ from lxml import etree
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
-from openqabot.types import Repos
 from openqabot.utils import retry10 as retried_requests
+
+if TYPE_CHECKING:
+    from openqabot.types import Repos
 
 log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-def make_token_header(token: str) -> Dict[str, str]:
+def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
+def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:
     return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
-def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
+def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
@@ -45,30 +47,30 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
 
 
 def read_utf8(name: str) -> str:
-    return Path("responses/%s" % name).read_text(encoding="utf8")
+    return Path("responses/{}".format(name)).read_text(encoding="utf8")
 
 
 def read_json(name: str) -> Any:
-    return json.loads(Path("responses/%s.json" % name).read_text(encoding="utf8"))
+    return json.loads(Path("responses/{}.json".format(name)).read_text(encoding="utf8"))
 
 
 def read_xml(name: str) -> etree.ElementTree:
-    return etree.parse("responses/%s.xml" % name)
+    return etree.parse("responses/{}.xml".format(name))
 
 
 def reviews_url(repo_name: str, number: int) -> str:
-    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
-    return "repos/%s/pulls/%s/reviews" % (repo_name, number)
+    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullReviews
+    return "repos/{}/pulls/{}/reviews".format(repo_name, number)
 
 
 def changed_files_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
-    return "repos/%s/pulls/%s/files" % (repo_name, number)
+    return "repos/{}/pulls/{}/files".format(repo_name, number)
 
 
 def comments_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
-    return "repos/%s/issues/%s/comments" % (repo_name, number)
+    return "repos/{}/issues/{}/comments".format(repo_name, number)
 
 
 def get_product_name(obs_project: str) -> str:
@@ -76,7 +78,7 @@ def get_product_name(obs_project: str) -> str:
     return product_match.group(1) if product_match else ""
 
 
-def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, str]:
+def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, str]:
     m = re.search(r".*/products/(.*)#([\d\.]{2,6})$", scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
@@ -84,7 +86,7 @@ def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, st
 def compute_repo_url(
     base: str,
     product_name: str,
-    repo: Tuple[str, str, str],
+    repo: tuple[str, str, str],
     arch: str,
     path: str = "repodata/repomd.xml",
 ) -> str:
@@ -101,8 +103,8 @@ def compute_repo_url(
 def compute_repo_url_for_job_setting(
     base: str,
     repo: Repos,
-    product_repo: Optional[Union[List[str], str]],
-    product_version: Optional[str],
+    product_repo: list[str] | str | None,
+    product_version: str | None,
 ) -> str:
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
@@ -120,7 +122,7 @@ def compute_repo_url_for_job_setting(
     )
 
 
-def get_open_prs(token: Dict[str, str], repo: str, *, dry: bool, number: Optional[int]) -> List[Any]:
+def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
     if dry:
         return read_json("pulls")
     open_prs = []
@@ -131,8 +133,8 @@ def get_open_prs(token: Dict[str, str], repo: str, *, dry: bool, number: Optiona
         open_prs.append(pr)
         return open_prs
     while True:
-        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullRequests
-        prs_on_page = get_json("repos/%s/pulls?state=open&page=%i" % (repo, page), token)
+        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
+        prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
         if not isinstance(prs_on_page, list) or len(prs_on_page) <= 0:
             break
         open_prs.extend(prs_on_page)
@@ -141,7 +143,7 @@ def get_open_prs(token: Dict[str, str], repo: str, *, dry: bool, number: Optiona
 
 
 def review_pr(
-    token: Dict[str, str],
+    token: dict[str, str],
     repo_name: str,
     pr_number: int,
     msg: str,
@@ -165,12 +167,12 @@ def review_pr(
     post_json(review_url, token, review_data)
 
 
-def get_name(review: Dict[str, Any], of: str, via: str) -> str:
+def get_name(review: dict[str, Any], of: str, via: str) -> str:
     entity = review.get(of)
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: Dict[str, Any], users: List[str]) -> bool:
+def is_review_requested_by(review: dict[str, Any], users: list[str]) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -178,7 +180,7 @@ def is_review_requested_by(review: Dict[str, Any], users: List[str]) -> bool:
     return any(user in user_specifications for user in users)
 
 
-def add_reviews(incident: Dict[str, Any], reviews: List[Any]) -> int:
+def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
     approvals = 0
     changes_requested = 0
     review_requested = 0
@@ -235,8 +237,8 @@ def add_channel_for_build_result(
     arch: str,
     product_name: str,
     res: Any,
-    projects: Set[str],
-) -> Tuple[str, bool]:
+    projects: set[str],
+) -> tuple[str, bool]:
     channel = f"{project}:{arch}"
     if arch == "local":
         return channel
@@ -264,12 +266,12 @@ def add_channel_for_build_result(
 
 
 def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
-    incident: Dict[str, Any],
+    incident: dict[str, Any],
     res: Any,
-    projects: Set[str],
-    successful_packages: Set[str],
-    unpublished_repos: Set[str],
-    failed_packages: Set[str],
+    projects: set[str],
+    successful_packages: set[str],
+    unpublished_repos: set[str],
+    failed_packages: set[str],
 ) -> None:
     state = res.get("state")
     project = res.get("project")
@@ -314,7 +316,7 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> Set[str]:
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str]:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
     if product_name == "":
@@ -346,14 +348,14 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
+def is_build_result_relevant(res: Any, relevant_archs: set[str]) -> bool:
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: bool) -> None:
+def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
     successful_packages = set()
     unavailable_projects = set()
     unpublished_repos = set()
@@ -406,8 +408,8 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: boo
 
 
 def add_comments_and_referenced_build_results(
-    incident: Dict[str, Any],
-    comments: List[Any],
+    incident: dict[str, Any],
+    comments: list[Any],
     *,
     dry: bool,
 ) -> None:
@@ -420,8 +422,8 @@ def add_comments_and_referenced_build_results(
 
 
 def add_packages_from_patchinfo(
-    incident: Dict[str, Any],
-    token: Dict[str, str],
+    incident: dict[str, Any],
+    token: dict[str, str],
     patch_info_url: str,
     *,
     dry: bool,
@@ -434,7 +436,7 @@ def add_packages_from_patchinfo(
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], *, dry: bool) -> None:
+def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
@@ -442,7 +444,7 @@ def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], fil
             add_packages_from_patchinfo(incident, token, raw_url, dry=dry)
 
 
-def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) -> bool:
+def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
     failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
         log.info("Skipping PR %i, not all packages succeeded and published", number)
@@ -455,13 +457,13 @@ def is_build_acceptable_and_log_if_not(incident: Dict[str, Any], number: int) ->
 
 
 def make_incident_from_pr(
-    pr: Dict[str, Any],
-    token: Dict[str, str],
+    pr: dict[str, Any],
+    token: dict[str, str],
     *,
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
@@ -517,13 +519,13 @@ def make_incident_from_pr(
 
 
 def get_incidents_from_open_prs(
-    open_prs: List[Dict[str, Any]],
-    token: Dict[str, str],
+    open_prs: list[dict[str, Any]],
+    token: dict[str, str],
     *,
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     incidents = []
 
     # configure osc to be able to request build info from OBS

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from logging import getLogger
 from pathlib import Path
-from typing import List, Set, Union
 
 from ruamel.yaml import YAML
 
@@ -22,9 +21,9 @@ def load_metadata(
     *,
     aggregate: bool,
     incidents: bool,
-    extrasettings: Set[str],
-) -> List[Union[Aggregate, Incidents]]:
-    ret: List[Union[Aggregate, Incidents]] = []
+    extrasettings: set[str],
+) -> list[Aggregate | Incidents]:
+    ret: list[Aggregate | Incidents] = []
 
     loader = YAML(typ="safe")
 
@@ -83,7 +82,7 @@ def load_metadata(
     return ret
 
 
-def read_products(path: Path) -> List[Data]:
+def read_products(path: Path) -> list[Data]:
     loader = YAML(typ="safe")
     ret = []
 
@@ -112,7 +111,7 @@ def read_products(path: Path) -> List[Data]:
     return ret
 
 
-def get_onearch(path: Path) -> Set[str]:
+def get_onearch(path: Path) -> set[str]:
     loader = YAML(typ="safe")
 
     try:

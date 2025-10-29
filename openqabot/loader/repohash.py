@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from hashlib import md5
 from logging import getLogger
-from typing import List, Optional, Tuple
 
 import requests
 from lxml import etree
@@ -20,11 +19,11 @@ log = getLogger("bot.loader.repohash")
 
 
 def get_max_revision(
-    repos: List[Tuple[str, str]],
+    repos: list[tuple[str, str]],
     arch: str,
     project: str,
-    product_name: Optional[str] = None,
-    product_version: Optional[str] = None,
+    product_name: str | None = None,
+    product_version: str | None = None,
 ) -> int:
     max_rev = 0
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
@@ -71,7 +70,7 @@ def get_max_revision(
     return max_rev
 
 
-def merge_repohash(hashes: List[str]) -> str:
+def merge_repohash(hashes: list[str]) -> str:
     m = md5(b"start")  # noqa: S324 hashlib-insecure-hash-function
 
     for h in hashes:

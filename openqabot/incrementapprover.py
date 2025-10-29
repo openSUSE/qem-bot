@@ -8,7 +8,7 @@ from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
 from pprint import pformat
-from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Any, NamedTuple
 
 import osc.conf
 import osc.core
@@ -39,7 +39,7 @@ class BuildInfo(NamedTuple):
     def __str__(self) -> str:
         return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
-    def string_with_params(self, params: Dict[str, str]) -> str:
+    def string_with_params(self, params: dict[str, str]) -> str:
         version = params.get("VERSION", self.version)
         flavor = params.get("FLAVOR", self.flavor)
         arch = params.get("ARCH", self.arch)
@@ -49,10 +49,10 @@ class BuildInfo(NamedTuple):
 
 class ApprovalStatus(NamedTuple):
     request: osc.core.Request
-    ok_jobs: Set[int] = set()  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
-    reasons_to_disapprove: List[str] = []  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
+    ok_jobs: set[int] = set()  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
+    reasons_to_disapprove: list[str] = []  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
 
-    def add(self, ok_jobs: Set[int], reasons_to_disapprove: List[str]) -> None:
+    def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
         self.ok_jobs.update(ok_jobs)
         self.reasons_to_disapprove.extend(reasons_to_disapprove)
 
@@ -67,7 +67,7 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(self, config: IncrementConfig) -> Optional[osc.core.Request]:
+    def _find_request_on_obs(self, config: IncrementConfig) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
@@ -100,8 +100,8 @@ class IncrementApprover:
     def _request_openqa_job_results(
         self,
         build_info: BuildInfo,
-        params: List[Dict[str, str]],
-    ) -> List[Dict[str, Dict[str, Dict[str, Any]]]]:
+        params: list[dict[str, str]],
+    ) -> list[dict[str, dict[str, dict[str, Any]]]]:
         log.debug("Checking openQA job results for %s", build_info)
         query_params = (
             {
@@ -119,10 +119,10 @@ class IncrementApprover:
 
     def _check_openqa_jobs(
         self,
-        results: List[Dict[str, Dict[str, Dict[str, Any]]]],
+        results: list[dict[str, dict[str, dict[str, Any]]]],
         build_info: BuildInfo,
-        params: List[Dict[str, str]],
-    ) -> Optional[bool]:
+        params: list[dict[str, str]],
+    ) -> bool | None:
         actual_states = set(next((res.keys() for res in results), []))
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
@@ -142,9 +142,9 @@ class IncrementApprover:
 
     def _evaluate_openqa_job_results(
         self,
-        results: Dict[str, Dict[str, Dict[str, Any]]],
-        ok_jobs: Set[int],
-        not_ok_jobs: Dict[str, Set[str]],
+        results: dict[str, dict[str, dict[str, Any]]],
+        ok_jobs: set[int],
+        not_ok_jobs: dict[str, set[str]],
     ) -> None:
         for state in final_states:
             for result, info in results.get(state, {}).items():
@@ -155,8 +155,8 @@ class IncrementApprover:
 
     def _evaluate_list_of_openqa_job_results(
         self,
-        list_of_results: List[Dict[str, Dict[str, Dict[str, Any]]]],
-    ) -> Tuple[Set[int], List[str]]:
+        list_of_results: list[dict[str, dict[str, dict[str, Any]]]],
+    ) -> tuple[set[int], list[str]]:
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         openqa_url = self.client.url.geturl()
@@ -164,17 +164,14 @@ class IncrementApprover:
             self._evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
         reasons_to_disapprove = []  # compose list of blocking jobs
         for result, job_ids in not_ok_jobs.items():
-            job_list = "\n".join((f" - {openqa_url}/tests/{i}" for i in job_ids))
+            job_list = "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
             reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
         return (ok_jobs, reasons_to_disapprove)
 
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
         reasons_to_disapprove = approval_status.reasons_to_disapprove
         if len(reasons_to_disapprove) == 0:
-            message = "All %i jobs on openQA have %s" % (
-                len(approval_status.ok_jobs),
-                "/".join(sorted(ok_results)),
-            )
+            message = f"All {len(approval_status.ok_jobs)} jobs on openQA have {'/'.join(sorted(ok_results))}"
             if not self.args.dry:
                 osc.core.change_review_state(
                     apiurl=OBS_URL,
@@ -188,7 +185,7 @@ class IncrementApprover:
         log.info(message)
         return 0
 
-    def _determine_build_info(self, config: IncrementConfig) -> Set[BuildInfo]:
+    def _determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
         # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
         build_project_url = config.build_project_url()
         sub_path = config.build_listing_sub_path
@@ -225,7 +222,7 @@ class IncrementApprover:
         package: Package,
         config: IncrementConfig,
         build_info: BuildInfo,
-    ) -> Optional[Dict[str, str]]:
+    ) -> dict[str, str] | None:
         for additional_build in config.additional_builds:
             package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
             package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
@@ -255,30 +252,30 @@ class IncrementApprover:
 
     def _extra_builds_for_additional_builds(
         self,
-        package_diff: Set[Package],
+        package_diff: set[Package],
         config: IncrementConfig,
         build_info: BuildInfo,
-    ) -> List[Dict[str, str]]:
-        def handle_package(p: Package) -> Optional[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
+        def handle_package(p: Package) -> dict[str, str] | None:
             return self._extra_builds_for_package(p, config, build_info)
 
         extra_builds = map(handle_package, package_diff)
         return [*filter(lambda b: b is not None, extra_builds)]
 
     @staticmethod
-    def _populate_params_from_env(params: Dict[str, str], env_var: str) -> None:
+    def _populate_params_from_env(params: dict[str, str], env_var: str) -> None:
         value = os.environ.get(env_var, "")
         if len(value) > 0:
             params["__" + env_var] = value
 
     @staticmethod
-    def _match_packages(package_diff: Set[Package], packages_to_find: List[str]) -> bool:
+    def _match_packages(package_diff: set[Package], packages_to_find: list[str]) -> bool:
         if len(packages_to_find) == 0:
             return True
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
-    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> List[Dict[str, str]]:
+    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> list[dict[str, str]]:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -311,7 +308,7 @@ class IncrementApprover:
             extra_params.append({})
         return [*(merge_dicts(base_params, p) for p in extra_params)]
 
-    def _schedule_openqa_jobs(self, build_info: BuildInfo, params: List[Dict[str, str]]) -> int:
+    def _schedule_openqa_jobs(self, build_info: BuildInfo, params: list[dict[str, str]]) -> int:
         error_count = 0
         for p in params:
             log.info("Scheduling jobs for %s", build_info.string_with_params(p))
@@ -324,7 +321,7 @@ class IncrementApprover:
                 error_count += 1
         return error_count
 
-    def _process_request_for_config(self, request: Optional[osc.core.Request], config: IncrementConfig) -> int:
+    def _process_request_for_config(self, request: osc.core.Request | None, config: IncrementConfig) -> int:
         error_count = 0
         if request is None:
             return error_count

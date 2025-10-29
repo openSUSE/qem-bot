@@ -6,7 +6,7 @@ import logging
 import re
 import urllib.error
 from pathlib import Path
-from typing import Any, NamedTuple, Tuple
+from typing import Any, NamedTuple
 from urllib.parse import urljoin
 
 import osc.conf
@@ -71,7 +71,7 @@ def fake_gitea_api_post_review_comment() -> None:
 
 @pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: Any) -> Tuple[int, list, Any]:
+    def reply_callback(request: Any) -> tuple[int, list, Any]:
         return (200, [], request.body)
 
     responses.add_callback(

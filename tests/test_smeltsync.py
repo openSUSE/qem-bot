@@ -5,7 +5,7 @@
 import logging
 import re
 from collections import namedtuple
-from typing import Any, List, Tuple
+from typing import Any
 
 import pytest
 from _pytest.logging import LogCaptureFixture
@@ -40,7 +40,7 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
                                             "node": {
                                                 "requestId": 1000,
                                                 "status": {"name": request.param[2]},
-                                                "reviewSet": {
+                                                "reviewset": {
                                                     "edges": [
                                                         {
                                                             "node": {
@@ -68,7 +68,7 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
 
 @pytest.fixture
 def fake_qem(monkeypatch: pytest.MonkeyPatch) -> None:
-    def f_active_inc(*_args: Any) -> List[str]:
+    def f_active_inc(*_args: Any) -> list[str]:
         return ["100"]
 
     monkeypatch.setattr(openqabot.smeltsync, "get_active_incidents", f_active_inc)
@@ -76,7 +76,7 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: pytest.FixtureRequest) -> Tuple[int, List[Any], bytes]:
+    def reply_callback(request: pytest.FixtureRequest) -> tuple[int, list[Any], bytes]:
         return (200, [], request.body)
 
     responses.add_callback(

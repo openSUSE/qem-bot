@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 from argparse import Namespace
 from functools import lru_cache
+from itertools import starmap
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
@@ -30,7 +31,7 @@ class openQAInterface:
         self.retries = 3
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)
-        self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+        self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
         """Return True only for the configured openQA instance.
@@ -39,11 +40,11 @@ class openQAInterface:
         """
         return self.url.netloc == OPENQA_URL
 
-    def post_job(self, settings: Dict[str, Any]) -> None:
+    def post_job(self, settings: dict[str, Any]) -> None:
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
-            " ".join(["%s=%s" % (k, v) for k, v in settings.items()]),
+            " ".join(list(starmap("{}={}".format, settings.items()))),
         )
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
@@ -59,7 +60,7 @@ class openQAInterface:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
-    def get_jobs(self, data: Data) -> List[Dict[str, Any]]:
+    def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         log.info("Getting openQA tests results for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
@@ -72,10 +73,10 @@ class openQAInterface:
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int) -> List[Dict[str, str]]:
+    def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         ret = []
         try:
-            ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
+            ret = self.openqa.openqa_request("GET", "jobs/{}/comments".format(job_id), retries=self.retries)
             ret = [{"text": c.get("text", "")} for c in ret]
         except Exception as e:  # pylint: disable=broad-except
             (_, _, status_code, *_) = e.args
@@ -92,12 +93,12 @@ class openQAInterface:
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
-    def get_single_job(self, job_id: int) -> Optional[Dict[str, Any]]:
+    def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         ret = None
         try:
             ret = self.openqa.openqa_request(
                 "GET",
-                "jobs/%s" % job_id,
+                "jobs/{}".format(job_id),
             )["job"]
         except RequestError:
             log.exception("")
@@ -109,12 +110,12 @@ class openQAInterface:
         try:
             ret = self.openqa.openqa_request(
                 "GET",
-                "/tests/%s/ajax?previous_limit=%s&next_limit=0" % (job_id, limit),
+                "/tests/{}/ajax?previous_limit={}&next_limit=0".format(job_id, limit),
                 retries=self.retries,
             )
         except RequestError:
             log.exception("")
         return ret
 
-    def get_scheduled_product_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

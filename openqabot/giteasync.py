@@ -3,7 +3,7 @@
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any, Dict, List
+from typing import Any
 
 from .loader.gitea import get_incidents_from_open_prs, get_open_prs, make_token_header
 from .loader.qem import update_incidents
@@ -15,9 +15,9 @@ class GiteaSync:
     def __init__(self, args: Namespace) -> None:
         self.dry: bool = args.dry
         self.fake_data: bool = args.fake_data
-        self.dashboard_token: Dict[str, str] = {"Authorization": "Token " + args.token}
-        self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
-        self.open_prs: List[Any] = get_open_prs(
+        self.dashboard_token: dict[str, str] = {"Authorization": "Token " + args.token}
+        self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
+        self.open_prs: list[Any] = get_open_prs(
             self.gitea_token,
             args.gitea_repo,
             dry=self.fake_data,

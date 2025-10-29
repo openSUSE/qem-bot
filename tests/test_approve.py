@@ -5,7 +5,7 @@
 import io
 import logging
 import re
-from typing import Any, Dict, List, NamedTuple, NoReturn
+from typing import Any, NamedTuple, NoReturn
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -79,8 +79,9 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(
         json={
             "job": {
                 "settings": {
-                    "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
-                    % request.param,
+                    "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/{}/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/".format(
+                        request.param
+                    ),
                 },
             },
         },
@@ -96,7 +97,7 @@ def fake_openqa_older_jobs_api() -> None:
 
 
 @pytest.fixture
-def fake_dashboard_remarks_api() -> List[responses.BaseResponse]:
+def fake_dashboard_remarks_api() -> list[responses.BaseResponse]:
     return [
         responses.patch(
             f"{QEM_DASHBOARD}api/jobs/{job_id}/remarks?text=acceptable_for&incident_number=2",
@@ -184,7 +185,7 @@ def fake_responses_for_creating_pr_review() -> None:
 
 @pytest.fixture
 def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
-    def f_inc_approver(*_args: Any) -> List[IncReq]:
+    def f_inc_approver(*_args: Any) -> list[IncReq]:
         return [
             IncReq(1, 100),
             IncReq(2, 200),
@@ -199,7 +200,7 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
             ),
         ]
 
-    def f_inc_single_approver(_token: Dict[str, str], i: int) -> List[IncReq]:
+    def f_inc_single_approver(_token: dict[str, str], i: int) -> list[IncReq]:
         return [f_inc_approver()[i - 1]]
 
     # Inc 1 needs aggregates
@@ -207,11 +208,11 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
-    class NoSettingsResultsError(NoResultsError):
+    class NosettingsResultsError(NoResultsError):
         def __init__(self) -> None:
             super().__init__("No results for settings")
 
-    def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> List[JobAggr]:
+    def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> list[JobAggr]:
         if "inc" in request.param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -230,7 +231,7 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
         }
         return results.get(inc)
 
-    def f_aggr_settings(inc: int, _token: str) -> List[JobAggr]:
+    def f_aggr_settings(inc: int, _token: str) -> list[JobAggr]:
         if "aggr" in request.param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -594,7 +595,7 @@ def test_one_aggr_failed(caplog: LogCaptureFixture) -> None:
 )
 def test_approval_unblocked_via_openqa_comment(
     caplog: LogCaptureFixture,
-    fake_dashboard_remarks_api: List[responses.BaseResponse],
+    fake_dashboard_remarks_api: list[responses.BaseResponse],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -629,7 +630,7 @@ def test_approval_unblocked_via_openqa_comment(
 )
 def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     caplog: LogCaptureFixture,
-    fake_dashboard_remarks_api: List[responses.BaseResponse],
+    fake_dashboard_remarks_api: list[responses.BaseResponse],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0

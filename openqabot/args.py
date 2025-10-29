@@ -197,7 +197,7 @@ def get_parser() -> ArgumentParser:
     cmdgiteasync.add_argument(
         "--consider-unrequested-prs",
         action="store_true",
-        help="Consider PRs where no review from team %s was requested as well" % OBS_GROUP,
+        help="Consider PRs where no review from team {} was requested as well".format(OBS_GROUP),
     )
     cmdgiteasync.add_argument(
         "--pr-number",

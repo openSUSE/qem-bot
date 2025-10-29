@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from concurrent import futures
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import urllib3
 import urllib3.exceptions
@@ -126,13 +126,13 @@ INCIDENT_SCHEMA = {
 }
 
 
-def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
+def get_json(query: str, host: str = SMELT) -> dict[str, Any]:
     return retried_requests.get(host, params={"query": query}, verify=False).json()
 
 
-def get_active_incidents() -> Set[int]:
+def get_active_incidents() -> set[int]:
     """Get active incidents from SMELT GraphQL api."""
-    active: Set[int] = set()
+    active: set[int] = set()
 
     has_next = True
     cursor = None
@@ -156,7 +156,7 @@ def get_active_incidents() -> Set[int]:
     return active
 
 
-def get_incident(incident: int) -> Optional[Dict[str, Any]]:
+def get_incident(incident: int) -> dict[str, Any] | None:
     query = INCIDENT % {"incident": incident}
 
     log.info("Getting info about incident %s from SMELT", incident)
@@ -174,7 +174,7 @@ def get_incident(incident: int) -> Optional[Dict[str, Any]]:
     return inc_result
 
 
-def get_incidents(active: Set[int]) -> List[Dict[str, Any]]:
+def get_incidents(active: set[int]) -> list[dict[str, Any]]:
     with futures.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
         incidents = (future.result() for future in futures.as_completed(future_inc))
