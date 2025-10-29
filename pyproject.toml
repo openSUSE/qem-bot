@@ -60,6 +60,7 @@ extend-select =[
     "FA",
     "INT",
     "PYI",
+    "PT",
     "DOC",
 ]
 
