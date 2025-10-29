@@ -53,7 +53,8 @@ class CommentAPI(object):
         elif project_name:
             url = makeurl(self.apiurl, ["comments", "project", project_name], query)
         else:
-            raise ValueError("Please, set request_id, project_name or / and package_name to add a comment.")
+            msg = "Please, set request_id, project_name or / and package_name to add a comment."
+            raise ValueError(msg)
         return url
 
     def get_comments(
@@ -140,7 +141,8 @@ class CommentAPI(object):
         :return: Comment id.
         """
         if not comment:
-            raise ValueError("Empty comment.")
+            msg = "Empty comment."
+            raise ValueError(msg)
 
         comment = self.truncate(comment.strip())
 

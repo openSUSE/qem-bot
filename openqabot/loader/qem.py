@@ -77,8 +77,9 @@ def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]
 def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool = False) -> List[JobAggr]:
     settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
+        msg = f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
         raise NoResultsError(
-            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository.",
+            msg,
         )
 
     if not all_incidents:
@@ -141,7 +142,8 @@ def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     settings = get_json("api/update_settings/" + str(inc), headers=token)
     if not settings:
-        raise NoResultsError(f"Inc {inc} does not have any aggregates settings")
+        msg = f"Inc {inc} does not have any aggregates settings"
+        raise NoResultsError(msg)
 
     # is string comparsion ... so we need reversed sort
     settings = sorted(settings, key=itemgetter("build"), reverse=True)

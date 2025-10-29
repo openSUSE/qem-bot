@@ -200,7 +200,8 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
 
     def f_inc_settins(inc: int, _token: str, _all_inc: bool) -> List[JobAggr]:
         if "inc" in request.param:
-            raise NoResultsError("No results for settings")
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
             1: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(1000, 1010)],
             2: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(2000, 2010)],
@@ -218,7 +219,8 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
 
     def f_aggr_settings(inc: int, _token: str) -> List[JobAggr]:
         if "aggr" in request.param:
-            raise NoResultsError("No results for settings")
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
             5: [],
             4: [],
@@ -387,7 +389,8 @@ def test_403_response(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
+        msg = "Fake OBS"
+        raise HTTPError(msg, 403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     monkeypatch.setattr(openqabot.loader.gitea, "GIT_REVIEW_BOT", "")
@@ -405,7 +408,8 @@ def test_404_response(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> No
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
+        msg = "Fake OBS"
+        raise HTTPError(msg, 404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
@@ -425,7 +429,8 @@ def test_500_response(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
+        msg = "Fake OBS"
+        raise HTTPError(msg, 500, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
@@ -442,7 +447,8 @@ def test_osc_unknown_exception(caplog: LogCaptureFixture, monkeypatch: MonkeyPat
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise Exception("Fake OBS exception")
+        msg = "Fake OBS exception"
+        raise Exception(msg)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
