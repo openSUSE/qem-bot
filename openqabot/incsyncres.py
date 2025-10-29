@@ -3,7 +3,7 @@
 from argparse import Namespace
 from concurrent import futures
 from logging import getLogger
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from .loader.qem import get_active_incidents, get_incident_settings_data
 from .syncres import SyncRes
@@ -22,7 +22,7 @@ class IncResultsSync(SyncRes):
         self.active = get_active_incidents(self.token)
 
     def __call__(self) -> int:
-        incidents: List[Data] = []
+        incidents: list[Data] = []
 
         for inc in self.active:
             incidents += get_incident_settings_data(self.token, inc)

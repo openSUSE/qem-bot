@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod, abstractstaticmethod
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from openqabot import DEPRIORITIZE_LIMIT
 
@@ -15,10 +15,10 @@ class BaseConf(ABC):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-        settings: Dict[str, Any],
-        _config: Dict[str, Any],  # Consider to remove and adapt code
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+        settings: dict[str, Any],
+        _config: dict[str, Any],  # Consider to remove and adapt code
     ) -> None:
         self.product = product
         self.product_repo = product_repo
@@ -28,16 +28,16 @@ class BaseConf(ABC):
     @abstractmethod
     def __call__(
         self,
-        incidents: List[Incident],
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        incidents: list[Incident],
+        token: dict[str, str],
+        ci_url: str | None,
         *,
         ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         pass
 
     @abstractstaticmethod
-    def normalize_repos(config: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
         pass
 
     def filter_embargoed(self, flavor: str) -> bool:

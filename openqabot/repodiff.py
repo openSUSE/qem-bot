@@ -8,7 +8,7 @@ import re
 from collections import defaultdict
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import zstandard
 
@@ -46,14 +46,14 @@ class Package(NamedTuple):
 
 
 class RepoDiff:
-    def __init__(self, args: Optional[Namespace]) -> None:
+    def __init__(self, args: Namespace | None) -> None:
         self.args = args
 
     def _make_repodata_url(self, project: str) -> str:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Optional[str]:
+    def _find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
     @staticmethod
@@ -64,7 +64,7 @@ class RepoDiff:
             return zstandard.decompress(repo_data_raw)
         return repo_data_raw
 
-    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
+    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
@@ -76,7 +76,7 @@ class RepoDiff:
             Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project: str) -> Optional[etree.Element]:
+    def _load_repodata(self, project: str) -> etree.Element | None:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(
             url + "?jsontable=1",
@@ -92,7 +92,7 @@ class RepoDiff:
         log.debug("Parsing %s", repo_data_file)
         return etree.fromstring(repo_data)
 
-    def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
+    def _load_packages(self, project: str) -> defaultdict[str, set[Package]]:
         repo_data = self._load_repodata(project)
         packages_by_arch = defaultdict(set)
         if repo_data is None:
@@ -110,7 +110,7 @@ class RepoDiff:
             packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
         return packages_by_arch
 
-    def compute_diff(self, repo_a: str, repo_b: str) -> Tuple[DefaultDict[str, Set[Package]], int]:
+    def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
         packages_by_arch_a = self._load_packages(repo_a)
         packages_by_arch_b = self._load_packages(repo_b)
         diff_by_arch = defaultdict(set)

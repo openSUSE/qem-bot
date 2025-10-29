@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import pytest
 import requests
@@ -49,7 +49,7 @@ repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
 arch = "x86_64"
 
 
-def add_sles_sled_response(sled_body: Union[str, ConnectionError, HTTPError, BufferError]) -> None:
+def add_sles_sled_response(sled_body: str | ConnectionError | HTTPError | BufferError) -> None:
     responses.add(
         responses.GET,
         url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",

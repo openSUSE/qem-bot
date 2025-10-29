@@ -3,7 +3,7 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from typing import Any, Dict, List, NamedTuple, NoReturn, Set
+from typing import Any, NamedTuple, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -32,7 +32,7 @@ def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
         def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
-            self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+            self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
         def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
@@ -61,20 +61,20 @@ def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def __call__(self, *_args: Any, **_kwargs: Any) -> List[Dict[str, Any]]:
+        def __call__(self, *_args: Any, **_kwargs: Any) -> list[dict[str, Any]]:
             return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
-    def f_load_metadata(*_args: Any, **_kwds: Any) -> List[FakeWorker]:
+    def f_load_metadata(*_args: Any, **_kwds: Any) -> list[FakeWorker]:
         return [FakeWorker()]
 
     monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
 
-    def f_get_incidents(*_args: Any, **_kwds: Any) -> List[int]:
+    def f_get_incidents(*_args: Any, **_kwds: Any) -> list[int]:
         return [123]
 
     monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
-    def f_get_onearch(*_args: Any, **_kwds: Any) -> Set[Any]:
+    def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()
 
     monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)

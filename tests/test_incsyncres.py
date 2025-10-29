@@ -3,7 +3,7 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from typing import Any, List, NamedTuple
+from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 import pytest
@@ -23,7 +23,7 @@ class Namespace(NamedTuple):
 
 @pytest.fixture
 def get_a_i(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake(*_args: Any) -> List[int]:
+    def fake(*_args: Any) -> list[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
