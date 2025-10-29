@@ -99,6 +99,7 @@ extend-select =[
     "YTT", # https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
     "ASYNC", # https://docs.astral.sh/ruff/rules/#flake8-async-async
     "COM", # https://docs.astral.sh/ruff/rules/#flake8-commas-com
+    "CPY", # https://docs.astral.sh/ruff/rules/#flake8-copyright-cpy
 ]
 
 ignore = [
@@ -148,3 +149,7 @@ ignore = [
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.
 docstring-code-format = true
+
+[tool.ruff.lint.flake8-copyright]
+author = "SUSE LLC"
+notice-rgx = "Copyright"
