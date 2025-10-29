@@ -4,7 +4,7 @@
 
 import logging
 from collections import namedtuple
-from typing import Any, List
+from typing import Any
 from urllib.parse import urlparse
 
 import pytest
@@ -21,7 +21,7 @@ namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
 @pytest.fixture
 def get_a_i(monkeypatch: MonkeyPatch) -> None:
-    def fake(*_args: Any) -> List[int]:
+    def fake(*_args: Any) -> list[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)

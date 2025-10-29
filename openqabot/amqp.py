@@ -6,7 +6,7 @@ import re
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Dict, Sequence
+from typing import TYPE_CHECKING, Any
 
 import pika
 import pika.channel
@@ -18,6 +18,8 @@ from .syncres import SyncRes
 from .utils import compare_incident_data
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from .types import Data
 
 log = getLogger("bot.amqp")
@@ -30,7 +32,7 @@ class AMQP(SyncRes):
         super().__init__(args)
         self.args = args
         self.dry: bool = args.dry
-        self.token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+        self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
         if not args.url:
             return
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py
@@ -77,7 +79,7 @@ class AMQP(SyncRes):
                 return self.handle_aggregate(build_nr, message)
         return None
 
-    def handle_incident(self, inc_nr: int, message: Dict[str, Any]) -> None:
+    def handle_incident(self, inc_nr: int, message: dict[str, Any]) -> None:
         # Load Data about current incident from dashboard database
         try:
             settings: Sequence[Data] = get_incident_settings_data(self.token, inc_nr)
@@ -105,5 +107,5 @@ class AMQP(SyncRes):
         approve = Approver(self.args, inc_nr)
         approve()
 
-    def handle_aggregate(self, unused_build: str, unused_message: Dict[str, Any]) -> None:  # noqa: ARG002 Unused method argument
+    def handle_aggregate(self, unused_build: str, unused_message: dict[str, Any]) -> None:  # noqa: ARG002 Unused method argument
         return

@@ -3,7 +3,6 @@
 import logging
 import re
 from collections import namedtuple
-from typing import Dict, Tuple
 from urllib.parse import urlparse
 
 import pytest
@@ -21,7 +20,7 @@ _args = namedtuple("Args", ("openqa_instance", "token"))
 
 @pytest.fixture
 def fake_osd_rsp() -> None:
-    def reply_callback(_request: FixtureRequest) -> Tuple[int, Dict[str, str], bytes]:
+    def reply_callback(_request: FixtureRequest) -> tuple[int, dict[str, str], bytes]:
         return (200, _request.headers, b'{"bar":"foo"}')
 
     responses.add_callback(

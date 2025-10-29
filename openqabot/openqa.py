@@ -4,7 +4,7 @@ import logging
 from argparse import Namespace
 from functools import lru_cache
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
@@ -27,7 +27,7 @@ class openQAInterface:
         self.retries = 3
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)
-        self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+        self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
         """Return True only for the configured openQA instance.
@@ -36,7 +36,7 @@ class openQAInterface:
         """
         return self.url.netloc == OPENQA_URL
 
-    def post_job(self, settings: Dict[str, Any]) -> None:
+    def post_job(self, settings: dict[str, Any]) -> None:
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
@@ -57,7 +57,7 @@ class openQAInterface:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
-    def get_jobs(self, data: Data) -> List[Dict[str, Any]]:
+    def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         log.info("Getting openQA tests results for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
@@ -77,7 +77,7 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int) -> List[Dict[str, str]]:
+    def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         ret = []
         try:
             ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
@@ -104,7 +104,7 @@ class openQAInterface:
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
-    def get_single_job(self, job_id: int) -> Optional[Dict[str, Any]]:
+    def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         ret = None
         try:
             ret = self.openqa.openqa_request(
@@ -128,5 +128,5 @@ class openQAInterface:
             log.exception(e)
         return ret
 
-    def get_scheduled_product_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

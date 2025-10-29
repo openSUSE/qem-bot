@@ -6,7 +6,7 @@ import logging
 import os
 from collections import namedtuple
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 import osc.conf
@@ -98,7 +98,7 @@ def fake_osc_get_config(override_apiurl: str) -> None:
     assert override_apiurl == OBS_URL
 
 
-def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> List[osc.core.Request]:
+def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
     assert url == OBS_URL
     assert project == "OBS:PROJECT:TEST"
     req = osc.core.Request()
@@ -122,8 +122,8 @@ def run_approver(
     schedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
-    config: Optional[IncrementConfig] = None,
-) -> Tuple[int, List]:
+    config: IncrementConfig | None = None,
+) -> tuple[int, list]:
     jobs = []
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")

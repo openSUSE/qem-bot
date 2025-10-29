@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0+
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any
 from xml.etree import ElementTree as ET
 
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
@@ -10,7 +10,7 @@ from osc.core import http_DELETE, http_GET, http_POST, makeurl
 from openqabot.utc import UTC
 
 
-def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
+def _comment_as_dict(comment_element: ET.Element) -> dict[str, Any]:
     """Convert an XML element comment into a dictionary.
 
     :param comment_element: XML element that store a comment.
@@ -25,7 +25,7 @@ def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
     }
 
 
-class CommentAPI(object):
+class CommentAPI:
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
     def __init__(self, apiurl: str) -> None:
@@ -33,10 +33,10 @@ class CommentAPI(object):
 
     def _prepare_url(
         self,
-        request_id: Optional[Union[str, int]] = None,
-        project_name: Optional[str] = None,
-        package_name: Optional[str] = None,
-        query: Optional[Dict[str, Any]] = None,
+        request_id: str | int | None = None,
+        project_name: str | None = None,
+        package_name: str | None = None,
+        query: dict[str, Any] | None = None,
     ) -> str:
         """Prepare the URL to get/put comments in OBS.
 
@@ -59,10 +59,10 @@ class CommentAPI(object):
 
     def get_comments(
         self,
-        request_id: Optional[Union[str, int]] = None,
-        project_name: Optional[str] = None,
-        package_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        request_id: str | int | None = None,
+        project_name: str | None = None,
+        package_name: str | None = None,
+    ) -> dict[str, Any]:
         """Get the list of comments of an object in OBS.
 
         :param request_id: Request where to get comments.
@@ -80,10 +80,10 @@ class CommentAPI(object):
 
     def comment_find(
         self,
-        comments: Dict[str, Any],
+        comments: dict[str, Any],
         bot: str,
-        info_match: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        info_match: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
         """Return previous bot comments that match criteria."""
         # Case-insensitive for backwards compatibility.
         bot = bot.lower()
@@ -114,7 +114,7 @@ class CommentAPI(object):
         return None, None
 
     @staticmethod
-    def add_marker(comment: str, bot: str, info: Optional[Dict[str, Any]] = None) -> str:
+    def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
         """Add bot marker to comment that can be used to find comment."""
         if info:
             infos = []
@@ -126,11 +126,11 @@ class CommentAPI(object):
 
     def add_comment(
         self,
-        request_id: Optional[Union[str, int]] = None,
-        project_name: Optional[str] = None,
-        package_name: Optional[str] = None,
-        comment: Optional[str] = None,
-        parent_id: Optional[Union[str, int]] = None,
+        request_id: str | int | None = None,
+        project_name: str | None = None,
+        package_name: str | None = None,
+        comment: str | None = None,
+        parent_id: str | int | None = None,
     ) -> str:
         """Add a comment in an object in OBS.
 
@@ -185,7 +185,7 @@ class CommentAPI(object):
 
         return comment + suffix
 
-    def delete(self, comment_id: Union[str, int]) -> None:
+    def delete(self, comment_id: str | int) -> None:
         """Remove a comment object.
 
         :param comment_id: Id of the comment object.
@@ -193,7 +193,7 @@ class CommentAPI(object):
         url = makeurl(self.apiurl, ["comment", comment_id])
         http_DELETE(url)
 
-    def delete_children(self, comments: Dict[str, Any]) -> Dict[str, Any]:
+    def delete_children(self, comments: dict[str, Any]) -> dict[str, Any]:
         """Remove the comments that have no childs.
 
         :param comments dict of id->comment dict
@@ -214,9 +214,9 @@ class CommentAPI(object):
 
     def delete_from(
         self,
-        request_id: Optional[Union[str, int]] = None,
-        project_name: Optional[str] = None,
-        package_name: Optional[str] = None,
+        request_id: str | int | None = None,
+        project_name: str | None = None,
+        package_name: str | None = None,
     ) -> bool:
         """Remove the comments related with a request, project or package.
 
@@ -233,9 +233,9 @@ class CommentAPI(object):
     def delete_from_where_user(
         self,
         user: str,
-        request_id: Optional[Union[str, int]] = None,
-        project_name: Optional[str] = None,
-        package_name: Optional[str] = None,
+        request_id: str | int | None = None,
+        project_name: str | None = None,
+        package_name: str | None = None,
     ) -> None:
         """Remove comments where @user is mentioned.
 

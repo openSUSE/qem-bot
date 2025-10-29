@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 
@@ -94,7 +94,7 @@ def test_normalize_results() -> None:
         ),
     ],
 )
-def test_walk(data: Union[List[Any], Dict[str, Any]], result: Union[List[Any], Dict[str, Any]]) -> None:
+def test_walk(data: list[Any] | dict[str, Any], result: list[Any] | dict[str, Any]) -> None:
     ret = walk(data)
     assert result == ret
 
