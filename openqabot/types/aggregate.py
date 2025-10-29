@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from openqabot import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
-from openqabot.errors import NoTestIssues, SameBuildExists
+from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utc import UTC
@@ -42,7 +42,7 @@ class Aggregate(BaseConf):
                 key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
             }
         except KeyError as e:
-            raise NoTestIssues from e
+            raise NoTestIssuesError from e
 
         return repos
 
@@ -54,7 +54,7 @@ class Aggregate(BaseConf):
         today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
 
         if build.startswith(today) and repohash == old_repohash:
-            raise SameBuildExists
+            raise SameBuildExistsError
 
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
@@ -140,7 +140,7 @@ class Aggregate(BaseConf):
                     old_repohash,
                     old_build,
                 )
-            except SameBuildExists:
+            except SameBuildExistsError:
                 log.info(
                     "For %s aggreagate on %s there is existing build",
                     self.product,

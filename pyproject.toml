@@ -111,6 +111,7 @@ extend-select =[
     "FLY", # https://docs.astral.sh/ruff/rules/#flynt-fly
     "NPY", # https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
     "PD", # https://docs.astral.sh/ruff/rules/#pandas-vet-pd
+    "N", # https://docs.astral.sh/ruff/rules/#pep8-naming-n
 ]
 
 ignore = [

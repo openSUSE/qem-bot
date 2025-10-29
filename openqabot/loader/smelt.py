@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-import concurrent.futures as CT
+from concurrent import futures
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set
 
@@ -173,7 +173,7 @@ def get_incident(incident: int) -> Optional[Dict[str, Any]]:
 
 
 def get_incidents(active: Set[int]) -> List[Dict[str, Any]]:
-    with CT.ThreadPoolExecutor() as executor:
+    with futures.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
-        incidents = (future.result() for future in CT.as_completed(future_inc))
+        incidents = (future.result() for future in futures.as_completed(future_inc))
         return [inc for inc in incidents if inc]

@@ -24,10 +24,10 @@ class IncReq(NamedTuple):
 class JobAggr(NamedTuple):
     id: int
     aggregate: bool
-    withAggregate: bool
+    with_aggregate: bool
 
 
-class LoaderQemException(Exception):
+class LoaderQemError(Exception):
     pass
 
 
@@ -47,7 +47,7 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
     incidents = get_json("api/incidents", headers=token, verify=True)
 
     if "error" in incidents:
-        raise LoaderQemException(incidents)
+        raise LoaderQemError(incidents)
 
     xs = []
     for i in incidents:
@@ -95,7 +95,7 @@ def get_incident_settings(inc: int, token: Dict[str, str], *, all_incidents: boo
             rrid = rrid[-1]
             settings = [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
 
-    return [JobAggr(i["id"], aggregate=False, withAggregate=i["withAggregate"]) for i in settings]
+    return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
@@ -143,7 +143,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
     last_build = settings[0]["build"][:-2]
-    return [JobAggr(i["id"], aggregate=True, withAggregate=False) for i in settings if last_build in i["build"]]
+    return [JobAggr(i["id"], aggregate=True, with_aggregate=False) for i in settings if last_build in i["build"]]
 
 
 def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[Data]:

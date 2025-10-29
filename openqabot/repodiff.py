@@ -9,8 +9,8 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
-import lxml.etree as ET
 import zstandard
+from lxml import etree
 
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as retried_requests
@@ -63,7 +63,7 @@ class RepoDiff:
             Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project: str) -> Optional[ET.Element]:
+    def _load_repodata(self, project: str) -> Optional[etree.Element]:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(
             url + "?jsontable=1",
@@ -77,7 +77,7 @@ class RepoDiff:
             return None
         repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
         log.debug("Parsing %s", repo_data_file)
-        return ET.fromstring(repo_data)
+        return etree.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)

@@ -4,7 +4,7 @@ import re
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader.repohash import get_max_revision
 
 from . import ArchVer, Repos
@@ -60,7 +60,7 @@ class Incident:
         ]
 
         if not self.channels:
-            raise EmptyChannels(self.project)
+            raise EmptyChannelsError(self.project)
 
         self.packages = sorted(incident["packages"], key=len)
         if not self.packages:
@@ -74,7 +74,7 @@ class Incident:
     def create(cls, incident_data: Dict) -> Optional["Incident"]:
         try:
             return cls(incident_data)
-        except EmptyChannels:
+        except EmptyChannelsError:
             log.info("Project %s has empty channels - check incident in SMELT", incident_data.get("project"))
             return None
         except EmptyPackagesError:

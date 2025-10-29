@@ -216,17 +216,17 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
             msg = "No results for settings"
             raise NoResultsError(msg)
         results = {
-            1: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(1000, 1010)],
-            2: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(2000, 2010)],
+            1: [JobAggr(i, aggregate=False, with_aggregate=True) for i in range(1000, 1010)],
+            2: [JobAggr(i, aggregate=False, with_aggregate=True) for i in range(2000, 2010)],
             3: [
-                JobAggr(3000, aggregate=False, withAggregate=False),
-                JobAggr(3001, aggregate=False, withAggregate=False),
-                JobAggr(3002, aggregate=False, withAggregate=True),
-                JobAggr(3002, aggregate=False, withAggregate=False),
-                JobAggr(3003, aggregate=False, withAggregate=True),
+                JobAggr(3000, aggregate=False, with_aggregate=False),
+                JobAggr(3001, aggregate=False, with_aggregate=False),
+                JobAggr(3002, aggregate=False, with_aggregate=True),
+                JobAggr(3002, aggregate=False, with_aggregate=False),
+                JobAggr(3003, aggregate=False, with_aggregate=True),
             ],
-            4: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(4000, 4010)],
-            5: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(5000, 5010)],
+            4: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(4000, 4010)],
+            5: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(5000, 5010)],
         }
         return results.get(inc)
 
@@ -237,9 +237,9 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
         results = {
             5: [],
             4: [],
-            1: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(10000, 10010)],
-            2: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(20000, 20010)],
-            3: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(30000, 30010)],
+            1: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(10000, 10010)],
+            2: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(20000, 20010)],
+            3: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(30000, 30010)],
         }
         return results.get(inc)
 
@@ -466,11 +466,11 @@ def test_osc_unknown_exception(caplog: LogCaptureFixture, monkeypatch: pytest.Mo
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        class ArbitraryObsException(Exception):
+        class ArbitraryObsError(Exception):
             def __init__(self) -> None:
                 super().__init__("Fake OBS exception")
 
-        raise ArbitraryObsException
+        raise ArbitraryObsError
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1

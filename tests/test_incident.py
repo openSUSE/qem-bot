@@ -6,7 +6,7 @@ from typing import Any, NoReturn
 import pytest
 
 import openqabot.types.incident
-from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
 
@@ -98,7 +98,7 @@ def test_inc_nopackage() -> None:
 def test_inc_nochannels() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = []
-    with pytest.raises(EmptyChannels):
+    with pytest.raises(EmptyChannelsError):
         Incident(bad_data)
 
 
@@ -110,7 +110,7 @@ def test_inc_nochannels2() -> None:
         "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:x86_64",
         "SUSE:Updates:SLE-Module-SUSE-Manager-Server:15-SP4:aarch64",
     ]
-    with pytest.raises(EmptyChannels):
+    with pytest.raises(EmptyChannelsError):
         Incident(bad_data)
 
 

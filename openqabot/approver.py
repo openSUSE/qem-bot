@@ -120,7 +120,7 @@ class Approver:
         except NoResultsError as e:
             log.info(e)
 
-            if any(i.withAggregate for i in i_jobs):
+            if any(i.with_aggregate for i in i_jobs):
                 log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
 
@@ -130,7 +130,7 @@ class Approver:
             log.info("%s has at least one failed job in incident tests", _mi2str(inc))
             return False
 
-        if any(i.withAggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
+        if any(i.with_aggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
             log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
             return False
 
