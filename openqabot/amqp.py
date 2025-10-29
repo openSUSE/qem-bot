@@ -6,7 +6,7 @@ import re
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any, Dict, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Sequence
 
 import pika
 import pika.channel
@@ -15,8 +15,10 @@ import pika.spec
 from .approver import Approver
 from .loader.qem import get_incident_settings_data
 from .syncres import SyncRes
-from .types import Data
 from .utils import compare_incident_data
+
+if TYPE_CHECKING:
+    from .types import Data
 
 log = getLogger("bot.amqp")
 build_inc_regex = re.compile(r":(\d+):.*")

@@ -63,6 +63,7 @@ extend-select =[
     "PT",
     "SLOT",
     "TID",
+    "TC",
     "DOC",
 ]
 
