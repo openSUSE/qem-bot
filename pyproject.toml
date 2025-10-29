@@ -55,6 +55,7 @@ extend-select =[
     "YTT",
     "ASYNC",
     "COM",
+    "CPY",
     "DOC",
 ]
 
