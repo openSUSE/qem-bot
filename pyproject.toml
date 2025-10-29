@@ -65,6 +65,7 @@ extend-select =[
     "TID",
     "TC",
     "PTH",
+    "FLY",
     "DOC",
 ]
 
