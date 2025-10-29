@@ -114,6 +114,7 @@ extend-select =[
     "N", # https://docs.astral.sh/ruff/rules/#pep8-naming-n
     "PLE", # https://docs.astral.sh/ruff/rules/#error-ple
     "PLR", # https://docs.astral.sh/ruff/rules/#refactor-plr
+    "PLW", # https://docs.astral.sh/ruff/rules/#warning-plw
 ]
 
 ignore = [
