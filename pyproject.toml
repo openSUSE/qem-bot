@@ -109,6 +109,7 @@ extend-select =[
     "TC", # https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
     "PTH", # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
     "FLY", # https://docs.astral.sh/ruff/rules/#flynt-fly
+    "NPY", # https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
 ]
 
 ignore = [
