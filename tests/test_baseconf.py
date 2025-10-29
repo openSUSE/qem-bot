@@ -18,7 +18,7 @@ class FakeBaseConf(BaseConf):
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(_config) -> None:
+    def normalize_repos(_config: Any) -> None:
         pass
 
 
@@ -27,16 +27,16 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 
 @pytest.fixture
-def baseconf_gen():
+def baseconf_gen() -> FakeBaseConf:
     return FakeBaseConf(prod_name, None, None, settings, {})
 
 
-def test_baseconf_init(baseconf_gen) -> None:
+def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
 
 
-def test_is_embargoed(baseconf_gen) -> None:
+def test_is_embargoed(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.filter_embargoed("None")
 
     baseconf_gen.settings["PUBLIC_CLOUD_SOMETHING"] = ""
