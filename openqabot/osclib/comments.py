@@ -7,7 +7,7 @@ from xml.etree import ElementTree as ET
 
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
-from ..utc import UTC
+from openqabot.utc import UTC
 
 
 def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
