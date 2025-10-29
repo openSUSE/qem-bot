@@ -59,6 +59,7 @@ extend-select =[
     "EM",
     "FA",
     "INT",
+    "PYI",
     "DOC",
 ]
 
