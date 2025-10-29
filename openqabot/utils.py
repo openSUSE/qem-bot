@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: MIT
 import logging
 from copy import deepcopy
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .types import Data
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from .types import Data
 
 
 def create_logger(name: str) -> logging.Logger:

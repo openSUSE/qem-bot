@@ -1,8 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from logging import getLogger
-from pathlib import Path
-from typing import List, Set, Union
+from typing import TYPE_CHECKING, List, Set, Union
 
 from ruamel.yaml import YAML
 
@@ -11,6 +10,9 @@ from openqabot.types import Data
 from openqabot.types.aggregate import Aggregate
 from openqabot.types.incidents import Incidents
 from openqabot.utils import get_yml_list
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 log = getLogger("bot.loader.config")
 

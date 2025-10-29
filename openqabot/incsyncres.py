@@ -3,11 +3,13 @@
 import concurrent.futures as CT
 from argparse import Namespace
 from logging import getLogger
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from .loader.qem import get_active_incidents, get_incident_settings_data
 from .syncres import SyncRes
-from .types import Data
+
+if TYPE_CHECKING:
+    from .types import Data
 
 log = getLogger("bot.incsyncres")
 

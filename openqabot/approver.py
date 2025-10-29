@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: MIT
 import re
 import string
-from argparse import Namespace
 from datetime import datetime, timedelta
 from functools import lru_cache
 from logging import getLogger
-from typing import Dict, List, Optional, Pattern
+from typing import TYPE_CHECKING, Dict, List, Optional, Pattern
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -29,6 +28,9 @@ from .loader.qem import (
     get_single_incident,
 )
 from .utc import UTC
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.approver")
 

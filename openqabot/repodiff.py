@@ -3,16 +3,18 @@
 import gzip
 import json
 import re
-from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import zstandard
 
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as requests
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.repo_diff")
 ns = "{http://linux.duke.edu/metadata/common}"

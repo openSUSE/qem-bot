@@ -4,7 +4,7 @@ import datetime
 from collections import defaultdict
 from itertools import chain
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from openqabot import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
@@ -15,7 +15,9 @@ from openqabot.utc import UTC
 
 from . import ProdVer, Repos
 from .baseconf import BaseConf
-from .incident import Incident
+
+if TYPE_CHECKING:
+    from .incident import Incident
 
 log = getLogger("bot.types.aggregate")
 

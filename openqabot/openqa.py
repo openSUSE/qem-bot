@@ -1,11 +1,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
-from argparse import Namespace
 from functools import lru_cache
 from pprint import pformat
-from typing import Any, Dict, List, Optional
-from urllib.parse import ParseResult
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
@@ -13,7 +11,12 @@ from openqa_client.exceptions import RequestError
 from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
 from .errors import PostOpenQAError
 from .loader.qem import update_job
-from .types import Data
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from urllib.parse import ParseResult
+
+    from .types import Data
 
 log = logging.getLogger("bot.openqa")
 

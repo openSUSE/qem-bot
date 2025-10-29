@@ -1,7 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
 
 from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
 from openqabot.errors import NoRepoFoundError
@@ -11,7 +11,9 @@ from openqabot.utils import retry3 as requests
 
 from . import ProdVer, Repos
 from .baseconf import BaseConf
-from .incident import Incident
+
+if TYPE_CHECKING:
+    from .incident import Incident
 
 log = getLogger("bot.types.incidents")
 

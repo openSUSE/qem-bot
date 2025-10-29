@@ -1,11 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from abc import ABC, abstractmethod, abstractstaticmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from openqabot import DEPRIORITIZE_LIMIT
 
-from .incident import Incident
+if TYPE_CHECKING:
+    from .incident import Incident
 
 
 class BaseConf(ABC):

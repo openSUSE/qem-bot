@@ -6,20 +6,23 @@ import re
 from functools import lru_cache
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
 
 import osc.conf
 import osc.core
 import osc.util.xml
 import urllib3
 import urllib3.exceptions
-from defusedxml import ElementTree
 from defusedxml.ElementTree import parse
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
-from openqabot.types import Repos
 from openqabot.utils import retry10 as requests
+
+if TYPE_CHECKING:
+    from defusedxml import ElementTree
+
+    from openqabot.types import Repos
 
 log = getLogger("bot.loader.gitea")
 

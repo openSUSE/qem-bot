@@ -1,16 +1,18 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import pytest
 import requests
-from _pytest.logging import LogCaptureFixture
 from requests import ConnectionError, HTTPError  # noqa: A004
 
 import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
+
+if TYPE_CHECKING:
+    from _pytest.logging import LogCaptureFixture
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"

@@ -1,13 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.smeltsync")
 

@@ -5,13 +5,12 @@
 import logging
 import os
 from pathlib import Path
-from typing import Any, List, NamedTuple, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, NamedTuple, Optional, Tuple
 from urllib.parse import urlparse
 
 import osc.conf
 import osc.core
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot
 import responses
@@ -20,6 +19,9 @@ from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
 from responses import GET
+
+if TYPE_CHECKING:
+    from _pytest.logging import LogCaptureFixture
 
 
 # Fake Namespace for IncrementApprover initialization

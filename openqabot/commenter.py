@@ -1,9 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import osc.conf
 import osc.core
@@ -14,7 +13,11 @@ from . import OBS_URL
 from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
-from .types.incident import Incident
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from .types.incident import Incident
 
 log = getLogger("bot.commenter")
 

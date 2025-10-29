@@ -1,12 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import pytest
 
 import openqabot.types.baseconf
-from openqabot.types.baseconf import BaseConf, Incident
+from openqabot.types.baseconf import BaseConf
+
+if TYPE_CHECKING:
+    from openqabot.types.baseconf import Incident
 
 
 class FakeBaseConf(BaseConf):
