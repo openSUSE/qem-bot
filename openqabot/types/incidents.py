@@ -243,7 +243,7 @@ class Incidents(BaseConf):
             sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
 
-        full_post["qem"]["withAggregate"] = True
+        full_post["qem"]["with_aggregate"] = True
         aggregate_job = data.get("aggregate_job", True)
 
         if not aggregate_job:
@@ -251,17 +251,17 @@ class Incidents(BaseConf):
             neg = set(data.get("aggregate_check_false", []))
 
             if pos and not pos.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
+                full_post["qem"]["with_aggregate"] = False
                 log.info("Aggregate not needed for incident %s", inc.id)
             if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
+                full_post["qem"]["with_aggregate"] = False
                 log.info("Aggregate not needed for incident %s", inc.id)
             if not (neg and pos):
-                full_post["qem"]["withAggregate"] = False
+                full_post["qem"]["with_aggregate"] = False
 
         # some arch specific packages doesn't have aggregate tests
         if not self.singlearch.isdisjoint(set(inc.packages)):
-            full_post["qem"]["withAggregate"] = False
+            full_post["qem"]["with_aggregate"] = False
 
         delta_prio = data.get("override_priority", 0)
 

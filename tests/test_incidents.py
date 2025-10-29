@@ -436,7 +436,7 @@ def test_gitea_incidents() -> None:
         assert qem["flavor"] == flavor
         assert qem["incident"] == inc.id
         assert qem["version"] == product_ver
-        assert qem["withAggregate"]
+        assert qem["with_aggregate"]
         for s in computed_settings:
             assert s["ARCH"] == arch
             assert s["BASE_TEST_ISSUES"] == "%i" % inc.id

@@ -10,11 +10,11 @@ class NoRepoFoundError(Error):
     pass
 
 
-class NoTestIssues(Error):
+class NoTestIssuesError(Error):
     pass
 
 
-class EmptyChannels(Error):
+class EmptyChannelsError(Error):
     pass
 
 
@@ -22,7 +22,7 @@ class EmptyPackagesError(Error):
     pass
 
 
-class SameBuildExists(Error):
+class SameBuildExistsError(Error):
     pass
 
 
@@ -30,7 +30,7 @@ class NoResultsError(Error):
     pass
 
 
-class EmptySettings(Error):
+class EmptySettingsError(Error):
     pass
 
 

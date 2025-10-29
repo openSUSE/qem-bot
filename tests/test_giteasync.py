@@ -29,9 +29,9 @@ from openqabot.types import Repos
 from responses import GET, matchers
 
 try:
-    import lxml.etree as ET
+    from lxml.etree import ElementTree
 except ImportError:
-    import defusedxml.ElementTree as ET
+    from defusedxml.ElementTree import ElementTree
 
 
 class Namespace(NamedTuple):
@@ -91,7 +91,7 @@ def fake_repo() -> None:
     responses.add(GET, url, body=listing)
 
 
-def fake_osc_http_get(url: str) -> ET.ElementTree:
+def fake_osc_http_get(url: str) -> ElementTree:
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124")
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
@@ -99,7 +99,7 @@ def fake_osc_http_get(url: str) -> ET.ElementTree:
     raise AssertionError("Code tried to query unexpected OSC URL: " + url)
 
 
-def noop_osc_http_get(_url: str) -> ET.ElementTree:
+def noop_osc_http_get(_url: str) -> ElementTree:
     return read_xml("empty-build-results")
 
 

@@ -26,11 +26,11 @@ primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
 
 
 try:
-    import lxml.etree as ET
+    from lxml import etree
 
     log.info("Using lxml for XML parsing when computing repo diff")
 except ImportError:
-    import defusedxml.ElementTree as ET
+    import defusedxml.ElementTree as etree  # noqa: N813, see https://lxml.de/tutorial.html
 
     log.warning("Using built-in XML parsing when computing repo diff")
 
@@ -74,7 +74,7 @@ class RepoDiff:
             Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project: str) -> Optional[ET.Element]:
+    def _load_repodata(self, project: str) -> Optional[etree.Element]:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(
             url + "?jsontable=1",
@@ -88,7 +88,7 @@ class RepoDiff:
             return None
         repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
         log.debug("Parsing %s", repo_data_file)
-        return ET.fromstring(repo_data)
+        return etree.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)

@@ -5,7 +5,11 @@ from logging import getLogger
 from typing import List, Optional, Tuple
 
 import requests
-from defusedxml import ElementTree as ET
+
+try:
+    from lxml import etree
+except ImportError:
+    import defusedxml.ElementTree as etree  # noqa: N813, see https://lxml.de/tutorial.html
 from requests.exceptions import RetryError
 
 from openqabot import OBS_DOWNLOAD_URL, OBS_PRODUCTS
@@ -50,10 +54,10 @@ def get_max_revision(
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
-            root = ET.fromstring(retried_requests.get(url).text)
+            root = etree.fromstring(retried_requests.get(url).text)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
-            ET.ParseError,
+            etree.ParseError,
             requests.ConnectionError,
             requests.HTTPError,
             RetryError,

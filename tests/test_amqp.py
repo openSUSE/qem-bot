@@ -47,7 +47,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
-            "withAggregate": False,
+            "with_aggregate": False,
         },
     ]
     responses.add(
