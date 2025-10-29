@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from hashlib import md5
 from logging import getLogger
 from typing import List, Optional, Tuple

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, List, Optional, Union
 

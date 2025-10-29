@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: GPL-2.0+
+from __future__ import annotations
+
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union

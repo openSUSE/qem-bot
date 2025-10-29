@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
+from __future__ import annotations
+
 from logging import getLogger
 from pprint import pformat
 from typing import Any, Dict, List, Optional

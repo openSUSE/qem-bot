@@ -115,6 +115,7 @@ extend-select =[
     "PLE", # https://docs.astral.sh/ruff/rules/#error-ple
     "PLR", # https://docs.astral.sh/ruff/rules/#refactor-plr
     "PLW", # https://docs.astral.sh/ruff/rules/#warning-plw
+    "FA", # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
 ]
 
 ignore = [
@@ -159,6 +160,9 @@ ignore = [
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
+    "TC001", # typing-only-first-party-import
+    "TC002", # typing-only-third-party-import
+    "TC003", # typing-only-standard-library-import
 ]
 
 [tool.ruff.format]

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Union
