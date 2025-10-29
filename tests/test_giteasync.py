@@ -2,14 +2,16 @@
 # SPDX-License-Identifier: MIT
 import logging
 import re
+import xml.etree.ElementTree as ET
 from collections import namedtuple
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 from urllib.parse import urljoin
 
 import osc.conf
 import osc.core
 import pytest
+from pytest import LogCaptureFixture, MonkeyPatch
 
 import openqabot.loader.gitea
 import responses
@@ -71,7 +73,7 @@ def fake_gitea_api_post_review_comment() -> None:
 
 @pytest.fixture(scope="function")
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request):
+    def reply_callback(request: Any) -> Tuple[int, list, Any]:
         return (200, [], request.body)
 
     responses.add_callback(
@@ -89,7 +91,7 @@ def fake_repo() -> None:
     responses.add(GET, url, body=listing)
 
 
-def fake_osc_http_get(url: str):
+def fake_osc_http_get(url: str) -> ET.ElementTree:
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124")
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
@@ -97,11 +99,11 @@ def fake_osc_http_get(url: str):
     raise AssertionError("Code tried to query unexpected OSC URL: " + url)
 
 
-def noop_osc_http_get(_url: str):
+def noop_osc_http_get(_url: str) -> ET.ElementTree:
     return read_xml("empty-build-results")
 
 
-def fake_osc_xml_parse(data: Any):
+def fake_osc_xml_parse(data: Any) -> Any:
     return data  # fake_osc_http_get already returns parsed XML so just return that
 
 
@@ -109,12 +111,14 @@ def fake_osc_get_config(override_apiurl: str) -> None:
     assert override_apiurl == OBS_URL
 
 
-def fake_get_multibuild_data(obs_project: str):
+def fake_get_multibuild_data(obs_project: str) -> str:
     assert obs_project == "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
 
-def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=True) -> None:
+def run_gitea_sync(
+    caplog: LogCaptureFixture, monkeypatch: MonkeyPatch, no_build_results: bool = False, allow_failures: bool = True
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
     if no_build_results:
@@ -130,7 +134,7 @@ def run_gitea_sync(caplog, monkeypatch, no_build_results=False, allow_failures=T
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_product_repo(caplog, monkeypatch) -> None:
+def test_sync_with_product_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
     run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -165,7 +169,7 @@ def test_sync_with_product_repo(caplog, monkeypatch) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback")
-def test_sync_with_product_version_from_repo_listing(caplog, monkeypatch) -> None:
+def test_sync_with_product_version_from_repo_listing(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(caplog, monkeypatch)
 
@@ -181,7 +185,7 @@ def test_sync_with_product_version_from_repo_listing(caplog, monkeypatch) -> Non
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_codestream_repo(caplog, monkeypatch) -> None:
+def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
     run_gitea_sync(caplog, monkeypatch)
@@ -203,7 +207,7 @@ def test_sync_with_codestream_repo(caplog, monkeypatch) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_without_results(caplog, monkeypatch) -> None:
+def test_sync_without_results(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
     run_gitea_sync(caplog, monkeypatch, True, False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
