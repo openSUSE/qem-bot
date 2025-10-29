@@ -554,7 +554,9 @@ def test_one_aggr_failed(caplog: LogCaptureFixture) -> None:
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
 )
-def test_approval_unblocked_via_openqa_comment(caplog: LogCaptureFixture, fake_dashboard_remarks_api) -> None:
+def test_approval_unblocked_via_openqa_comment(
+    caplog: LogCaptureFixture, fake_dashboard_remarks_api: List[responses.BaseResponse]
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     messages = [x[-1] for x in caplog.record_tuples]
@@ -588,7 +590,7 @@ def test_approval_unblocked_via_openqa_comment(caplog: LogCaptureFixture, fake_d
 )
 def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     caplog: LogCaptureFixture,
-    fake_dashboard_remarks_api,
+    fake_dashboard_remarks_api: List[responses.BaseResponse],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
