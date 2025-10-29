@@ -105,6 +105,7 @@ extend-select =[
     "PYI", # https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
     "PT", # https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
     "SLOT", # https://docs.astral.sh/ruff/rules/#flake8-slots-slot
+    "TID", # https://docs.astral.sh/ruff/rules/#flake8-tidy-imports-tid
 ]
 
 ignore = [

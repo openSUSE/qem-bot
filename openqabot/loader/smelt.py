@@ -8,9 +8,9 @@ import urllib3
 import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
-from .. import SMELT
-from ..utils import retry10 as retried_requests
-from ..utils import walk
+from openqabot import SMELT
+from openqabot.utils import retry10 as retried_requests
+from openqabot.utils import walk
 
 log = getLogger("bot.loader.smelt")
 

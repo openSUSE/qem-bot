@@ -6,12 +6,9 @@ from pprint import pformat
 from typing import Any, Dict, List, NamedTuple, Sequence
 
 from openqabot.dashboard import get_json, patch, put
-
-from ..errors import (
-    NoResultsError,
-)
-from ..types import Data
-from ..types.incident import Incident
+from openqabot.errors import NoResultsError
+from openqabot.types import Data
+from openqabot.types.incident import Incident
 
 log = getLogger("bot.loader.qem")
 

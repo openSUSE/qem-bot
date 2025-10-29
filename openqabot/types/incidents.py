@@ -3,11 +3,12 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from .. import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
-from ..errors import NoRepoFoundError
-from ..loader import gitea
-from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utils import retry3 as retried_requests
+from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+from openqabot.errors import NoRepoFoundError
+from openqabot.loader import gitea
+from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.utils import retry3 as retried_requests
+
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident

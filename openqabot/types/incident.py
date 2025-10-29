@@ -4,8 +4,9 @@ import re
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
-from ..loader.repohash import get_max_revision
+from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.loader.repohash import get_max_revision
+
 from . import ArchVer, Repos
 
 log = getLogger("bot.types.incident")

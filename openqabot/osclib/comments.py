@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 from lxml import etree
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
-from ..utc import UTC
+from openqabot.utc import UTC
 
 
 def _comment_as_dict(comment_element: etree.Element) -> Dict[str, Any]:

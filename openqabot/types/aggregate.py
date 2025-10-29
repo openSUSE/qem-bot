@@ -6,12 +6,13 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from .. import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
-from ..dashboard import get_json
-from ..errors import NoTestIssues, SameBuildExists
-from ..loader.repohash import merge_repohash
-from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utc import UTC
+from openqabot import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
+from openqabot.dashboard import get_json
+from openqabot.errors import NoTestIssues, SameBuildExists
+from openqabot.loader.repohash import merge_repohash
+from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.utc import UTC
+
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
