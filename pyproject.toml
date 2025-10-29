@@ -53,6 +53,7 @@ extend-select =[
     "FBT",
     "TRY",
     "YTT",
+    "ASYNC",
     "DOC",
 ]
 
