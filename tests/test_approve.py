@@ -209,7 +209,8 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
 
     def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> List[JobAggr]:
         if "inc" in request.param:
-            raise NoSettingsResultsError
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
             1: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(1000, 1010)],
             2: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(2000, 2010)],
@@ -227,7 +228,8 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
 
     def f_aggr_settings(inc: int, _token: str) -> List[JobAggr]:
         if "aggr" in request.param:
-            raise NoSettingsResultsError
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
             5: [],
             4: [],

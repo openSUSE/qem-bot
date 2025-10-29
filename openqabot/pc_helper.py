@@ -69,7 +69,8 @@ def apply_publiccloud_pint_image(settings: Dict[str, Any]) -> Dict[str, Any]:
             if image is not None:
                 break
         if image is None:
-            raise ValueError("Cannot find matching image in pint")  # noqa: TRY301, TRY003
+            msg = "Cannot find matching image in pint"
+            raise ValueError(msg)  # noqa: TRY301
         settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
