@@ -1,3 +1,4 @@
+dataclasses
 osc
 openqa-client
 pika

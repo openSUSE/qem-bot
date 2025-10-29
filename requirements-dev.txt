@@ -1,6 +1,7 @@
 pytest
 pytest-cov
 coverage
+dataclasses
 responses>=0.21.0
 requests
 osc
