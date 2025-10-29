@@ -107,6 +107,7 @@ extend-select =[
     "SLOT", # https://docs.astral.sh/ruff/rules/#flake8-slots-slot
     "TID", # https://docs.astral.sh/ruff/rules/#flake8-tidy-imports-tid
     "TC", # https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
+    "PTH", # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
 ]
 
 ignore = [

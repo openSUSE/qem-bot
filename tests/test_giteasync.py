@@ -106,7 +106,7 @@ def fake_osc_xml_parse(data: Any) -> Any:
 
 
 def fake_urllib_http_error(data: Any) -> Any:
-    with open("responses/empty-build-results.xml", encoding="utf-8") as fp:
+    with Path("responses/empty-build-results.xml").open(encoding="utf-8") as fp:
         raise urllib.error.HTTPError(data, 404, "Not found", {}, fp)
 
 
