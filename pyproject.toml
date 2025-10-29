@@ -69,6 +69,7 @@ extend-select =[
     "NPY",
     "PD",
     "N",
+    "PLE",
     "DOC",
 ]
 
