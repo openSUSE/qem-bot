@@ -5,8 +5,7 @@
 import io
 import logging
 import re
-from collections import namedtuple
-from typing import Any, Dict, List, NoReturn
+from typing import Any, Dict, List, NamedTuple, NoReturn
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -23,13 +22,19 @@ from openqabot.errors import NoResultsError
 from openqabot.loader.qem import IncReq, JobAggr
 from responses import matchers
 
+
 # Fake Namespace for Approver initialization
-_namespace = namedtuple(
-    "Namespace",
-    ("dry", "token", "all_incidents", "openqa_instance", "incident", "gitea_token"),
-)
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    all_incidents: bool
+    openqa_instance: str
+    incident: str
+    gitea_token: str
+
+
 openqa_instance_url = urlparse("http://instance.qa")
-args = _namespace(
+args = Namespace(
     dry=False,
     token="123",
     all_incidents=False,
@@ -254,7 +259,7 @@ def f_osconf(monkeypatch: MonkeyPatch) -> None:
 
 
 def approver(incident: int = 0) -> int:
-    args = _namespace(
+    args = Namespace(
         dry=True,
         token="123",
         all_incidents=False,

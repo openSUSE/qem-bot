@@ -3,8 +3,7 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from collections import namedtuple
-from typing import Any, List
+from typing import Any, List, NamedTuple
 from urllib.parse import urlparse
 
 import pytest
@@ -16,7 +15,11 @@ import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.incsyncres import IncResultsSync
 
-namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
+
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
 
 
 @pytest.fixture
@@ -69,7 +72,7 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -128,7 +131,7 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -187,7 +190,7 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -251,7 +254,7 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -315,7 +318,7 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 

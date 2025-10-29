@@ -4,9 +4,8 @@
 
 import logging
 import re
-from collections import namedtuple
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any, NamedTuple, Tuple
 from urllib.parse import urljoin
 
 import osc.conf
@@ -36,21 +35,16 @@ except ImportError:
     import defusedxml.ElementTree as ET
 
 
-# Fake Namespace for GiteaSync initialization
-_namespace = namedtuple(
-    "Namespace",
-    (
-        "dry",
-        "fake_data",
-        "token",
-        "gitea_token",
-        "retry",
-        "gitea_repo",
-        "allow_build_failures",
-        "consider_unrequested_prs",
-        "pr_number",
-    ),
-)
+class Namespace(NamedTuple):
+    dry: bool
+    fake_data: bool
+    token: str
+    gitea_token: str
+    retry: bool
+    gitea_repo: str
+    allow_build_failures: bool
+    consider_unrequested_prs: bool
+    pr_number: int
 
 
 @pytest.fixture(scope="function")
@@ -139,7 +133,7 @@ def run_gitea_sync(
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
-    args = _namespace(
+    args = Namespace(
         dry=False,
         fake_data=False,
         token="123",

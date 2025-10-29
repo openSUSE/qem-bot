@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import logging
 import re
-from collections import namedtuple
+from typing import NamedTuple
 from urllib.parse import urlparse
 
 import pytest
@@ -14,7 +14,10 @@ from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
 from responses import matchers
 
-_args = namedtuple("Args", ("openqa_instance", "token"))
+
+class Args(NamedTuple):
+    openqa_instance: str
+    token: str
 
 
 @pytest.fixture(scope="function")
@@ -49,14 +52,14 @@ def test_bool() -> None:
     false_address = urlparse("http://fake.openqa.site")
     true_address = urlparse("https://openqa.suse.de")
 
-    assert oQAI(_args(true_address, ""))
-    assert not oQAI(_args(false_address, ""))
+    assert oQAI(Args(true_address, ""))
+    assert not oQAI(Args(false_address, ""))
 
 
 @responses.activate
 def test_post_job_failed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.retries = 0
     with pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
@@ -69,7 +72,7 @@ def test_post_job_failed(caplog: LogCaptureFixture) -> None:
 @pytest.mark.usefixtures("fake_osd_rsp")
 def test_post_job_passed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.post_job({"foo": "bar"})
 
     messages = [x[-1] for x in caplog.record_tuples]
@@ -82,7 +85,7 @@ def test_post_job_passed(caplog: LogCaptureFixture) -> None:
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
 def test_handle_job_not_found(caplog: LogCaptureFixture) -> None:
-    client = oQAI(_args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.handle_job_not_found(42)
     messages = [x[-1] for x in caplog.record_tuples]
     assert len(messages) == 2
