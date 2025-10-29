@@ -288,7 +288,7 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
-        if job_result.get("acceptable_for_" + str(inc), False):
+        if job_result.get("acceptable_for_" + str(inc)):
             log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):

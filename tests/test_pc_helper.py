@@ -153,7 +153,7 @@ def test_get_latest_tools_image() -> None:
             "build_results": [
                 {"failed": 10, "build": "AAAAA"},
                 {"failed": 0, "build": "test"},
-            ]
+            ],
         },
     )
     ret = get_latest_tools_image("http://url/results")

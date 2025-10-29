@@ -78,7 +78,7 @@ def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool =
     settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
         raise NoResultsError(
-            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
+            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository.",
         )
 
     if not all_incidents:

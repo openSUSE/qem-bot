@@ -32,7 +32,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "withAggregate": False,
-        }
+        },
     ]
     responses.add(
         method="GET",
@@ -49,7 +49,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "build": "33222",
-        }
+        },
     ]
     responses.add(
         method="GET",

@@ -82,7 +82,7 @@ def get_product_name(obs_project: str) -> str:
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, str]:
-    m = re.search(".*/products/(.*)#(.*)", scmsync_url)
+    m = re.search(r".*/products/(.*)#(.*)", scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
 
@@ -121,7 +121,7 @@ def compute_repo_url_for_job_setting(
                 "",
             )
             for p in (product_names if isinstance(product_names, list) else [product_names])
-        )
+        ),
     )
 
 
@@ -235,7 +235,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
 
 
 def add_channel_for_build_result(
-    project: str, arch: str, product_name: str, res: Any, projects: Set[str]
+    project: str, arch: str, product_name: str, res: Any, projects: Set[str],
 ) -> Tuple[str, bool]:
     channel = ":".join([project, arch])
     if arch == "local":
@@ -359,7 +359,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) 
     failed_packages = set()
     projects = set()
     for url in obs_urls:
-        project_match = re.search(".*/project/show/(.*)", url)
+        project_match = re.search(r".*/project/show/(.*)", url)
         if project_match:
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
@@ -408,12 +408,15 @@ def add_comments_and_referenced_build_results(
         body = comment["body"]
         user_name = comment["user"]["username"]
         if user_name == "autogits_obs_staging_bot":
-            add_build_results(incident, re.findall("https://[^ ]*", body), dry)
+            add_build_results(incident, re.findall(r"https://[^ ]*", body), dry)
             break
 
 
 def add_packages_from_patchinfo(
-    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+    incident: Dict[str, Any],
+    token: Dict[str, str],
+    patch_info_url: str,
+    dry: bool,
 ) -> None:
     if dry:
         patch_info = read_xml("patch-info")

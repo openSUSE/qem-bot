@@ -34,7 +34,7 @@ def apply_pc_tools_image(settings: Dict[str, Any]) -> Dict[str, Any]:
     try:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
             )
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"

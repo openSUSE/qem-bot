@@ -87,7 +87,7 @@ def __retry(retries: Optional[int], backoff_factor: float) -> Session:
             retries,
             backoff_factor=backoff_factor,
             status_forcelist=frozenset({403, 413, 429, 503}),
-        )
+        ),
     )
     http = Session()
     http.mount("https://", adapter)

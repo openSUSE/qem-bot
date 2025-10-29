@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 import gzip
 import json
+import pathlib
 import re
 from argparse import Namespace
 from collections import defaultdict
@@ -61,14 +62,13 @@ class RepoDiff:
                     return binary_file.read()
         resp = requests.get(url)
         if self.args is not None and self.args.dump_data and not self.args.fake_data:
-            with open(name, "wb") as output_file:
-                output_file.write(resp.content)
+            pathlib.Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
     def _load_repodata(self, project: str) -> Optional[ET.Element]:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(
-            url + "?jsontable=1", f"repodata-listing-{project}.json", as_json=True
+            url + "?jsontable=1", f"repodata-listing-{project}.json", as_json=True,
         )
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)

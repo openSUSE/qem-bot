@@ -30,7 +30,7 @@ _namespace = namedtuple(
 )
 openqa_instance_url = urlparse("http://instance.qa")
 args = _namespace(
-    dry=False, token="123", all_incidents=False, openqa_instance=openqa_instance_url, incident=None, gitea_token=None
+    dry=False, token="123", all_incidents=False, openqa_instance=openqa_instance_url, incident=None, gitea_token=None,
 )
 
 
@@ -61,19 +61,19 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(
                 {"build": "20240115-1", "id": 100002, "result": "failed"},
                 {"build": "20240114-1", "id": 100004, "result": "failed"},
                 {"build": "20240113-1", "id": 100005, "result": "softfailed"},
-            ]
+            ],
         },
     )
     responses.add(
         responses.GET,
-        re.compile("http://instance.qa/api/v1/jobs/.*"),
+        re.compile(r"http://instance.qa/api/v1/jobs/.*"),
         json={
             "job": {
                 "settings": {
                     "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
-                    % request.param
-                }
-            }
+                    % request.param,
+                },
+            },
         },
     )
 
@@ -167,8 +167,8 @@ def fake_responses_for_creating_pr_review() -> None:
                     "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
                     "comments": [],
                     "event": "APPROVED",
-                }
-            )
+                },
+            ),
         ],
     )
 
@@ -566,7 +566,7 @@ def test_one_aggr_failed(caplog: LogCaptureFixture) -> None:
     "fake_openqa_older_jobs_api",
 )
 def test_approval_unblocked_via_openqa_comment(
-    caplog: LogCaptureFixture, fake_dashboard_remarks_api: List[responses.BaseResponse]
+    caplog: LogCaptureFixture, fake_dashboard_remarks_api: List[responses.BaseResponse],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -589,7 +589,7 @@ def test_approval_unblocked_via_openqa_comment(
             "incident": 2,
             "not_acceptable_job_ids": [100003],
             "acceptable_job_ids": [100002, 100004],
-        }
+        },
     ],
     indirect=True,
 )

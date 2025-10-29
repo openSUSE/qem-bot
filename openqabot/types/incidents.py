@@ -228,7 +228,7 @@ class Incidents(BaseConf):
                     "BASE_TEST_ISSUES",  # GA product dir SLE15+
                     "RT_TEST_ISSUES",  # realtime kernel
                     "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                }
+                },
             )
         ):
             log.warning(
@@ -241,7 +241,7 @@ class Incidents(BaseConf):
             full_post["openqa"][key] = str(value.id)
 
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(self._make_repo_url(inc, chan) for chan in channels_set)
+            sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
 
         full_post["qem"]["withAggregate"] = True
