@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import logging
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import datetime
 from collections import defaultdict
 from itertools import chain
