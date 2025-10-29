@@ -235,7 +235,7 @@ def add_channel_for_build_result(
     res: Any,
     projects: Set[str],
 ) -> Tuple[str, bool]:
-    channel = ":".join([project, arch])
+    channel = f"{project}:{arch}"
     if arch == "local":
         return channel
 
@@ -252,7 +252,7 @@ def add_channel_for_build_result(
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
     if len(product_version) > 0:
-        channel = "#".join([channel, product_version])
+        channel = f"{channel}#{product_version}"
     elif len(product_name) > 0:
         log.warning("Unable to determine product version for build result %s:%s, not adding channel", project, arch)
         return channel

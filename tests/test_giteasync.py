@@ -167,7 +167,7 @@ def test_sync_with_product_repo(caplog: pytest.LogCaptureFixture, monkeypatch: p
     channels = incident["channels"]
     failed_or_unpublished = incident["failed_or_unpublished_packages"]
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
-        channel = "#".join([":".join((expected_repo, arch)), "15.99"])
+        channel = "#".join([f"{expected_repo}:{arch}", "15.99"])
         assert channel in channels
         assert channel in failed_or_unpublished
     assert incident["project"] == "SLFO"
@@ -196,7 +196,7 @@ def test_sync_with_product_version_from_repo_listing(
     incident = responses.calls[-1].response.json()[0]
     channels = incident["channels"]
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
-        channel = "#".join([":".join((expected_repo, arch)), "16.0"])  # the 16.0 comes from repo listing
+        channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
         assert channel in channels
     requests_to_download_repo = [r for r in responses.calls if r.request.url.startswith(OBS_DOWNLOAD_URL)]
     assert len(requests_to_download_repo) == 1
@@ -215,7 +215,7 @@ def test_sync_with_codestream_repo(caplog: pytest.LogCaptureFixture, monkeypatch
     channels = incident["channels"]
     failed_or_unpublished = incident["failed_or_unpublished_packages"]
     for arch in ["ppc64le", "aarch64", "x86_64"]:
-        channel = ":".join((expected_repo, arch))
+        channel = f"{expected_repo}:{arch}"
         assert channel in channels
         assert channel in failed_or_unpublished
 

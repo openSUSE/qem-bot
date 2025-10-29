@@ -292,7 +292,7 @@ class IncrementApprover:
         if config.diff_project_suffix != "none":
             build_project = config.build_project() + repo_sub_path
             diff_project = config.diff_project()
-            diff_key = ":".join([build_project, diff_project])
+            diff_key = f"{build_project}:{diff_project}"
             repo_diff = self.repo_diff.get(diff_key)
             if repo_diff is None:
                 log.debug("Comuting diff to project %s", diff_project)

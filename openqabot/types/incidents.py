@@ -180,7 +180,7 @@ class Incidents(BaseConf):
             log.debug(
                 "Meta-data channel: %s, %s, %s",
                 channel.product,
-                "#".join((channel.version, channel.product_version)),
+                f"{channel.version}#{channel.product_version}",
                 arch,
             )
             f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
