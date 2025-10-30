@@ -24,5 +24,9 @@ test-with-coverage:
 .PHONY: checkstyle
 checkstyle: ruff
 
+.PHONY: checkpyproject
+checkpyproject:
+	validate-pyproject pyproject.toml
+
 .PHONY: test
-test: only-test checkstyle
+test: only-test checkstyle checkpyproject
