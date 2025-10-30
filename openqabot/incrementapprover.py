@@ -45,12 +45,23 @@ class BuildInfo(NamedTuple):
         return f"{self.product}v{version} build {build}@{arch} of flavor {flavor}"
 
 
+class ApprovalStatus(NamedTuple):
+    request: osc.core.Request
+    ok_jobs: Set[int] = set()  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
+    reasons_to_disapprove: List[str] = []  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
+
+    def add(self, ok_jobs: Set[int], reasons_to_disapprove: List[str]) -> None:
+        self.ok_jobs.update(ok_jobs)
+        self.reasons_to_disapprove.extend(reasons_to_disapprove)
+
+
 class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
         self.args = args
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
         self.repo_diff = {}
+        self.requests_to_approve = {}
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
@@ -125,41 +136,41 @@ class IncrementApprover:
     def _evaluate_openqa_job_results(
         self,
         results: Dict[str, Dict[str, Dict[str, Any]]],
+        ok_jobs: Set[int],
         not_ok_jobs: Dict[str, Set[str]],
-    ) -> int:
-        ok_jobs = 0
+    ) -> None:
         for state in final_states:
             for result, info in results.get(state, {}).items():
                 if result in ok_results:
-                    ok_jobs += 1
+                    ok_jobs.update(set(info["job_ids"]))
                 else:
                     not_ok_jobs[result].update(info["job_ids"])
-        return ok_jobs
 
     def _evaluate_list_of_openqa_job_results(
         self, list_of_results: List[Dict[str, Dict[str, Dict[str, Any]]]]
-    ) -> Tuple[int, List[str]]:
-        ok_jobs = 0  # count ok jobs
+    ) -> Tuple[Set[int], List[str]]:
+        ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         openqa_url = self.client.url.geturl()
         for results in list_of_results:
-            ok_jobs += self._evaluate_openqa_job_results(results, not_ok_jobs)
+            self._evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
         reasons_to_disapprove = []  # compose list of blocking jobs
         for result, job_ids in not_ok_jobs.items():
             job_list = "\n".join((f" - {openqa_url}/tests/{i}" for i in job_ids))
             reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
         return (ok_jobs, reasons_to_disapprove)
 
-    def _handle_approval(self, request: osc.core.Request, ok_jobs: int, reasons_to_disapprove: List[str]) -> int:
+    def _handle_approval(self, approval_status: ApprovalStatus) -> int:
+        reasons_to_disapprove = approval_status.reasons_to_disapprove
         if len(reasons_to_disapprove) == 0:
             message = "All %i jobs on openQA have %s" % (
-                ok_jobs,
+                len(approval_status.ok_jobs),
                 "/".join(sorted(ok_results)),
             )
             if not self.args.dry:
                 osc.core.change_review_state(
                     apiurl=OBS_URL,
-                    reqid=str(request.id),
+                    reqid=str(approval_status.request.reqid),
                     newstate="accepted",
                     by_group=OBS_GROUP,
                     message=message,
@@ -299,21 +310,32 @@ class IncrementApprover:
         error_count = 0
         if request is None:
             return error_count
+        request_id = request.reqid
+        requests_to_approve = self.requests_to_approve
+        if request_id in requests_to_approve:
+            approval_status = requests_to_approve[request_id]
+        else:
+            approval_status = ApprovalStatus(request)
+            requests_to_approve[request_id] = approval_status
         for build_info in self._determine_build_info(config):
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
             params = self._make_scheduling_parameters(config, build_info)
+            info_str = build_info.string_with_params(params[0])
             res = self._request_openqa_job_results(build_info, params)
             if self.args.reschedule:
                 error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
             openqa_jobs_ready = self._check_openqa_jobs(res, build_info, params)
-            if openqa_jobs_ready is None and self.args.schedule:
-                error_count += self._schedule_openqa_jobs(build_info, params)
+            if openqa_jobs_ready is None:
+                approval_status.reasons_to_disapprove.append("No jobs scheduled for " + info_str)
+                if self.args.schedule:
+                    error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
-            if not openqa_jobs_ready:
-                continue
-            error_count += self._handle_approval(request, *(self._evaluate_list_of_openqa_job_results(res)))
+            if openqa_jobs_ready:
+                approval_status.add(*(self._evaluate_list_of_openqa_job_results(res)))
+            else:
+                approval_status.reasons_to_disapprove.append("Not all jobs ready for " + info_str)
         return error_count
 
     def __call__(self) -> int:
@@ -321,4 +343,6 @@ class IncrementApprover:
         for config in self.config:
             request = self._find_request_on_obs(config)
             error_count += self._process_request_for_config(request, config)
+        for request in self.requests_to_approve.values():
+            error_count += self._handle_approval(request)
         return error_count

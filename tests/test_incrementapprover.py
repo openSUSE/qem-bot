@@ -79,7 +79,7 @@ def fake_ok_jobs() -> None:
     responses.add(
         GET,
         openqa_url,
-        json={"done": {"passed": {"job_ids": [20]}, "softfailed": {"job_ids": [21]}}},
+        json={"done": {"passed": {"job_ids": [22]}, "softfailed": {"job_ids": [24]}}},
     )
 
 
@@ -114,25 +114,19 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
     assert message == "All 2 jobs on openQA have passed/softfailed"
 
 
-def run_approver(
+def prepare_approver(
     caplog: LogCaptureFixture,
     monkeypatch: MonkeyPatch,
     schedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: Optional[IncrementConfig] = None,
-) -> Tuple[int, List]:
-    jobs = []
+) -> IncrementApprover:
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
     monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
-    monkeypatch.setattr(
-        openqabot.openqa.openQAInterface,
-        "post_job",
-        lambda _self, data: jobs.append(data),
-    )
     args = _namespace(
         False,
         "not-secret",
@@ -157,9 +151,45 @@ def run_approver(
         {} if config is None else config.settings,
         [] if config is None else config.additional_builds,
     )
-    increment_approver = IncrementApprover(args)
+    return IncrementApprover(args)
+
+
+def run_approver(
+    caplog,
+    monkeypatch,
+    schedule: bool = False,
+    diff_project_suffix: str = "none",
+    test_env_var: str = "",
+    config: Optional[IncrementConfig] = None,
+) -> Tuple[int, List]:
+    jobs = []
+    monkeypatch.setattr(
+        openqabot.openqa.openQAInterface,
+        "post_job",
+        lambda _self, data: jobs.append(data),
+    )
+    increment_approver = prepare_approver(caplog, monkeypatch, schedule, diff_project_suffix, test_env_var, config)
     errors = increment_approver()
     return (errors, jobs)
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
+def test_approval_if_there_are_only_ok_openqa_jobs(caplog, monkeypatch):
+    run_approver(caplog, monkeypatch)
+    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    assert "All 2 jobs on openQA have passed/softfailed" in last_message
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
+def test_skipping_with_failing_openqa_jobs_for_one_config(caplog, monkeypatch):
+    increment_approver = prepare_approver(caplog, monkeypatch)
+    increment_approver.config.append(increment_approver.config[0])
+    increment_approver()
+    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    assert "have passed" not in last_message
+    assert "ended up with result 'failed':\n - http://openqa-instance/tests/21" in last_message
 
 
 @responses.activate
@@ -278,17 +308,6 @@ def test_listing_not_ok_openqa_jobs(
     assert "The following openQA jobs ended up with result 'failed'" in last_message
     assert "http://openqa-instance/tests/21" in last_message
     assert "http://openqa-instance/tests/20" not in last_message
-
-
-@responses.activate
-@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_approval_if_there_are_only_ok_openqa_jobs(
-    caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    run_approver(caplog, monkeypatch)
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
-    assert "All 2 jobs on openQA have passed/softfailed" in last_message
 
 
 def test_config_parsing(caplog: LogCaptureFixture) -> None:
