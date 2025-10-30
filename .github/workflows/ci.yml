@@ -15,7 +15,7 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - name: Setup enviroment
-        run: pip install -r requirements-dev.txt
+        run: pip install -e .[dev]
       - name: Run tests + cov report
         run: make test-with-coverage
       - name: Upload coverage to CodeCov
