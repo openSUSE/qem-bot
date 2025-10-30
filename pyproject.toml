@@ -4,6 +4,48 @@ dynamic = ["version"]
 description = "Tool for scheduling maintenance tests on openQA based on [SMELT](https://tools.io.suse.de/smelt) incidents and Gitea PRs."
 readme = "Readme.md"
 requires-python = ">=3.6"
+license = "MIT"
+authors = [
+    { name = "SUSE LLC" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "dataclasses",
+    "osc",
+    "openqa-client",
+    "pika",
+    "requests",
+    "ruamel.yaml",
+    "jsonschema",
+    "lxml",
+    "PyYAML",
+]
+
+[project.urls]
+Homepage = "https://github.com/openSUSE/qem-bot"
+
+[project.scripts]
+qem-bot = "openqabot.main:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "coverage",
+    "responses>=0.21.0",
+    "urllib3<2",
+    "ruff",
+]
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages]
+find = {}
 
 [tool.ruff]
 line-length = 120

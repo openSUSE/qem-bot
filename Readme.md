@@ -164,7 +164,7 @@ for consideration or create an issue with a code change proposal.
 Ensure you have the dependencies for development installed. The easiest
 way to get them is via pip:
 
-    pip install -r requirements-dev.txt
+    pip install -e ".[dev]"
 
 There are currently only limited automatic tests available. Run `make test`
 or `pytest` to execute Python-based unit tests. Run e.g.
