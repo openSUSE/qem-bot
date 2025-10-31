@@ -1,9 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
+from argparse import Namespace
 from functools import lru_cache
 from pprint import pformat
-from typing import Dict
+from typing import Any, Dict, List, Optional
 from urllib.parse import ParseResult
 
 from openqa_client.client import OpenQA_Client
@@ -18,7 +19,7 @@ log = logging.getLogger("bot.openqa")
 
 
 class openQAInterface:
-    def __init__(self, args) -> None:
+    def __init__(self, args: Namespace) -> None:
         self.url: ParseResult = args.openqa_instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = 3
@@ -33,7 +34,7 @@ class openQAInterface:
         """
         return self.url.netloc == OPENQA_URL
 
-    def post_job(self, settings) -> None:
+    def post_job(self, settings: Dict[str, Any]) -> None:
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
@@ -50,11 +51,11 @@ class openQAInterface:
             log.error("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
 
-    def handle_job_not_found(self, job_id: int):
+    def handle_job_not_found(self, job_id: int) -> None:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
-    def get_jobs(self, data: Data):
+    def get_jobs(self, data: Data) -> List[Dict[str, Any]]:
         log.info("Getting openQA tests results for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
@@ -74,7 +75,7 @@ class openQAInterface:
         return ret
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int):
+    def get_job_comments(self, job_id: int) -> List[Dict[str, str]]:
         ret = []
         try:
             ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
@@ -101,7 +102,7 @@ class openQAInterface:
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
-    def get_single_job(self, job_id: int):
+    def get_single_job(self, job_id: int) -> Optional[Dict[str, Any]]:
         ret = None
         try:
             ret = self.openqa.openqa_request(
@@ -125,5 +126,5 @@ class openQAInterface:
             log.exception(e)
         return ret
 
-    def get_scheduled_product_stats(self, params):
+    def get_scheduled_product_stats(self, params: Dict[str, Any]) -> Dict[str, Any]:
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

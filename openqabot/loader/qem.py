@@ -3,7 +3,7 @@
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Dict, List, NamedTuple, Sequence
+from typing import Any, Dict, List, NamedTuple, Sequence
 
 from openqabot.dashboard import get_json, patch, put
 
@@ -118,7 +118,7 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
     ]
 
 
-def get_incident_results(inc: int, token: Dict[str, str]):
+def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
     try:
         settings = get_incident_settings(inc, token)
     except NoResultsError as e:
@@ -151,7 +151,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     return [JobAggr(i["id"], True, False) for i in settings if last_build in i["build"]]
 
 
-def get_aggregate_settings_data(token: Dict[str, str], data: Data):
+def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[Data]:
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
     try:
         settings = get_json(url, headers=token)
@@ -181,7 +181,7 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data):
     ]
 
 
-def get_aggregate_results(inc: int, token: Dict[str, str]):
+def get_aggregate_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
     try:
         settings = get_aggregate_settings(inc, token)
     except NoResultsError as e:
@@ -191,18 +191,17 @@ def get_aggregate_results(inc: int, token: Dict[str, str]):
     for job_aggr in settings:
         try:
             data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
+            ret += data
         except Exception as e:
             log.exception(e)
             raise e
         if "error" in data:
             raise ValueError(data["error"])
 
-        ret += data
-
     return ret
 
 
-def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
+def update_incidents(token: Dict[str, str], data: Dict[str, Any], **kwargs: Any) -> int:
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
@@ -227,7 +226,7 @@ def update_incidents(token: Dict[str, str], data, **kwargs) -> int:
     return 2
 
 
-def post_job(token: Dict[str, str], data) -> None:
+def post_job(token: Dict[str, str], data: Dict[str, Any]) -> None:
     try:
         result = put("api/jobs", headers=token, json=data)
         if result.status_code != 200:
@@ -237,7 +236,7 @@ def post_job(token: Dict[str, str], data) -> None:
         log.exception(e)
 
 
-def update_job(token: Dict[str, str], job_id: int, data) -> None:
+def update_job(token: Dict[str, str], job_id: int, data: Dict[str, Any]) -> None:
     try:
         result = patch("api/jobs/" + str(job_id), headers=token, json=data)
         if result.status_code != 200:

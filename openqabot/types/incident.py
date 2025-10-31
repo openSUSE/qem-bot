@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
 from ..loader.repohash import get_max_revision
@@ -13,7 +13,7 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 
 class Incident:
-    def __init__(self, incident):
+    def __init__(self, incident: Dict[str, Any]) -> None:
         self.rr = incident["rr_number"]
         self.project = incident["project"]
         self.id = incident["number"]
@@ -84,10 +84,10 @@ class Incident:
         self,
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
-    ):
+    ) -> None:
         self.revisions = self._rev(self.arch_filter, self.channels, self.project, product_repo, product_version)
 
-    def revisions_with_fallback(self, arch: str, ver: str):
+    def revisions_with_fallback(self, arch: str, ver: str) -> Optional[int]:
         if self.revisions is None:
             self.compute_revisions_for_product_repo(None, None)
         try:
@@ -145,12 +145,12 @@ class Incident:
             raise NoRepoFoundError
         return rev
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.rrid:
             return f"<Incident: {self.rrid}>"
         return f"<Incident: {self.project}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.id)
 
     @staticmethod

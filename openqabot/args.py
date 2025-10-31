@@ -1,13 +1,13 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from urllib.parse import urlparse
 
 from . import AMQP_URL, BUILD_REGEX, OBS_GROUP
 
 
-def do_full_schedule(args):
+def do_full_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
     args.disable_incidents = False
@@ -17,7 +17,7 @@ def do_full_schedule(args):
     return bot()
 
 
-def do_incident_schedule(args):
+def do_incident_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
     args.disable_incidents = False
@@ -27,7 +27,7 @@ def do_incident_schedule(args):
     return bot()
 
 
-def do_aggregate_schedule(args):
+def do_aggregate_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
     args.disable_aggregates = False
@@ -37,70 +37,70 @@ def do_aggregate_schedule(args):
     return bot()
 
 
-def do_sync_smelt(args):
+def do_sync_smelt(args: Namespace) -> int:
     from .smeltsync import SMELTSync
 
     syncer = SMELTSync(args)
     return syncer()
 
 
-def do_sync_gitea(args):
+def do_sync_gitea(args: Namespace) -> int:
     from .giteasync import GiteaSync
 
     syncer = GiteaSync(args)
     return syncer()
 
 
-def do_approve(args):
+def do_approve(args: Namespace) -> int:
     from .approver import Approver
 
     approve = Approver(args)
     return approve()
 
 
-def do_comment(args):
+def do_comment(args: Namespace) -> int:
     from .commenter import Commenter
 
     comment = Commenter(args)
     return comment()
 
 
-def do_sync_inc_results(args):
+def do_sync_inc_results(args: Namespace) -> int:
     from .incsyncres import IncResultsSync
 
     syncer = IncResultsSync(args)
     return syncer()
 
 
-def do_sync_aggregate_results(args):
+def do_sync_aggregate_results(args: Namespace) -> int:
     from .aggrsync import AggregateResultsSync
 
     syncer = AggregateResultsSync(args)
     return syncer()
 
 
-def do_increment_approve(args):
+def do_increment_approve(args: Namespace) -> int:
     from .incrementapprover import IncrementApprover
 
     approve = IncrementApprover(args)
     return approve()
 
 
-def do_repo_diff_computation(args):
+def do_repo_diff_computation(args: Namespace) -> int:
     from .repodiff import RepoDiff
 
     repo_diff = RepoDiff(args)
     return repo_diff()
 
 
-def do_amqp(args):
+def do_amqp(args: Namespace) -> int:
     from .amqp import AMQP
 
     amqp = AMQP(args)
     return amqp()
 
 
-def get_parser():
+def get_parser() -> ArgumentParser:
     parser = ArgumentParser(description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot")
 
     parser.add_argument(

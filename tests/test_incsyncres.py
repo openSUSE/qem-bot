@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: MIT
 import logging
 from collections import namedtuple
+from typing import Any, List
 from urllib.parse import urlparse
 
 import pytest
+from _pytest.logging import LogCaptureFixture
+from pytest import MonkeyPatch
 
 import openqabot.incsyncres
 import responses
@@ -15,8 +18,8 @@ namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
 
 @pytest.fixture
-def get_a_i(monkeypatch):
-    def fake(*_args):
+def get_a_i(monkeypatch: MonkeyPatch) -> None:
+    def fake(*_args: Any) -> List[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
@@ -24,7 +27,7 @@ def get_a_i(monkeypatch):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_clone_dry(caplog):
+def test_clone_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -84,7 +87,7 @@ def test_clone_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_nogroup_dry(caplog):
+def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -142,7 +145,7 @@ def test_nogroup_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_fast_dry(caplog):
+def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -202,7 +205,7 @@ def test_devel_fast_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_dry(caplog):
+def test_devel_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -266,7 +269,7 @@ def test_devel_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_passed_dry(caplog):
+def test_passed_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data

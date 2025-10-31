@@ -13,7 +13,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import create_logger, get_yml_list
 
 
-def main():
+def main() -> None:
     """Run Public Cloud helper with online access for testing purposes.
 
     Allowing to prove that Public Cloud related logic is actually working without executing

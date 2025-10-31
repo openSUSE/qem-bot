@@ -47,7 +47,7 @@ def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GIT
         raise e
 
 
-def read_utf8(name: str) -> Any:
+def read_utf8(name: str) -> str:
     with open("responses/%s" % name, "r", encoding="utf8") as utf8:
         return utf8.read()
 
@@ -57,21 +57,21 @@ def read_json(name: str) -> Any:
         return json.loads(json_file.read())
 
 
-def read_xml(name: str) -> Any:
+def read_xml(name: str) -> ET.ElementTree:
     return ET.parse("responses/%s.xml" % name)
 
 
-def reviews_url(repo_name: str, number: int):
+def reviews_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoListPullReviews
     return "repos/%s/pulls/%s/reviews" % (repo_name, number)
 
 
-def changed_files_url(repo_name: str, number: int):
+def changed_files_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
     return "repos/%s/pulls/%s/files" % (repo_name, number)
 
 
-def comments_url(repo_name: str, number: int):
+def comments_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return "repos/%s/issues/%s/comments" % (repo_name, number)
 
@@ -152,7 +152,7 @@ def review_pr(
     msg: str,
     commit_id: str,
     approve: bool = True,
-):
+) -> None:
     if GIT_REVIEW_BOT:
         review_url = comments_url(repo_name, pr_number)
         review_cmd = f"@{GIT_REVIEW_BOT}: "
@@ -169,12 +169,12 @@ def review_pr(
     post_json(review_url, token, review_data)
 
 
-def get_name(review: Dict[str, Any], of: str, via: str):
+def get_name(review: Dict[str, Any], of: str, via: str) -> str:
     entity = review.get(of)
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: Dict[str, Any], users: List[str]):
+def is_review_requested_by(review: Dict[str, Any], users: List[str]) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -229,7 +229,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
             version = next(parts, "")
             if len(version) > 0:
                 return version
-    except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
+    except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
         log.warning("Unable to read product version from '%s': %s", url, e)
     return version
 
@@ -270,7 +270,7 @@ def add_build_result(
     successful_packages: Set[str],
     unpublished_repos: Set[str],
     failed_packages: Set[str],
-):
+) -> None:
     state = res.get("state")
     project = res.get("project")
     product_name = get_product_name(project)
@@ -309,7 +309,7 @@ def add_build_result(
             failed_packages.add(status.get("package"))
 
 
-def get_multibuild_data(obs_project: str):
+def get_multibuild_data(obs_project: str) -> str:
     r = MultibuildFlavorResolver(OBS_URL, obs_project, "000productcompose")
     return r.get_multibuild_data()
 
@@ -353,7 +353,7 @@ def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool):
+def add_build_results(incident: Dict[str, Any], obs_urls: List[str], dry: bool) -> None:
     successful_packages = set()
     unpublished_repos = set()
     failed_packages = set()
@@ -403,7 +403,7 @@ def add_comments_and_referenced_build_results(
     incident: Dict[str, Any],
     comments: List[Any],
     dry: bool,
-):
+) -> None:
     for comment in reversed(comments):
         body = comment["body"]
         user_name = comment["user"]["username"]
@@ -412,7 +412,9 @@ def add_comments_and_referenced_build_results(
             break
 
 
-def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool):
+def add_packages_from_patchinfo(
+    incident: Dict[str, Any], token: Dict[str, str], patch_info_url: str, dry: bool
+) -> None:
     if dry:
         patch_info = read_xml("patch-info")
     else:
@@ -421,7 +423,7 @@ def add_packages_from_patchinfo(incident: Dict[str, Any], token: Dict[str, str],
         incident["packages"].append(res.text)
 
 
-def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool):
+def add_packages_from_files(incident: Dict[str, Any], token: Dict[str, str], files: List[Any], dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
@@ -447,7 +449,7 @@ def make_incident_from_pr(
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-):
+) -> Optional[Dict[str, Any]]:
     log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
@@ -504,12 +506,12 @@ def make_incident_from_pr(
 
 
 def get_incidents_from_open_prs(
-    open_prs: Set[int],
+    open_prs: List[Dict[str, Any]],
     token: Dict[str, str],
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> List[Any]:
+) -> List[Dict[str, Any]]:
     incidents = []
 
     # configure osc to be able to request build info from OBS

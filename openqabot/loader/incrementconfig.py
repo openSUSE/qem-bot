@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Set
+from typing import Dict, Iterator, List, Set
 
 from ruamel.yaml import YAML
 
@@ -45,7 +45,7 @@ class IncrementConfig:
         return f"{base_url}/{base_path}"
 
     @staticmethod
-    def from_config_entry(entry: Dict[str, str]) -> Any:
+    def from_config_entry(entry: Dict[str, str]) -> "IncrementConfig":
         return IncrementConfig(
             distri=entry["distri"],
             version=entry.get("version", "any"),
@@ -63,7 +63,7 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path) -> Iterator[Any]:
+    def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
         try:
             log.info("Reading config file '%s'", file_path)
             return map(
@@ -75,11 +75,11 @@ class IncrementConfig:
             return iter(())
 
     @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator[Any]:
+    def from_config_path(file_or_dir_path: Path) -> Iterator["IncrementConfig"]:
         return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
 
     @staticmethod
-    def from_args(args: Namespace) -> List[Any]:
+    def from_args(args: Namespace) -> List["IncrementConfig"]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
         # Create a dictionary of arguments for IncrementConfig

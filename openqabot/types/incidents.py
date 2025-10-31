@@ -23,15 +23,15 @@ class Incidents(BaseConf):
         product: str,
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
-        settings,
-        config,
+        settings: Dict[str, Any],
+        config: Dict[str, Any],
         extrasettings: Set[str],
     ) -> None:
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Incidents product: {self.product}>"
 
     @staticmethod
@@ -41,7 +41,7 @@ class Incidents(BaseConf):
         return ProdVer(channel_parts[0], *version_parts)
 
     @staticmethod
-    def normalize_repos(config):
+    def normalize_repos(config: Dict[str, Any]) -> Dict[str, Any]:
         ret = {}
         for flavor, data in config.items():
             ret[flavor] = {}
@@ -93,7 +93,7 @@ class Incidents(BaseConf):
 
         return False
 
-    def _make_repo_url(self, inc: Incident, chan: Repos):
+    def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
         return (
             gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan, self.product_repo, self.product_version)
             if chan.product == "SUSE:SLFO"
@@ -103,13 +103,13 @@ class Incidents(BaseConf):
     def _handle_incident(  # noqa: PLR0911,C901 # pylint: disable=too-many-return-statements
         self,
         inc: Incident,
-        arch,
-        flavor,
-        data,
+        arch: str,
+        flavor: str,
+        data: Dict[str, Any],
         token: Dict[str, str],
         ci_url: Optional[str],
         ignore_onetime: bool,
-    ) -> Dict[str, Any]:
+    ) -> Optional[Dict[str, Any]]:
         if inc.type == "git" and not inc.ongoing:
             log.info(
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
@@ -326,7 +326,7 @@ class Incidents(BaseConf):
         token: Dict[str, str],
         ci_url: Optional[str],
         ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Optional[Dict[str, Any]]]:
         ret = []
 
         for flavor, data in self.flavors.items():

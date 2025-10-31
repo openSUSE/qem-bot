@@ -66,16 +66,14 @@ def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
     return False
 
 
-def sanitize_comment_text(
-    text,
-):
+def sanitize_comment_text(text: str) -> str:
     text = "".join(x for x in text if x in string.printable)
     text = text.replace("\r", " ").replace("\n", " ")
     return text.strip()
 
 
 class Approver:
-    def __init__(self, args: Namespace, single_incident=None) -> None:
+    def __init__(self, args: Namespace, single_incident: Optional[int] = None) -> None:
         self.dry = args.dry
         self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
         if single_incident is None:
@@ -139,7 +137,7 @@ class Approver:
         # everything is green --> add incident to approve list
         return True
 
-    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int):
+    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int) -> None:
         try:
             patch(
                 "api/jobs/" + str(job_id) + "/remarks?text=acceptable_for&incident_number=" + str(incident_number),
@@ -276,7 +274,7 @@ class Approver:
     def is_job_passing(self, job_result: dict) -> bool:
         return job_result["status"] == "passed"
 
-    def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int):
+    def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int) -> None:
         for job_result in job_results:
             if self.is_job_passing(job_result):
                 continue

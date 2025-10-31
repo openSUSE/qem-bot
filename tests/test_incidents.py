@@ -1,16 +1,17 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
+from pytest import MonkeyPatch
 
 import responses
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incidents import Incidents
 
 
-def test_incidents_constructor():
+def test_incidents_constructor() -> None:
     """What is the bare minimal set of arguments
     needed by the constructor?
     """
@@ -26,7 +27,7 @@ def test_incidents_constructor():
     )
 
 
-def test_incidents_printable():
+def test_incidents_printable() -> None:
     """Try the printable"""
     test_config = {}
     test_config["FLAVOR"] = {}
@@ -41,7 +42,7 @@ def test_incidents_printable():
     assert str(inc) == "<Incidents product: hello>"
 
 
-def test_incidents_call():
+def test_incidents_call() -> None:
     """What is the bare minimal set of arguments
     needed by the callable?
     """
@@ -59,7 +60,7 @@ def test_incidents_call():
     assert res == []
 
 
-def test_incidents_call_with_flavors():
+def test_incidents_call_with_flavors() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": []}}
     inc = Incidents(
@@ -77,7 +78,7 @@ def test_incidents_call_with_flavors():
 class MyIncident_0(object):
     """The simpler possible implementation of Incident class"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.id = None
         self.staging = False
         self.livepatch = False
@@ -88,14 +89,14 @@ class MyIncident_0(object):
         self.ongoing = True
         self.type = "smelt"
 
-    def compute_revisions_for_product_repo(self, product_repo: Optional[str], product_version: Optional[str]):
+    def compute_revisions_for_product_repo(self, product_repo: Optional[str], product_version: Optional[str]) -> None:
         pass
 
-    def revisions_with_fallback(self, arch: str, version: str):
+    def revisions_with_fallback(self, arch: str, version: str) -> None:
         pass
 
 
-def test_incidents_call_with_incidents():
+def test_incidents_call_with_incidents() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
     inc = Incidents(
@@ -111,12 +112,12 @@ def test_incidents_call_with_incidents():
 
 
 class MyIncident_1(MyIncident_0):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.channels = []
 
 
-def test_incidents_call_with_issues():
+def test_incidents_call_with_issues() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
     inc = Incidents(
@@ -132,7 +133,7 @@ def test_incidents_call_with_issues():
 
 
 @pytest.fixture
-def request_mock(monkeypatch):
+def request_mock(monkeypatch: MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -142,27 +143,27 @@ def request_mock(monkeypatch):
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
-        def json():
+        def json() -> List[Dict]:
             return [{"flavor": None}]
 
-    def mock_get(*_args, **_kwargs):
+    def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
 
 
 class MyIncident_2(MyIncident_1):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, _arch, _version):
+    def revisions_with_fallback(self, _arch: str, _version: str) -> bool:
         return True
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_with_channels():
+def test_incidents_call_with_channels() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -179,17 +180,17 @@ def test_incidents_call_with_channels():
 
 
 class MyIncident_3(MyIncident_2):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, _requires):
+    def contains_package(self, _requires: List[str]) -> bool:
         return True
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_with_packages():
+def test_incidents_call_with_packages() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}}
 
@@ -206,7 +207,7 @@ def test_incidents_call_with_packages():
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_with_params_expand():
+def test_incidents_call_with_params_expand() -> None:
     """Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
     The only flavor is using params_expand.
@@ -249,7 +250,7 @@ def test_incidents_call_with_params_expand():
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_with_params_expand_distri_version():
+def test_incidents_call_with_params_expand_distri_version() -> None:
     """DISTRI and VERSION settings cannot be changed using params_expand."""
     test_config = {}
     test_config["FLAVOR"] = {
@@ -301,7 +302,7 @@ def test_incidents_call_with_params_expand_distri_version():
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_with_params_expand_isolated():
+def test_incidents_call_with_params_expand_isolated() -> None:
     """Product configuration has 4 settings.
     Incident configuration has 2 flavors.
     Only the first flavor is using params_expand, the other is not.
@@ -344,13 +345,13 @@ def test_incidents_call_with_params_expand_isolated():
 
 
 class MyIncident_4(MyIncident_3):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.embargoed = False
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_public_cloud_pint_query(monkeypatch):
+def test_incidents_call_public_cloud_pint_query(monkeypatch: MonkeyPatch) -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -372,7 +373,7 @@ def test_incidents_call_public_cloud_pint_query(monkeypatch):
     assert "PUBLIC_CLOUD_IMAGE_ID" in res[0]["openqa"]
 
 
-def test_making_repo_url():
+def test_making_repo_url() -> None:
     s = {"VERSION": "", "DISTRI": None}
     c = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
     incs = Incidents(
@@ -397,12 +398,12 @@ def test_making_repo_url():
 
 
 class MyIncident_5(MyIncident_2):
-    def revisions_with_fallback(self, arch, version):
+    def revisions_with_fallback(self, arch: str, version: str) -> int:
         return self.revisions[ArchVer(arch, version)]
 
 
 @responses.activate
-def test_gitea_incidents():
+def test_gitea_incidents() -> None:
     # declare fields of Repos used in this test
     product = "SUSE:SLFO"  # "product" is used to store the name of the codestream in Gitea-based incidents …
     version = "1.1.99:PullRequest:166:SLES"  # … and version is the full project including the product

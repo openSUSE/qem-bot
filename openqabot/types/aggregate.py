@@ -25,8 +25,8 @@ class Aggregate(BaseConf):
         product: str,
         product_repo: Optional[Union[List[str], str]],
         product_version: Optional[str],
-        settings,
-        config,
+        settings: Dict[str, Any],
+        config: Dict[str, Any],
     ) -> None:
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavor = config["FLAVOR"]
@@ -35,7 +35,7 @@ class Aggregate(BaseConf):
         self.test_issues = self.normalize_repos(config)
 
     @staticmethod
-    def normalize_repos(config):
+    def normalize_repos(config: Dict[str, Any]) -> Dict[str, ProdVer]:
         try:
             repos = {
                 key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
@@ -45,7 +45,7 @@ class Aggregate(BaseConf):
 
         return repos
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Aggregate product: {self.product}>"
 
     @staticmethod

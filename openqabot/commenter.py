@@ -3,7 +3,7 @@
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import osc.conf
 import osc.core
@@ -106,7 +106,7 @@ class Commenter:
             log.info("Would write comment to request %s", inc)
             log.debug(pformat(msg))
 
-    def summarize_message(self, jobs) -> str:  # noqa: C901
+    def summarize_message(self, jobs: List[Dict[str, Any]]) -> str:  # noqa: C901
         groups = {}
         for job in jobs:
             if "job_group" not in job:
@@ -165,7 +165,7 @@ class Commenter:
     def emd(string: str) -> str:
         return string.replace("_", r"\_")
 
-    def __summarize_one_openqa_job(self, job) -> Optional[str]:
+    def __summarize_one_openqa_job(self, job: Dict[str, Any]) -> Optional[str]:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
         if job["status"] not in ["passed", "failed", "softfailed"]:
             rstring = job["status"]

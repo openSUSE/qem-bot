@@ -6,9 +6,11 @@ import re
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Dict, Sequence
+from typing import Any, Dict, Sequence
 
 import pika
+import pika.channel
+import pika.spec
 
 from .approver import Approver
 from .loader.qem import get_incident_settings_data
@@ -45,12 +47,18 @@ class AMQP(SyncRes):
         self.stop()
         return 0
 
-    def stop(self):
+    def stop(self) -> None:
         if self.connection:
             log.info("Closing AMQP connection")
             self.connection.close()
 
-    def on_message(self, unused_channel, method, unused_properties, body) -> None:  # noqa: ARG002 Unused method argument
+    def on_message(
+        self,
+        unused_channel: pika.channel.Channel,  # noqa: ARG002 Unused method argument
+        method: pika.spec.Basic.Deliver,
+        unused_properties: pika.spec.BasicProperties,  # noqa: ARG002 Unused method argument
+        body: bytes,
+    ) -> None:
         message = json.loads(body)
         if method.routing_key == "suse.openqa.job.done" and "BUILD" in message:
             match = build_inc_regex.match(message["BUILD"])
@@ -67,7 +75,7 @@ class AMQP(SyncRes):
                 return self.handle_aggregate(build_nr, message)
         return None
 
-    def handle_incident(self, inc_nr: int, message) -> None:
+    def handle_incident(self, inc_nr: int, message: Dict[str, Any]) -> None:
         # Load Data about current incident from dashboard database
         try:
             settings: Sequence[Data] = get_incident_settings_data(self.token, inc_nr)
@@ -95,5 +103,5 @@ class AMQP(SyncRes):
         approve = Approver(self.args, inc_nr)
         approve()
 
-    def handle_aggregate(self, unused_build: str, unused_message) -> None:  # noqa: ARG002 Unused method argument
+    def handle_aggregate(self, unused_build: str, unused_message: Dict[str, Any]) -> None:  # noqa: ARG002 Unused method argument
         return

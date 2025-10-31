@@ -4,7 +4,7 @@ from argparse import Namespace
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .loader.qem import update_incidents
 from .loader.smelt import get_active_incidents, get_incidents
@@ -32,7 +32,7 @@ class SMELTSync:
         return update_incidents(self.token, data, retry=self.retry)
 
     @staticmethod
-    def _review_rrequest(request_set):
+    def _review_rrequest(request_set: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
@@ -40,23 +40,23 @@ class SMELTSync:
         return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
-    def _is_inreview(rr_number) -> bool:
+    def _is_inreview(rr_number: Dict[str, Any]) -> bool:
         if rr_number["reviewSet"]:
             return rr_number["status"]["name"] == "review"
         return False
 
     @staticmethod
-    def _is_revoked(rr_number) -> bool:
+    def _is_revoked(rr_number: Dict[str, Any]) -> bool:
         if rr_number["reviewSet"]:
             return rr_number["status"]["name"] == "revoked"
         return False
 
     @staticmethod
-    def _is_accepted(rr_number) -> bool:
+    def _is_accepted(rr_number: Dict[str, Any]) -> bool:
         return rr_number["status"]["name"] == "accepted" or rr_number["status"]["name"] == "new"
 
     @staticmethod
-    def _has_qam_review(rr_number) -> bool:
+    def _has_qam_review(rr_number: Dict[str, Any]) -> bool:
         if not rr_number["reviewSet"]:
             return False
         rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
@@ -64,7 +64,7 @@ class SMELTSync:
         return bool(review) and review[0]["status"]["name"] in ("review", "new")
 
     @classmethod
-    def _create_record(cls, inc):
+    def _create_record(cls, inc: Dict[str, Any]) -> Dict[str, Any]:
         incident = {}
         incident["isActive"] = True
 
