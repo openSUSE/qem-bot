@@ -1,9 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from copy import deepcopy
-from typing import NoReturn
+from typing import Any, NoReturn
 
 import pytest
+from pytest import MonkeyPatch
 
 import openqabot.types.incident
 from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
@@ -34,16 +35,16 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch) -> None:
-    def fake(*_args, **_kwargs) -> int:
+def mock_good(monkeypatch: MonkeyPatch) -> None:
+    def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
     monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
 
 
 @pytest.fixture
-def mock_ex(monkeypatch) -> None:
-    def fake(*_args, **_kwargs) -> NoReturn:
+def mock_ex(monkeypatch: MonkeyPatch) -> None:
+    def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
     monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
