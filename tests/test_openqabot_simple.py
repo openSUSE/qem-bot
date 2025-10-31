@@ -49,10 +49,10 @@ def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
 @pytest.fixture
 def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, *_args, **_kwargs) -> None:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def post_job(self, *_args, **_kwargs) -> NoReturn:
+        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:
             raise PostOpenQAError
 
     monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
