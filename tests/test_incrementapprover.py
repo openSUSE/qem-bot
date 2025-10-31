@@ -118,6 +118,7 @@ def prepare_approver(
     caplog: LogCaptureFixture,
     monkeypatch: MonkeyPatch,
     schedule: bool = False,
+    reschedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: Optional[IncrementConfig] = None,
@@ -140,7 +141,7 @@ def prepare_approver(
         "16.0",
         "Online-Increments",
         schedule,
-        False,
+        reschedule,
         "product",
         BUILD_REGEX,
         ".*",
@@ -158,6 +159,7 @@ def run_approver(
     caplog,
     monkeypatch,
     schedule: bool = False,
+    reschedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: Optional[IncrementConfig] = None,
@@ -168,7 +170,9 @@ def run_approver(
         "post_job",
         lambda _self, data: jobs.append(data),
     )
-    increment_approver = prepare_approver(caplog, monkeypatch, schedule, diff_project_suffix, test_env_var, config)
+    increment_approver = prepare_approver(
+        caplog, monkeypatch, schedule, reschedule, diff_project_suffix, test_env_var, config
+    )
     errors = increment_approver()
     return (errors, jobs)
 
@@ -179,6 +183,15 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog, monkeypatch):
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
+def test_skipping_if_rescheduling(caplog, monkeypatch):
+    run_approver(caplog, monkeypatch, reschedule=True)
+    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    assert "have passed" not in last_message
+    assert "Re-scheduling jobs for" in last_message
 
 
 @responses.activate
