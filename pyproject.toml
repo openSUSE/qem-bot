@@ -8,6 +8,7 @@ requires-python = ">=3.6"
 [tool.ruff]
 line-length = 120
 exclude = ['metadata']
+preview = true
 
 [tool.ruff.lint]
 # E, F: Standard pycodestyle and Pyflakes (default flake8)
@@ -47,6 +48,32 @@ extend-select =[
     "PGH",
     "ARG",
     "RUF",
+    "ANN",
+    "S",
+    "FBT",
+    "TRY",
+    "YTT",
+    "ASYNC",
+    "COM",
+    "CPY",
+    "EM",
+    "FA",
+    "INT",
+    "PYI",
+    "PT",
+    "SLOT",
+    "TID",
+    "TC",
+    "PTH",
+    "FLY",
+    "NPY",
+    "PD",
+    "N",
+    "PLE",
+    "PLR",
+    "PLW",
+    "UP",  # TODO needs at least python3.7 for "from __future__ import annotations" or probably better we setup a new container with python311 which is in leap 15.6
+    "DOC",
 ]
 
 ignore = [
@@ -84,6 +111,8 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
     "B019",
+    "ANN401",
+    "S101",
 ]
 
 [tool.ruff.format]

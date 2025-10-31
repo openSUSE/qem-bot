@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 import logging
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,7 +24,7 @@ except ImportError as e:
     log.info("%s: Likely older python version", e)
 
 
-def test_normalize_results():
+def test_normalize_results() -> None:
     assert normalize_results("none") == "waiting"
     assert normalize_results("passed") == "passed"
     assert normalize_results("failed") == "failed"
@@ -43,7 +44,7 @@ def test_normalize_results():
 
 
 @pytest.mark.parametrize(
-    "data,result",
+    ("data", "result"),
     [
         ([], []),
         ({}, {}),
@@ -61,16 +62,16 @@ def test_normalize_results():
                                             {"node": {"name": "12:x86_64"}},
                                             {"node": {"name": "12:Update"}},
                                             {"node": {"name": "12:s390x"}},
-                                        ]
+                                        ],
                                     },
                                     "c": {"edges": []},
                                     "cM": None,
                                     "cQ": None,
-                                }
-                            }
-                        ]
-                    }
-                }
+                                },
+                            },
+                        ],
+                    },
+                },
             },
             {
                 "d": {
@@ -86,14 +87,14 @@ def test_normalize_results():
                                 {"name": "12:s390x"},
                             ],
                             "rS": [],
-                        }
-                    ]
+                        },
+                    ],
                 },
             },
         ),
     ],
 )
-def test_walk(data, result):
+def test_walk(data: list[Any] | dict[str, Any], result: list[Any] | dict[str, Any]) -> None:
     ret = walk(data)
     assert result == ret
 
@@ -101,7 +102,7 @@ def test_walk(data, result):
 if has_registries:
 
     @responses.activate(registry=registries.OrderedRegistry)
-    def test_retry3():
+    def test_retry3() -> None:
         _ = responses.add(responses.GET, "http://host.some", status=503)
         _ = responses.add(responses.GET, "http://host.some", status=503)
         rsp3 = responses.add(responses.GET, "http://host.some", status=200)
@@ -115,7 +116,7 @@ if has_registries:
         assert rsp4.call_count == 1
 
 
-def test_get_yml_list_single_file_yml(tmp_path):
+def test_get_yml_list_single_file_yml(tmp_path: Path) -> None:
     """Create a folder with a single .yml file
     Call the function with the path of the file
     The expected behavior is the function to return
@@ -133,7 +134,7 @@ def test_get_yml_list_single_file_yml(tmp_path):
         assert filename in res[0].name
 
 
-def test_get_yml_list_folder_with_single_file_yml(tmp_path):
+def test_get_yml_list_folder_with_single_file_yml(tmp_path: Path) -> None:
     d = tmp_path / "it_is_a_folder"
     d.mkdir()
     p = d / "hello.yml"
@@ -144,7 +145,7 @@ def test_get_yml_list_folder_with_single_file_yml(tmp_path):
     assert "hello.yml" in res[0].name
 
 
-def test_get_yml_list_folder_with_multiple_files(tmp_path):
+def test_get_yml_list_folder_with_multiple_files(tmp_path: Path) -> None:
     """Create a folder with 10 files in it, 5 has a valid extension"""
     d = tmp_path / "it_is_a_folder"
     d.mkdir()

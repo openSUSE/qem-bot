@@ -1,10 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
+from argparse import Namespace
 from functools import lru_cache
 from pprint import pformat
-from typing import Dict
-from urllib.parse import ParseResult
+from typing import TYPE_CHECKING, Any
 
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
@@ -14,17 +14,20 @@ from .errors import PostOpenQAError
 from .loader.qem import update_job
 from .types import Data
 
+if TYPE_CHECKING:
+    from urllib.parse import ParseResult
+
 log = logging.getLogger("bot.openqa")
 
 
 class openQAInterface:
-    def __init__(self, args) -> None:
+    def __init__(self, args: Namespace) -> None:
         self.url: ParseResult = args.openqa_instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = 3
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)
-        self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+        self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
         """Return True only for the configured openQA instance.
@@ -33,7 +36,7 @@ class openQAInterface:
         """
         return self.url.netloc == OPENQA_URL
 
-    def post_job(self, settings) -> None:
+    def post_job(self, settings: dict[str, Any]) -> None:
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
@@ -42,19 +45,19 @@ class openQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
-            log.error("openQA returned %s", e.args[-1])
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("openQA returned %s", e.args[-1])
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
             log.exception(e)
-            log.error("Post failed with %s", pformat(settings))
+            log.exception("Post failed with %s", pformat(settings))
             raise PostOpenQAError from e
 
-    def handle_job_not_found(self, job_id: int):
+    def handle_job_not_found(self, job_id: int) -> None:
         log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
-    def get_jobs(self, data: Data):
+    def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         log.info("Getting openQA tests results for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
@@ -70,11 +73,11 @@ class openQAInterface:
             ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
         return ret
 
     @lru_cache(maxsize=512)
-    def get_job_comments(self, job_id: int):
+    def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         ret = []
         try:
             ret = self.openqa.openqa_request("GET", "jobs/%s/comments" % job_id, retries=self.retries)
@@ -95,13 +98,13 @@ class openQAInterface:
             ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
-    def get_single_job(self, job_id: int):
+    def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         ret = None
         try:
             ret = self.openqa.openqa_request(
@@ -125,5 +128,5 @@ class openQAInterface:
             log.exception(e)
         return ret
 
-    def get_scheduled_product_stats(self, params):
+    def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

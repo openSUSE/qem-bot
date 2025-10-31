@@ -1,16 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Set
 
 from ruamel.yaml import YAML
 
-from .. import OBS_DOWNLOAD_URL
-from ..utils import get_yml_list
+from openqabot import OBS_DOWNLOAD_URL
+from openqabot.utils import get_yml_list
 
 log = getLogger("bot.increment_config")
 
@@ -26,10 +26,10 @@ class IncrementConfig:
     build_listing_sub_path: str
     build_regex: str
     product_regex: str
-    packages: List[str] = field(default_factory=list)
-    archs: Set[str] = field(default_factory=set)
-    settings: Dict[str, str] = field(default_factory=dict)
-    additional_builds: List[Dict[str, str]] = field(default_factory=list)
+    packages: list[str] = field(default_factory=list)
+    archs: set[str] = field(default_factory=set)
+    settings: dict[str, str] = field(default_factory=dict)
+    additional_builds: list[dict[str, str]] = field(default_factory=list)
 
     def _concat_project(self, project: str) -> str:
         return project if self.project_base == "" else f"{self.project_base}:{project}"
@@ -45,7 +45,7 @@ class IncrementConfig:
         return f"{base_url}/{base_path}"
 
     @staticmethod
-    def from_config_entry(entry: Dict[str, str]) -> Any:
+    def from_config_entry(entry: dict[str, str]) -> "IncrementConfig":
         return IncrementConfig(
             distri=entry["distri"],
             version=entry.get("version", "any"),
@@ -63,7 +63,7 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path) -> Iterator[Any]:
+    def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
         try:
             log.info("Reading config file '%s'", file_path)
             return map(
@@ -75,11 +75,11 @@ class IncrementConfig:
             return iter(())
 
     @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator[Any]:
+    def from_config_path(file_or_dir_path: Path) -> Iterator["IncrementConfig"]:
         return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
 
     @staticmethod
-    def from_args(args: Namespace) -> List[Any]:
+    def from_args(args: Namespace) -> list["IncrementConfig"]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
         # Create a dictionary of arguments for IncrementConfig

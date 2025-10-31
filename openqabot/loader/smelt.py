@@ -2,15 +2,15 @@
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
-from typing import Any, List, Set
+from typing import Any
 
 import urllib3
 import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
-from .. import SMELT
-from ..utils import retry10 as requests
-from ..utils import walk
+from openqabot import SMELT
+from openqabot.utils import retry10 as requests
+from openqabot.utils import walk
 
 log = getLogger("bot.loader.smelt")
 
@@ -124,17 +124,17 @@ INCIDENT_SCHEMA = {
 }
 
 
-def get_json(query: str, host: str = SMELT) -> dict:
+def get_json(query: str, host: str = SMELT) -> dict[str, Any]:
     try:
         return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
         log.exception(e)
-        raise e
+        raise
 
 
-def get_active_incidents() -> Set[int]:
+def get_active_incidents() -> set[int]:
     """Get active incidents from SMELT GraphQL api."""
-    active: Set[int] = set()
+    active: set[int] = set()
 
     has_next = True
     cursor = None
@@ -146,7 +146,7 @@ def get_active_incidents() -> Set[int]:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
         except ValidationError:
             log.exception("Invalid data from SMELT received")
-            return []
+            return set()
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
         has_next = incidents["pageInfo"]["hasNextPage"]
@@ -158,7 +158,7 @@ def get_active_incidents() -> Set[int]:
     return active
 
 
-def get_incident(incident: int):
+def get_incident(incident: int) -> dict[str, Any] | None:
     query = INCIDENT % {"incident": incident}
 
     log.info("Getting info about incident %s from SMELT", incident)
@@ -170,14 +170,14 @@ def get_incident(incident: int):
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
     except Exception as e:  # pylint: disable=broad-except
-        log.error("Unknown error for incident %s", incident)
+        log.exception("Unknown error for incident %s", incident)
         log.exception(e)
         return None
 
     return inc_result
 
 
-def get_incidents(active: Set[int]) -> List[Any]:
+def get_incidents(active: set[int]) -> list[dict[str, Any]]:
     with CT.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
         incidents = (future.result() for future in CT.as_completed(future_inc))

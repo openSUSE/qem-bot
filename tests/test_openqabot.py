@@ -8,7 +8,7 @@ import pytest
 from openqabot.main import main  # SUT
 
 
-def test_help():
+def test_help() -> None:
     sys.argv += ["--help"]
     with pytest.raises(SystemExit):
         main()

@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
 
@@ -10,15 +10,15 @@ from openqabot.types.baseconf import BaseConf, Incident
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        _incidents: List[Incident],
-        _token: Dict[str, str],
-        _ci_url: Optional[str],
+        _incidents: list[Incident],
+        _token: dict[str, str],
+        _ci_url: str | None,
         _ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(_config):
+    def normalize_repos(_config: Any) -> None:
         pass
 
 
@@ -27,16 +27,16 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 
 @pytest.fixture
-def baseconf_gen():
+def baseconf_gen() -> FakeBaseConf:
     return FakeBaseConf(prod_name, None, None, settings, {})
 
 
-def test_baseconf_init(baseconf_gen):
+def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
 
 
-def test_is_embargoed(baseconf_gen):
+def test_is_embargoed(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.filter_embargoed("None")
 
     baseconf_gen.settings["PUBLIC_CLOUD_SOMETHING"] = ""

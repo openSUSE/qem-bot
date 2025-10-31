@@ -1,13 +1,14 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any
 
-from .. import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
-from ..errors import NoRepoFoundError
-from ..loader import gitea
-from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utils import retry3 as requests
+from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+from openqabot.errors import NoRepoFoundError
+from openqabot.loader import gitea
+from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.utils import retry3 as requests
+
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
@@ -21,17 +22,17 @@ class Incidents(BaseConf):
     def __init__(
         self,
         product: str,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-        settings,
-        config,
-        extrasettings: Set[str],
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+        settings: dict[str, Any],
+        config: dict[str, Any],
+        extrasettings: set[str],
     ) -> None:
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Incidents product: {self.product}>"
 
     @staticmethod
@@ -41,7 +42,7 @@ class Incidents(BaseConf):
         return ProdVer(channel_parts[0], *version_parts)
 
     @staticmethod
-    def normalize_repos(config):
+    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
         ret = {}
         for flavor, data in config.items():
             ret[flavor] = {}
@@ -57,13 +58,13 @@ class Incidents(BaseConf):
         return ret
 
     @staticmethod
-    def _repo_osuse(chan: Repos) -> Union[Tuple[str, str, str], Tuple[str, str]]:
+    def _repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
         if chan.product == "openSUSE-SLE":
             return chan.product, chan.version
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
+    def _is_scheduled_job(token: dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
             jobs = requests.get(
@@ -93,7 +94,7 @@ class Incidents(BaseConf):
 
         return False
 
-    def _make_repo_url(self, inc: Incident, chan: Repos):
+    def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
         return (
             gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan, self.product_repo, self.product_version)
             if chan.product == "SUSE:SLFO"
@@ -103,13 +104,13 @@ class Incidents(BaseConf):
     def _handle_incident(  # noqa: PLR0911,C901 # pylint: disable=too-many-return-statements
         self,
         inc: Incident,
-        arch,
-        flavor,
-        data,
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        arch: str,
+        flavor: str,
+        data: dict[str, Any],
+        token: dict[str, str],
+        ci_url: str | None,
         ignore_onetime: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any] | None:
         if inc.type == "git" and not inc.ongoing:
             log.info(
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
@@ -124,7 +125,7 @@ class Incidents(BaseConf):
                 inc.id,
             )
             return None
-        full_post: Dict[str, Any] = {}
+        full_post: dict[str, Any] = {}
         full_post["api"] = "api/incident_settings"
         full_post["qem"] = {}
         full_post["openqa"] = {}
@@ -178,7 +179,7 @@ class Incidents(BaseConf):
             log.debug(
                 "Meta-data channel: %s, %s, %s",
                 channel.product,
-                "#".join((channel.version, channel.product_version)),
+                f"{channel.version}#{channel.product_version}",
                 arch,
             )
             f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
@@ -228,7 +229,7 @@ class Incidents(BaseConf):
                     "BASE_TEST_ISSUES",  # GA product dir SLE15+
                     "RT_TEST_ISSUES",  # realtime kernel
                     "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                }
+                },
             )
         ):
             log.warning(
@@ -241,7 +242,7 @@ class Incidents(BaseConf):
             full_post["openqa"][key] = str(value.id)
 
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(self._make_repo_url(inc, chan) for chan in channels_set)
+            sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
 
         full_post["qem"]["withAggregate"] = True
@@ -322,11 +323,11 @@ class Incidents(BaseConf):
 
     def __call__(
         self,
-        incidents: List[Incident],
-        token: Dict[str, str],
-        ci_url: Optional[str],
+        incidents: list[Incident],
+        token: dict[str, str],
+        ci_url: str | None,
         ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any] | None]:
         ret = []
 
         for flavor, data in self.flavors.items():

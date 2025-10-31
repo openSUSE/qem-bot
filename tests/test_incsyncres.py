@@ -1,10 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
 from collections import namedtuple
+from typing import Any
 from urllib.parse import urlparse
 
 import pytest
+from _pytest.logging import LogCaptureFixture
+from pytest import MonkeyPatch
 
 import openqabot.incsyncres
 import responses
@@ -15,8 +20,8 @@ namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
 
 
 @pytest.fixture
-def get_a_i(monkeypatch):
-    def fake(*_args):
+def get_a_i(monkeypatch: MonkeyPatch) -> None:
+    def fake(*_args: Any) -> list[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
@@ -24,7 +29,7 @@ def get_a_i(monkeypatch):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_clone_dry(caplog):
+def test_clone_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -35,7 +40,7 @@ def test_clone_dry(caplog):
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -55,8 +60,8 @@ def test_clone_dry(caplog):
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": 1234,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -64,7 +69,7 @@ def test_clone_dry(caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -84,7 +89,7 @@ def test_clone_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_nogroup_dry(caplog):
+def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -95,7 +100,7 @@ def test_nogroup_dry(caplog):
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -114,8 +119,8 @@ def test_nogroup_dry(caplog):
                 "group_id": 10,
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -123,7 +128,7 @@ def test_nogroup_dry(caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -142,7 +147,7 @@ def test_nogroup_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_fast_dry(caplog):
+def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -153,7 +158,7 @@ def test_devel_fast_dry(caplog):
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -173,8 +178,8 @@ def test_devel_fast_dry(caplog):
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -182,7 +187,7 @@ def test_devel_fast_dry(caplog):
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -202,7 +207,7 @@ def test_devel_fast_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_dry(caplog):
+def test_devel_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -213,7 +218,7 @@ def test_devel_dry(caplog):
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -233,8 +238,8 @@ def test_devel_dry(caplog):
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -246,7 +251,7 @@ def test_devel_dry(caplog):
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -266,7 +271,7 @@ def test_devel_dry(caplog):
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_passed_dry(caplog):
+def test_passed_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -277,7 +282,7 @@ def test_passed_dry(caplog):
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -297,8 +302,8 @@ def test_passed_dry(caplog):
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -310,7 +315,7 @@ def test_passed_dry(caplog):
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 

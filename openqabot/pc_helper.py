@@ -1,15 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import re
-from functools import lru_cache
+from functools import cache
 from logging import getLogger
+from typing import Any
 
 from .utils import retry5 as requests
 
 log = getLogger("openqabot.pc_helper")
 
 
-def get_latest_tools_image(query):
+def get_latest_tools_image(query: str) -> str | None:
     """Get latest tools image.
 
     'publiccloud_tools_<BUILD NUM>.qcow2' is a generic name for an image used by Public Cloud tests to run
@@ -24,7 +25,7 @@ def get_latest_tools_image(query):
     return None
 
 
-def apply_pc_tools_image(settings):
+def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
     """Apply the PC tools image in settings.
 
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
@@ -33,7 +34,7 @@ def apply_pc_tools_image(settings):
     try:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
             )
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
@@ -41,12 +42,12 @@ def apply_pc_tools_image(settings):
             log_error += f" PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
         log.warning("%s : %s", log_error, e)
     finally:
-        del settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+        settings.pop("PUBLIC_CLOUD_TOOLS_IMAGE_QUERY", None)
     return settings
 
 
-@lru_cache(maxsize=None)
-def pint_query(query):
+@cache
+def pint_query(query: str) -> dict[str, Any]:
     """Perform a pint query.
 
     Successive queries are cached
@@ -54,10 +55,10 @@ def pint_query(query):
     return requests.get(query).json()
 
 
-def apply_publiccloud_pint_image(settings):
+def apply_publiccloud_pint_image(settings: dict[str, Any]) -> dict[str, Any]:
     """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
     try:
-        region = settings.get("PUBLIC_CLOUD_PINT_REGION", None)
+        region = settings.get("PUBLIC_CLOUD_PINT_REGION")
         # We need to include active and inactive images. Active images have precedence
         # inactive images are maintained PC images which only receive security updates.
         # See https://www.suse.com/c/suse-public-cloud-image-life-cycle/
@@ -68,7 +69,8 @@ def apply_publiccloud_pint_image(settings):
             if image is not None:
                 break
         if image is None:
-            raise ValueError("Cannot find matching image in pint")
+            msg = "Cannot find matching image in pint"
+            raise ValueError(msg)
         settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
@@ -79,20 +81,22 @@ def apply_publiccloud_pint_image(settings):
         log.warning("{%s: %s", log_error, e)
         settings["PUBLIC_CLOUD_IMAGE_ID"] = None
     finally:
-        if "PUBLIC_CLOUD_PINT_QUERY" in settings:
-            del settings["PUBLIC_CLOUD_PINT_QUERY"]
-        if "PUBLIC_CLOUD_PINT_NAME" in settings:
-            del settings["PUBLIC_CLOUD_PINT_NAME"]
+        settings.pop("PUBLIC_CLOUD_PINT_QUERY", None)
+        settings.pop("PUBLIC_CLOUD_PINT_NAME", None)
         if "PUBLIC_CLOUD_PINT_REGION" in settings:
             # If we define a region for the pint query, propagate this value
             settings["PUBLIC_CLOUD_REGION"] = settings["PUBLIC_CLOUD_PINT_REGION"]
             del settings["PUBLIC_CLOUD_PINT_REGION"]
-        if "PUBLIC_CLOUD_PINT_FIELD" in settings:
-            del settings["PUBLIC_CLOUD_PINT_FIELD"]
+        settings.pop("PUBLIC_CLOUD_PINT_FIELD", None)
     return settings
 
 
-def get_recent_pint_image(images, name_regex, region=None, state="active"):
+def get_recent_pint_image(
+    images: list[dict[str, Any]],
+    name_regex: str,
+    region: str | None = None,
+    state: str = "active",
+) -> dict[str, Any] | None:
     """Get most recent PINT image.
 
     From the given set of images (received json from pint),
@@ -108,7 +112,7 @@ def get_recent_pint_image(images, name_regex, region=None, state="active"):
         region = None
     recentimage = None
 
-    def is_newer(date1, date2):
+    def is_newer(date1: str, date2: str) -> bool:
         # Checks if date1 is newer than date2. Expected date format: YYYYMMDD
         # Because for the format, we can do a simple int comparison
         return int(date1) > int(date2)

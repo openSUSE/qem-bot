@@ -2,21 +2,12 @@
 # SPDX-License-Identifier: MIT
 import gzip
 import json
+import pathlib
 import re
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    Iterator,
-    List,
-    NamedTuple,
-    Optional,
-    Set,
-    Tuple,
-)
+from typing import Any, NamedTuple
 
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as requests
@@ -49,35 +40,36 @@ class Package(NamedTuple):
 
 
 class RepoDiff:
-    def __init__(self, args: Optional[Namespace]) -> None:
+    def __init__(self, args: Namespace | None) -> None:
         self.args = args
 
     def _make_repodata_url(self, project: str) -> str:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Iterator[Optional[str]]:
+    def _find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
-    def _request_and_dump(self, url: str, name: str, as_json: bool = False):
+    def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> bytes | dict[str, Any]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
             if as_json:
-                with open(name, "r", encoding="utf8") as json_file:
+                with pathlib.Path(name).open(encoding="utf8") as json_file:
                     return json.loads(json_file.read())
             else:
-                with open(name, "rb") as binary_file:
+                with pathlib.Path(name).open("rb") as binary_file:
                     return binary_file.read()
         resp = requests.get(url)
         if self.args is not None and self.args.dump_data and not self.args.fake_data:
-            with open(name, "wb") as output_file:
-                output_file.write(resp.content)
+            pathlib.Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project: str) -> Optional[str]:
+    def _load_repodata(self, project: str) -> ET.Element | None:
         url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
+        repo_data_listing = self._request_and_dump(
+            url + "?jsontable=1", f"repodata-listing-{project}.json", as_json=True,
+        )
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
@@ -87,7 +79,7 @@ class RepoDiff:
         log.debug("Parsing %s", repo_data_file)
         return ET.fromstring(repo_data)
 
-    def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
+    def _load_packages(self, project: str) -> defaultdict[str, set[Package]]:
         repo_data = self._load_repodata(project)
         log.debug("Loading packages for %s", project)
         packages_by_arch = defaultdict(set)
@@ -103,7 +95,7 @@ class RepoDiff:
             packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
         return packages_by_arch
 
-    def compute_diff(self, repo_a: str, repo_b: str) -> Tuple[DefaultDict[str, Set[Package]], int]:
+    def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
         packages_by_arch_a = self._load_packages(repo_a)
         packages_by_arch_b = self._load_packages(repo_b)
         diff_by_arch = defaultdict(set)

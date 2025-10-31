@@ -1,16 +1,20 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import json
 import logging
 from collections import namedtuple
 from urllib.parse import urlparse
+
+from _pytest.logging import LogCaptureFixture
 
 import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
 
 namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url", "gitea_token"])
-args = namespace(True, "ToKeN", urlparse("http://instance.qa"), None, None)
+args = namespace(dry=True, token="ToKeN", openqa_instance=urlparse("http://instance.qa"), url=None, gitea_token=None)
 amqp = AMQP(args)
 
 fake_method = namedtuple("Method", ["routing_key"])
@@ -18,7 +22,7 @@ fake_job_done = fake_method("suse.openqa.job.done")
 
 
 @responses.activate
-def test_handling_incident(caplog):
+def test_handling_incident(caplog: LogCaptureFixture) -> None:
     # define response for get_incident_settings_data
     data = [
         {
@@ -28,7 +32,7 @@ def test_handling_incident(caplog):
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "withAggregate": False,
-        }
+        },
     ]
     responses.add(
         method="GET",
@@ -45,7 +49,7 @@ def test_handling_incident(caplog):
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "build": "33222",
-        }
+        },
     ]
     responses.add(
         method="GET",
@@ -77,7 +81,7 @@ def test_handling_incident(caplog):
 
 
 @responses.activate
-def test_handling_aggregate(caplog):
+def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 

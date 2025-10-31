@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: MIT
 import re
 from logging import getLogger
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Optional
 
-from ..errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
-from ..loader.repohash import get_max_revision
+from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.loader.repohash import get_max_revision
+
 from . import ArchVer, Repos
 
 log = getLogger("bot.types.incident")
@@ -13,7 +14,7 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 
 class Incident:
-    def __init__(self, incident):
+    def __init__(self, incident: dict[str, Any]) -> None:
         self.rr = incident["rr_number"]
         self.project = incident["project"]
         self.id = incident["number"]
@@ -70,7 +71,7 @@ class Incident:
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod
-    def create(cls, incident_data: Dict) -> Optional["Incident"]:
+    def create(cls, incident_data: dict) -> Optional["Incident"]:
         try:
             return cls(incident_data)
         except EmptyChannels:
@@ -82,12 +83,12 @@ class Incident:
 
     def compute_revisions_for_product_repo(
         self,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-    ):
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+    ) -> None:
         self.revisions = self._rev(self.arch_filter, self.channels, self.project, product_repo, product_version)
 
-    def revisions_with_fallback(self, arch: str, ver: str):
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
         if self.revisions is None:
             self.compute_revisions_for_product_repo(None, None)
         try:
@@ -103,14 +104,14 @@ class Incident:
 
     @staticmethod
     def _rev(
-        arch_filter: Optional[List[str]],
-        channels: List[Repos],
+        arch_filter: list[str] | None,
+        channels: list[Repos],
         project: str,
-        product_repo: Optional[Union[List[str], str]],
-        product_version: Optional[str],
-    ) -> Dict[ArchVer, int]:
-        rev: Dict[ArchVer, int] = {}
-        tmpdict: Dict[ArchVer, List[Tuple[str, str]]] = {}
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+    ) -> dict[ArchVer, int]:
+        rev: dict[ArchVer, int] = {}
+        tmpdict: dict[ArchVer, list[tuple[str, str]]] = {}
 
         for repo in channels:
             if arch_filter is not None and repo.arch not in arch_filter:
@@ -145,16 +146,16 @@ class Incident:
             raise NoRepoFoundError
         return rev
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.rrid:
             return f"<Incident: {self.rrid}>"
         return f"<Incident: {self.project}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.id)
 
     @staticmethod
-    def _is_livepatch(packages: List[str]) -> bool:
+    def _is_livepatch(packages: list[str]) -> bool:
         kgraft = False
 
         for package in packages:
@@ -165,7 +166,7 @@ class Incident:
 
         return kgraft
 
-    def contains_package(self, requires: List[str]) -> bool:
+    def contains_package(self, requires: list[str]) -> bool:
         for package in self.packages:
             for req in requires:
                 if package.startswith(req) and package != "kernel-livepatch-tools":

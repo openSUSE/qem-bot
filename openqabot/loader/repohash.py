@@ -2,26 +2,26 @@
 # SPDX-License-Identifier: MIT
 from hashlib import md5
 from logging import getLogger
-from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
 import requests
 from requests.exceptions import RetryError
 
-from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
-from ..errors import NoRepoFoundError
-from ..utils import retry5 as retried_requests
+from openqabot import OBS_DOWNLOAD_URL, OBS_PRODUCTS
+from openqabot.errors import NoRepoFoundError
+from openqabot.utils import retry5 as retried_requests
+
 from . import gitea
 
 log = getLogger("bot.loader.repohash")
 
 
 def get_max_revision(
-    repos: List[Tuple[str, str]],
+    repos: list[tuple[str, str]],
     arch: str,
     project: str,
-    product_name: Optional[str] = None,
-    product_version: Optional[str] = None,
+    product_name: str | None = None,
+    product_version: str | None = None,
 ) -> int:
     max_rev = 0
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
@@ -61,7 +61,7 @@ def get_max_revision(
             raise NoRepoFoundError from e
         except Exception as e:
             log.exception(e)
-            raise e
+            raise
 
         if cs is None:
             log.error("%s's revision is None", url)
@@ -71,7 +71,7 @@ def get_max_revision(
     return max_rev
 
 
-def merge_repohash(hashes: List[str]) -> str:
+def merge_repohash(hashes: list[str]) -> str:
     m = md5(b"start")
 
     for h in hashes:
