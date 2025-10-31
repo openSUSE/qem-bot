@@ -324,6 +324,7 @@ class IncrementApprover:
             info_str = build_info.string_with_params(params[0])
             res = self._request_openqa_job_results(build_info, params)
             if self.args.reschedule:
+                approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
                 error_count += self._schedule_openqa_jobs(build_info, params)
                 continue
             openqa_jobs_ready = self._check_openqa_jobs(res, build_info, params)
