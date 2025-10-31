@@ -1,9 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import pytest
+from pytest import MonkeyPatch
 
 import responses
 from openqabot.types import ArchVer, Repos
@@ -132,7 +133,7 @@ def test_incidents_call_with_issues() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch) -> None:
+def request_mock(monkeypatch: MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -142,10 +143,10 @@ def request_mock(monkeypatch) -> None:
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
-        def json():
+        def json() -> List[Dict]:
             return [{"flavor": None}]
 
-    def mock_get(*_args, **_kwargs):
+    def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
         return MockResponse()
 
     monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
@@ -157,7 +158,7 @@ class MyIncident_2(MyIncident_1):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, _arch, _version) -> bool:
+    def revisions_with_fallback(self, _arch: str, _version: str) -> bool:
         return True
 
 
@@ -184,7 +185,7 @@ class MyIncident_3(MyIncident_2):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, _requires) -> bool:
+    def contains_package(self, _requires: List[str]) -> bool:
         return True
 
 
@@ -350,7 +351,7 @@ class MyIncident_4(MyIncident_3):
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_public_cloud_pint_query(monkeypatch) -> None:
+def test_incidents_call_public_cloud_pint_query(monkeypatch: MonkeyPatch) -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -397,7 +398,7 @@ def test_making_repo_url() -> None:
 
 
 class MyIncident_5(MyIncident_2):
-    def revisions_with_fallback(self, arch, version):
+    def revisions_with_fallback(self, arch: str, version: str) -> int:
         return self.revisions[ArchVer(arch, version)]
 
 
