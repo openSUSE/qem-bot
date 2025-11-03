@@ -85,7 +85,7 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
     "B019",
-    "ANN401",
+    "ANN401", # any-type
 ]
 
 [tool.ruff.format]
