@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import concurrent.futures as CT
 from logging import getLogger
-from typing import Any, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 import urllib3
 import urllib3.exceptions
@@ -124,7 +124,7 @@ INCIDENT_SCHEMA = {
 }
 
 
-def get_json(query: str, host: str = SMELT) -> dict:
+def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
     try:
         return requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
@@ -146,7 +146,7 @@ def get_active_incidents() -> Set[int]:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
         except ValidationError:
             log.exception("Invalid data from SMELT received")
-            return []
+            return set()
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
         has_next = incidents["pageInfo"]["hasNextPage"]
@@ -158,7 +158,7 @@ def get_active_incidents() -> Set[int]:
     return active
 
 
-def get_incident(incident: int):
+def get_incident(incident: int) -> Optional[Dict[str, Any]]:
     query = INCIDENT % {"incident": incident}
 
     log.info("Getting info about incident %s from SMELT", incident)
@@ -177,7 +177,7 @@ def get_incident(incident: int):
     return inc_result
 
 
-def get_incidents(active: Set[int]) -> List[Any]:
+def get_incidents(active: Set[int]) -> List[Dict[str, Any]]:
     with CT.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
         incidents = (future.result() for future in CT.as_completed(future_inc))

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0+
 import re
 from datetime import datetime
+from typing import Any, Dict, Optional, Tuple, Union
 from xml.etree import ElementTree as ET
 
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
@@ -9,7 +10,7 @@ from osc.core import http_DELETE, http_GET, http_POST, makeurl
 from ..utc import UTC
 
 
-def _comment_as_dict(comment_element):
+def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
     """Convert an XML element comment into a dictionary.
 
     :param comment_element: XML element that store a comment.
@@ -27,10 +28,16 @@ def _comment_as_dict(comment_element):
 class CommentAPI(object):
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
-    def __init__(self, apiurl):
+    def __init__(self, apiurl: str) -> None:
         self.apiurl = apiurl
 
-    def _prepare_url(self, request_id=None, project_name=None, package_name=None, query=None):
+    def _prepare_url(
+        self,
+        request_id: Optional[Union[str, int]] = None,
+        project_name: Optional[str] = None,
+        package_name: Optional[str] = None,
+        query: Optional[Dict[str, Any]] = None,
+    ) -> str:
         """Prepare the URL to get/put comments in OBS.
 
         :param request_id: Request where to refer the comment.
@@ -49,7 +56,12 @@ class CommentAPI(object):
             raise ValueError("Please, set request_id, project_name or / and package_name to add a comment.")
         return url
 
-    def get_comments(self, request_id=None, project_name=None, package_name=None):
+    def get_comments(
+        self,
+        request_id: Optional[Union[str, int]] = None,
+        project_name: Optional[str] = None,
+        package_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Get the list of comments of an object in OBS.
 
         :param request_id: Request where to get comments.
@@ -58,14 +70,19 @@ class CommentAPI(object):
         :returns: A list of comments (as a dictionary).
         """
         url = self._prepare_url(request_id, project_name, package_name)
-        root = root = ET.parse(http_GET(url)).getroot()
+        root = ET.parse(http_GET(url)).getroot()
         comments = {}
         for c in root.findall("comment"):
             c = _comment_as_dict(c)
             comments[c["id"]] = c
         return comments
 
-    def comment_find(self, comments, bot, info_match=None):
+    def comment_find(
+        self,
+        comments: Dict[str, Any],
+        bot: str,
+        info_match: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """Return previous bot comments that match criteria."""
         # Case-insensitive for backwards compatibility.
         bot = bot.lower()
@@ -96,7 +113,7 @@ class CommentAPI(object):
         return None, None
 
     @staticmethod
-    def add_marker(comment, bot, info=None):
+    def add_marker(comment: str, bot: str, info: Optional[Dict[str, Any]] = None) -> str:
         """Add bot marker to comment that can be used to find comment."""
         if info:
             infos = []
@@ -108,12 +125,12 @@ class CommentAPI(object):
 
     def add_comment(
         self,
-        request_id=None,
-        project_name=None,
-        package_name=None,
-        comment=None,
-        parent_id=None,
-    ):
+        request_id: Optional[Union[str, int]] = None,
+        project_name: Optional[str] = None,
+        package_name: Optional[str] = None,
+        comment: Optional[str] = None,
+        parent_id: Optional[Union[str, int]] = None,
+    ) -> str:
         """Add a comment in an object in OBS.
 
         :param request_id: Request where to write a comment.
@@ -134,7 +151,7 @@ class CommentAPI(object):
         return http_POST(url, data=comment)
 
     @staticmethod
-    def truncate(comment, suffix="...", length=65535):
+    def truncate(comment: str, suffix: str = "...", length: int = 65535) -> str:
         # Handle very short length by dropping suffix and just chopping comment.
         if length <= len(suffix) + len("\n</pre>"):
             return comment[:length]
@@ -166,15 +183,15 @@ class CommentAPI(object):
 
         return comment + suffix
 
-    def delete(self, comment_id):
+    def delete(self, comment_id: Union[str, int]) -> None:
         """Remove a comment object.
 
         :param comment_id: Id of the comment object.
         """
         url = makeurl(self.apiurl, ["comment", comment_id])
-        return http_DELETE(url)
+        http_DELETE(url)
 
-    def delete_children(self, comments):
+    def delete_children(self, comments: Dict[str, Any]) -> Dict[str, Any]:
         """Remove the comments that have no childs.
 
         :param comments dict of id->comment dict
@@ -193,7 +210,12 @@ class CommentAPI(object):
 
         return comments
 
-    def delete_from(self, request_id=None, project_name=None, package_name=None):
+    def delete_from(
+        self,
+        request_id: Optional[Union[str, int]] = None,
+        project_name: Optional[str] = None,
+        package_name: Optional[str] = None,
+    ) -> bool:
         """Remove the comments related with a request, project or package.
 
         :param request_id: Request where to remove comments.
@@ -206,7 +228,13 @@ class CommentAPI(object):
             comments = self.delete_children(comments)
         return True
 
-    def delete_from_where_user(self, user, request_id=None, project_name=None, package_name=None):
+    def delete_from_where_user(
+        self,
+        user: str,
+        request_id: Optional[Union[str, int]] = None,
+        project_name: Optional[str] = None,
+        package_name: Optional[str] = None,
+    ) -> None:
         """Remove comments where @user is mentioned.
 
         This method is used to remove notifications when a request is

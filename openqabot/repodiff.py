@@ -6,17 +6,7 @@ import re
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
-from typing import (
-    Any,
-    DefaultDict,
-    Dict,
-    Iterator,
-    List,
-    NamedTuple,
-    Optional,
-    Set,
-    Tuple,
-)
+from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as requests
@@ -56,10 +46,10 @@ class RepoDiff:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Iterator[Optional[str]]:
+    def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Optional[str]:
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
-    def _request_and_dump(self, url: str, name: str, as_json: bool = False):
+    def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
@@ -75,7 +65,7 @@ class RepoDiff:
                 output_file.write(resp.content)
         return resp.json() if as_json else resp.content
 
-    def _load_repodata(self, project: str) -> Optional[str]:
+    def _load_repodata(self, project: str) -> Optional[ET.Element]:
         url = self._make_repodata_url(project)
         repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
         rows = repo_data_listing.get("data", [])
