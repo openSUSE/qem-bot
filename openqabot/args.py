@@ -352,6 +352,13 @@ def get_parser() -> ArgumentParser:
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
     cmdamqp.add_argument("--url", type=str, default=AMQP_URL, help="the URL of the AMQP server")
+    cmdamqp.add_argument(
+        "--queue",
+        type=str,
+        nargs="+",
+        default=["openqa", "gitea"],
+        help="Specify the queues to listen to. 'openqa' maps to all 'suse.openqa', while 'gitea' maps to the events from PR on Gitea.specify queue to listen to. openqa maps to all suse.openqa, while gitea maps is about the events from PR in gitea.",
+    )
     cmdamqp.set_defaults(func=do_amqp)
 
     return parser
