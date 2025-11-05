@@ -1,5 +1,7 @@
 <resultlist state="6e48177c5dc93e3281cdac1b5fdc1e04">
   <result project="SUSE:SLFO:1.1.99:PullRequest:124:SLES" repository="standard" arch="aarch64" code="published" state="published">
+    <!-- This scmsync element is supposed to be ignored as it only contains a Git hash and not the product version. -->
+    <scmsync>https://src.suse.de/products/SLES#18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scmsync>
     <scminfo>18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d</scminfo>
     <!-- The list of packages in this and other results is stripped down from the actual example on Gitea. -->
     <status package="base-image" code="excluded" />

@@ -82,7 +82,7 @@ def get_product_name(obs_project: str) -> str:
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> Tuple[str, str]:
-    m = re.search(".*/products/(.*)#(.*)", scmsync_url)
+    m = re.search(".*/products/(.*)#([\\d\\.]{2,6})$", scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
 
