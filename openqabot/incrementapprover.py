@@ -321,6 +321,9 @@ class IncrementApprover:
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
             params = self._make_scheduling_parameters(config, build_info)
+            if len(params) < 1:
+                log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
+                continue
             info_str = build_info.string_with_params(params[0])
             res = self._request_openqa_job_results(build_info, params)
             if self.args.reschedule:

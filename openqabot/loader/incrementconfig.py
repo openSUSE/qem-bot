@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import pprint
 from argparse import Namespace
 from dataclasses import dataclass, field
 from itertools import chain
@@ -43,6 +44,10 @@ class IncrementConfig:
     def build_project_url(self, base_url: str = OBS_DOWNLOAD_URL) -> str:
         base_path = self.build_project().replace(":", ":/")
         return f"{base_url}/{base_path}"
+
+    def __str__(self) -> str:
+        settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
+        return f"{self.distri} ({settings_str})"
 
     @staticmethod
     def from_config_entry(entry: Dict[str, str]) -> "IncrementConfig":

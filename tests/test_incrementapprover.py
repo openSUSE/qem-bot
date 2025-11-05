@@ -252,14 +252,15 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     monkeypatch: MonkeyPatch,
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    config = next(IncrementConfig.from_config_file(path))
-    (errors, jobs) = run_approver(
-        caplog,
-        monkeypatch,
-        schedule=True,
-        diff_project_suffix="PUBLISH/product",
-        config=config,
-    )
+    configs = IncrementConfig.from_config_file(path)
+    args = {
+        "caplog": caplog,
+        "monkeypatch": monkeypatch,
+        "schedule": True,
+        "diff_project_suffix": "PUBLISH/product",
+        "config": next(configs),
+    }
+    (errors, jobs) = run_approver(**args)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -297,6 +298,13 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     assert expected_livepatch_params | {"ARCH": "aarch64"} not in jobs, (
         "additional kernel livepatch jobs only created if package is new"
     )
+
+    config = next(configs)
+    config.packages.append("foobar")  # make the filter for packages not match
+    args["config"] = config
+    (errors, jobs) = run_approver(**args)
+    assert jobs == []
+    assert any("filtered out via 'packages' or 'archs'" in m[-1] for m in caplog.record_tuples)
 
 
 @responses.activate
