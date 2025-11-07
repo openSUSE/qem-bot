@@ -76,8 +76,7 @@ class AMQP(SyncRes):
         log.info("%s - Received openQA job message", method.routing_key)
         log.debug(" %s - %s", method.routing_key, body.decode())
         message = json.loads(body)
-        if self.args.dry:
-            return None
+
         if method.routing_key == "suse.openqa.job.done" and "BUILD" in message:
             match = build_inc_regex.match(message["BUILD"])
             if match:
@@ -101,8 +100,18 @@ class AMQP(SyncRes):
         log.info("%s - Received Gitea review request message", method.routing_key)
         log.debug(" %s - %s", method.routing_key, body.decode())
         message = json.loads(body)
-        reviewers = message.get("pull_request", {}).get("requested_reviewers", [])
-        if any(reviewer.get("username") == "qam-openqa-review" for reviewer in reviewers):
+
+        def _has_build_succeeded() -> bool:
+            review_tag = message.get("review", {})
+            is_type_approved = review_tag.get("type") == "pull_request_review_approved"
+            is_build_success = review_tag.get("content") == "Build successful"
+            return is_type_approved and is_build_success
+
+        def _has_reviewer_qam_openqa_review() -> bool:
+            reviewers = message.get("pull_request", {}).get("requested_reviewers", [])
+            return any(reviewer.get("username") == "qam-openqa-review" for reviewer in reviewers)
+
+        if _has_build_succeeded() and _has_reviewer_qam_openqa_review():
             return self.handle_inc_review_request(message, self.args)
         return None
 
@@ -141,8 +150,9 @@ class AMQP(SyncRes):
         return
 
     def handle_inc_review_request(self, message: Dict[str, Any], args: Namespace) -> None:  # noqa: ARG002 Unused method argument
-        pr_number = int(message.get("pull_request", {}).get("number"))
-        if not pr_number:
+        try:
+            pr_number = int(message.get("pull_request", {}).get("number"))
+        except ValueError:
             log.error("Could not extract PR number from AMQP message")
             return
 
