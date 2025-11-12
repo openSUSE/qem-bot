@@ -8,6 +8,8 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
+import pyzstd
+
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as requests
 
@@ -17,7 +19,7 @@ package_tag = ns + "package"
 name_tag = ns + "name"
 version_tag = ns + "version"
 arch_tag = ns + "arch"
-primary_re = re.compile(r".*-primary.xml(?:.gz)?$")
+primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
 
 
 try:
@@ -49,6 +51,14 @@ class RepoDiff:
     def _find_primary_repodata(self, rows: List[Dict[str, Any]]) -> Optional[str]:
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
+    @staticmethod
+    def _decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
+        if repo_data_file.endswith(".gz"):
+            return gzip.decompress(repo_data_raw)
+        if repo_data_file.endswith(".zst"):
+            return pyzstd.decompress(repo_data_raw)
+        return repo_data_raw
+
     def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
@@ -71,16 +81,18 @@ class RepoDiff:
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
+            log.warning("Unable to find repo data file under %s", url)
             return None
-        repo_data_raw = self._request_and_dump(url + repo_data_file, repo_data_file)
-        repo_data = gzip.decompress(repo_data_raw) if repo_data_file.endswith(".gz") else repo_data_raw
+        repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
         log.debug("Parsing %s", repo_data_file)
         return ET.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> DefaultDict[str, Set[Package]]:
         repo_data = self._load_repodata(project)
-        log.debug("Loading packages for %s", project)
         packages_by_arch = defaultdict(set)
+        if repo_data is None:
+            return packages_by_arch
+        log.debug("Loading packages for %s", project)
         for package in repo_data.iterfind(package_tag):
             if package.get("type") != "rpm":
                 continue
