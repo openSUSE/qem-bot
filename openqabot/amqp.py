@@ -13,9 +13,11 @@ import pika.spec
 
 from .approver import Approver
 from .errors import PostOpenQAError
+from .loader.gitea import make_incident_from_pr, make_token_header
 from .loader.qem import get_incident_settings_data
 from .syncres import SyncRes
 from .types import Data
+from .types.incident import Incident
 from .utils import compare_incident_data
 
 log = getLogger("bot.amqp")
@@ -33,9 +35,7 @@ class AMQP(SyncRes):
             return
         routing_keys = {
             "openqa": ("*.openqa.#", self.on_job_message),
-            "gitea": ("*.pull_request_review_request.#",
-                self.on_review_request,
-            ),
+            "gitea": ("*.pull_request_review_request.#", self.on_review_request),
         }
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py
         self.connection = pika.BlockingConnection(pika.URLParameters(args.url))
@@ -101,7 +101,9 @@ class AMQP(SyncRes):
         message = json.loads(body)
 
         def _has_build_succeeded() -> bool:
-            review_tag = message.get("review", {})
+            review_tag = message.get("review", "")
+            if not review_tag or review_tag == "null":
+                return False
             is_type_approved = review_tag.get("type") == "pull_request_review_approved"
             is_build_success = review_tag.get("content") == "Build successful"
             return is_type_approved and is_build_success
@@ -148,54 +150,71 @@ class AMQP(SyncRes):
     def handle_aggregate(self, unused_build: str, unused_message: Dict[str, Any]) -> None:  # noqa: ARG002 Unused method argument
         return
 
-    def handle_inc_review_request(self, message: Dict[str, Any], args: Namespace) -> None:  # noqa: ARG002 Unused method argument
+    def handle_inc_review_request(self, message: Dict[str, Any], args: Namespace) -> None:
         try:
             pr_number = int(message.get("pull_request", {}).get("number"))
-        except ValueError:
+        except (ValueError, TypeError):
             log.error("Could not extract PR number from AMQP message")
             return
 
-        # this assumes that the incident settings are available on dashboard
-        try:
-            if not self.args.dry:
-                settings_data: Sequence[Data] = get_incident_settings_data(self.token, pr_number)
-            else:
-                settings_data: Sequence[Data] = []
-        except ValueError as e:
-            log.error("Could not get incident settings for PR %s: %s", pr_number, e)
+        pr_data = message.get("pull_request", {})
+        if not pr_data:
+            log.error("No pull_request data in AMQP message")
             return
 
-        if not settings_data:
-            log.warning("No settings data found for PR %s", pr_number)
+        gitea_token = make_token_header(getattr(args, "gitea_token", None))
+        # Fetch incident data from Gitea/OBS using make_incident_from_pr
+        log.info("Fetching incident data for PR %s from Gitea/OBS", pr_number)
+        incident_data = make_incident_from_pr(
+            pr=pr_data,
+            token=gitea_token,
+            only_successful_builds=True,
+            only_requested_prs=False,
+            dry=self.args.dry,
+        )
+
+        if incident_data is None:
+            log.warning("No incident data for PR %s", pr_number)
             return
 
-        try:
-            log.info("Scheduling jobs for PR %s", pr_number)
-            error_count = 0
-            for s in settings_data:
-                params = {
-                    "DISTRI": s.distri,
-                    "VERSION": s.version,
-                    "FLAVOR": s.flavor,
-                    "ARCH": s.arch,
-                    "BUILD": s.build,
-                }
-                log.info(
-                    "Scheduling job for %s v%s build %s@%s of flavor %s", s.distri, s.version, s.build, s.arch, s.flavor
-                )
-                if self.dry:
-                    log.info("Dry run - would schedule: %s", params)
-                    continue
-                try:
-                    self.client.post_job(params)
-                except PostOpenQAError as e:
-                    log.error("Failed to schedule job with params %s: %s", params, e)
-                    error_count += 1
+        incident = Incident.create(incident_data)
+        log.info(incident)
+        # Schedule jobs for each repo/arch combination now
+        error_count = 0
+        for channel in incident.channels:
+            log.info("Scheduling jobs for PR %s with %d channel(s)", pr_number, len(incident.channels))
+            # For Gitea PRs, BUILD format is ":PR_NUMBER:package"
+            build = f":{pr_number}:{incident.packages[0]}" if incident.packages else f":{pr_number}:unknown"
 
-            if error_count > 0:
-                log.error("Failed to schedule %d jobs for PR %d", error_count, pr_number)
-            else:
-                log.info("Successfully scheduled %d jobs for PR %d", len(settings_data), pr_number)
+            params = {
+                "DISTRI": "sle",
+                "VERSION": channel.product_version if channel.product_version else channel.version,
+                "FLAVOR": "Server-DVD-Updates",
+                "ARCH": channel.arch,
+                "BUILD": build,
+                "INCIDENT_ID": pr_number,
+            }
 
-        except Exception as e:
-            log.exception("Error during job scheduling for PR %s: %s", pr_number, e)
+            log.info(
+                "Review Request %s with medium type variables is going to be scheduled in openQA: %s %s %s %s",
+                pr_number,
+                params["DISTRI"],
+                params["VERSION"],
+                params["BUILD"],
+                params["ARCH"],
+            )
+
+            if self.dry:
+                log.info("Dry run - would schedule: %s", params)
+                continue
+
+            try:
+                self.client.post_job(params)
+            except PostOpenQAError as e:
+                log.error("Failed to schedule job with params %s: %s", params, e)
+                error_count += 1
+
+        if error_count > 0:
+            log.error("Failed to schedule %d jobs for PR %d", error_count, pr_number)
+        else:
+            log.info("Successfully scheduled %d jobs for PR %d", len(incident.channels), pr_number)

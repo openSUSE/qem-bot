@@ -39,6 +39,58 @@ def mock_incident_settings_data_160() -> List[Data]:
 
 
 @pytest.fixture
+def mock_incident_settings_from_pr160() -> List[Data]:
+    pr_number = 160
+    return {
+        "approved": False,
+        "channels": [
+            "SUSE:Updates:openSUSE-SLE:15.4",
+            "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:aarch64",
+            "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:x86_64",
+            "SUSE:SLE-15-SP4:Update",
+            "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:x86_64",
+            "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:aarch64",
+        ],
+        "emu": False,
+        "inReview": True,
+        "inReviewQAM": True,
+        "isActive": True,
+        "number": 24618,
+        "packages": ["some", "package", "name"],
+        "project": "SUSE:Maintenance:160",
+        "rr_number": pr_number,
+        "embargoed": True,
+        "priority": 600,
+    }
+
+
+@pytest.fixture
+def mock_incident_settings_from_pr888() -> List[Data]:
+    pr_number = 888
+    return {
+        "approved": False,
+        "channels": [
+            "SUSE:Updates:openSUSE-SLE:15.4",
+            "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:aarch64",
+            "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:x86_64",
+            "SUSE:SLE-15-SP4:Update",
+            "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:x86_64",
+            "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:aarch64",
+        ],
+        "emu": False,
+        "inReview": True,
+        "inReviewQAM": True,
+        "isActive": True,
+        "number": 24618,
+        "packages": ["some", "package", "name"],
+        "project": "SUSE:Maintenance:888",
+        "rr_number": pr_number,
+        "embargoed": True,
+        "priority": 600,
+    }
+
+
+@pytest.fixture
 def mock_incident_settings_data_888() -> List[Data]:
     """Mock incident_settings_data with a single job"""
     pr_number = 888
@@ -67,6 +119,20 @@ def mock_qem_get_incident_settings() -> Any:
 
     """
     with patch("openqabot.amqp.get_incident_settings_data") as mock_amqp:
+        yield mock_amqp
+
+
+@pytest.fixture
+def mock_incident_make_incident_from_pr() -> Any:
+    """Fixture providing a mock for make_incident_from_pr function.
+    To make it reusable across all tests append the patch with the other places
+    you want to use it.
+
+    Example:
+        mock_incident_make_incident_from_pr.return_value = [Data(...), Data(...)]
+
+    """
+    with patch("openqabot.amqp.make_incident_from_pr") as mock_amqp:
         yield mock_amqp
 
 

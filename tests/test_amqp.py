@@ -94,8 +94,8 @@ def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
 @responses.activate
 def test_handle_inc_review_request_triggers_scheduling(
     caplog: LogCaptureFixture,
-    mock_incident_settings_data_160: callable,
-    mock_qem_get_incident_settings: callable,
+    mock_incident_settings_from_pr160: callable,
+    mock_incident_make_incident_from_pr: callable,
     mock_openqa_post_job: callable,
     mock_gitea_review_request_body: callable,
 ) -> None:
@@ -106,39 +106,59 @@ def test_handle_inc_review_request_triggers_scheduling(
     args_no_dry = namespace(False, "ToKeN", urlparse("http://instance.qa"), None, None)
     amqp = AMQP(args_no_dry)
 
-    mock_qem_get_incident_settings.return_value = mock_incident_settings_data_160
+    mock_incident_make_incident_from_pr.return_value = mock_incident_settings_from_pr160
 
     with mock_openqa_post_job(amqp) as mock_post:
         amqp.on_review_request("", fake_review_request_topic, "", body)
-        mock_qem_get_incident_settings.assert_called_once_with(amqp.token, pr_number)
+        mock_incident_make_incident_from_pr.assert_called_once()
+        call_kwargs = mock_incident_make_incident_from_pr.call_args[1]
+        assert call_kwargs["dry"] is False, f"Expected dry=False, got dry={call_kwargs.get('dry')}"
 
-        assert mock_post.call_count == 2, f"Expected 2 calls to post_job, got {mock_post.call_count}"
-
+        assert mock_post.call_count == 3, f"Expected 3 calls to post_job, got {mock_post.call_count}"
         expected_calls = [
-            {"DISTRI": "sle", "VERSION": "15-SP7", "FLAVOR": "TestFlavor", "ARCH": "x86_64", "BUILD": ":852:test"},
             {
                 "DISTRI": "sle",
-                "VERSION": "15-SP6",
+                "VERSION": "15-SP4",
+                "FLAVOR": "Server-DVD-Updates",
+                "ARCH": "x86_64",
+                "BUILD": ":160:some",
+                "INCIDENT_ID": 160,
+            },
+            {
+                "DISTRI": "sle",
+                "VERSION": "15-SP4",
                 "FLAVOR": "Server-DVD-Updates",
                 "ARCH": "aarch64",
-                "BUILD": ":852:test",
+                "BUILD": ":160:some",
+                "INCIDENT_ID": 160,
+            },
+            {
+                "DISTRI": "sle",
+                "VERSION": "15.4",
+                "FLAVOR": "Server-DVD-Updates",
+                "ARCH": "x86_64",
+                "BUILD": ":160:some",
+                "INCIDENT_ID": 160,
             },
         ]
-
         actual_calls = [call[0][0] for call in mock_post.call_args_list]
-        assert actual_calls == expected_calls, f"Expected calls {expected_calls}, got {actual_calls}"
+        assert actual_calls == expected_calls, f"Expected calls {expected_calls}, ****** got {actual_calls}"
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert any("Received Gitea review request message" in m for m in messages)
     assert any("Scheduling jobs for PR 160" in m for m in messages)
-    assert any("Successfully scheduled 2 jobs for PR 160" in m for m in messages)
+    assert any("Scheduling jobs for PR 160 with 3 channel" in m for m in messages)
+    assert any(
+        "Review Request 160 with medium type variables is going to be scheduled in openQA" in m for m in messages
+    )
+    assert any("Successfully scheduled 3 jobs for PR 160" in m for m in messages)
 
 
 @responses.activate
 def test_smoke_handle_inc_review_request_dry_run(
     caplog: LogCaptureFixture,
-    mock_incident_settings_data_888: callable,
-    mock_qem_get_incident_settings: callable,
+    mock_incident_settings_from_pr160: callable,
+    mock_incident_make_incident_from_pr: callable,
     mock_openqa_post_job: callable,
     mock_gitea_review_request_body: callable,
 ) -> None:
@@ -147,21 +167,28 @@ def test_smoke_handle_inc_review_request_dry_run(
     pr_number = 160
     body = mock_gitea_review_request_body(pr_number)
 
-    mock_qem_get_incident_settings.return_value = mock_incident_settings_data_888
-
+    mock_incident_make_incident_from_pr.return_value = mock_incident_settings_from_pr160
     with mock_openqa_post_job(amqp) as mock_post:
         amqp.on_review_request("", fake_review_request_topic, "", body)
-        mock_qem_get_incident_settings.assert_not_called()
+        mock_incident_make_incident_from_pr.assert_called_once()
+        mocked_data = mock_incident_make_incident_from_pr.call_args[1]
+        assert mocked_data["dry"] is True
         mock_post.assert_not_called()
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert any("Received Gitea review request message" in m for m in messages)
-    assert any("No settings data found for PR 160" in m for m in messages)
+    assert any("Scheduling jobs for PR 160" in m for m in messages)
+    assert any("Scheduling jobs for PR 160 with 3 channel" in m for m in messages)
+    assert any(
+        "Review Request 160 with medium type variables is going to be scheduled in openQA" in m for m in messages
+    )
+    assert any("Successfully scheduled 3 jobs for PR 160" in m for m in messages)
+    assert any("Dry run - would schedule" in m for m in messages)
 
 
 @responses.activate
 def test_handle_inc_review_request_wrong_reviewer(
-    caplog: LogCaptureFixture, mock_qem_get_incident_settings: callable, mock_gitea_review_request_body: callable
+    caplog: LogCaptureFixture, mock_incident_make_incident_from_pr: callable, mock_gitea_review_request_body: callable
 ) -> None:
     caplog.set_level(logging.DEBUG)
     pr_number = 888
@@ -171,7 +198,7 @@ def test_handle_inc_review_request_wrong_reviewer(
     amqp = AMQP(args_test)
 
     amqp.on_review_request("", fake_review_request_topic, "", body)
-    mock_qem_get_incident_settings.assert_not_called()
+    mock_incident_make_incident_from_pr.assert_not_called()
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert any("Received Gitea review request message" in m for m in messages)
