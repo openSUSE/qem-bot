@@ -116,5 +116,5 @@ class RepoDiff:
             count,
             args.repo_a,
         )
-        log.info(diff)
+        print(json.dumps(diff, indent=4, default=list))  # noqa: T201
         return len(diff)
