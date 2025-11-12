@@ -3,6 +3,7 @@
 from abc import ABCMeta, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, List, Optional, Union
 
+from .. import DEPRIORITIZE_LIMIT
 from .incident import Incident
 
 
@@ -43,3 +44,5 @@ class BaseConf(metaclass=ABCMeta):
     def set_obsoletion(settings: dict) -> None:
         if "_OBSOLETE" not in settings:
             settings["_DEPRIORITIZEBUILD"] = 1
+            if DEPRIORITIZE_LIMIT is not None:
+                settings["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
