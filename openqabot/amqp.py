@@ -32,9 +32,8 @@ class AMQP(SyncRes):
         if not args.url:
             return
         routing_keys = {
-            "openqa": ("suse.openqa.#", self.on_job_message),
-            "gitea": (
-                "suse.src.pull_request_review_request.review_requested",  # suse.src.products.pull_request_review_request.review_requested
+            "openqa": ("*.openqa.#", self.on_job_message),
+            "gitea": ("*.pull_request_review_request.#",
                 self.on_review_request,
             ),
         }
