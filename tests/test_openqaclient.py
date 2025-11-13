@@ -3,10 +3,8 @@
 import logging
 import re
 from collections import namedtuple
-from typing import Any, List, Tuple
 from urllib.parse import urlparse
 
-import osc
 import pytest
 from _pytest.logging import LogCaptureFixture
 
@@ -21,13 +19,11 @@ _args = namedtuple("Args", ("openqa_instance", "token"))
 
 @pytest.fixture(scope="function")
 def fake_osd_rsp() -> None:
-    def reply_callback(request: osc.core.Request) -> Tuple[int, List[Any], bytes]:
-        return (200, request.headers, b'{"bar":"foo"}')
-
-    responses.add_callback(
+    responses.add(
         responses.POST,
         re.compile(r"https://openqa.suse.de/"),
-        callback=reply_callback,
+        json={"bar": "foo"},
+        status=200,
     )
 
 
@@ -79,7 +75,7 @@ def test_post_job_passed(caplog: LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
     assert len(responses.calls) == 1
-    assert responses.calls[0].response.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
+    assert responses.calls[0].request.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
     assert responses.calls[0].response.json() == {"bar": "foo"}
 
 
