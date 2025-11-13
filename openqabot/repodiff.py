@@ -8,7 +8,7 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
-import pyzstd
+import zstandard
 
 from . import OBS_DOWNLOAD_URL
 from .utils import retry10 as requests
@@ -56,7 +56,7 @@ class RepoDiff:
         if repo_data_file.endswith(".gz"):
             return gzip.decompress(repo_data_raw)
         if repo_data_file.endswith(".zst"):
-            return pyzstd.decompress(repo_data_raw)
+            return zstandard.decompress(repo_data_raw)
         return repo_data_raw
 
     def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:

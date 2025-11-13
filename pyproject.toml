@@ -17,7 +17,7 @@ dependencies = [
     "osc",
     "openqa-client",
     "pika",
-    "pyzstd",
+    "zstandard",
     "requests",
     "ruamel.yaml",
     "jsonschema",
