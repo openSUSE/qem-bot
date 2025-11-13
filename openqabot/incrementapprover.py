@@ -216,19 +216,21 @@ class IncrementApprover:
         self, package: Package, config: IncrementConfig, build_info: BuildInfo
     ) -> Optional[Dict[str, str]]:
         for additional_build in config.additional_builds:
-            m = re.search(additional_build["regex"], package.name)
-            if not m:
+            package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
+            package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
+            if not package_name_match:
+                continue
                 continue
             extra_build = [build_info.build, additional_build["build_suffix"]]
             extra_params = {}
             try:
-                kind = m.group("kind")
+                kind = package_name_match.group("kind")
                 if kind != "default":
                     extra_build.append(kind)
             except IndexError:
                 pass
             try:
-                kernel_version = m.group("kernel_version").replace("_", ".")
+                kernel_version = package_name_match.group("kernel_version").replace("_", ".")
                 extra_build.append(kernel_version)
                 extra_params["KERNEL_VERSION"] = kernel_version
             except IndexError:
