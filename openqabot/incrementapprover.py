@@ -220,6 +220,8 @@ class IncrementApprover:
             package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
             if not package_name_match:
                 continue
+            package_version_regex = additional_build.get("package_version_regex")
+            if package_version_regex is not None and not re.search(package_version_regex, package.version):
                 continue
             extra_build = [build_info.build, additional_build["build_suffix"]]
             extra_params = {}
