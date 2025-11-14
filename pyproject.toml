@@ -96,6 +96,7 @@ extend-select =[
     "S", # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "FBT", # https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt
     "TRY", # https://docs.astral.sh/ruff/rules/#tryceratops-try
+    "DOC", # https://docs.astral.sh/ruff/rules/#pydoclint-doc
 ]
 
 ignore = [
@@ -136,6 +137,8 @@ ignore = [
     "ANN401", # any-type
     "S101",
     "PLR6301", # no-self-use
+    "DOC201", # docstring-missing-returns
+    "DOC501", # docstring-missing-exception
 ]
 
 [tool.ruff.format]
