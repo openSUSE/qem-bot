@@ -186,12 +186,27 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, mo
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
 def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
-    run_approver(caplog, monkeypatch, reschedule=True)
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
-    assert "have passed" not in last_message
-    assert "Re-scheduling jobs for" in last_message
+    # Mock the openQA API to return existing failed jobs.
+    # These would normally block approval, but reschedule=True should ignore them.
+    resp = responses.add(
+        GET,
+        openqa_url,
+        json={"done": {"passed": {"job_ids": [20]}, "failed": {"job_ids": [21]}}},
+    )
+
+    test_product_repo = read_json("test-product-repo")
+    responses.add(
+        GET,
+        OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1",
+        json=test_product_repo,
+    )
+
+    (errors, jobs) = run_approver(caplog, monkeypatch, reschedule=True)
+
+    assert resp.call_count == 0, "no check for existing jobs with reschedule=True"
+    assert errors == 0
+    assert len(jobs) == len(test_product_repo["data"]), "number of scheduled jobs on openQA is equal to update on Gitea"
 
 
 @responses.activate
