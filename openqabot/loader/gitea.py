@@ -156,7 +156,7 @@ def review_pr(
     if GIT_REVIEW_BOT:
         review_url = comments_url(repo_name, pr_number)
         review_cmd = f"@{GIT_REVIEW_BOT}: "
-        review_cmd += "approved" if approve else "decline"
+        review_cmd += "approve" if approve else "decline"
         review_data = {"body": f"{review_cmd}\n{msg}\nTested commit: {commit_id}"}
     else:
         review_url = reviews_url(repo_name, pr_number)
