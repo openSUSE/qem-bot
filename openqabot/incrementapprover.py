@@ -96,7 +96,9 @@ class IncrementApprover:
         return relevant_request
 
     def _request_openqa_job_results(
-        self, build_info: BuildInfo, params: List[Dict[str, str]]
+        self,
+        build_info: BuildInfo,
+        params: List[Dict[str, str]],
     ) -> List[Dict[str, Dict[str, Dict[str, Any]]]]:
         log.debug("Checking openQA job results for %s", build_info)
         query_params = (
@@ -114,7 +116,10 @@ class IncrementApprover:
         return res
 
     def _check_openqa_jobs(
-        self, results: List[Dict[str, Dict[str, Dict[str, Any]]]], build_info: BuildInfo, params: List[Dict[str, str]]
+        self,
+        results: List[Dict[str, Dict[str, Dict[str, Any]]]],
+        build_info: BuildInfo,
+        params: List[Dict[str, str]],
     ) -> Optional[bool]:
         actual_states = set(next((res.keys() for res in results), []))
         pending_states = actual_states - final_states
@@ -147,7 +152,8 @@ class IncrementApprover:
                     not_ok_jobs[result].update(info["job_ids"])
 
     def _evaluate_list_of_openqa_job_results(
-        self, list_of_results: List[Dict[str, Dict[str, Dict[str, Any]]]]
+        self,
+        list_of_results: List[Dict[str, Dict[str, Dict[str, Any]]]],
     ) -> Tuple[Set[int], List[str]]:
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
@@ -213,7 +219,10 @@ class IncrementApprover:
         return res
 
     def _extra_builds_for_package(
-        self, package: Package, config: IncrementConfig, build_info: BuildInfo
+        self,
+        package: Package,
+        config: IncrementConfig,
+        build_info: BuildInfo,
     ) -> Optional[Dict[str, str]]:
         for additional_build in config.additional_builds:
             package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
@@ -243,7 +252,10 @@ class IncrementApprover:
         return None
 
     def _extra_builds_for_additional_builds(
-        self, package_diff: Set[Package], config: IncrementConfig, build_info: BuildInfo
+        self,
+        package_diff: Set[Package],
+        config: IncrementConfig,
+        build_info: BuildInfo,
     ) -> List[Dict[str, str]]:
         def handle_package(p: Package) -> Optional[Dict[str, str]]:
             return self._extra_builds_for_package(p, config, build_info)

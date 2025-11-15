@@ -109,15 +109,15 @@ class Aggregate(BaseConf):
                 for inc in incs:
                     if self.test_issues[issue].product.startswith("openSUSE"):
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/",
                         )
                     else:
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/",
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
-                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())})
+                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
             )
 
             try:
@@ -135,7 +135,9 @@ class Aggregate(BaseConf):
 
             try:
                 full_post["openqa"]["BUILD"] = self.get_buildnr(
-                    full_post["openqa"]["REPOHASH"], old_repohash, old_build
+                    full_post["openqa"]["REPOHASH"],
+                    old_repohash,
+                    old_build,
                 )
             except SameBuildExists:
                 log.info(
