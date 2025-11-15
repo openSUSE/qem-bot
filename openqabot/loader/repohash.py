@@ -3,9 +3,9 @@
 from hashlib import md5
 from logging import getLogger
 from typing import List, Optional, Tuple
-from xml.etree import ElementTree as ET
 
 import requests
+from defusedxml import ElementTree as ET
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
@@ -72,7 +72,7 @@ def get_max_revision(
 
 
 def merge_repohash(hashes: List[str]) -> str:
-    m = md5(b"start")
+    m = md5(b"start")  # noqa: S324 hashlib-insecure-hash-function
 
     for h in hashes:
         m.update(h.encode())
