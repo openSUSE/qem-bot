@@ -1,9 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from argparse import Namespace
+from __future__ import annotations
+
 from logging import getLogger
 from pprint import pformat
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
@@ -14,7 +15,11 @@ from . import OBS_URL
 from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
-from .types.incident import Incident
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from .types.incident import Incident
 
 log = getLogger("bot.commenter")
 
@@ -48,7 +53,7 @@ class Commenter:
             state = "none"
             if any(j["status"] in ("running") for j in i_jobs + u_jobs):
                 log.info("%s needs to wait a bit longer", inc)
-            elif any(j["status"] not in ("passed", "softfailed") for j in i_jobs + u_jobs):
+            elif any(j["status"] not in {"passed", "softfailed"} for j in i_jobs + u_jobs):
                 log.info("There is a failed job for %s", inc)
                 state = "failed"
             else:
@@ -75,7 +80,7 @@ class Commenter:
         info = {}
         info["state"] = state
         for key in inc.revisions:
-            info["revision_%s_%s" % (key.version, key.arch)] = inc.revisions[key]
+            info["revision_{}_{}".format(key.version, key.arch)] = inc.revisions[key]
 
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
@@ -106,7 +111,7 @@ class Commenter:
             log.info("Would write comment to request %s", inc)
             log.debug(pformat(msg))
 
-    def summarize_message(self, jobs: List[Dict[str, Any]]) -> str:  # noqa: C901
+    def summarize_message(self, jobs: list[dict[str, Any]]) -> str:  # noqa: C901
         groups = {}
         for job in jobs:
             if "job_group" not in job:
@@ -165,9 +170,9 @@ class Commenter:
     def emd(string: str) -> str:
         return string.replace("_", r"\_")
 
-    def __summarize_one_openqa_job(self, job: Dict[str, Any]) -> Optional[str]:
+    def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
-        if job["status"] not in ["passed", "failed", "softfailed"]:
+        if job["status"] not in {"passed", "failed", "softfailed"}:
             rstring = job["status"]
             if rstring == "none":
                 return None

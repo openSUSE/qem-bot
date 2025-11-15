@@ -1,17 +1,17 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+from __future__ import annotations
+
 import logging
 import os
-from collections import namedtuple
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlparse
 
 import osc.conf
 import osc.core
 import pytest
-from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot
 import responses
@@ -21,51 +21,56 @@ from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
 from responses import GET
 
+if TYPE_CHECKING:
+    from _pytest.logging import LogCaptureFixture
+
+
 # Fake Namespace for IncrementApprover initialization
-_namespace = namedtuple(
-    "Namespace",
-    (
-        "dry",
-        "token",
-        "openqa_instance",
-        "accepted",
-        "request_id",
-        "project_base",
-        "build_project_suffix",
-        "diff_project_suffix",
-        "distri",
-        "version",
-        "flavor",
-        "schedule",
-        "reschedule",
-        "build_listing_sub_path",
-        "build_regex",
-        "product_regex",
-        "fake_data",
-        "increment_config",
-        "packages",
-        "archs",
-        "settings",
-        "additional_builds",
-    ),
-)
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
+    accepted: bool
+    request_id: int
+    project_base: str
+    build_project_suffix: str
+    diff_project_suffix: str
+    distri: str
+    version: str
+    flavor: str
+    schedule: bool
+    reschedule: bool
+    build_listing_sub_path: str
+    build_regex: str
+    product_regex: str
+    fake_data: bool
+    increment_config: str
+    packages: list
+    archs: set
+    settings: dict
+    additional_builds: list
+
 
 # define fake data
-ReviewState = namedtuple("ReviewState", ("state", "by_group"))
+class ReviewState(NamedTuple):
+    state: str
+    by_group: str
+
+
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_no_jobs() -> None:
     responses.add(GET, openqa_url, json={})
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_pending_jobs() -> None:
     responses.add(GET, openqa_url, json={"scheduled": {}, "running": {}})
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_not_ok_jobs() -> None:
     responses.add(
         GET,
@@ -74,7 +79,7 @@ def fake_not_ok_jobs() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_ok_jobs() -> None:
     responses.add(
         GET,
@@ -83,7 +88,7 @@ def fake_ok_jobs() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_product_repo() -> None:
     responses.add(
         GET,
@@ -96,7 +101,7 @@ def fake_osc_get_config(override_apiurl: str) -> None:
     assert override_apiurl == OBS_URL
 
 
-def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> List[osc.core.Request]:
+def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
     assert url == OBS_URL
     assert project == "OBS:PROJECT:TEST"
     req = osc.core.Request()
@@ -116,54 +121,56 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
 
 def prepare_approver(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
     schedule: bool = False,
     reschedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
-    config: Optional[IncrementConfig] = None,
+    config: IncrementConfig | None = None,
 ) -> IncrementApprover:
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
     monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
-    args = _namespace(
-        False,
-        "not-secret",
-        urlparse("http://openqa-instance"),
-        True,
-        None,
-        "OBS:PROJECT",
-        "TEST",
-        diff_project_suffix,
-        "sle",
-        "16.0",
-        "Online-Increments",
-        schedule,
-        reschedule,
-        "product",
-        BUILD_REGEX,
-        ".*",
-        True,
-        None,
-        [] if config is None else config.packages,
-        set() if config is None else config.archs,
-        {} if config is None else config.settings,
-        [] if config is None else config.additional_builds,
+    args = Namespace(
+        dry=False,
+        token="not-secret",
+        openqa_instance=urlparse("http://openqa-instance"),
+        accepted=True,
+        request_id=None,
+        project_base="OBS:PROJECT",
+        build_project_suffix="TEST",
+        diff_project_suffix=diff_project_suffix,
+        distri="sle",
+        version="16.0",
+        flavor="Online-Increments",
+        schedule=schedule,
+        reschedule=reschedule,
+        build_listing_sub_path="product",
+        build_regex=BUILD_REGEX,
+        product_regex=".*",
+        fake_data=True,
+        increment_config=None,
+        packages=[] if config is None else config.packages,
+        archs=set() if config is None else config.archs,
+        settings={} if config is None else config.settings,
+        additional_builds=[] if config is None else config.additional_builds,
     )
     return IncrementApprover(args)
 
 
 def run_approver(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
     schedule: bool = False,
     reschedule: bool = False,
     diff_project_suffix: str = "none",
     test_env_var: str = "",
-    config: Optional[IncrementConfig] = None,
-) -> Tuple[int, List]:
+    config: IncrementConfig | None = None,
+) -> tuple[int, list]:
     jobs = []
     monkeypatch.setattr(
         openqabot.openqa.openQAInterface,
@@ -171,7 +178,13 @@ def run_approver(
         lambda _self, data: jobs.append(data),
     )
     increment_approver = prepare_approver(
-        caplog, monkeypatch, schedule, reschedule, diff_project_suffix, test_env_var, config
+        caplog,
+        monkeypatch,
+        schedule=schedule,
+        reschedule=reschedule,
+        diff_project_suffix=diff_project_suffix,
+        test_env_var=test_env_var,
+        config=config,
     )
     errors = increment_approver()
     return (errors, jobs)
@@ -179,7 +192,7 @@ def run_approver(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
@@ -187,7 +200,7 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, mo
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch, reschedule=True)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "have passed" not in last_message
@@ -196,7 +209,9 @@ def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: Monkey
 
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
-def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_skipping_with_failing_openqa_jobs_for_one_config(
+    caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     increment_approver = prepare_approver(caplog, monkeypatch)
     increment_approver.config.append(increment_approver.config[0])
     increment_approver()
@@ -209,7 +224,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: LogCaptureFixt
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_skipping_with_no_openqa_jobs(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
@@ -223,7 +238,7 @@ def test_skipping_with_no_openqa_jobs(
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_with_no_openqa_jobs(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     ci_job_url = "https://some/ci/job/url"
     (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, test_env_var=ci_job_url)
@@ -249,7 +264,7 @@ def test_scheduling_with_no_openqa_jobs(
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
@@ -309,7 +324,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
-def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -322,7 +337,7 @@ def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatc
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
 def test_listing_not_ok_openqa_jobs(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
@@ -351,7 +366,7 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
     assert configs[1].distri == "bar"
     assert configs[1].version == "42"
     assert configs[1].flavor == "Test-Increments"
-    assert configs[1].project_base == ""
+    assert not configs[1].project_base
     assert configs[1].build_project() == "ToTest"
     assert configs[1].diff_project() == "none"
 

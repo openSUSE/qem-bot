@@ -1,24 +1,32 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from logging import getLogger
-from pathlib import Path
-from typing import List, Set, Union
+from typing import TYPE_CHECKING
 
 from ruamel.yaml import YAML
 
-from ..errors import NoTestIssues
-from ..types import Data
-from ..types.aggregate import Aggregate
-from ..types.incidents import Incidents
-from ..utils import get_yml_list
+from openqabot.errors import NoTestIssuesError
+from openqabot.types import Data
+from openqabot.types.aggregate import Aggregate
+from openqabot.types.incidents import Incidents
+from openqabot.utils import get_yml_list
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 log = getLogger("bot.loader.config")
 
 
 def load_metadata(
-    path: Path, aggregate: bool, incidents: bool, extrasettings: Set[str]
-) -> List[Union[Aggregate, Incidents]]:
-    ret: List[Union[Aggregate, Incidents]] = []
+    path: Path,
+    *,
+    aggregate: bool,
+    incidents: bool,
+    extrasettings: set[str],
+) -> list[Aggregate | Incidents]:
+    ret: list[Aggregate | Incidents] = []
 
     loader = YAML(typ="safe")
 
@@ -31,14 +39,14 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Found generic exception")
             continue
 
         try:
             settings = data.get("settings")
         except AttributeError:
-            log.error("The YAML file '%s' contains no valid data for bot settings.", p)
+            log.exception("The YAML file '%s' contains no valid data for bot settings.", p)
             continue
 
         if "product" not in data:
@@ -56,7 +64,7 @@ def load_metadata(
                             settings,
                             data[key],
                             extrasettings,
-                        )
+                        ),
                     )
                 elif key == "aggregate" and not aggregate:
                     try:
@@ -67,9 +75,9 @@ def load_metadata(
                                 data.get("product_version"),
                                 settings,
                                 data[key],
-                            )
+                            ),
                         )
-                    except NoTestIssues:
+                    except NoTestIssuesError:
                         log.warning("No 'test_issues' in %s config", data["product"])
                 else:
                     continue
@@ -77,7 +85,7 @@ def load_metadata(
     return ret
 
 
-def read_products(path: Path) -> List[Data]:
+def read_products(path: Path) -> list[Data]:
     loader = YAML(typ="safe")
     ret = []
 
@@ -86,10 +94,10 @@ def read_products(path: Path) -> List[Data]:
         data = loader.load(p)
 
         if not data:
-            log.info("Skipping invalid config %s - empty config", str(p))
+            log.info("Skipping invalid config %s - empty config", p)
             continue
         if not isinstance(data, dict):
-            log.info("Skipping invalid config %s - invalid format", str(p))
+            log.info("Skipping invalid config %s - invalid format", p)
             continue
 
         try:
@@ -98,7 +106,7 @@ def read_products(path: Path) -> List[Data]:
             version = data["settings"]["VERSION"]
             product = data["product"]
         except KeyError as e:
-            log.info("Skipping config %s with no %s settings", str(p), str(e))
+            log.info("Skipping config %s with no %s settings", p, e)
             continue
 
         ret.extend(Data(0, 0, flavor, arch, distri, version, "", product) for arch in data["aggregate"]["archs"])
@@ -106,13 +114,13 @@ def read_products(path: Path) -> List[Data]:
     return ret
 
 
-def get_onearch(path: Path) -> Set[str]:
+def get_onearch(path: Path) -> set[str]:
     loader = YAML(typ="safe")
 
     try:
         data = loader.load(path)
-    except Exception as e:  # pylint: disable=broad-except
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Found generic exception")
         return set()
 
     return set(data)

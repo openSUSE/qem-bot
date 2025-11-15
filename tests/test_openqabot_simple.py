@@ -1,13 +1,13 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
-from collections import namedtuple
-from typing import Any, Dict, List, NoReturn, Set
+from typing import Any, NamedTuple, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot.openqabot
 import responses
@@ -15,27 +15,24 @@ from openqabot import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqabot import OpenQABot
 
-Namespace = namedtuple(
-    "Namespace",
-    [
-        "dry",
-        "ignore_onetime",
-        "token",
-        "singlearch",
-        "openqa_instance",
-        "configs",
-        "disable_aggregates",
-        "disable_incidents",
-    ],
-)
+
+class Namespace(NamedTuple):
+    dry: bool
+    ignore_onetime: bool
+    token: str
+    singlearch: str
+    openqa_instance: str
+    configs: str
+    disable_aggregates: bool
+    disable_incidents: bool
 
 
 @pytest.fixture
-def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
-        def __init__(self, args: Any) -> None:
+        def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
-            self.qem_token: Dict[str, str] = {"Authorization": f"Token {args.token}"}
+            self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
         def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
@@ -47,7 +44,7 @@ def mock_openqa_passed(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
+def mock_openqa_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -59,25 +56,25 @@ def mock_openqa_exception(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_runtime(monkeypatch: MonkeyPatch) -> None:
+def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def __call__(self, *_args: Any, **_kwargs: Any) -> List[Dict[str, Any]]:
+        def __call__(self, *_args: Any, **_kwargs: Any) -> list[dict[str, Any]]:
             return [{"qem": {"fake": "result"}, "openqa": {"fake", "result"}, "api": "bar"}]
 
-    def f_load_metadata(*_args: Any, **_kwds: Any) -> List[FakeWorker]:
+    def f_load_metadata(*_args: Any, **_kwds: Any) -> list[FakeWorker]:
         return [FakeWorker()]
 
     monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
 
-    def f_get_incidents(*_args: Any, **_kwds: Any) -> List[int]:
+    def f_get_incidents(*_args: Any, **_kwds: Any) -> list[int]:
         return [123]
 
     monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
-    def f_get_onearch(*_args: Any, **_kwds: Any) -> Set[Any]:
+    def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()
 
     monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)
@@ -88,14 +85,14 @@ def mock_runtime(monkeypatch: MonkeyPatch) -> None:
 def test_passed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -113,14 +110,14 @@ def test_passed(caplog: LogCaptureFixture) -> None:
 def test_dry(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        True,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=True,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -137,14 +134,14 @@ def test_dry(caplog: LogCaptureFixture) -> None:
 def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.opensuse.org"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.opensuse.org"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 
@@ -163,14 +160,14 @@ def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
 def test_passed_post_osd_failed(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
-        False,
-        False,
-        "token",
-        "single",
-        urlparse("https://openqa.suse.de"),
-        None,
-        False,
-        False,
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_incidents=False,
     )
     bot = OpenQABot(args)
 

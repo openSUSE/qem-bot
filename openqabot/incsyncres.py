@@ -1,13 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-import concurrent.futures as CT
 from argparse import Namespace
+from concurrent import futures
 from logging import getLogger
-from typing import List
+from typing import TYPE_CHECKING
 
 from .loader.qem import get_active_incidents, get_incident_settings_data
 from .syncres import SyncRes
-from .types import Data
+
+if TYPE_CHECKING:
+    from .types import Data
 
 log = getLogger("bot.incsyncres")
 
@@ -20,16 +22,16 @@ class IncResultsSync(SyncRes):
         self.active = get_active_incidents(self.token)
 
     def __call__(self) -> int:
-        incidents: List[Data] = []
+        incidents: list[Data] = []
 
         for inc in self.active:
             incidents += get_incident_settings_data(self.token, inc)
 
         full = {}
 
-        with CT.ThreadPoolExecutor() as executor:
+        with futures.ThreadPoolExecutor() as executor:
             future_result = {executor.submit(self.client.get_jobs, f): f for f in incidents}
-            for future in CT.as_completed(future_result):
+            for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()
 
         results = []

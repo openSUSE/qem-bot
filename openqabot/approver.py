@@ -1,12 +1,14 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import re
 import string
-from argparse import Namespace
 from datetime import datetime, timedelta
 from functools import lru_cache
 from logging import getLogger
-from typing import Dict, List, Optional, Pattern
+from re import Pattern
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -30,14 +32,17 @@ from .loader.qem import (
 )
 from .utc import UTC
 
+if TYPE_CHECKING:
+    from argparse import Namespace
+
 log = getLogger("bot.approver")
 
 
 def _mi2str(inc: IncReq) -> str:
     return (
-        "%s:%s:%s" % (OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
+        "{}:{}:{}".format(OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
         if inc.type is None
-        else "%s:%s" % (inc.type, str(inc.inc))
+        else "{}:{}".format(inc.type, str(inc.inc))
     )
 
 
@@ -73,9 +78,9 @@ def sanitize_comment_text(text: str) -> str:
 
 
 class Approver:
-    def __init__(self, args: Namespace, single_incident: Optional[int] = None) -> None:
+    def __init__(self, args: Namespace, single_incident: int | None = None) -> None:
         self.dry = args.dry
-        self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
+        self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_incident is None:
             self.single_incident = args.incident
             self.all_incidents = args.all_incidents
@@ -111,7 +116,7 @@ class Approver:
 
     def _approvable(self, inc: IncReq) -> bool:
         try:
-            i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
+            i_jobs = get_incident_settings(inc.inc, self.token, all_incidents=self.all_incidents)
         except NoResultsError as e:
             log.info(e)
             return False
@@ -120,7 +125,7 @@ class Approver:
         except NoResultsError as e:
             log.info(e)
 
-            if any(i.withAggregate for i in i_jobs):
+            if any(i.with_aggregate for i in i_jobs):
                 log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
 
@@ -130,7 +135,7 @@ class Approver:
             log.info("%s has at least one failed job in incident tests", _mi2str(inc))
             return False
 
-        if any(i.withAggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
+        if any(i.with_aggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
             log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
             return False
 
@@ -153,7 +158,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(r"@review:acceptable_for:incident_%s:(.+?)(?:$|\s)" % inc, re.DOTALL)
+        regex = re.compile(r"@review:acceptable_for:incident_{}:(.+?)(?:$|\s)".format(inc), re.DOTALL)
         try:
             for comment in self.client.get_job_comments(job_id):
                 sanitized_text = sanitize_comment_text(comment["text"])
@@ -190,7 +195,7 @@ class Approver:
         job: dict,
         oldest_build_usable: datetime,
         regex: Pattern[str],
-    ) -> Optional[bool]:
+    ) -> bool | None:
         job_build = job["build"][:-2]
         try:
             job_build_date = datetime.strptime(job_build, "%Y%m%d").astimezone(UTC)
@@ -259,7 +264,7 @@ class Approver:
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(days=OLDEST_APPROVAL_JOB_DAYS)
 
-        regex = re.compile(r"(.*)Maintenance:/%s/(.*)" % inc)
+        regex = re.compile(r"(.*)Maintenance:/{}/(.*)".format(inc))
         for job in older_jobs:
             was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
             if was_ok is not None:
@@ -274,7 +279,7 @@ class Approver:
     def is_job_passing(self, job_result: dict) -> bool:
         return job_result["status"] == "passed"
 
-    def mark_jobs_as_acceptable_for_incident(self, job_results: List[dict], inc: int) -> None:
+    def mark_jobs_as_acceptable_for_incident(self, job_results: list[dict], inc: int) -> None:
         for job_result in job_results:
             if self.is_job_passing(job_result):
                 continue
@@ -288,7 +293,7 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
-        if job_result.get("acceptable_for_" + str(inc), False):
+        if job_result.get("acceptable_for_" + str(inc)):
             log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
@@ -305,11 +310,12 @@ class Approver:
     def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
         job_results = get_json(api + str(job_aggr.id), headers=self.token)
         if not job_results:
-            raise NoResultsError("Job setting %s not found for incident %s" % (str(job_aggr.id), str(inc)))
+            msg = "Job setting {} not found for incident {}".format(str(job_aggr.id), str(inc))
+            raise NoResultsError(msg)
         self.mark_jobs_as_acceptable_for_incident(job_results, inc)
         return all(self.is_job_acceptable(inc, api, r) for r in job_results)
 
-    def get_incident_result(self, jobs: List[JobAggr], api: str, inc: int) -> bool:
+    def get_incident_result(self, jobs: list[JobAggr], api: str, inc: int) -> bool:
         res = False
 
         for job_aggr in jobs:
@@ -324,7 +330,7 @@ class Approver:
         return res
 
     def approve(self, inc: IncReq) -> bool:
-        msg = "Request accepted for '%s' based on data in %s" % (
+        msg = "Request accepted for '{}' based on data in {}".format(
             OBS_GROUP,
             QEM_DASHBOARD,
         )
@@ -343,8 +349,8 @@ class Approver:
             )
         except HTTPError as e:
             return _handle_http_error(e, inc)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Generic exception caught")
             return False
 
         return True
@@ -359,7 +365,7 @@ class Approver:
                 msg,
                 inc.scm_info,
             )
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Generic exception caught")
             return False
         return True

@@ -1,22 +1,27 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest import MonkeyPatch
 
 import openqabot.types.baseconf
-from openqabot.types.baseconf import BaseConf, Incident
+from openqabot.types.baseconf import BaseConf
+
+if TYPE_CHECKING:
+    from openqabot.types.baseconf import Incident
 
 
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        _incidents: List[Incident],
-        _token: Dict[str, str],
-        _ci_url: Optional[str],
+        _incidents: list[Incident],
+        _token: dict[str, str],
+        _ci_url: str | None,
+        *,
         _ignore_onetime: bool,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return [{"foo": "bar"}]
 
     @staticmethod
@@ -51,7 +56,7 @@ def test_is_embargoed(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.filter_embargoed("Azure-test")
 
 
-def test_set_obsoletion(baseconf_gen: FakeBaseConf, monkeypatch: MonkeyPatch) -> None:
+def test_set_obsoletion(baseconf_gen: FakeBaseConf, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.types.baseconf, "DEPRIORITIZE_LIMIT", "50")
     settings = {}
     baseconf_gen.set_obsoletion(settings)

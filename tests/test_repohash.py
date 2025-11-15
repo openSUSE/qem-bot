@@ -1,16 +1,20 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import logging
-from typing import Union
+from typing import TYPE_CHECKING
 
 import pytest
 import requests
-from _pytest.logging import LogCaptureFixture
 from requests import ConnectionError, HTTPError  # noqa: A004
 
 import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
+
+if TYPE_CHECKING:
+    from _pytest.logging import LogCaptureFixture
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"
@@ -45,7 +49,7 @@ repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
 arch = "x86_64"
 
 
-def add_sles_sled_response(sled_body: Union[str, ConnectionError, HTTPError, BufferError]) -> None:
+def add_sles_sled_response(sled_body: str | ConnectionError | HTTPError | BufferError) -> None:
     responses.add(
         responses.GET,
         url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
@@ -116,7 +120,7 @@ def test_get_max_revison_exception(caplog: LogCaptureFixture) -> None:
     with pytest.raises(BufferError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert str(caplog.records[0].msg) == "other error"
+    assert "Generic exception caught" in caplog.records[0].msg
 
 
 def test_merge_repohash() -> None:

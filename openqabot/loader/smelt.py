@@ -1,16 +1,18 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-import concurrent.futures as CT
+from __future__ import annotations
+
+from concurrent import futures
 from logging import getLogger
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import urllib3
 import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
-from .. import SMELT
-from ..utils import retry10 as requests
-from ..utils import walk
+from openqabot import SMELT
+from openqabot.utils import retry10 as requests
+from openqabot.utils import walk
 
 log = getLogger("bot.loader.smelt")
 
@@ -23,8 +25,8 @@ ACTIVE_NEXT = '{ incidents(status_Name_Iexact:"active", first: 100, \
 after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { incidentId}}}}'
 
 INCIDENT = '{incidents(incidentId: %(incident)s) { edges { node {emu project \
-repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
-{ requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
+repositories { edges { node { name } } } requestset(kind: "RR") { edges { node \
+{ requestId status { name } reviewset { edges { node { assignedByGroup { name } \
 status { name } } } } } } } packages { edges { node { name } } } } } \
     edges{ node { crd priority } } } }'
 
@@ -100,7 +102,7 @@ INCIDENT_SCHEMA = {
                                         "packages": {
                                             "type": "object",
                                         },
-                                        "requestSet": {
+                                        "requestset": {
                                             "type": "object",
                                         },
                                         "crd": {
@@ -124,17 +126,17 @@ INCIDENT_SCHEMA = {
 }
 
 
-def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
+def get_json(query: str, host: str = SMELT) -> dict[str, Any]:
     try:
         return requests.get(host, params={"query": query}, verify=False).json()
-    except Exception as e:
-        log.exception(e)
-        raise e
+    except Exception:
+        log.exception("Found generic exception")
+        raise
 
 
-def get_active_incidents() -> Set[int]:
+def get_active_incidents() -> set[int]:
     """Get active incidents from SMELT GraphQL api."""
-    active: Set[int] = set()
+    active: set[int] = set()
 
     has_next = True
     cursor = None
@@ -158,7 +160,7 @@ def get_active_incidents() -> Set[int]:
     return active
 
 
-def get_incident(incident: int) -> Optional[Dict[str, Any]]:
+def get_incident(incident: int) -> dict[str, Any] | None:
     query = INCIDENT % {"incident": incident}
 
     log.info("Getting info about incident %s from SMELT", incident)
@@ -169,16 +171,15 @@ def get_incident(incident: int) -> Optional[Dict[str, Any]]:
     except ValidationError:
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
-    except Exception as e:  # pylint: disable=broad-except
-        log.error("Unknown error for incident %s", incident)
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Unknown error for incident %s", incident)
         return None
 
     return inc_result
 
 
-def get_incidents(active: Set[int]) -> List[Dict[str, Any]]:
-    with CT.ThreadPoolExecutor() as executor:
+def get_incidents(active: Set[int]) -> list[dict[str, Any]]:
+    with futures.ThreadPoolExecutor() as executor:
         future_inc = [executor.submit(get_incident, inc) for inc in active]
-        incidents = (future.result() for future in CT.as_completed(future_inc))
+        incidents = (future.result() for future in futures.as_completed(future_inc))
         return [inc for inc in incidents if inc]

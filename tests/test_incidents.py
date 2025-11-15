@@ -1,10 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pytest
-from pytest import MonkeyPatch
 
 import responses
 from openqabot.types import ArchVer, Repos
@@ -75,7 +75,7 @@ def test_incidents_call_with_flavors() -> None:
     assert res == []
 
 
-class MyIncident_0(object):
+class MyIncident_0:
     """The simpler possible implementation of Incident class"""
 
     def __init__(self) -> None:
@@ -89,7 +89,7 @@ class MyIncident_0(object):
         self.ongoing = True
         self.type = "smelt"
 
-    def compute_revisions_for_product_repo(self, product_repo: Optional[str], product_version: Optional[str]) -> None:
+    def compute_revisions_for_product_repo(self, product_repo: str | None, product_version: str | None) -> None:
         pass
 
     def revisions_with_fallback(self, arch: str, version: str) -> None:
@@ -133,7 +133,7 @@ def test_incidents_call_with_issues() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch: MonkeyPatch) -> None:
+def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
@@ -143,7 +143,7 @@ def request_mock(monkeypatch: MonkeyPatch) -> None:
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
-        def json() -> List[Dict]:
+        def json() -> list[dict]:
             return [{"flavor": None}]
 
     def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
@@ -185,7 +185,7 @@ class MyIncident_3(MyIncident_2):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, _requires: List[str]) -> bool:
+    def contains_package(self, _requires: list[str]) -> bool:
         return True
 
 
@@ -211,7 +211,7 @@ def test_incidents_call_with_params_expand() -> None:
     """Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
     The only flavor is using params_expand.
-    Set of setting in product and flavor:
+    set of setting in product and flavor:
     - match on SOMETHING: flavor value has to win
     - flavor set extend product set SOMETHING_NEW:
     - one setting is only at product level SOMETHING_ELSE
@@ -226,7 +226,7 @@ def test_incidents_call_with_params_expand() -> None:
                 "SOMETHING": "flavor win",
                 "SOMETHING_NEW": "something flavor specific",
             },
-        }
+        },
     }
 
     inc = Incidents(
@@ -351,7 +351,7 @@ class MyIncident_4(MyIncident_3):
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_public_cloud_pint_query(monkeypatch: MonkeyPatch) -> None:
+def test_incidents_call_public_cloud_pint_query(monkeypatch: pytest.MonkeyPatch) -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
@@ -437,11 +437,11 @@ def test_gitea_incidents() -> None:
         assert qem["flavor"] == flavor
         assert qem["incident"] == inc.id
         assert qem["version"] == product_ver
-        assert qem["withAggregate"]
+        assert qem["with_aggregate"]
         for s in computed_settings:
             assert s["ARCH"] == arch
-            assert s["BASE_TEST_ISSUES"] == "%i" % inc.id
-            assert s["BUILD"] == ":%i:None" % inc.id
+            assert s["BASE_TEST_ISSUES"] == str(inc.id)
+            assert s["BUILD"] == f":{inc.id}:None"
             assert s["DISTRI"] == settings["DISTRI"]
             assert s["FLAVOR"] == flavor
             assert s["INCIDENT_ID"] == inc.id

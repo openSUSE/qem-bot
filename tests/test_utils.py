@@ -1,8 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import pytest
 
@@ -44,7 +46,7 @@ def test_normalize_results() -> None:
 
 
 @pytest.mark.parametrize(
-    "data,result",
+    ("data", "result"),
     [
         ([], []),
         ({}, {}),
@@ -62,16 +64,16 @@ def test_normalize_results() -> None:
                                             {"node": {"name": "12:x86_64"}},
                                             {"node": {"name": "12:Update"}},
                                             {"node": {"name": "12:s390x"}},
-                                        ]
+                                        ],
                                     },
                                     "c": {"edges": []},
                                     "cM": None,
                                     "cQ": None,
-                                }
-                            }
-                        ]
-                    }
-                }
+                                },
+                            },
+                        ],
+                    },
+                },
             },
             {
                 "d": {
@@ -87,14 +89,14 @@ def test_normalize_results() -> None:
                                 {"name": "12:s390x"},
                             ],
                             "rS": [],
-                        }
-                    ]
+                        },
+                    ],
                 },
             },
         ),
     ],
 )
-def test_walk(data: Union[List[Any], Dict[str, Any]], result: Union[List[Any], Dict[str, Any]]) -> None:
+def test_walk(data: list[Any] | dict[str, Any], result: list[Any] | dict[str, Any]) -> None:
     ret = walk(data)
     assert result == ret
 

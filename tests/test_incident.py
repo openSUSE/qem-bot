@@ -4,10 +4,9 @@ from copy import deepcopy
 from typing import Any, NoReturn
 
 import pytest
-from pytest import MonkeyPatch
 
 import openqabot.types.incident
-from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
+from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
 
@@ -35,7 +34,7 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch: MonkeyPatch) -> None:
+def mock_good(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
@@ -43,7 +42,7 @@ def mock_good(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_ex(monkeypatch: MonkeyPatch) -> None:
+def mock_ex(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
@@ -82,8 +81,8 @@ def test_inc_normal_livepatch() -> None:
 
 @pytest.mark.usefixtures("mock_ex")
 def test_inc_norepo() -> None:
+    inc = Incident(test_data)
     with pytest.raises(NoRepoFoundError):
-        inc = Incident(test_data)
         inc.revisions_with_fallback("x86_64", "15-SP4")
 
 
@@ -99,7 +98,7 @@ def test_inc_nopackage() -> None:
 def test_inc_nochannels() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = []
-    with pytest.raises(EmptyChannels):
+    with pytest.raises(EmptyChannelsError):
         Incident(bad_data)
 
 
@@ -111,7 +110,7 @@ def test_inc_nochannels2() -> None:
         "SUSE:Updates:SLE-Module-Development-Tools-OBS:15-SP4:x86_64",
         "SUSE:Updates:SLE-Module-SUSE-Manager-Server:15-SP4:aarch64",
     ]
-    with pytest.raises(EmptyChannels):
+    with pytest.raises(EmptyChannelsError):
         Incident(bad_data)
 
 

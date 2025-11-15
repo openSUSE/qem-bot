@@ -1,27 +1,33 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from hashlib import md5
 from logging import getLogger
-from typing import List, Optional, Tuple
-from xml.etree import ElementTree as ET
 
 import requests
+
+try:
+    from lxml import etree
+except ImportError:
+    import defusedxml.ElementTree as etree  # noqa: N813, see https://lxml.de/tutorial.html
 from requests.exceptions import RetryError
 
-from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
-from ..errors import NoRepoFoundError
-from ..utils import retry5 as retried_requests
+from openqabot import OBS_DOWNLOAD_URL, OBS_PRODUCTS
+from openqabot.errors import NoRepoFoundError
+from openqabot.utils import retry5 as retried_requests
+
 from . import gitea
 
 log = getLogger("bot.loader.repohash")
 
 
 def get_max_revision(
-    repos: List[Tuple[str, str]],
+    repos: list[tuple[str, str]],
     arch: str,
     project: str,
-    product_name: Optional[str] = None,
-    product_version: Optional[str] = None,
+    product_name: str | None = None,
+    product_version: str | None = None,
 ) -> int:
     max_rev = 0
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
@@ -49,19 +55,19 @@ def get_max_revision(
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
-            root = ET.fromstring(retried_requests.get(url).text)
+            root = etree.fromstring(retried_requests.get(url).text)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
-            ET.ParseError,
+            etree.ParseError,
             requests.ConnectionError,
             requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
             log.info("%s not found -- skipping incident", url)
             raise NoRepoFoundError from e
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("Generic exception caught")
+            raise
 
         if cs is None:
             log.error("%s's revision is None", url)
@@ -71,8 +77,8 @@ def get_max_revision(
     return max_rev
 
 
-def merge_repohash(hashes: List[str]) -> str:
-    m = md5(b"start")
+def merge_repohash(hashes: list[str]) -> str:
+    m = md5(b"start")  # noqa: S324 hashlib-insecure-hash-function
 
     for h in hashes:
         m.update(h.encode())

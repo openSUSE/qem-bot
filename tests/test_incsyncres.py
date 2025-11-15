@@ -1,25 +1,29 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
-from collections import namedtuple
-from typing import Any, List
+from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import MonkeyPatch
 
 import openqabot.incsyncres
 import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.incsyncres import IncResultsSync
 
-namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance"])
+
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
 
 
 @pytest.fixture
-def get_a_i(monkeypatch: MonkeyPatch) -> None:
-    def fake(*_args: Any) -> List[int]:
+def get_a_i(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake(*_args: Any) -> list[int]:
         return [100]
 
     monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
@@ -38,7 +42,7 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -58,8 +62,8 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": 1234,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -67,7 +71,7 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -98,7 +102,7 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -117,8 +121,8 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
                 "group_id": 10,
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -126,7 +130,7 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -156,7 +160,7 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -176,8 +180,8 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -185,7 +189,7 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
         json=data,
     )
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -216,7 +220,7 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -236,8 +240,8 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -249,7 +253,7 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 
@@ -280,7 +284,7 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -300,8 +304,8 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -313,7 +317,7 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = namespace(False, "ToKeN", urlparse("http://instance.qa"))
+    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
     syncer = IncResultsSync(args)
 

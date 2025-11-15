@@ -4,7 +4,7 @@ from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger
 from os import environ
-from typing import Any, Dict, List
+from typing import Any
 
 from openqabot.dashboard import put
 
@@ -27,12 +27,17 @@ class OpenQABot:
 
         extrasettings = get_onearch(args.singlearch)
 
-        self.workers = load_metadata(args.configs, args.disable_aggregates, args.disable_incidents, extrasettings)
+        self.workers = load_metadata(
+            args.configs,
+            aggregate=args.disable_aggregates,
+            incidents=args.disable_incidents,
+            extrasettings=extrasettings,
+        )
 
         self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")
 
-    def post_qem(self, data: Dict[str, Any], api: str) -> None:
+    def post_qem(self, data: dict[str, Any], api: str) -> None:
         if not self.openqa:
             log.warning(
                 "No valid openQA configuration specified: '%s' not posted to dashboard",
@@ -47,18 +52,18 @@ class OpenQABot:
                 res.status_code,
                 res.json().get("id", "No id?"),
             )
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("Found generic exception")
+            raise
 
-    def post_openqa(self, data: Dict[str, Any]) -> None:
+    def post_openqa(self, data: dict[str, Any]) -> None:
         self.openqa.post_job(data)
 
     def __call__(self) -> int:
         log.info("Starting bot mainloop")
-        post: List[Dict[str, Any]] = []
+        post: list[dict[str, Any]] = []
         for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
+            post += worker(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
 
         if self.dry:
             log.info("Would trigger %d products in openQA", len(post))
@@ -68,8 +73,8 @@ class OpenQABot:
         else:
             log.info("Triggering %d products in openQA", len(post))
 
-            def poster(job: Dict[str, Any]) -> None:
-                log.info("Triggering %s", str(job))
+            def poster(job: dict[str, Any]) -> None:
+                log.info("Triggering %s", job)
                 try:
                     self.post_openqa(job["openqa"])
                 except PostOpenQAError:
