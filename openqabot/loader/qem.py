@@ -6,12 +6,9 @@ from pprint import pformat
 from typing import Any, Dict, List, NamedTuple, Sequence
 
 from openqabot.dashboard import get_json, patch, put
-
-from ..errors import (
-    NoResultsError,
-)
-from ..types import Data
-from ..types.incident import Incident
+from openqabot.errors import NoResultsError
+from openqabot.types import Data
+from openqabot.types.incident import Incident
 
 log = getLogger("bot.loader.qem")
 
@@ -30,11 +27,28 @@ class JobAggr(NamedTuple):
     withAggregate: bool
 
 
+class LoaderQemException(Exception):
+    pass
+
+
+class NoIncidentResultsError(NoResultsError):
+    def __init__(self, inc: int) -> None:
+        super().__init__(
+            self,
+            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository.",
+        )
+
+
+class NoAggregateResultsError(NoResultsError):
+    def __init__(self, inc: int) -> None:
+        super().__init__(self, f"Inc {inc} does not have any aggregates settings")
+
+
 def get_incidents(token: Dict[str, str]) -> List[Incident]:
     incidents = get_json("api/incidents", headers=token, verify=True)
 
     if "error" in incidents:
-        raise Exception(incidents)
+        raise LoaderQemException(incidents)
 
     xs = []
     for i in incidents:
@@ -48,9 +62,9 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
 def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
     try:
         data = get_json("api/incidents", headers=token)
-    except Exception as e:
-        log.exception(e)
-        raise e
+    except Exception:
+        log.exception("Found generic exception")
+        raise
     return list({i["number"] for i in data})
 
 
@@ -74,12 +88,10 @@ def get_single_incident(token: Dict[str, str], incident_id: int) -> List[IncReq]
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
-def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool = False) -> List[JobAggr]:
+def get_incident_settings(inc: int, token: Dict[str, str], *, all_incidents: bool = False) -> List[JobAggr]:
     settings = get_json("api/incident_settings/" + str(inc), headers=token)
     if not settings:
-        raise NoResultsError(
-            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
-        )
+        raise NoIncidentResultsError(inc)
 
     if not all_incidents:
         rrids = [i["settings"].get("RRID", None) for i in settings]
@@ -88,16 +100,16 @@ def get_incident_settings(inc: int, token: Dict[str, str], all_incidents: bool =
             rrid = rrid[-1]
             settings = [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
 
-    return [JobAggr(i["id"], False, i["withAggregate"]) for i in settings]
+    return [JobAggr(i["id"], aggregate=False, withAggregate=i["withAggregate"]) for i in settings]
 
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
     log.info("Getting settings for %s", number)
     try:
         data = get_json("api/incident_settings/" + f"{number}", headers=token)
-    except Exception as e:
-        log.exception(e)
-        raise e
+    except Exception:
+        log.exception("Found generic exception")
+        raise
 
     if "error" in data:
         log.warning("Incident %s contains error: %s", number, data["error"])
@@ -119,19 +131,16 @@ def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[D
 
 
 def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
-    try:
-        settings = get_incident_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    settings = get_incident_settings(inc, token, all_incidents=False)
 
     ret = []
     for job_aggr in settings:
         try:
             data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
             ret += data
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("Found generic exception")
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 
@@ -141,23 +150,23 @@ def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]
 def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
     settings = get_json("api/update_settings/" + str(inc), headers=token)
     if not settings:
-        raise NoResultsError(f"Inc {inc} does not have any aggregates settings")
+        raise NoAggregateResultsError(inc)
 
     # is string comparsion ... so we need reversed sort
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
     last_build = settings[0]["build"][:-2]
-    return [JobAggr(i["id"], True, False) for i in settings if last_build in i["build"]]
+    return [JobAggr(i["id"], aggregate=True, withAggregate=False) for i in settings if last_build in i["build"]]
 
 
 def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[Data]:
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
     try:
         settings = get_json(url, headers=token)
-    except Exception as e:
-        log.exception(e)
-        raise e
+    except Exception:
+        log.exception("Found generic exception")
+        raise
 
     if not settings:
         log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
@@ -182,19 +191,16 @@ def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[D
 
 
 def get_aggregate_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]]:
-    try:
-        settings = get_aggregate_settings(inc, token)
-    except NoResultsError as e:
-        raise e
+    settings = get_aggregate_settings(inc, token)
 
     ret = []
     for job_aggr in settings:
         try:
             data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
             ret += data
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("Found generic exception")
+            raise
         if "error" in data:
             raise ValueError(data["error"])
 
@@ -208,8 +214,8 @@ def update_incidents(token: Dict[str, str], data: Dict[str, Any], **kwargs: Any)
         retry -= 1
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Found generic exception")
             return 1
         if ret.status_code == 200:
             log.info("Smelt/Gitea Incidents updated")
@@ -232,8 +238,8 @@ def post_job(token: Dict[str, str], data: Dict[str, Any]) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception as e:  # pylint: disable=broad-except
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Found generic exception")
 
 
 def update_job(token: Dict[str, str], job_id: int, data: Dict[str, Any]) -> None:
@@ -242,5 +248,5 @@ def update_job(token: Dict[str, str], job_id: int, data: Dict[str, Any]) -> None
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception as e:  # pylint: disable=broad-except
-        log.exception(e)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("Found generic exception")

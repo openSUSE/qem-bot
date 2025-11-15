@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import json
 import logging
-from collections import namedtuple
+from typing import NamedTuple
 from urllib.parse import urlparse
 
 from _pytest.logging import LogCaptureFixture
@@ -11,12 +11,30 @@ import responses
 from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
 
-namespace = namedtuple("Namespace", ["dry", "token", "openqa_instance", "url", "gitea_token"])
-args = namespace(True, "ToKeN", urlparse("http://instance.qa"), None, None)
+
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    openqa_instance: str
+    url: str
+    gitea_token: str
+
+
+args = Namespace(
+    dry=True,
+    token="ToKeN",  # noqa: S106
+    openqa_instance=urlparse("http://instance.qa"),
+    url=None,
+    gitea_token=None,
+)
 amqp = AMQP(args)
 
-fake_method = namedtuple("Method", ["routing_key"])
-fake_job_done = fake_method("suse.openqa.job.done")
+
+class Method(NamedTuple):
+    routing_key: str
+
+
+fake_job_done = Method("suse.openqa.job.done")
 
 
 @responses.activate
@@ -30,7 +48,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "withAggregate": False,
-        }
+        },
     ]
     responses.add(
         method="GET",
@@ -47,7 +65,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
             "settings": {"DISTRI": "linux", "BUILD": "33222"},
             "version": "13.3",
             "build": "33222",
-        }
+        },
     ]
     responses.add(
         method="GET",

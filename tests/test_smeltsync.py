@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
 import re
 from collections import namedtuple
@@ -7,7 +9,6 @@ from typing import Any, List, Tuple
 
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import FixtureRequest, MonkeyPatch
 
 import openqabot.smeltsync
 import responses
@@ -16,11 +17,11 @@ from openqabot.smeltsync import SMELTSync
 from responses import matchers
 
 # Fake Namespace for SyncRes initialization
-_namespace = namedtuple("Namespace", ("dry", "token", "retry"))
+_namespace = namedtuple("Namespace", ("dry", "token", "retry"))  # noqa: PYI024
 
 
-@pytest.fixture(scope="function")
-def fake_smelt_api(request: FixtureRequest) -> None:
+@pytest.fixture
+def fake_smelt_api(request: pytest.FixtureRequest) -> None:
     responses.add(
         responses.GET,
         re.compile(SMELT + r"\?query=.*"),
@@ -45,37 +46,37 @@ def fake_smelt_api(request: FixtureRequest) -> None:
                                                             "node": {
                                                                 "assignedByGroup": {"name": request.param[0]},
                                                                 "status": {"name": request.param[1]},
-                                                            }
+                                                            },
                                                         },
-                                                    ]
+                                                    ],
                                                 },
-                                            }
-                                        }
-                                    ]
+                                            },
+                                        },
+                                    ],
                                 },
                                 "packages": {"edges": [{"node": {"name": "xrdp"}}]},
                                 "crd": request.param[3],
                                 "priority": request.param[4],
-                            }
-                        }
-                    ]
-                }
-            }
+                            },
+                        },
+                    ],
+                },
+            },
         },
     )
 
 
-@pytest.fixture(scope="function")
-def fake_qem(monkeypatch: MonkeyPatch) -> None:
+@pytest.fixture
+def fake_qem(monkeypatch: pytest.MonkeyPatch) -> None:
     def f_active_inc(*_args: Any) -> List[str]:
         return ["100"]
 
     monkeypatch.setattr(openqabot.smeltsync, "get_active_incidents", f_active_inc)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: FixtureRequest) -> Tuple[int, List[Any], bytes]:
+    def reply_callback(request: pytest.FixtureRequest) -> Tuple[int, List[Any], bytes]:
         return (200, [], request.body)
 
     responses.add_callback(
@@ -96,7 +97,7 @@ def fake_dashboard_replyback() -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_sync_qam_inreview(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(False, "123", False))() == 0
+    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Getting info about incident 100 from SMELT" in messages
     assert "Starting to sync incidents from smelt to dashboard" in messages
@@ -117,7 +118,7 @@ def test_sync_qam_inreview(caplog: LogCaptureFixture) -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_no_embragoed_and_priority_value(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(False, "123", False))() == 0
+    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
     incident = responses.calls[1].response.json()[0]
@@ -137,7 +138,7 @@ def test_sync_approved(
     caplog: LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(False, "123", False))() == 0
+    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Getting info about incident 100 from SMELT" in messages
     assert "Starting to sync incidents from smelt to dashboard" in messages

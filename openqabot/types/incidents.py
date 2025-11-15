@@ -3,11 +3,12 @@
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from .. import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
-from ..errors import NoRepoFoundError
-from ..loader import gitea
-from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utils import retry3 as requests
+from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+from openqabot.errors import NoRepoFoundError
+from openqabot.loader import gitea
+from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.utils import retry3 as requests
+
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
@@ -18,7 +19,7 @@ BASE_PRIO = 50
 
 
 class Incidents(BaseConf):
-    def __init__(
+    def __init__(  # noqa: PLR0917 too-many-positional-arguments
         self,
         product: str,
         product_repo: Optional[Union[List[str], str]],
@@ -70,8 +71,8 @@ class Incidents(BaseConf):
                 f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Found generic exception")
 
         if not jobs:
             return False
@@ -100,7 +101,7 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # noqa: PLR0911,C901 # pylint: disable=too-many-return-statements
+    def _handle_incident(  # noqa: PLR0911,C901, PLR0917
         self,
         inc: Incident,
         arch: str,
@@ -108,6 +109,7 @@ class Incidents(BaseConf):
         data: Dict[str, Any],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool,
     ) -> Optional[Dict[str, Any]]:
         if inc.type == "git" and not inc.ongoing:
@@ -191,7 +193,7 @@ class Incidents(BaseConf):
                             if len(channel.product_version) > 0
                             else inc_channel.version.startswith(channel.version)
                         )
-                        and channel.product_version in ("", inc_channel.product_version)
+                        and channel.product_version in {"", inc_channel.product_version}
                         and inc_channel.arch == arch
                     ):
                         issue_dict[issue] = inc
@@ -221,27 +223,22 @@ class Incidents(BaseConf):
             "Kernel" in flavor
             and not inc.livepatch
             and not flavor.endswith("Azure")
-            and set(issue_dict.keys()).isdisjoint(
-                {
-                    "OS_TEST_ISSUES",  # standard product dir
-                    "LTSS_TEST_ISSUES",  # LTSS product dir
-                    "BASE_TEST_ISSUES",  # GA product dir SLE15+
-                    "RT_TEST_ISSUES",  # realtime kernel
-                    "COCO_TEST_ISSUES",  # Confidential Computing kernel
-                }
-            )
+            and set(issue_dict.keys()).isdisjoint({
+                "OS_TEST_ISSUES",  # standard product dir
+                "LTSS_TEST_ISSUES",  # LTSS product dir
+                "BASE_TEST_ISSUES",  # GA product dir SLE15+
+                "RT_TEST_ISSUES",  # realtime kernel
+                "COCO_TEST_ISSUES",  # Confidential Computing kernel
+            })
         ):
-            log.warning(
-                "Kernel incident %s doesn't have product repository",
-                str(inc),
-            )
+            log.warning("Kernel incident %s doesn't have product repository", inc)
             return None
 
         for key, value in issue_dict.items():
             full_post["openqa"][key] = str(value.id)
 
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(self._make_repo_url(inc, chan) for chan in channels_set)
+            sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
 
         full_post["qem"]["withAggregate"] = True
@@ -325,6 +322,7 @@ class Incidents(BaseConf):
         incidents: List[Incident],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool,
     ) -> List[Optional[Dict[str, Any]]]:
         ret = []
@@ -335,7 +333,17 @@ class Incidents(BaseConf):
                 for inc in incidents:
                     inc.arch_filter = archs  # compute repo hash only for configured archs
                     try:
-                        ret.append(self._handle_incident(inc, arch, flavor, data, token, ci_url, ignore_onetime))
+                        ret.append(
+                            self._handle_incident(
+                                inc,
+                                arch,
+                                flavor,
+                                data,
+                                token,
+                                ci_url,
+                                ignore_onetime=ignore_onetime,
+                            ),
+                        )
                     except NoRepoFoundError as e:
                         log.info(
                             "Project %s can't calculate repohash of incident %i: %s .. skipping",

@@ -111,7 +111,7 @@ class Approver:
 
     def _approvable(self, inc: IncReq) -> bool:
         try:
-            i_jobs = get_incident_settings(inc.inc, self.token, self.all_incidents)
+            i_jobs = get_incident_settings(inc.inc, self.token, all_incidents=self.all_incidents)
         except NoResultsError as e:
             log.info(e)
             return False
@@ -288,7 +288,7 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
-        if job_result.get("acceptable_for_" + str(inc), False):
+        if job_result.get("acceptable_for_" + str(inc)):
             log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
@@ -343,8 +343,8 @@ class Approver:
             )
         except HTTPError as e:
             return _handle_http_error(e, inc)
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Generic exception caught")
             return False
 
         return True
@@ -359,7 +359,7 @@ class Approver:
                 msg,
                 inc.scm_info,
             )
-        except Exception as e:  # pylint: disable=broad-except
-            log.exception(e)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Generic exception caught")
             return False
         return True

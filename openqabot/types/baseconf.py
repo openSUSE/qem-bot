@@ -1,13 +1,14 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from abc import ABCMeta, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, List, Optional, Union
 
-from .. import DEPRIORITIZE_LIMIT
+from openqabot import DEPRIORITIZE_LIMIT
+
 from .incident import Incident
 
 
-class BaseConf(metaclass=ABCMeta):
+class BaseConf(ABC):
     def __init__(
         self,
         product: str,
@@ -27,6 +28,7 @@ class BaseConf(metaclass=ABCMeta):
         incidents: List[Incident],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool,
     ) -> List[Dict[str, Any]]:
         pass

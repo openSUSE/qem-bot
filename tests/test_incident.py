@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import Any, NoReturn
 
 import pytest
-from pytest import MonkeyPatch
 
 import openqabot.types.incident
 from openqabot.errors import EmptyChannels, EmptyPackagesError, NoRepoFoundError
@@ -35,7 +34,7 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch: MonkeyPatch) -> None:
+def mock_good(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
@@ -43,7 +42,7 @@ def mock_good(monkeypatch: MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def mock_ex(monkeypatch: MonkeyPatch) -> None:
+def mock_ex(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
@@ -82,8 +81,8 @@ def test_inc_normal_livepatch() -> None:
 
 @pytest.mark.usefixtures("mock_ex")
 def test_inc_norepo() -> None:
+    inc = Incident(test_data)
     with pytest.raises(NoRepoFoundError):
-        inc = Incident(test_data)
         inc.revisions_with_fallback("x86_64", "15-SP4")
 
 

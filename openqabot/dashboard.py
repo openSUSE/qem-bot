@@ -15,7 +15,7 @@ def get_json(route: str, **kwargs: Dict) -> str:
 def patch(route: str, **kwargs: Dict) -> str:
     # openqabot/loader/qem.py originally used req.patch so we will just use that here without retry. Can potentially be changed to used retry5 as requests as
     # well
-    return req.patch(QEM_DASHBOARD + route, **kwargs)
+    return req.patch(QEM_DASHBOARD + route, timeout=10, **kwargs)
 
 
 def put(route: str, **kwargs: Dict) -> str:

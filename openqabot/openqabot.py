@@ -27,7 +27,12 @@ class OpenQABot:
 
         extrasettings = get_onearch(args.singlearch)
 
-        self.workers = load_metadata(args.configs, args.disable_aggregates, args.disable_incidents, extrasettings)
+        self.workers = load_metadata(
+            args.configs,
+            aggregate=args.disable_aggregates,
+            incidents=args.disable_incidents,
+            extrasettings=extrasettings,
+        )
 
         self.openqa = openQAInterface(args)
         self.ci = environ.get("CI_JOB_URL")
@@ -47,9 +52,9 @@ class OpenQABot:
                 res.status_code,
                 res.json().get("id", "No id?"),
             )
-        except Exception as e:
-            log.exception(e)
-            raise e
+        except Exception:
+            log.exception("Found generic exception")
+            raise
 
     def post_openqa(self, data: Dict[str, Any]) -> None:
         self.openqa.post_job(data)
@@ -58,7 +63,7 @@ class OpenQABot:
         log.info("Starting bot mainloop")
         post: List[Dict[str, Any]] = []
         for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ci, self.ignore_onetime)
+            post += worker(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
 
         if self.dry:
             log.info("Would trigger %d products in openQA", len(post))
@@ -69,7 +74,7 @@ class OpenQABot:
             log.info("Triggering %d products in openQA", len(post))
 
             def poster(job: Dict[str, Any]) -> None:
-                log.info("Triggering %s", str(job))
+                log.info("Triggering %s", job)
                 try:
                     self.post_openqa(job["openqa"])
                 except PostOpenQAError:

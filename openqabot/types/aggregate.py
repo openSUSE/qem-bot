@@ -6,12 +6,13 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from .. import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
-from ..dashboard import get_json
-from ..errors import NoTestIssues, SameBuildExists
-from ..loader.repohash import merge_repohash
-from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utc import UTC
+from openqabot import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
+from openqabot.dashboard import get_json
+from openqabot.errors import NoTestIssues, SameBuildExists
+from openqabot.loader.repohash import merge_repohash
+from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.utc import UTC
+
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
@@ -55,7 +56,7 @@ class Aggregate(BaseConf):
         if build.startswith(today) and repohash == old_repohash:
             raise SameBuildExists
 
-        counter = int(build.split("-")[-1]) + 1 if build.startswith(today) else 1
+        counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
     def __call__(  # noqa: C901
@@ -63,6 +64,7 @@ class Aggregate(BaseConf):
         incidents: List[Incident],
         token: Dict[str, str],
         ci_url: Optional[str],
+        *,
         ignore_onetime: bool = False,
     ) -> List[Dict[str, Any]]:
         ret = []
@@ -108,15 +110,15 @@ class Aggregate(BaseConf):
                 for inc in incs:
                     if self.test_issues[issue].product.startswith("openSUSE"):
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/",
                         )
                     else:
                         test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
+                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/",
                         )
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
-                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())})
+                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
             )
 
             try:
@@ -125,8 +127,8 @@ class Aggregate(BaseConf):
                     params={"product": self.product, "arch": arch},
                     headers=token,
                 )
-            except Exception as e:  # pylint: disable=broad-except
-                log.exception(e)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Found generic exception")
                 old_jobs = None
 
             old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
@@ -134,7 +136,9 @@ class Aggregate(BaseConf):
 
             try:
                 full_post["openqa"]["BUILD"] = self.get_buildnr(
-                    full_post["openqa"]["REPOHASH"], old_repohash, old_build
+                    full_post["openqa"]["REPOHASH"],
+                    old_repohash,
+                    old_build,
                 )
             except SameBuildExists:
                 log.info(

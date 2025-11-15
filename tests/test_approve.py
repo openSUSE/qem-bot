@@ -1,10 +1,11 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import io
 import logging
 import re
-from collections import namedtuple
-from typing import Any, Dict, List, NoReturn
+from typing import Any, Dict, List, NamedTuple, NoReturn
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -12,7 +13,6 @@ import osc.conf
 import osc.core
 import pytest
 from _pytest.logging import LogCaptureFixture
-from pytest import FixtureRequest, MonkeyPatch
 
 import openqabot.approver
 import responses
@@ -21,18 +21,31 @@ from openqabot.errors import NoResultsError
 from openqabot.loader.qem import IncReq, JobAggr
 from responses import matchers
 
+
 # Fake Namespace for Approver initialization
-_namespace = namedtuple(
-    "Namespace",
-    ("dry", "token", "all_incidents", "openqa_instance", "incident", "gitea_token"),
-)
+class Namespace(NamedTuple):
+    dry: bool
+    token: str
+    all_incidents: bool
+    openqa_instance: str
+    incident: str
+    gitea_token: str
+
+
 openqa_instance_url = urlparse("http://instance.qa")
-args = _namespace(False, "123", False, openqa_instance_url, None, None)
+args = Namespace(
+    dry=False,
+    token="123",
+    all_incidents=False,
+    openqa_instance=openqa_instance_url,
+    incident=None,
+    gitea_token=None,
+)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_unblocking_incidents_via_older_ok_result(
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> None:
     responses.add(
         responses.GET,
@@ -57,24 +70,24 @@ def fake_responses_for_unblocking_incidents_via_older_ok_result(
                 {"build": "20240115-1", "id": 100002, "result": "failed"},
                 {"build": "20240114-1", "id": 100004, "result": "failed"},
                 {"build": "20240113-1", "id": 100005, "result": "softfailed"},
-            ]
+            ],
         },
     )
     responses.add(
         responses.GET,
-        re.compile("http://instance.qa/api/v1/jobs/.*"),
+        re.compile(r"http://instance.qa/api/v1/jobs/.*"),
         json={
             "job": {
                 "settings": {
                     "BASE_TEST_REPOS": "http://download.suse.de/ibs/SUSE:/Maintenance:/1111/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/,http://download.suse.de/ibs/SUSE:/Maintenance:/%s/SUSE_Updates_SLE-Module-Basesystem_15-SP5_x86_64/"
-                    % request.param
-                }
-            }
+                    % request.param,
+                },
+            },
         },
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_openqa_older_jobs_api() -> None:
     responses.get(
         re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
@@ -82,7 +95,7 @@ def fake_openqa_older_jobs_api() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_remarks_api() -> List[responses.BaseResponse]:
     return [
         responses.patch(
@@ -101,7 +114,7 @@ def add_two_passed_response() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_openqa_comment_api() -> None:
     responses.add(
         responses.GET,
@@ -111,14 +124,14 @@ def fake_openqa_comment_api() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_two_passed_jobs() -> None:
     add_two_passed_response()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_unblocking_incidents_via_openqa_comments(
-    request: FixtureRequest,
+    request: pytest.FixtureRequest,
 ) -> None:
     params = request.param
     incident = params["incident"]
@@ -145,12 +158,12 @@ def fake_responses_for_unblocking_incidents_via_openqa_comments(
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_updating_job() -> None:
     responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_responses_for_creating_pr_review() -> None:
     responses.add(
         responses.POST,
@@ -163,14 +176,14 @@ def fake_responses_for_creating_pr_review() -> None:
                     "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
                     "comments": [],
                     "event": "APPROVED",
-                }
-            )
+                },
+            ),
         ],
     )
 
 
-@pytest.fixture(scope="function")
-def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
+@pytest.fixture
+def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
     def f_inc_approver(*_args: Any) -> List[IncReq]:
         return [
             IncReq(1, 100),
@@ -194,33 +207,39 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
-    def f_inc_settins(inc: int, _token: str, _all_inc: bool) -> List[JobAggr]:
+    class NoSettingsResultsError(NoResultsError):
+        def __init__(self) -> None:
+            super().__init__("No results for settings")
+
+    def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> List[JobAggr]:
         if "inc" in request.param:
-            raise NoResultsError("No results for settings")
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
-            1: [JobAggr(i, False, True) for i in range(1000, 1010)],
-            2: [JobAggr(i, False, True) for i in range(2000, 2010)],
+            1: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(1000, 1010)],
+            2: [JobAggr(i, aggregate=False, withAggregate=True) for i in range(2000, 2010)],
             3: [
-                JobAggr(3000, False, False),
-                JobAggr(3001, False, False),
-                JobAggr(3002, False, True),
-                JobAggr(3002, False, False),
-                JobAggr(3003, False, True),
+                JobAggr(3000, aggregate=False, withAggregate=False),
+                JobAggr(3001, aggregate=False, withAggregate=False),
+                JobAggr(3002, aggregate=False, withAggregate=True),
+                JobAggr(3002, aggregate=False, withAggregate=False),
+                JobAggr(3003, aggregate=False, withAggregate=True),
             ],
-            4: [JobAggr(i, False, False) for i in range(4000, 4010)],
-            5: [JobAggr(i, False, False) for i in range(5000, 5010)],
+            4: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(4000, 4010)],
+            5: [JobAggr(i, aggregate=False, withAggregate=False) for i in range(5000, 5010)],
         }
         return results.get(inc)
 
     def f_aggr_settings(inc: int, _token: str) -> List[JobAggr]:
         if "aggr" in request.param:
-            raise NoResultsError("No results for settings")
+            msg = "No results for settings"
+            raise NoResultsError(msg)
         results = {
             5: [],
             4: [],
-            1: [JobAggr(i, True, False) for i in range(10000, 10010)],
-            2: [JobAggr(i, True, False) for i in range(20000, 20010)],
-            3: [JobAggr(i, True, False) for i in range(30000, 30010)],
+            1: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(10000, 10010)],
+            2: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(20000, 20010)],
+            3: [JobAggr(i, aggregate=True, withAggregate=False) for i in range(30000, 30010)],
         }
         return results.get(inc)
 
@@ -231,7 +250,7 @@ def fake_qem(monkeypatch: MonkeyPatch, request: FixtureRequest) -> None:
 
 
 @pytest.fixture
-def f_osconf(monkeypatch: MonkeyPatch) -> None:
+def f_osconf(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake(*_args: Any, **_kwds: Any) -> None:
         pass
 
@@ -239,7 +258,14 @@ def f_osconf(monkeypatch: MonkeyPatch) -> None:
 
 
 def approver(incident: int = 0) -> int:
-    args = _namespace(True, "123", False, openqa_instance_url, incident, None)
+    args = Namespace(
+        dry=True,
+        token="123",
+        all_incidents=False,
+        openqa_instance=openqa_instance_url,
+        incident=incident,
+        gitea_token=None,
+    )
     approver = Approver(args)
     approver.client.retries = 0
     return approver()
@@ -366,17 +392,22 @@ def test_inc_without_results(caplog: LogCaptureFixture) -> None:
     assert "End of bot run" in messages
 
 
+class ObsHTTPError(HTTPError):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__("Fake OBS", *args, **kwargs)
+
+
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_403_response(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 403, "Not allowed", "sd", None)
+        raise ObsHTTPError(403, "Not allowed", "sd", None)
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     monkeypatch.setattr(openqabot.loader.gitea, "GIT_REVIEW_BOT", "")
@@ -390,11 +421,11 @@ def test_403_response(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
-def test_404_response(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_404_response(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 404, "Not Found", None, io.BytesIO(b"review state"))
+        raise ObsHTTPError(404, "Not Found", None, io.BytesIO(b"review state"))
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
@@ -409,12 +440,16 @@ def test_404_response(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> No
 @pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
 def test_500_response(
     caplog: LogCaptureFixture,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise HTTPError("Fake OBS", 500, "Not allowed", "sd", None)
+        class ObsHTTPError(HTTPError):
+            def __init__(self) -> None:
+                super().__init__("Fake OBS", 500, "Not allowed", "sd", None)
+
+        raise ObsHTTPError
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
@@ -427,22 +462,26 @@ def test_500_response(
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
-def test_osc_unknown_exception(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_osc_unknown_exception(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> NoReturn:
-        raise Exception("Fake OBS exception")
+        class ArbitraryObsException(Exception):
+            def __init__(self) -> None:
+                super().__init__("Fake OBS exception")
+
+        raise ArbitraryObsException
 
     monkeypatch.setattr(osc.core, "change_review_state", f_osc_core)
     assert Approver(args)() == 1
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fake OBS exception" in messages, "Fake OBS exception"
+    assert "Generic exception caught" in messages
 
 
 @responses.activate
 @pytest.mark.parametrize("fake_qem", ["NoResultsError isn't raised"], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
-def test_osc_all_pass(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_osc_all_pass(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def f_osc_core(*_args: Any, **_kwds: Any) -> None:
@@ -470,8 +509,8 @@ def test_osc_all_pass(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> No
     assert len(responses.calls) == 76
 
 
-@pytest.fixture(scope="function")
-def fake_incident_1_failed_2_passed(request: FixtureRequest) -> None:
+@pytest.fixture
+def fake_incident_1_failed_2_passed(request: pytest.FixtureRequest) -> None:
     responses.add(
         responses.GET,
         f"{QEM_DASHBOARD}api/jobs/incident/%s" % request.param,
@@ -555,7 +594,8 @@ def test_one_aggr_failed(caplog: LogCaptureFixture) -> None:
     "fake_openqa_older_jobs_api",
 )
 def test_approval_unblocked_via_openqa_comment(
-    caplog: LogCaptureFixture, fake_dashboard_remarks_api: List[responses.BaseResponse]
+    caplog: LogCaptureFixture,
+    fake_dashboard_remarks_api: List[responses.BaseResponse],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -578,7 +618,7 @@ def test_approval_unblocked_via_openqa_comment(
             "incident": 2,
             "not_acceptable_job_ids": [100003],
             "acceptable_job_ids": [100002, 100004],
-        }
+        },
     ],
     indirect=True,
 )

@@ -1,17 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+
 import logging
 import re
-import xml.etree.ElementTree as ET
-from collections import namedtuple
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any, NamedTuple, Tuple
 from urllib.parse import urljoin
 
 import osc.conf
 import osc.core
 import pytest
-from pytest import LogCaptureFixture, MonkeyPatch
 
 import openqabot.loader.gitea
 import responses
@@ -29,24 +28,25 @@ from openqabot.loader.gitea import (
 from openqabot.types import Repos
 from responses import GET, matchers
 
-# Fake Namespace for GiteaSync initialization
-_namespace = namedtuple(
-    "Namespace",
-    (
-        "dry",
-        "fake_data",
-        "token",
-        "gitea_token",
-        "retry",
-        "gitea_repo",
-        "allow_build_failures",
-        "consider_unrequested_prs",
-        "pr_number",
-    ),
-)
+try:
+    import lxml.etree as ET
+except ImportError:
+    import defusedxml.ElementTree as ET
 
 
-@pytest.fixture(scope="function")
+class Namespace(NamedTuple):
+    dry: bool
+    fake_data: bool
+    token: str
+    gitea_token: str
+    retry: bool
+    gitea_repo: str
+    allow_build_failures: bool
+    consider_unrequested_prs: bool
+    pr_number: int
+
+
+@pytest.fixture
 def fake_gitea_api() -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
@@ -64,14 +64,14 @@ def fake_gitea_api() -> None:
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_gitea_api_post_review_comment() -> None:
     url = "https://src.suse.de/api/v1/repos/orga/repo/issues/42/comments"
     msg = "@qam-openqa-review: approved\naccepted\nTested commit: 12345"
     responses.post(url, match=[matchers.json_params_matcher({"body": msg})])
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_dashboard_replyback() -> None:
     def reply_callback(request: Any) -> Tuple[int, list, Any]:
         return (200, [], request.body)
@@ -84,7 +84,7 @@ def fake_dashboard_replyback() -> None:
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def fake_repo() -> None:
     url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
@@ -117,7 +117,11 @@ def fake_get_multibuild_data(obs_project: str) -> str:
 
 
 def run_gitea_sync(
-    caplog: LogCaptureFixture, monkeypatch: MonkeyPatch, no_build_results: bool = False, allow_failures: bool = True
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    no_build_results: bool = False,
+    allow_failures: bool = True,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
@@ -128,13 +132,23 @@ def run_gitea_sync(
     monkeypatch.setattr(osc.util.xml, "xml_parse", fake_osc_xml_parse)
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
-    args = _namespace(False, False, "123", "456", False, "products/SLFO", allow_failures, False, None)
+    args = Namespace(
+        dry=False,
+        fake_data=False,
+        token="123",
+        gitea_token="456",
+        retry=False,
+        gitea_repo="products/SLFO",
+        allow_build_failures=allow_failures,
+        consider_unrequested_prs=False,
+        pr_number=None,
+    )
     assert GiteaSync(args)() == 0
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_product_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_product_repo(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_gitea_sync(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -169,7 +183,9 @@ def test_sync_with_product_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPa
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback")
-def test_sync_with_product_version_from_repo_listing(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_product_version_from_repo_listing(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(caplog, monkeypatch)
 
@@ -185,7 +201,7 @@ def test_sync_with_product_version_from_repo_listing(caplog: LogCaptureFixture, 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+def test_sync_with_codestream_repo(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_REPO_TYPE", "standard")
     monkeypatch.setattr(openqabot.loader.gitea, "OBS_PRODUCTS", "")
     run_gitea_sync(caplog, monkeypatch)
@@ -207,15 +223,15 @@ def test_sync_with_codestream_repo(caplog: LogCaptureFixture, monkeypatch: Monke
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_without_results(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
-    run_gitea_sync(caplog, monkeypatch, True, False)
+def test_sync_without_results(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_gitea_sync(caplog, monkeypatch, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages
 
 
 def test_extracting_product_name_and_version() -> None:
-    assert get_product_name("1.1.99:PullRequest:166") == ""
+    assert not get_product_name("1.1.99:PullRequest:166")
     assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
 
     slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"
@@ -229,7 +245,7 @@ def test_extracting_product_name_and_version() -> None:
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api_post_review_comment")
 def test_reviewing_pr() -> None:
-    review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345")
+    review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
 
 
 def test_computing_repo_url() -> None:

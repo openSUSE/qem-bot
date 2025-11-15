@@ -3,11 +3,11 @@
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
-from xml.etree import ElementTree as ET
 
+from defusedxml.etree import ElementTree as ET
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
-from ..utc import UTC
+from openqabot.utc import UTC
 
 
 def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
@@ -23,6 +23,16 @@ def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
         "parent": comment_element.get("parent", None),
         "comment": comment_element.text,
     }
+
+
+class OscCommentsValueError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Please, set request_id, project_name or / and package_name to add a comment.")
+
+
+class OscCommentsEmptyError(ValueError):
+    def __init__(self) -> None:
+        super().__init__("Empty comment.")
 
 
 class CommentAPI(object):
@@ -53,7 +63,7 @@ class CommentAPI(object):
         elif project_name:
             url = makeurl(self.apiurl, ["comments", "project", project_name], query)
         else:
-            raise ValueError("Please, set request_id, project_name or / and package_name to add a comment.")
+            raise OscCommentsValueError
         return url
 
     def get_comments(
@@ -140,7 +150,7 @@ class CommentAPI(object):
         :return: Comment id.
         """
         if not comment:
-            raise ValueError("Empty comment.")
+            raise OscCommentsEmptyError
 
         comment = self.truncate(comment.strip())
 

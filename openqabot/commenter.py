@@ -48,7 +48,7 @@ class Commenter:
             state = "none"
             if any(j["status"] in ("running") for j in i_jobs + u_jobs):
                 log.info("%s needs to wait a bit longer", inc)
-            elif any(j["status"] not in ("passed", "softfailed") for j in i_jobs + u_jobs):
+            elif any(j["status"] not in {"passed", "softfailed"} for j in i_jobs + u_jobs):
                 log.info("There is a failed job for %s", inc)
                 state = "failed"
             else:
@@ -167,7 +167,7 @@ class Commenter:
 
     def __summarize_one_openqa_job(self, job: Dict[str, Any]) -> Optional[str]:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
-        if job["status"] not in ["passed", "failed", "softfailed"]:
+        if job["status"] not in {"passed", "failed", "softfailed"}:
             rstring = job["status"]
             if rstring == "none":
                 return None

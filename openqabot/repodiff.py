@@ -6,6 +6,7 @@ import re
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
+from pathlib import Path
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 import zstandard
@@ -27,7 +28,7 @@ try:
 
     log.info("Using lxml for XML parsing when computing repo diff")
 except ImportError:
-    import xml.etree.ElementTree as ET
+    import defusedxml.ElementTree as ET
 
     log.warning("Using built-in XML parsing when computing repo diff")
 
@@ -59,25 +60,25 @@ class RepoDiff:
             return zstandard.decompress(repo_data_raw)
         return repo_data_raw
 
-    def _request_and_dump(self, url: str, name: str, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
+    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> Union[bytes, Dict[str, Any]]:
         log.debug("Requesting %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
             if as_json:
-                with open(name, "r", encoding="utf8") as json_file:
-                    return json.loads(json_file.read())
-            else:
-                with open(name, "rb") as binary_file:
-                    return binary_file.read()
+                return json.loads(Path(name).read_text(encoding="utf8"))
+            return Path(name).read_bytes()
         resp = requests.get(url)
         if self.args is not None and self.args.dump_data and not self.args.fake_data:
-            with open(name, "wb") as output_file:
-                output_file.write(resp.content)
+            Path(name).write_bytes(resp.content)
         return resp.json() if as_json else resp.content
 
     def _load_repodata(self, project: str) -> Optional[ET.Element]:
         url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(url + "?jsontable=1", f"repodata-listing-{project}.json", True)
+        repo_data_listing = self._request_and_dump(
+            url + "?jsontable=1",
+            f"repodata-listing-{project}.json",
+            as_json=True,
+        )
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:

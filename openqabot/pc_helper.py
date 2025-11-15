@@ -34,7 +34,7 @@ def apply_pc_tools_image(settings: Dict[str, Any]) -> Dict[str, Any]:
     try:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"]
+                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
             )
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
         log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
@@ -69,7 +69,8 @@ def apply_publiccloud_pint_image(settings: Dict[str, Any]) -> Dict[str, Any]:
             if image is not None:
                 break
         if image is None:
-            raise ValueError("Cannot find matching image in pint")
+            msg = "Cannot find matching image in pint"
+            raise ValueError(msg)  # noqa: TRY301
         settings["PUBLIC_CLOUD_IMAGE_ID"] = image[settings["PUBLIC_CLOUD_PINT_FIELD"]]
         settings["PUBLIC_CLOUD_IMAGE_NAME"] = image["name"]
         settings["PUBLIC_CLOUD_IMAGE_STATE"] = image["state"]
@@ -107,7 +108,7 @@ def get_recent_pint_image(
     Get the latest one based on 'publishedon'
     """
     name = re.compile(name_regex)
-    if region == "":
+    if not region:
         region = None
     recentimage = None
 
