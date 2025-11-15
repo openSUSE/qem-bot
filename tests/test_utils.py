@@ -62,16 +62,16 @@ def test_normalize_results() -> None:
                                             {"node": {"name": "12:x86_64"}},
                                             {"node": {"name": "12:Update"}},
                                             {"node": {"name": "12:s390x"}},
-                                        ]
+                                        ],
                                     },
                                     "c": {"edges": []},
                                     "cM": None,
                                     "cQ": None,
-                                }
-                            }
-                        ]
-                    }
-                }
+                                },
+                            },
+                        ],
+                    },
+                },
             },
             {
                 "d": {
@@ -87,8 +87,8 @@ def test_normalize_results() -> None:
                                 {"name": "12:s390x"},
                             ],
                             "rS": [],
-                        }
-                    ]
+                        },
+                    ],
                 },
             },
         ),

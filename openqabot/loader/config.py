@@ -16,7 +16,11 @@ log = getLogger("bot.loader.config")
 
 
 def load_metadata(
-    path: Path, *, aggregate: bool, incidents: bool, extrasettings: Set[str]
+    path: Path,
+    *,
+    aggregate: bool,
+    incidents: bool,
+    extrasettings: Set[str],
 ) -> List[Union[Aggregate, Incidents]]:
     ret: List[Union[Aggregate, Incidents]] = []
 
@@ -56,7 +60,7 @@ def load_metadata(
                             settings,
                             data[key],
                             extrasettings,
-                        )
+                        ),
                     )
                 elif key == "aggregate" and not aggregate:
                     try:
@@ -67,7 +71,7 @@ def load_metadata(
                                 data.get("product_version"),
                                 settings,
                                 data[key],
-                            )
+                            ),
                         )
                     except NoTestIssues:
                         log.warning("No 'test_issues' in %s config", data["product"])

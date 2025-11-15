@@ -40,7 +40,7 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -60,8 +60,8 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": 1234,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -100,7 +100,7 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -119,8 +119,8 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
                 "group_id": 10,
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -158,7 +158,7 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -178,8 +178,8 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
                 "group": "Devel FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -218,7 +218,7 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -238,8 +238,8 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",
@@ -282,7 +282,7 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
             "arch": "arch",
             "settings": {"DISTRI": "linux", "BUILD": "123"},
             "version": "13.3",
-        }
+        },
     ]
 
     responses.add(
@@ -302,8 +302,8 @@ def test_passed_dry(caplog: LogCaptureFixture) -> None:
                 "group": "FakeGroup",
                 "result": "passed",
                 "clone_id": False,
-            }
-        ]
+            },
+        ],
     }
     responses.add(
         method="GET",

@@ -18,7 +18,10 @@ class GiteaSync:
         self.dashboard_token: Dict[str, str] = {"Authorization": "Token " + args.token}
         self.gitea_token: Dict[str, str] = make_token_header(args.gitea_token)
         self.open_prs: List[Any] = get_open_prs(
-            self.gitea_token, args.gitea_repo, dry=self.fake_data, number=args.pr_number
+            self.gitea_token,
+            args.gitea_repo,
+            dry=self.fake_data,
+            number=args.pr_number,
         )
         log.info(
             "Loaded %i active PRs/incidents from %s",

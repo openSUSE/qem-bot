@@ -226,7 +226,7 @@ def test_incidents_call_with_params_expand() -> None:
                 "SOMETHING": "flavor win",
                 "SOMETHING_NEW": "something flavor specific",
             },
-        }
+        },
     }
 
     inc = Incidents(

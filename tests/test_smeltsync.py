@@ -47,22 +47,22 @@ def fake_smelt_api(request: FixtureRequest) -> None:
                                                             "node": {
                                                                 "assignedByGroup": {"name": request.param[0]},
                                                                 "status": {"name": request.param[1]},
-                                                            }
+                                                            },
                                                         },
-                                                    ]
+                                                    ],
                                                 },
-                                            }
-                                        }
-                                    ]
+                                            },
+                                        },
+                                    ],
                                 },
                                 "packages": {"edges": [{"node": {"name": "xrdp"}}]},
                                 "crd": request.param[3],
                                 "priority": request.param[4],
-                            }
-                        }
-                    ]
-                }
-            }
+                            },
+                        },
+                    ],
+                },
+            },
         },
     )
 

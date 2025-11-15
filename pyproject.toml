@@ -98,6 +98,7 @@ extend-select =[
     "DOC", # https://docs.astral.sh/ruff/rules/#pydoclint-doc
     "YTT", # https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
     "ASYNC", # https://docs.astral.sh/ruff/rules/#flake8-async-async
+    "COM", # https://docs.astral.sh/ruff/rules/#flake8-commas-com
 ]
 
 ignore = [
@@ -141,6 +142,7 @@ ignore = [
     "PLC1901", # compare-to-empty-string
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
+    "COM812", # missing-trailing-comma
 ]
 
 [tool.ruff.format]

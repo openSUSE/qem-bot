@@ -237,7 +237,7 @@ class Incidents(BaseConf):
             full_post["openqa"][key] = str(value.id)
 
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(self._make_repo_url(inc, chan) for chan in channels_set)
+            sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
 
         full_post["qem"]["withAggregate"] = True
@@ -341,7 +341,7 @@ class Incidents(BaseConf):
                                 token,
                                 ci_url,
                                 ignore_onetime=ignore_onetime,
-                            )
+                            ),
                         )
                     except NoRepoFoundError as e:
                         log.info(
