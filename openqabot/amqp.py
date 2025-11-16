@@ -33,6 +33,8 @@ class AMQP(SyncRes):
         self.args = args
         self.dry: bool = args.dry
         self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
+        self.connection = None
+        self.channel = None
         if not args.url:
             return
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py

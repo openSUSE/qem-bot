@@ -37,6 +37,10 @@ class FakeMethod(NamedTuple):
 fake_job_done = FakeMethod("suse.openqa.job.done")
 
 
+def test_init_no_url() -> None:
+    assert amqp.connection is None
+
+
 @responses.activate
 def test_handling_incident(caplog: LogCaptureFixture) -> None:
     # define response for get_incident_settings_data
