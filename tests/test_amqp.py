@@ -41,6 +41,7 @@ fake_job_done = FakeMethod("suse.openqa.job.done")
 
 def test_init_no_url() -> None:
     assert amqp.connection is None
+    amqp.stop()
 
 
 def test_call() -> None:
