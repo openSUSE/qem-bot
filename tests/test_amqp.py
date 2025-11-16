@@ -136,3 +136,9 @@ def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
         json.dumps({"BUILD": "12345678-9"}),
     )
     assert not caplog.text
+
+
+def test_on_message_no_build(caplog: LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    amqp.on_message("", fake_job_done, "", json.dumps({"NOBUILD": "12345678-9"}))
+    assert not caplog.text
