@@ -1,8 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 import json
 import logging
 from typing import NamedTuple
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 from _pytest.logging import LogCaptureFixture
@@ -22,7 +24,7 @@ class Namespace(NamedTuple):
 
 args = Namespace(
     dry=True,
-    token="ToKeN",  # noqa: S106
+    token="ToKeN",
     openqa_instance=urlparse("http://instance.qa"),
     url=None,
     gitea_token=None,
@@ -39,6 +41,21 @@ fake_job_done = FakeMethod("suse.openqa.job.done")
 
 def test_init_no_url() -> None:
     assert amqp.connection is None
+
+
+def test_call() -> None:
+    with patch("openqabot.amqp.pika"):
+        args_with_url = Namespace(
+            dry=True,
+            token="ToKeN",
+            openqa_instance=urlparse("http://instance.qa"),
+            url="amqp://test.url",
+            gitea_token=None,
+        )
+        amqp_with_url = AMQP(args_with_url)
+        amqp_with_url()
+        amqp_with_url.channel.start_consuming.assert_called_once()
+        amqp_with_url.connection.close.assert_called_once()
 
 
 @responses.activate
