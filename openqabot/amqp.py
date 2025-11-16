@@ -15,12 +15,12 @@ import pika.spec
 from .approver import Approver
 from .loader.qem import get_incident_settings_data
 from .syncres import SyncRes
+from .types import Data
 from .utils import compare_incident_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from .types import Data
 
 log = getLogger("bot.amqp")
 build_inc_regex = re.compile(r":(\d+):.*")
@@ -81,6 +81,22 @@ class AMQP(SyncRes):
                 return self.handle_aggregate(build_nr, message)
         return None
 
+    def _update_dashboard_entry(self, job: dict[str, Any], inc: Data, message: dict[str, Any]) -> None:
+        if not self.filter_jobs(job):
+            return
+        try:
+            AMQP.operation = "incident"
+            r = self.normalize_data(inc, job)
+        except KeyError:
+            return
+        # Post update about matching openQA job into dashboard database
+        if r["job_id"] == message["id"]:
+            self.post_result(r)
+
+    def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:
+        for v in self.client.get_jobs(inc):
+            self._update_dashboard_entry(v, inc, message)
+
     def handle_incident(self, inc_nr: int, message: dict[str, Any]) -> None:
         # Load Data about current incident from dashboard database
         try:
@@ -92,18 +108,7 @@ class AMQP(SyncRes):
             # Filter out not matching incident Data
             if not compare_incident_data(inc, message):
                 continue
-            # Fetch results from openQA about this incident (AMQP data does not contain enough information)
-            for v in self.client.get_jobs(inc):
-                if not self.filter_jobs(v):
-                    continue
-                try:
-                    AMQP.operation = "incident"
-                    r = self.normalize_data(inc, v)
-                except KeyError:
-                    continue
-                # Post update about matching openQA job into dashboard database
-                if r["job_id"] == message["id"]:
-                    self.post_result(r)
+            self._fetch_openqa_results(inc, message)
 
         # Try to approve incident
         approve = Approver(self.args, inc_nr)
