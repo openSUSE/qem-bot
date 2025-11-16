@@ -124,3 +124,15 @@ def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Aggregate build 12345678-9 done" in messages  # currently noop
+
+
+def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    fake_job_fail = FakeMethod("suse.openqa.job.fail")
+    amqp.on_message(
+        "",
+        fake_job_fail,
+        "",
+        json.dumps({"BUILD": "12345678-9"}),
+    )
+    assert not caplog.text
