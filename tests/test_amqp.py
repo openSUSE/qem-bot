@@ -157,3 +157,44 @@ def test_handle_incident_value_error(caplog: LogCaptureFixture) -> None:
     with patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError):
         amqp.handle_incident(33222, {})
     assert not caplog.text
+
+
+def test_handle_incident_updates_dashboard_entry() -> None:
+    with (
+        patch("openqabot.approver.get_single_incident"),
+        patch("openqabot.amqp.get_incident_settings_data", return_value=[0]),
+        patch("openqabot.amqp.compare_incident_data", return_value=True),
+        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0]),
+        patch("openqabot.amqp.AMQP._update_dashboard_entry", return_value=True) as update_dashboard_entry_mock,
+    ):
+        amqp.handle_incident(42, {})
+        update_dashboard_entry_mock.assert_called()
+
+
+def test_update_dashboard_entry_calls_post_result() -> None:
+    job = {"id": 42}
+    r = {"job_id": 42}
+    message = job
+    with (
+        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
+        patch("openqabot.syncres.SyncRes.normalize_data", return_value=r),
+        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+    ):
+        amqp._update_dashboard_entry(job, {}, {"id": 43})  # noqa: SLF001
+        post_result_mock.assert_not_called()
+        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
+        post_result_mock.assert_called_once()
+    with (
+        patch("openqabot.amqp.AMQP.filter_jobs", return_value=False),
+        patch("openqabot.syncres.SyncRes.normalize_data", return_value=r),
+        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+    ):
+        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
+        post_result_mock.assert_not_called()
+    with (
+        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
+        patch("openqabot.syncres.SyncRes.normalize_data", side_effect=KeyError),
+        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+    ):
+        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
+        post_result_mock.assert_not_called()
