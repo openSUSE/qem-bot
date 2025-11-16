@@ -148,3 +148,11 @@ def test_on_message_bad_build(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "badbuild"}))
     assert not caplog.text
+
+
+@responses.activate
+def test_handle_incident_value_error(caplog: LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    with patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError):
+        amqp.handle_incident(33222, {})
+    assert not caplog.text
