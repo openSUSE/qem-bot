@@ -142,3 +142,9 @@ def test_on_message_no_build(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"NOBUILD": "12345678-9"}))
     assert not caplog.text
+
+
+def test_on_message_bad_build(caplog: LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "badbuild"}))
+    assert not caplog.text
