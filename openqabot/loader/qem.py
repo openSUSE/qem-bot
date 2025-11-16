@@ -80,7 +80,7 @@ def get_incidents_approver(token: dict[str, str]) -> list[IncReq]:
 
 
 def get_single_incident(token: dict[str, str], incident_id: int) -> list[IncReq]:
-    incident = get_json("api/incidents/" + incident_id, headers=token)
+    incident = get_json("api/incidents/" + str(incident_id), headers=token)
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
