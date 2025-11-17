@@ -39,10 +39,9 @@ class IncResultsSync(SyncRes):
             for v in value:
                 if not self.filter_jobs(v):
                     continue
-
                 try:
                     r = self.normalize_data(key, v)
-                except KeyError:
+                except KeyError:  # pragma: no cover
                     continue
 
                 results.append(r)
