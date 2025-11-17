@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 try:
     from datetime import UTC
-except ImportError:
+except ImportError:  # pragma: no cover
     from datetime import timezone
 
     UTC = timezone.utc
