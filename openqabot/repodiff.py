@@ -8,6 +8,7 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
+import lxml.etree as ET
 import zstandard
 
 from . import OBS_DOWNLOAD_URL
@@ -20,16 +21,6 @@ name_tag = ns + "name"
 version_tag = ns + "version"
 arch_tag = ns + "arch"
 primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
-
-
-try:
-    import lxml.etree as ET
-
-    log.info("Using lxml for XML parsing when computing repo diff")
-except ImportError:
-    import defusedxml.ElementTree as ET
-
-    log.warning("Using built-in XML parsing when computing repo diff")
 
 
 class Package(NamedTuple):

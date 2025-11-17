@@ -4,13 +4,13 @@ import re
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
 
-from defusedxml.etree import ElementTree as ET
+from lxml import etree
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
 from ..utc import UTC
 
 
-def _comment_as_dict(comment_element: ET.Element) -> Dict[str, Any]:
+def _comment_as_dict(comment_element: etree.Element) -> Dict[str, Any]:
     """Convert an XML element comment into a dictionary.
 
     :param comment_element: XML element that store a comment.
@@ -70,7 +70,7 @@ class CommentAPI(object):
         :returns: A list of comments (as a dictionary).
         """
         url = self._prepare_url(request_id, project_name, package_name)
-        root = ET.parse(http_GET(url)).getroot()
+        root = etree.parse(http_GET(url)).getroot()
         comments = {}
         for c in root.findall("comment"):
             c = _comment_as_dict(c)
