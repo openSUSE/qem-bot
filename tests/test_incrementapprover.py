@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
 from urllib.parse import urlparse
@@ -58,6 +59,19 @@ class ReviewState(NamedTuple):
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 
 
+@dataclass
+class Action:
+    tgt_project: str
+    src_project: str
+    src_package: str
+
+
+@dataclass
+class Repo:
+    name: str
+    arch: str
+
+
 @pytest.fixture
 def fake_no_jobs() -> None:
     responses.add(GET, openqa_url, json={})
@@ -106,7 +120,45 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
     req.reqid = 42
     req.state = "review"
     req.reviews = [ReviewState("review", OBS_GROUP)]
+    req.actions = [
+        Action(
+            tgt_project="SUSE:Products:SLE-Product-SLES:16.0:TEST",
+            src_project="SUSE:Products:SLE-Product-SLES:16.0",
+            src_package="000productcompose:sles_aarch64",
+        )
+    ]
     return [req]
+
+
+def fake_get_repos_of_project(url: str, prj: str) -> List[Repo]:
+    assert url == OBS_URL
+    if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST":
+        return [Repo("images", "local")]
+    if prj == "SUSE:Products:SLE-Product-SLES:16.0":
+        return [Repo("product", "local")]
+    return []
+
+
+def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) -> List[str]:
+    assert url == OBS_URL
+    if package != "000productcompose:sles_aarch64" or arch != "local":
+        return []
+    if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "images":
+        return ["SLES-16.0-aarch64-Build160.4-Source.report", "foo"]
+    if prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
+        return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
+    return []
+
+
+def fake_get_binary_file(  # noqa: PLR0917
+    url: str, prj: str, repo: str, arch: str, package: str, filename: str, target_filename: str
+) -> None:
+    assert url == OBS_URL
+    assert package == "000productcompose:sles_aarch64"
+    assert arch == "local"
+    assert repo in {"images", "product"}
+    if filename == "SLES-16.0-aarch64-Build160.4-Source.report":
+        Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
 
 
 def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str) -> None:
@@ -258,23 +310,7 @@ def test_scheduling_with_no_openqa_jobs(
         } in jobs, f"{arch} jobs created"
 
 
-@responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
-def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = IncrementConfig.from_config_file(path)
-    args = {
-        "caplog": caplog,
-        "monkeypatch": monkeypatch,
-        "schedule": True,
-        "diff_project_suffix": "PUBLISH/product",
-        "config": next(configs),
-    }
-    (errors, jobs) = run_approver(**args)
-    messages = [x[-1] for x in caplog.record_tuples]
+def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) -> None:
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
         in messages
@@ -312,12 +348,55 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
         "additional kernel livepatch jobs only created if package is new"
     )
 
+
+@responses.activate
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
+    caplog: LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    configs = IncrementConfig.from_config_file(path)
+    args = {
+        "caplog": caplog,
+        "monkeypatch": monkeypatch,
+        "schedule": True,
+        "diff_project_suffix": "PUBLISH/product",
+        "config": next(configs),
+    }
+    (errors, jobs) = run_approver(**args)
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert_run_with_extra_livepatching(errors, jobs, messages)
+
     config = next(configs)
     config.packages.append("foobar")  # make the filter for packages not match
     args["config"] = config
     (errors, jobs) = run_approver(**args)
     assert jobs == []
     assert any("filtered out via 'packages' or 'archs'" in m[-1] for m in caplog.record_tuples)
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+def test_scheduling_extra_livepatching_builds_based_on_source_report(
+    caplog: LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(osc.core, "get_repos_of_project", fake_get_repos_of_project)
+    monkeypatch.setattr(osc.core, "get_binarylist", fake_get_binarylist)
+    monkeypatch.setattr(osc.core, "get_binary_file", fake_get_binary_file)
+    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    args = {
+        "caplog": caplog,
+        "monkeypatch": monkeypatch,
+        "schedule": True,
+        "diff_project_suffix": "source-report",
+        "config": next(IncrementConfig.from_config_file(path)),
+    }
+    (errors, jobs) = run_approver(**args)
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "Computing source report diff for request 42" in messages
+    assert_run_with_extra_livepatching(errors, jobs, messages)
 
 
 @responses.activate

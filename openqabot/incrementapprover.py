@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 from argparse import Namespace
 from collections import defaultdict
 from logging import getLogger
@@ -12,6 +13,7 @@ from typing import Any, NamedTuple
 
 import osc.conf
 import osc.core
+from lxml import etree
 
 from openqabot.openqa import openQAInterface
 
@@ -62,7 +64,7 @@ class IncrementApprover:
         self.args = args
         self.token = {"Authorization": "Token {}".format(args.token)}
         self.client = openQAInterface(args)
-        self.repo_diff = {}
+        self.package_diff = {}
         self.requests_to_approve = {}
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
@@ -96,6 +98,52 @@ class IncrementApprover:
             if hasattr(relevant_request.state, "to_xml"):
                 log.debug(relevant_request.to_str())
         return relevant_request
+
+    def _add_packages_for_action_project(
+        self, action: osc.core.Action, project: str, repo: str, arch: str, packages: defaultdict[str, set[Package]]
+    ) -> None:
+        log.debug(
+            "Finding source reports for package %s in project %s for repo/arch %s/%s",
+            action.src_package,
+            project,
+            repo,
+            arch,
+        )
+        repos = osc.core.get_repos_of_project(OBS_URL, prj=project)
+        binaries = [
+            osc.core.get_binarylist(OBS_URL, prj=project, repo=repo.name, arch=repo.arch, package=action.src_package)
+            for repo in repos
+        ]
+        source_reports = [b for binary_list in binaries for b in binary_list if b.endswith("Source.report")]
+        for source_report in source_reports:
+            log.debug("Processing source report %s for %s and %s/%s", source_report, project, repo, arch)
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                source_report_xml_path = f"{tmpdirname}/source-report-{project}-{repo}-{arch}.xml"
+                osc.core.get_binary_file(
+                    OBS_URL,
+                    prj=project,
+                    package=action.src_package,
+                    repo=repo,
+                    arch=arch,
+                    filename=source_report,
+                    target_filename=source_report_xml_path,
+                )
+                source_report_xml = etree.parse(source_report_xml_path)
+            source_report = source_report_xml.getroot()
+            for binary in source_report.iterfind("binary"):
+                arch = binary.get("arch")
+                packages[arch].add(Package(binary.get("name"), "", binary.get("version"), binary.get("release"), arch))
+                packages["noarch"].add(Package(binary.get("package"), "", "", "", "noarch"))
+
+    def _compute_packages_of_request_from_source_report(
+        self, request: osc.core.Request | None
+    ) -> tuple[defaultdict[str, set[Package]], int]:
+        tgt_packages = defaultdict(set)
+        src_packages = defaultdict(set)
+        for action in request.actions:
+            self._add_packages_for_action_project(action, action.tgt_project, "images", "local", tgt_packages)
+            self._add_packages_for_action_project(action, action.src_project, "product", "local", src_packages)
+        return RepoDiff.compute_diff_for_packages("source project", src_packages, "target project", tgt_packages)
 
     def _request_openqa_job_results(
         self,
@@ -275,7 +323,34 @@ class IncrementApprover:
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
-    def _make_scheduling_parameters(self, config: IncrementConfig, build_info: BuildInfo) -> list[dict[str, str]]:
+    def _package_diff(
+        self, request: osc.core.Request | None, config: IncrementConfig, repo_sub_path: str
+    ) -> defaultdict[str, set[Package]]:
+        package_diff = defaultdict(set)
+        if config.diff_project_suffix == "source-report":
+            # compute diff by checking the source report on obs
+            diff_key = "request:" + str(request.id)
+            package_diff = self.package_diff.get(diff_key)
+            if package_diff is None:
+                log.debug("Computing source report diff for request %s", request.id)
+                package_diff = self._compute_packages_of_request_from_source_report(request)[0]
+                log.debug("Packages updated by request %s: %s", request.id, pformat(package_diff))
+        elif config.diff_project_suffix != "none":
+            # compute diff by comparing repositories if "diff_project_suffix" is configured
+            build_project = config.build_project() + repo_sub_path
+            diff_project = config.diff_project()
+            diff_key = f"{build_project}:{diff_project}"
+            package_diff = self.package_diff.get(diff_key)
+            if package_diff is None:
+                log.debug("Comuting repo diff to project %s", diff_project)
+                package_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
+        if diff_key:
+            self.package_diff[diff_key] = package_diff
+        return package_diff
+
+    def _make_scheduling_parameters(
+        self, request: osc.core.Request | None, config: IncrementConfig, build_info: BuildInfo
+    ) -> list[dict[str, str]]:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -289,15 +364,8 @@ class IncrementApprover:
         base_params.update(config.settings)
         extra_params = []
         if config.diff_project_suffix != "none":
-            build_project = config.build_project() + repo_sub_path
-            diff_project = config.diff_project()
-            diff_key = f"{build_project}:{diff_project}"
-            repo_diff = self.repo_diff.get(diff_key)
-            if repo_diff is None:
-                log.debug("Comuting diff to project %s", diff_project)
-                repo_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
-                self.repo_diff[diff_key] = repo_diff
-            relevant_diff = repo_diff[build_info.arch] | repo_diff["noarch"]
+            package_diff = self._package_diff(request, config, repo_sub_path)
+            relevant_diff = package_diff[build_info.arch] | package_diff["noarch"]
             # schedule base params if package filter is empty for matching
             if IncrementApprover._match_packages(relevant_diff, config.packages):
                 extra_params.append({})
@@ -335,7 +403,7 @@ class IncrementApprover:
         for build_info in self._determine_build_info(config):
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
-            params = self._make_scheduling_parameters(config, build_info)
+            params = self._make_scheduling_parameters(request, config, build_info)
             if len(params) < 1:
                 log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
                 continue
