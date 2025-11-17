@@ -112,11 +112,8 @@ def test_get_max_revison_empty_xml(caplog: LogCaptureFixture) -> None:
 def test_get_max_revison_exception(caplog: LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(BufferError("other error"))
-
     with pytest.raises(BufferError):
         rp.get_max_revision(repos, arch, PROJECT)
-
-    assert caplog.records[0].exc_info[0] is BufferError
 
 
 def test_merge_repohash() -> None:

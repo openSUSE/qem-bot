@@ -125,11 +125,7 @@ INCIDENT_SCHEMA = {
 
 
 def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
-    try:
-        return retried_requests.get(host, params={"query": query}, verify=False).json()
-    except Exception:
-        log.exception("")
-        raise
+    return retried_requests.get(host, params={"query": query}, verify=False).json()
 
 
 def get_active_incidents() -> Set[int]:

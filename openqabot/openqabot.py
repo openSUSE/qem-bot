@@ -45,16 +45,8 @@ class OpenQABot:
             )
             return
 
-        try:
-            res = put(api, headers=self.token, json=data)
-            log.info(
-                "Put to dashboard result %s, database id: %s",
-                res.status_code,
-                res.json().get("id", "No id?"),
-            )
-        except Exception:
-            log.exception("")
-            raise
+        res = put(api, headers=self.token, json=data)
+        log.info("Put to dashboard result %s, database id: %s", res.status_code, res.json().get("id", "No id?"))
 
     def post_openqa(self, data: Dict[str, Any]) -> None:
         self.openqa.post_job(data)

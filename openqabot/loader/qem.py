@@ -62,11 +62,7 @@ def get_incidents(token: Dict[str, str]) -> List[Incident]:
 
 
 def get_active_incidents(token: Dict[str, str]) -> Sequence[int]:
-    try:
-        data = get_json("api/incidents", headers=token)
-    except Exception:
-        log.exception("")
-        raise
+    data = get_json("api/incidents", headers=token)
     return list({i["number"] for i in data})
 
 
@@ -107,12 +103,7 @@ def get_incident_settings(inc: int, token: Dict[str, str], *, all_incidents: boo
 
 def get_incident_settings_data(token: Dict[str, str], number: int) -> Sequence[Data]:
     log.info("Getting settings for %s", number)
-    try:
-        data = get_json("api/incident_settings/" + f"{number}", headers=token)
-    except Exception:
-        log.exception("")
-        raise
-
+    data = get_json("api/incident_settings/" + f"{number}", headers=token)
     if "error" in data:
         log.warning("Incident %s contains error: %s", number, data["error"])
         return []
@@ -137,12 +128,8 @@ def get_incident_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any]
 
     ret = []
     for job_aggr in settings:
-        try:
-            data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
-            ret += data
-        except Exception:
-            log.exception("")
-            raise
+        data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
+        ret += data
         if "error" in data:
             raise ValueError(data["error"])
 
@@ -164,12 +151,7 @@ def get_aggregate_settings(inc: int, token: Dict[str, str]) -> List[JobAggr]:
 
 def get_aggregate_settings_data(token: Dict[str, str], data: Data) -> Sequence[Data]:
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
-    try:
-        settings = get_json(url, headers=token)
-    except Exception:
-        log.exception("")
-        raise
-
+    settings = get_json(url, headers=token)
     if not settings:
         log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
         return []
@@ -197,12 +179,8 @@ def get_aggregate_results(inc: int, token: Dict[str, str]) -> List[Dict[str, Any
 
     ret = []
     for job_aggr in settings:
-        try:
-            data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
-            ret += data
-        except Exception:
-            log.exception("")
-            raise
+        data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
+        ret += data
         if "error" in data:
             raise ValueError(data["error"])
 
