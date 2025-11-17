@@ -17,7 +17,7 @@ tidy:
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	python3 -m pytest -v --cov=./openqabot --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
+	python3 -m pytest -v --cov --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
 
