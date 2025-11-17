@@ -125,6 +125,7 @@ def run_gitea_sync(
     *,
     no_build_results: bool = False,
     allow_failures: bool = True,
+    dry: bool = False,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
@@ -136,7 +137,7 @@ def run_gitea_sync(
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
     args = Namespace(
-        dry=False,
+        dry=dry,
         fake_data=False,
         token="123",
         gitea_token="456",
@@ -147,6 +148,13 @@ def run_gitea_sync(
         pr_number=None,
     )
     assert GiteaSync(args)() == 0
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
+def test_gitea_sync_on_dry_run_does_not_sync(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_gitea_sync(caplog, monkeypatch, dry=True)
+    assert "Dry run, nothing synced" in caplog.text
 
 
 @responses.activate
