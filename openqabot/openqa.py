@@ -64,14 +64,7 @@ class openQAInterface:
         param["build"] = data.build
         param["version"] = data.version
         param["arch"] = data.arch
-
-        ret = None
-        try:
-            ret = self.openqa.openqa_request("GET", "jobs", param)["jobs"]
-        except Exception:
-            log.exception("")
-            raise
-        return ret
+        return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
     @lru_cache(maxsize=512)
     def get_job_comments(self, job_id: int) -> List[Dict[str, str]]:
@@ -89,14 +82,7 @@ class openQAInterface:
 
     @lru_cache(maxsize=256)
     def is_devel_group(self, groupid: int) -> bool:
-        ret = None
-
-        try:
-            ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
-        except Exception:
-            log.exception("")
-            raise
-
+        ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
