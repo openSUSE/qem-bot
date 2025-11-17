@@ -371,3 +371,6 @@ def test_config_parsing_from_args() -> None:
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"
     assert config[0].flavor == "Online-Increments"
+    assert config[0].packages == []
+    assert config[0].archs == set()
+    assert config[0].settings == {}
