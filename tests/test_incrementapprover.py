@@ -362,3 +362,12 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
     messages = [x[-1][0:52] for x in caplog.record_tuples]
     assert "Unable to load config file 'tests/fixtures/config/01" in messages
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
+
+
+def test_config_parsing_from_args() -> None:
+    minimal_ns = namedtuple("Namespace", ("increment_config", "distri", "version", "flavor"))
+    config = IncrementConfig.from_args(minimal_ns(None, "sle", "16.0", "Online-Increments"))
+    assert len(config) == 1
+    assert config[0].distri == "sle"
+    assert config[0].version == "16.0"
+    assert config[0].flavor == "Online-Increments"

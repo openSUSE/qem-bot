@@ -21,12 +21,12 @@ class IncrementConfig:
     distri: str
     version: str
     flavor: str
-    project_base: str
-    build_project_suffix: str
-    diff_project_suffix: str
-    build_listing_sub_path: str
-    build_regex: str
-    product_regex: str
+    project_base: str = ""
+    build_project_suffix: str = ""
+    diff_project_suffix: str = ""
+    build_listing_sub_path: str = ""
+    build_regex: str = ""
+    product_regex: str = ""
     packages: List[str] = field(default_factory=list)
     archs: Set[str] = field(default_factory=set)
     settings: Dict[str, str] = field(default_factory=dict)
@@ -87,7 +87,7 @@ class IncrementConfig:
     def from_args(args: Namespace) -> List["IncrementConfig"]:
         if args.increment_config:
             return IncrementConfig.from_config_path(args.increment_config)
-        # Create a dictionary of arguments for IncrementConfig
+        # Create a dictionary from arguments for IncrementConfig
         config_args = {
             field_name: getattr(args, field_name)
             for field_name in [
@@ -105,5 +105,6 @@ class IncrementConfig:
                 "settings",
                 "additional_builds",
             ]
+            if hasattr(args, field_name)
         }
         return [IncrementConfig(**config_args)]
