@@ -37,6 +37,8 @@ def baseconf_gen() -> FakeBaseConf:
 def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
+    assert baseconf_gen([], {}, None, _ignore_onetime=False), "can be called"
+    assert not baseconf_gen.normalize_repos([]), "static method can be called"
 
 
 def test_is_embargoed(baseconf_gen: FakeBaseConf) -> None:
