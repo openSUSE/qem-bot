@@ -94,7 +94,7 @@ def fake_osc_http_get(url: str) -> etree.ElementTree:
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124")
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124:SLES")
-    raise AssertionError("Code tried to query unexpected OSC URL: " + url)
+    raise AssertionError("Code tried to query unexpected OSC URL: " + url)  # pragma: no cover
 
 
 def noop_osc_http_get(_url: str) -> etree.ElementTree:
