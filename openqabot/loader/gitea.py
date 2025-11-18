@@ -47,30 +47,30 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GIT
 
 
 def read_utf8(name: str) -> str:
-    return Path("responses/{}".format(name)).read_text(encoding="utf8")
+    return Path(f"responses/{name}").read_text(encoding="utf8")
 
 
 def read_json(name: str) -> Any:
-    return json.loads(Path("responses/{}.json".format(name)).read_text(encoding="utf8"))
+    return json.loads(Path(f"responses/{name}.json").read_text(encoding="utf8"))
 
 
 def read_xml(name: str) -> etree.ElementTree:
-    return etree.parse("responses/{}.xml".format(name))
+    return etree.parse(f"responses/{name}.xml")
 
 
 def reviews_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullReviews
-    return "repos/{}/pulls/{}/reviews".format(repo_name, number)
+    return f"repos/{repo_name}/pulls/{number}/reviews"
 
 
 def changed_files_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
-    return "repos/{}/pulls/{}/files".format(repo_name, number)
+    return f"repos/{repo_name}/pulls/{number}/files"
 
 
 def comments_url(repo_name: str, number: int) -> str:
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
-    return "repos/{}/issues/{}/comments".format(repo_name, number)
+    return f"repos/{repo_name}/issues/{number}/comments"
 
 
 def get_product_name(obs_project: str) -> str:
