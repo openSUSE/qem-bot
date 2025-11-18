@@ -512,7 +512,7 @@ def make_incident_from_pr(
             log.info("Skipping PR %s, no packages found/considered", number)
             return None
 
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         log.exception("Unable to process PR %s", pr.get("number", "?"))
         return None
     return incident
