@@ -39,9 +39,7 @@ def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
                 settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
             )
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-        log_error = "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed"
-        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-            log_error += f" PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
+        log_error = f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
         log.warning("%s : %s", log_error, e)
     finally:
         settings.pop("PUBLIC_CLOUD_TOOLS_IMAGE_QUERY", None)
