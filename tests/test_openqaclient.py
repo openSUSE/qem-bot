@@ -3,10 +3,12 @@
 import logging
 import re
 from typing import NamedTuple
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
+from openqa_client.exceptions import RequestError
 
 import responses
 from openqabot import QEM_DASHBOARD
@@ -66,6 +68,9 @@ def test_post_job_failed(caplog: LogCaptureFixture) -> None:
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
+    error = RequestError("POST", "no.where", "500", "no text")
+    with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
+        client.post_job({"foo": "bar"})
 
 
 @responses.activate
