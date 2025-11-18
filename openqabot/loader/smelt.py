@@ -167,7 +167,7 @@ def get_incident(incident: int) -> dict[str, Any] | None:
     except ValidationError:
         log.exception("Invalid data from SMELT for incident %s", incident)
         return None
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         log.exception("Unknown error for incident %s", incident)
         return None
 

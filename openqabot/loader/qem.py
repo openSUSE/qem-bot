@@ -192,7 +192,7 @@ def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any)
         retry -= 1
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             log.exception("")
             return 1
         if ret.status_code == 200:
@@ -216,7 +216,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         log.exception("")
 
 
@@ -226,5 +226,5 @@ def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         log.exception("")

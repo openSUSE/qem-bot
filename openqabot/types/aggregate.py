@@ -129,7 +129,7 @@ class Aggregate(BaseConf):
                     params={"product": self.product, "arch": arch},
                     headers=token,
                 )
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 log.exception("")
                 old_jobs = None
 

@@ -36,7 +36,7 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             log.exception("")
             continue
 
@@ -116,7 +116,7 @@ def get_onearch(path: Path) -> set[str]:
 
     try:
         data = loader.load(path)
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         log.exception("")
         return set()
 

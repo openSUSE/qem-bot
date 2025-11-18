@@ -73,7 +73,7 @@ class Incidents(BaseConf):
                 f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             log.exception("")
 
         if not jobs:
