@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import osc.conf
 import osc.core
 import osc.util.xml
+import requests
 import urllib3
 import urllib3.exceptions
 from lxml import etree
@@ -17,7 +18,7 @@ from osc.core import MultibuildFlavorResolver
 
 from .. import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
 from ..types import Repos
-from ..utils import retry10 as requests
+from ..utils import retry10 as retried_requests
 
 log = getLogger("bot.loader.gitea")
 
@@ -30,7 +31,7 @@ def make_token_header(token: str) -> Dict[str, str]:
 
 def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
     try:
-        return requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
+        return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
     except Exception as e:
         log.exception(e)
         raise e
@@ -39,7 +40,7 @@ def get_json(query: str, token: Dict[str, str], host: str = GITEA) -> Any:
 def post_json(query: str, token: Dict[str, str], post_data: Any, host: str = GITEA) -> Any:
     try:
         url = host + "/api/v1/" + query
-        res = requests.post(url, verify=False, headers=token, json=post_data)
+        res = retried_requests.post(url, verify=False, headers=token, json=post_data)
         if not res.ok:
             log.error("Unable to POST %s: %s", url, res.text)
     except Exception as e:
@@ -221,7 +222,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     start = f"{product_name}-"
     version = ""
     try:
-        for entry in requests.get(url).json()["data"]:
+        for entry in retried_requests.get(url).json()["data"]:
             name = entry["name"]
             if not name.startswith(start):
                 continue
@@ -418,7 +419,7 @@ def add_packages_from_patchinfo(
     if dry:
         patch_info = read_xml("patch-info")
     else:
-        patch_info = osc.util.xml.xml_fromstring(requests.get(patch_info_url, verify=False, headers=token).text)
+        patch_info = osc.util.xml.xml_fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).text)
     for res in patch_info.findall("package"):
         incident["packages"].append(res.text)
 
