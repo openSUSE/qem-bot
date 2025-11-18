@@ -4,6 +4,7 @@ import re
 from unittest.mock import patch
 
 import pytest
+from _pytest.logging import LogCaptureFixture
 
 import openqabot.pc_helper
 import responses
@@ -15,19 +16,20 @@ from openqabot.pc_helper import (
 )
 
 
-def test_apply_pc_tools_image(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apply_pc_tools_image(caplog: LogCaptureFixture) -> None:
     known_return = "test"
-    monkeypatch.setattr(
-        openqabot.pc_helper,
-        "get_latest_tools_image",
-        lambda *_args, **_kwargs: known_return,
-    )
-
     settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"}
-    apply_pc_tools_image(settings)
+    with patch("openqabot.pc_helper.get_latest_tools_image", return_value=known_return):
+        apply_pc_tools_image(settings)
     assert "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" in settings
     assert settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == known_return
     assert "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" not in settings
+    with patch("openqabot.pc_helper.get_latest_tools_image"):
+        apply_pc_tools_image(settings)
+    settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"}
+    with patch("openqabot.pc_helper.get_latest_tools_image", side_effect=BaseException):
+        apply_pc_tools_image(settings)
+    assert "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed" in caplog.text
 
 
 def test_pint_query_uses_cache() -> None:
