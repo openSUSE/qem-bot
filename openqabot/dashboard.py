@@ -2,21 +2,21 @@
 # SPDX-License-Identifier: MIT
 from typing import Dict
 
-import requests as req
+import requests
 
 from . import QEM_DASHBOARD
-from .utils import retry5 as requests
+from .utils import retry5 as retried_requests
 
 
 def get_json(route: str, **kwargs: Dict) -> str:
-    return requests.get(QEM_DASHBOARD + route, **kwargs).json()
+    return retried_requests.get(QEM_DASHBOARD + route, **kwargs).json()
 
 
 def patch(route: str, **kwargs: Dict) -> str:
     # openqabot/loader/qem.py originally used req.patch so we will just use that here without retry. Can potentially be changed to used retry5 as requests as
     # well
-    return req.patch(QEM_DASHBOARD + route, timeout=10, **kwargs)
+    return requests.patch(QEM_DASHBOARD + route, timeout=10, **kwargs)
 
 
 def put(route: str, **kwargs: Dict) -> str:
-    return requests.put(QEM_DASHBOARD + route, **kwargs)
+    return retried_requests.put(QEM_DASHBOARD + route, **kwargs)

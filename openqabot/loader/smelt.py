@@ -9,7 +9,7 @@ import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
 from .. import SMELT
-from ..utils import retry10 as requests
+from ..utils import retry10 as retried_requests
 from ..utils import walk
 
 log = getLogger("bot.loader.smelt")
@@ -126,7 +126,7 @@ INCIDENT_SCHEMA = {
 
 def get_json(query: str, host: str = SMELT) -> Dict[str, Any]:
     try:
-        return requests.get(host, params={"query": query}, verify=False).json()
+        return retried_requests.get(host, params={"query": query}, verify=False).json()
     except Exception as e:
         log.exception(e)
         raise e

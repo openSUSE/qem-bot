@@ -149,7 +149,7 @@ def request_mock(monkeypatch: MonkeyPatch) -> None:
     def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
         return MockResponse()
 
-    monkeypatch.setattr("openqabot.types.incidents.requests.get", mock_get)
+    monkeypatch.setattr("openqabot.types.incidents.retried_requests.get", mock_get)
 
 
 class MyIncident_2(MyIncident_1):

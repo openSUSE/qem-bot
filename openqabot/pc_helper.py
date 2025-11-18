@@ -5,7 +5,7 @@ from functools import lru_cache
 from logging import getLogger
 from typing import Any, Dict, List, Optional
 
-from .utils import retry5 as requests
+from .utils import retry5 as retried_requests
 
 log = getLogger("openqabot.pc_helper")
 
@@ -18,7 +18,7 @@ def get_latest_tools_image(query: str) -> Optional[str]:
     a value for <BUILD NUM>
     """
     # Get the first not-failing item
-    build_results = requests.get(query).json()["build_results"]
+    build_results = retried_requests.get(query).json()["build_results"]
     for build in build_results:
         if build["failed"] == 0:
             return "publiccloud_tools_{}.qcow2".format(build["build"])
@@ -52,7 +52,7 @@ def pint_query(query: str) -> Dict[str, Any]:
 
     Successive queries are cached
     """
-    return requests.get(query).json()
+    return retried_requests.get(query).json()
 
 
 def apply_publiccloud_pint_image(settings: Dict[str, Any]) -> Dict[str, Any]:

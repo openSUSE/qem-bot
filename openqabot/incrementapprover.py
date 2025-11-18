@@ -18,7 +18,7 @@ from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff
 from .utils import merge_dicts
-from .utils import retry10 as requests
+from .utils import retry10 as retried_requests
 
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
@@ -186,7 +186,7 @@ class IncrementApprover:
         sub_path = config.build_listing_sub_path
         url = f"{build_project_url}/{sub_path}/?jsontable=1"
         log.debug("Checking for '%s' files on %s", config.build_regex, url)
-        rows = requests.get(url).json().get("data", [])
+        rows = retried_requests.get(url).json().get("data", [])
         res = set()
         for row in rows:
             name = row.get("name", "")

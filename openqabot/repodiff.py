@@ -12,7 +12,7 @@ import lxml.etree as ET
 import zstandard
 
 from . import OBS_DOWNLOAD_URL
-from .utils import retry10 as requests
+from .utils import retry10 as retried_requests
 
 log = getLogger("bot.repo_diff")
 ns = "{http://linux.duke.edu/metadata/common}"
@@ -60,7 +60,7 @@ class RepoDiff:
             else:
                 with open(name, "rb") as binary_file:
                     return binary_file.read()
-        resp = requests.get(url)
+        resp = retried_requests.get(url)
         if self.args is not None and self.args.dump_data and not self.args.fake_data:
             with open(name, "wb") as output_file:
                 output_file.write(resp.content)

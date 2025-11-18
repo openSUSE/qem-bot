@@ -7,7 +7,7 @@ from .. import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_
 from ..errors import NoRepoFoundError
 from ..loader import gitea
 from ..pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from ..utils import retry3 as requests
+from ..utils import retry3 as retried_requests
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
@@ -66,7 +66,7 @@ class Incidents(BaseConf):
     def _is_scheduled_job(token: Dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
-            jobs = requests.get(
+            jobs = retried_requests.get(
                 f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
