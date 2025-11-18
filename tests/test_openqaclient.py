@@ -97,3 +97,12 @@ def test_handle_job_not_found(caplog: LogCaptureFixture) -> None:
     assert len(responses.calls) == 1
     assert "Job 42 not found in openQA, marking as obsolete on dashboard" in messages
     assert "job not found" in messages  # the 404 fixture is supposed to match
+
+
+def test_get_methods_handle_errors_gracefully() -> None:
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    error = RequestError("GET", "no.where", "500", "no text")
+    with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
+        assert client.get_job_comments(42) == []
+        assert not client.get_single_job(42)
+        assert client.get_older_jobs(42, 0) == {"data": []}
