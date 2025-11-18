@@ -4,8 +4,8 @@ from hashlib import md5
 from logging import getLogger
 from typing import List, Optional, Tuple
 
+import lxml.etree as ET
 import requests
-from defusedxml import ElementTree as ET
 from requests.exceptions import RetryError
 
 from .. import OBS_DOWNLOAD_URL, OBS_PRODUCTS
@@ -49,7 +49,7 @@ def get_max_revision(
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
-            root = ET.fromstring(retried_requests.get(url).text)
+            root = ET.fromstring(retried_requests.get(url).content)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
             ET.ParseError,

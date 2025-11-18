@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 import logging
 import re
-import xml.etree.ElementTree as ET
 from collections import namedtuple
 from pathlib import Path
 from typing import Any, Tuple
@@ -11,6 +10,7 @@ from urllib.parse import urljoin
 import osc.conf
 import osc.core
 import pytest
+from lxml import etree as ET
 from pytest import LogCaptureFixture, MonkeyPatch
 
 import openqabot.loader.gitea

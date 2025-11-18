@@ -12,8 +12,7 @@ import osc.core
 import osc.util.xml
 import urllib3
 import urllib3.exceptions
-from defusedxml import ElementTree
-from defusedxml.ElementTree import parse
+from lxml import etree
 from osc.core import MultibuildFlavorResolver
 
 from .. import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
@@ -58,8 +57,8 @@ def read_json(name: str) -> Any:
         return json.loads(json_file.read())
 
 
-def read_xml(name: str) -> ElementTree:
-    return parse("responses/%s.xml" % name)
+def read_xml(name: str) -> etree.ElementTree:
+    return etree.parse("responses/%s.xml" % name)
 
 
 def reviews_url(repo_name: str, number: int) -> str:

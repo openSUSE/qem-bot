@@ -14,7 +14,6 @@ classifiers = [
 ]
 dependencies = [
     "dataclasses",
-    "defusedxml",
     "osc",
     "openqa-client",
     "pika",
