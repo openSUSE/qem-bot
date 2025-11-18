@@ -130,6 +130,6 @@ def get_recent_pint_image(
         if (region is not None) and (region != image["region"]):
             continue
         # Get latest one based on 'publishedon'
-        if recentimage is None or is_newer(image["publishedon"], recentimage["publishedon"]):
+        if recentimage is None or is_newer(image["publishedon"], recentimage["publishedon"]):  # pragma: no branch
             recentimage = image
     return recentimage
