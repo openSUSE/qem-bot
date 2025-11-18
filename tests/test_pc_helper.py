@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import re
+from unittest.mock import patch
 
 import pytest
 
@@ -27,6 +28,13 @@ def test_apply_pc_tools_image(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" in settings
     assert settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == known_return
     assert "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" not in settings
+
+
+def test_pint_query_uses_cache() -> None:
+    with patch("openqabot.pc_helper.retried_requests.get") as get_mock:
+        for _ in range(1, 3):
+            openqabot.pc_helper.pint_query("foo")
+        get_mock.assert_called_once()
 
 
 def test_apply_publiccloud_pint_image(monkeypatch: pytest.MonkeyPatch) -> None:
