@@ -60,7 +60,7 @@ def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
         return MockResponse()
 
     monkeypatch.setattr(
-        "openqabot.dashboard.requests.get",
+        "openqabot.dashboard.retried_requests.get",
         mock_get,
     )
 
