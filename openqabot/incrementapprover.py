@@ -69,6 +69,17 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
+    def _get_regex_match(self, pattern: str, string: str) -> re.Match | None:
+        match = None
+        try:
+            match = re.search(pattern, string)
+        except re.PatternError:
+            log.warning(
+                "Pattern `%s` did not compile successfully. Considering search as non-match and returning empty result.",
+                pattern,
+            )
+        return match
+
     def _find_request_on_obs(self, config: IncrementConfig) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
@@ -244,10 +255,10 @@ class IncrementApprover:
         for row in rows:
             name = row.get("name", "")
             log.debug("Found file: %s", name)
-            m = re.search(config.build_regex, name)
+            m = self._get_regex_match(config.build_regex, name)
             if m:
                 product = m.group("product")
-                if not re.search(config.product_regex, product):
+                if not self._get_regex_match(config.product_regex, product):
                     continue  # skip if this config doesn't apply to the product
                 distri = config.distri
                 version = m.group("version")
@@ -273,11 +284,10 @@ class IncrementApprover:
     ) -> dict[str, str] | None:
         for additional_build in config.additional_builds:
             package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
-            package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
-            if not package_name_match:
+            if (package_name_match := self._get_regex_match(package_name_regex, package.name)) is None:
                 continue
             package_version_regex = additional_build.get("package_version_regex")
-            if package_version_regex is not None and not re.search(package_version_regex, package.version):
+            if package_version_regex is not None and not self._get_regex_match(package_version_regex, package.version):
                 continue
             extra_build = [build_info.build, additional_build["build_suffix"]]
             extra_params = {}
