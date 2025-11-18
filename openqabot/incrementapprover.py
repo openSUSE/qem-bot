@@ -215,14 +215,7 @@ class IncrementApprover:
     def _extra_builds_for_package(
         self, package: Package, config: IncrementConfig, build_info: BuildInfo
     ) -> Optional[Dict[str, str]]:
-        for additional_build in config.additional_builds:
-            package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
-            package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
-            if not package_name_match:
-                continue
-            package_version_regex = additional_build.get("package_version_regex")
-            if package_version_regex is not None and not re.search(package_version_regex, package.version):
-                continue
+        for additional_build, package_name_match in self._filter_packages_by_name(config.additional_builds, package):
             extra_build = [build_info.build, additional_build["build_suffix"]]
             extra_params = {}
             try:
@@ -250,6 +243,20 @@ class IncrementApprover:
 
         extra_builds = map(handle_package, package_diff)
         return [*filter(lambda b: b is not None, extra_builds)]
+
+    def _filter_packages_by_name(
+        self, additional_builds: List[Dict[str, str]], package: Package
+    ) -> List[Dict[str, str]]:
+        """Provide a genarator to filter out builds by the package name and version."""
+        for abuild in additional_builds:
+            package_name_regex = abuild.get("package_name_regex", abuild.get("regex"))
+            package_name_match = re.search(package_name_regex, package.name) if package_name_regex is not None else None
+            if not package_name_match:
+                continue
+            package_version_regex = abuild.get("package_version_regex")
+            if package_version_regex is not None and not re.search(package_version_regex, package.version):
+                continue
+            yield (abuild, package_name_match)
 
     @staticmethod
     def _populate_params_from_env(params: Dict[str, str], env_var: str) -> None:
