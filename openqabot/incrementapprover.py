@@ -81,6 +81,7 @@ class IncrementApprover:
             )
         return match
 
+    @cache
     def _find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
