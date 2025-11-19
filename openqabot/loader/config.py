@@ -49,35 +49,33 @@ def load_metadata(
         if "product" not in data:
             log.debug("Skipping invalid config %s", p)
             continue
-
-        if settings:
-            for key in data:
-                if key == "incidents" and not incidents:
+        for key in data:
+            if key == "incidents" and not incidents:
+                ret.append(
+                    Incidents(
+                        data["product"],
+                        data.get("product_repo"),
+                        data.get("product_version"),
+                        settings,
+                        data[key],
+                        extrasettings,
+                    ),
+                )
+            elif key == "aggregate" and not aggregate:
+                try:
                     ret.append(
-                        Incidents(
+                        Aggregate(
                             data["product"],
                             data.get("product_repo"),
                             data.get("product_version"),
                             settings,
                             data[key],
-                            extrasettings,
                         ),
                     )
-                elif key == "aggregate" and not aggregate:
-                    try:
-                        ret.append(
-                            Aggregate(
-                                data["product"],
-                                data.get("product_repo"),
-                                data.get("product_version"),
-                                settings,
-                                data[key],
-                            ),
-                        )
-                    except NoTestIssuesError:
-                        log.warning("No 'test_issues' in %s config", data["product"])
-                else:
-                    continue
+                except NoTestIssuesError:
+                    log.warning("No 'test_issues' in %s config", data["product"])
+            else:
+                continue
     log.debug("Loaded %i incidents/aggregates", len(ret))
     return ret
 
