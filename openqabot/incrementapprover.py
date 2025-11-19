@@ -70,13 +70,12 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(self, config: IncrementConfig) -> osc.core.Request | None:
+    def _find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
             relevant_states.append("accepted")
         if args.request_id is None:
-            build_project = config.build_project()
             log.debug(
                 "Checking for product increment requests to be reviewed by %s on %s",
                 OBS_GROUP,
@@ -433,7 +432,7 @@ class IncrementApprover:
     def __call__(self) -> int:
         error_count = 0
         for config in self.config:
-            request = self._find_request_on_obs(config)
+            request = self._find_request_on_obs(config.build_project())
             error_count += self._process_request_for_config(request, config)
         for request in self.requests_to_approve.values():
             error_count += self._handle_approval(request)
