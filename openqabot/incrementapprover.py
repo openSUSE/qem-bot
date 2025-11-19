@@ -7,6 +7,7 @@ import re
 import tempfile
 from argparse import Namespace
 from collections import defaultdict
+from functools import cache
 from logging import getLogger
 from pprint import pformat
 from typing import Any, NamedTuple
@@ -92,7 +93,7 @@ class IncrementApprover:
                 OBS_GROUP,
                 build_project,
             )
-            obs_requests = osc.core.get_request_list(OBS_URL, project=build_project, req_state=relevant_states)
+            obs_requests = self._get_obs_request_list(project=build_project, req_state=tuple(relevant_states))
             relevant_request = None
             for request in sorted(obs_requests, reverse=True):
                 for review in request.reviews:
@@ -155,6 +156,10 @@ class IncrementApprover:
             self._add_packages_for_action_project(action, action.tgt_project, "images", "local", tgt_packages)
             self._add_packages_for_action_project(action, action.src_project, "product", "local", src_packages)
         return RepoDiff.compute_diff_for_packages("source project", src_packages, "target project", tgt_packages)
+
+    @cache
+    def _get_obs_request_list(self, project: str, req_state: tuple) -> list:
+        return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
     def _request_openqa_job_results(
         self,
