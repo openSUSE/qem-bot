@@ -3,6 +3,7 @@
 import concurrent.futures as CT
 import json
 import re
+import urllib.error
 from functools import lru_cache
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
@@ -349,6 +350,7 @@ def is_build_result_relevant(res: Any, relevant_archs: Set[str]) -> bool:
 
 def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: bool) -> None:
     successful_packages = set()
+    unavailable_projects = set()
     unpublished_repos = set()
     failed_packages = set()
     projects = set()
@@ -362,7 +364,12 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: boo
             if dry:
                 build_info = read_xml("build-results-124-" + obs_project)
             else:
-                build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
+                try:
+                    build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
+                except urllib.error.HTTPError:
+                    unavailable_projects.add(obs_project)
+                    log.exception("Unable to read build results of project %s", build_info_url)
+                    continue
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
                     continue
@@ -387,7 +394,7 @@ def add_build_results(incident: Dict[str, Any], obs_urls: List[str], *, dry: boo
             ", ".join(failed_packages),
         )
     incident["channels"] = [*projects]
-    incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos]
+    incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos, *unavailable_projects]
     incident["successful_packages"] = [*successful_packages]
     if "scminfo" not in incident and len(OBS_PRODUCTS) == 1:
         incident["scminfo"] = incident.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")

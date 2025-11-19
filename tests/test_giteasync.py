@@ -4,6 +4,7 @@
 
 import logging
 import re
+import urllib.error
 from collections import namedtuple
 from pathlib import Path
 from typing import Any, Tuple
@@ -20,6 +21,7 @@ import responses
 from openqabot import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
+    add_build_results,
     compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
@@ -107,6 +109,11 @@ def noop_osc_http_get(_url: str) -> ET.ElementTree:
 
 def fake_osc_xml_parse(data: Any) -> Any:
     return data  # fake_osc_http_get already returns parsed XML so just return that
+
+
+def fake_urllib_http_error(data: Any) -> Any:
+    with open("responses/empty-build-results.xml") as fp:
+        raise urllib.error.HTTPError(data, 404, "Not found", {}, fp)
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:
@@ -240,6 +247,15 @@ def test_extracting_product_name_and_version() -> None:
     prod_url = "https://src.suse.de/products/SLES#15.99"
     prod_ver = get_product_name_and_version_from_scmsync(prod_url)
     assert prod_ver == ("SLES", "15.99")
+
+
+def test_handling_unavailable_build_info(caplog: LogCaptureFixture, monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(osc.core, "http_GET", fake_urllib_http_error)
+    incident = {}
+    add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
+    assert incident["successful_packages"] == []
+    assert incident["failed_or_unpublished_packages"] == ["bar"]
+    assert "Unable to read build results of project" in caplog.record_tuples[-1][-1]
 
 
 @responses.activate
