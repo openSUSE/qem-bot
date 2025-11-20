@@ -166,6 +166,60 @@ class Aggregate(BaseConf):
 
         return full_post
 
+    def _process_arch(
+        self,
+        arch: str,
+        valid_incidents: list[Incident],
+        token: dict[str, str],
+        ci_url: str | None,
+        *,
+        ignore_onetime: bool,
+    ) -> dict[str, Any] | None:
+        # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
+        issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
+
+        test_incidents, test_repos = self._get_test_incidents_and_repos(valid_incidents, issues_arch)
+
+        repohash = merge_repohash(
+            sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
+        )
+
+        try:
+            old_jobs = get_json(
+                "api/update_settings",
+                params={"product": self.product, "arch": arch},
+                headers=token,
+            )
+        except Exception:
+            log.exception("")
+            old_jobs = None
+
+        old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
+        old_build = old_jobs[0].get("build", "") if old_jobs else ""
+
+        try:
+            build = self.get_buildnr(
+                repohash,
+                old_repohash,
+                old_build,
+            )
+        except SameBuildExistsError:
+            log.info(
+                "For %s aggreagate on %s there is existing build",
+                self.product,
+                arch,
+            )
+            return None
+
+        if not ignore_onetime and (self.onetime and build.split("-")[-1] != "1"):
+            return None
+
+        return self._create_full_post(
+            arch,
+            _PostData(test_incidents, test_repos, repohash, build),
+            ci_url,
+        )
+
     def __call__(
         self,
         incidents: list[Incident],
@@ -174,56 +228,11 @@ class Aggregate(BaseConf):
         *,
         ignore_onetime: bool = False,
     ) -> list[dict[str, Any]]:
-        ret = []
+        valid_incidents = self._filter_incidents(incidents)
 
-        for arch in self.archs:
-            # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
-            issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
+        results = [
+            self._process_arch(arch, valid_incidents, token, ci_url, ignore_onetime=ignore_onetime)
+            for arch in self.archs
+        ]
 
-            valid_incidents = self._filter_incidents(incidents)
-            test_incidents, test_repos = self._get_test_incidents_and_repos(valid_incidents, issues_arch)
-
-            repohash = merge_repohash(
-                sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
-            )
-
-            try:
-                old_jobs = get_json(
-                    "api/update_settings",
-                    params={"product": self.product, "arch": arch},
-                    headers=token,
-                )
-            except Exception:
-                log.exception("")
-                old_jobs = None
-
-            old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
-            old_build = old_jobs[0].get("build", "") if old_jobs else ""
-
-            try:
-                build = self.get_buildnr(
-                    repohash,
-                    old_repohash,
-                    old_build,
-                )
-            except SameBuildExistsError:
-                log.info(
-                    "For %s aggreagate on %s there is existing build",
-                    self.product,
-                    arch,
-                )
-                continue
-
-            if not ignore_onetime and (self.onetime and build.split("-")[-1] != "1"):
-                continue
-
-            full_post = self._create_full_post(
-                arch,
-                _PostData(test_incidents, test_repos, repohash, build),
-                ci_url,
-            )
-
-            if full_post:
-                ret.append(full_post)
-
-        return ret
+        return [res for res in results if res is not None]
