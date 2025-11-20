@@ -69,17 +69,18 @@ class Aggregate(BaseConf):
         return f"{today}-{counter}"
 
     def _filter_incidents(self, incidents: list[Incident]) -> list[Incident]:
-        valid_incidents = []
-        for i in incidents:
-            if not any((i.livepatch, i.staging)):
-                if self.filter_embargoed(self.flavor) and i.embargoed:
-                    log.debug(
-                        "Incident %s is skipped because filtering embargoed is on and incident has embargoed True",
-                        i.id,
-                    )
-                else:
-                    valid_incidents.append(i)
-        return valid_incidents
+        def is_valid(incident: Incident) -> bool:
+            if any((incident.livepatch, incident.staging)):
+                return False
+            if self.filter_embargoed(self.flavor) and incident.embargoed:
+                log.debug(
+                    "Incident %s is skipped because filtering embargoed is on and incident has embargoed True",
+                    incident.id,
+                )
+                return False
+            return True
+
+        return [i for i in incidents if is_valid(i)]
 
     def _get_test_incidents_and_repos(
         self, valid_incidents: list[Incident], issues_arch: str
