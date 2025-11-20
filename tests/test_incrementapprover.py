@@ -178,6 +178,7 @@ def prepare_approver(
     diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: IncrementConfig | None = None,
+    request_id: int | None = None,
 ) -> IncrementApprover:
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
@@ -189,7 +190,7 @@ def prepare_approver(
         token="not-secret",
         openqa_instance=urlparse("http://openqa-instance"),
         accepted=True,
-        request_id=None,
+        request_id=request_id,
         project_base="OBS:PROJECT",
         build_project_suffix="TEST",
         diff_project_suffix=diff_project_suffix,
@@ -220,7 +221,8 @@ def run_approver(
     diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: IncrementConfig | None = None,
-) -> tuple[int, list]:
+    request_id: int | None = None,
+) -> Tuple[int, List]:
     jobs = []
     monkeypatch.setattr(
         openqabot.openqa.openQAInterface,
@@ -235,6 +237,7 @@ def run_approver(
         diff_project_suffix=diff_project_suffix,
         test_env_var=test_env_var,
         config=config,
+        request_id=request_id,
     )
     errors = increment_approver()
     return (errors, jobs)
@@ -454,6 +457,18 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
     messages = [x[-1][0:52] for x in caplog.record_tuples]
     assert "Unable to load config file 'tests/fixtures/config/01" in messages
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
+
+
+def test_handling_specific_request(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_request_from_api(apiurl: str, reqid: int) -> None:
+        assert apiurl == OBS_URL
+        assert reqid == "43"
+
+    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
+    run_approver(caplog, monkeypatch, request_id=43)
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert "Checking specified request 43" in messages
+    assert "Skipping approval, no relevant requests in states new/review/accepted" in messages
 
 
 def test_config_parsing_from_args() -> None:

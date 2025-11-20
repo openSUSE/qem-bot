@@ -90,7 +90,7 @@ class IncrementApprover:
                         break
         else:
             log.debug("Checking specified request %i", args.request_id)
-            relevant_request = osc.core.get_request(OBS_URL, str(args.request_id))
+            relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
         if relevant_request is None:
             log.info("Skipping approval, no relevant requests in states %s", "/".join(relevant_states))
         else:
