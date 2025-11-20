@@ -217,19 +217,17 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     project_path = project.replace(":", ":/")
     url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
-    version = ""
     try:
-        for entry in retried_requests.get(url).json()["data"]:
-            name = entry["name"]
-            if not name.startswith(start):
-                continue
-            parts = filter(lambda x: re.search(r"[.\d]+", x), name[len(start) :].split("-"))
-            version = next(parts, "")
-            if len(version) > 0:
-                return version
+        data = retried_requests.get(url).json()["data"]
+        versions = (
+            next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
+            for entry in data
+            if entry["name"].startswith(start)
+        )
+        return next((v for v in versions if len(v) > 0), "")
     except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
         log.warning("Unable to read product version from '%s': %s", url, e)
-    return version
+    return ""
 
 
 def add_channel_for_build_result(
