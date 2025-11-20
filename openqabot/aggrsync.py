@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import chain
 from logging import getLogger
 
 from .loader.config import read_products
@@ -19,9 +20,9 @@ class AggregateResultsSync(SyncRes):
         self.product = read_products(args.configs)
 
     def __call__(self) -> int:
-        update_setting = []
-        for product in self.product:
-            update_setting += get_aggregate_settings_data(self.token, product)
+        update_setting = list(
+            chain.from_iterable(get_aggregate_settings_data(self.token, product) for product in self.product)
+        )
 
         job_results = {}
         with ThreadPoolExecutor() as executor:
