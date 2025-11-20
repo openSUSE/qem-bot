@@ -86,16 +86,13 @@ class Incidents(BaseConf):
         revs = inc.revisions_with_fallback(arch, ver)
         if not revs:
             return False
-        for job in jobs:
-            if (
-                job["flavor"] == flavor
-                and job["arch"] == arch
-                and job["version"] == ver
-                and job["settings"]["REPOHASH"] == revs
-            ):
-                return True
-
-        return False
+        return any(
+            job["flavor"] == flavor
+            and job["arch"] == arch
+            and job["version"] == ver
+            and job["settings"]["REPOHASH"] == revs
+            for job in jobs
+        )
 
     def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
         return (
