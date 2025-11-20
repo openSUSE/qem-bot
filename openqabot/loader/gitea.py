@@ -430,8 +430,7 @@ def add_packages_from_patchinfo(
         patch_info = read_xml("patch-info")
     else:
         patch_info = osc.util.xml.xml_fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).text)
-    for res in patch_info.findall("package"):
-        incident["packages"].append(res.text)
+    incident["packages"].extend(res.text for res in patch_info.findall("package"))
 
 
 def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
