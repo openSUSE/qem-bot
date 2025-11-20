@@ -229,10 +229,11 @@ class IncrementApprover:
         openqa_url = self.client.url.geturl()
         for results in list_of_results:
             self._evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
-        reasons_to_disapprove = []  # compose list of blocking jobs
-        for result, job_ids in not_ok_jobs.items():
-            job_list = "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
+        reasons_to_disapprove = [
+            f"The following openQA jobs ended up with result '{result}':\n"
+            + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
+            for result, job_ids in not_ok_jobs.items()
+        ]
         return (ok_jobs, reasons_to_disapprove)
 
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
