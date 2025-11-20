@@ -101,9 +101,8 @@ class Aggregate(BaseConf):
     def _get_repo_url(self, inc: Incident, issue: str, issues_arch: str) -> str:
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
-        if product.startswith("openSUSE"):
-            return f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{product}_{version}/"
-        return f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{product}_{version}_{issues_arch}/"
+        base_url = f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{product}_{version}"
+        return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
     def _create_full_post(
         self,
