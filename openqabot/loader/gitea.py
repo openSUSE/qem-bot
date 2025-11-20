@@ -242,11 +242,14 @@ def add_channel_for_build_result(
         return channel
 
     # read product version from scmsync element if possible, e.g. 15.99
-    product_version = ""
-    for scmsync_element in res.findall("scmsync"):
-        (_, product_version) = get_product_name_and_version_from_scmsync(scmsync_element.text)
-        if len(product_version) > 0:
-            break
+    product_version = next(
+        (
+            pv
+            for _, pv in (get_product_name_and_version_from_scmsync(e.text) for e in res.findall("scmsync"))
+            if len(pv) > 0
+        ),
+        "",
+    )
 
     # read product version from directory listing if the project is for a concrete product
     if len(product_name) != 0 and len(product_version) == 0 and product_name in OBS_PRODUCTS:
