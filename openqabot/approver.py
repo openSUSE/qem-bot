@@ -204,7 +204,7 @@ class Approver:
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older jobs are too old to be considered",
                 failed_job_id,
                 inc,
             )
@@ -218,7 +218,7 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",
                 failed_job_id,
                 inc,
             )
