@@ -6,7 +6,7 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, Dict, List, Optional, Union
 
-from openqabot import DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
+from openqabot import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
 from openqabot.errors import NoTestIssues, SameBuildExists
 from openqabot.loader.repohash import merge_repohash
@@ -166,10 +166,13 @@ class Aggregate(BaseConf):
                 if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
                     continue
 
-            self.set_obsoletion(settings)
             full_post["openqa"].update(settings)
             full_post["openqa"]["FLAVOR"] = self.flavor
             full_post["openqa"]["ARCH"] = arch
+            full_post["openqa"]["_DEPRIORITIZEBUILD"] = 1
+
+            if DEPRIORITIZE_LIMIT is not None:
+                full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
 
             for template, issues in test_incidents.items():
                 full_post["openqa"][template] = ",".join(str(x) for x in issues)

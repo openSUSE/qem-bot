@@ -3,8 +3,6 @@
 from abc import ABC, abstractmethod, abstractstaticmethod
 from typing import Any, Dict, List, Optional, Union
 
-from openqabot import DEPRIORITIZE_LIMIT
-
 from .incident import Incident
 
 
@@ -41,10 +39,3 @@ class BaseConf(ABC):
         return any(k.startswith("PUBLIC") for k in self.settings) or any(
             flavor.startswith(s) for s in ("Azure", "EC2", "GCE")
         )
-
-    @staticmethod
-    def set_obsoletion(settings: dict) -> None:
-        if "_OBSOLETE" not in settings:
-            settings["_DEPRIORITIZEBUILD"] = 1
-            if DEPRIORITIZE_LIMIT is not None:
-                settings["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
