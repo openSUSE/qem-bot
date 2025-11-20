@@ -337,12 +337,11 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     #       problems later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering
     #       to actually relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
-    relevant_archs = set()
-    for flavor in flavors:
-        if flavor.startswith(product_prefix):
-            arch = flavor[prefix_len:]
-            if arch in {"x86_64", "aarch64", "ppc64le", "s390x"}:
-                relevant_archs.add(arch)
+    relevant_archs = {
+        flavor[prefix_len:]
+        for flavor in flavors
+        if flavor.startswith(product_prefix) and flavor[prefix_len:] in {"x86_64", "aarch64", "ppc64le", "s390x"}
+    }
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
