@@ -302,14 +302,12 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     if state != "published":
         unpublished_repos.add(channel)
         return
-    for status in res.findall("status"):
-        code = status.get("code")
-        if code == "excluded":
-            continue
-        if code == "succeeded":
-            successful_packages.add(status.get("package"))
-        else:
-            failed_packages.add(status.get("package"))
+    successful_packages.update(
+        status.get("package") for status in res.findall("status") if status.get("code") == "succeeded"
+    )
+    failed_packages.update(
+        status.get("package") for status in res.findall("status") if status.get("code") not in {"excluded", "succeeded"}
+    )
 
 
 def get_multibuild_data(obs_project: str) -> str:
