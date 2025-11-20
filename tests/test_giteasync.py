@@ -254,12 +254,14 @@ def test_extracting_product_name_and_version() -> None:
 
 
 def test_handling_unavailable_build_info(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     monkeypatch.setattr(osc.core, "http_GET", fake_urllib_http_error)
     incident = {}
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
     assert incident["failed_or_unpublished_packages"] == ["bar"]
-    assert "Unable to read build results of project" in caplog.record_tuples[-1][-1]
+    assert "Unable to read build results of project" in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 @responses.activate
