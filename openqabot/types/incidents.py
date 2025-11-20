@@ -45,19 +45,20 @@ class Incidents(BaseConf):
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        ret = {}
-        for flavor, data in config.items():
-            ret[flavor] = {}
-            for key, value in data.items():
-                if key == "issues":
-                    ret[flavor][key] = {
+        return {
+            flavor: {
+                key: (
+                    {
                         template: Incidents.product_version_from_issue_channel(channel)
                         for template, channel in value.items()
                     }
-                else:
-                    ret[flavor][key] = value
-
-        return ret
+                    if key == "issues"
+                    else value
+                )
+                for key, value in data.items()
+            }
+            for flavor, data in config.items()
+        }
 
     @staticmethod
     def _repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
