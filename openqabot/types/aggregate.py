@@ -61,6 +61,19 @@ class Aggregate(BaseConf):
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
+    def _filter_incidents(self, incidents: list[Incident]) -> list[Incident]:
+        valid_incidents = []
+        for i in incidents:
+            if not any((i.livepatch, i.staging)):
+                if self.filter_embargoed(self.flavor) and i.embargoed:
+                    log.debug(
+                        "Incident %s is skipped because filtering embargoed is on and incident has embargoed True",
+                        i.id,
+                    )
+                else:
+                    valid_incidents.append(i)
+        return valid_incidents
+
     def __call__(  # noqa: C901
         self,
         incidents: list[Incident],
@@ -87,21 +100,7 @@ class Aggregate(BaseConf):
             # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
             issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
-            # only testing queue and not livepatch
-            valid_incidents = []
-            for i in incidents:
-                if not any((i.livepatch, i.staging)):
-                    # if filtering embargoed updates is on
-                    if self.filter_embargoed(self.flavor) and i.embargoed:
-                        # we take ONLY non-embargoed updates
-                        log.debug(
-                            "Incident %s is skipped because filtering \
-                                      embargoed is on and incident has embargoed True",
-                            i.id,
-                        )
-                    # if filtering embargoed updates is off we ignoring this field
-                    else:
-                        valid_incidents.append(i)
+            valid_incidents = self._filter_incidents(incidents)
             for issue, template in self.test_issues.items():
                 for inc in valid_incidents:
                     if Repos(template.product, template.version, issues_arch) in inc.channels:
