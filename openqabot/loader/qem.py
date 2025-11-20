@@ -7,6 +7,8 @@ from operator import itemgetter
 from pprint import pformat
 from typing import Any, NamedTuple
 
+import requests
+
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
 from openqabot.types import Data
@@ -191,8 +193,8 @@ def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any)
         retry -= 1
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
-        except Exception:
-            log.exception("")
+        except requests.exceptions.RequestException:
+            log.exception("Request to QEM Dashboard failed")
             return 1
         if ret.status_code == 200:
             log.info("Smelt/Gitea Incidents updated")
@@ -215,8 +217,8 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")
 
 
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
@@ -225,5 +227,5 @@ def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")
