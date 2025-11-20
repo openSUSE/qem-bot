@@ -155,13 +155,10 @@ class Approver:
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
         regex = re.compile(r"@review:acceptable_for:incident_{}:(.+?)(?:$|\s)".format(inc), re.DOTALL)
         try:
-            for comment in self.client.get_job_comments(job_id):
-                sanitized_text = sanitize_comment_text(comment["text"])
-                if regex.search(sanitized_text):
-                    return True
+            comments = self.client.get_job_comments(job_id)
+            return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
         except RequestError:
-            pass
-        return False
+            return False
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
