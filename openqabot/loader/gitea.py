@@ -464,7 +464,7 @@ def make_incident_from_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]
