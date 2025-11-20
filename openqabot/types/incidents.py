@@ -247,22 +247,23 @@ class Incidents(BaseConf):
         full_post["qem"]["withAggregate"] = True
         aggregate_job = data.get("aggregate_job", True)
 
-        if not aggregate_job:
-            pos = set(data.get("aggregate_check_true", []))
-            neg = set(data.get("aggregate_check_false", []))
-
-            if pos and not pos.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if not (neg and pos):
-                full_post["qem"]["withAggregate"] = False
-
         # some arch specific packages doesn't have aggregate tests
         if not self.singlearch.isdisjoint(set(inc.packages)):
             full_post["qem"]["withAggregate"] = False
+
+        def _should_aggregate(data: dict[str, Any], openqa_keys: set[str]) -> bool:
+            pos = set(data.get("aggregate_check_true", []))
+            neg = set(data.get("aggregate_check_false", []))
+
+            if pos and not pos.isdisjoint(openqa_keys):
+                return False
+            if neg and neg.isdisjoint(openqa_keys):
+                return False
+            return neg and pos
+
+        if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
+            full_post["qem"]["withAggregate"] = False
+            log.info("Aggregate not needed for incident %s", inc.id)
 
         delta_prio = data.get("override_priority", 0)
 
