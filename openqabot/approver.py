@@ -120,12 +120,10 @@ class Approver:
         try:
             u_jobs = get_aggregate_settings(inc.inc, self.token)
         except NoResultsError as e:
-            log.info(e)
-
             if any(i.with_aggregate for i in i_jobs):
                 log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
-
+            log.info(e)
             u_jobs = []
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
