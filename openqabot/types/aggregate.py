@@ -74,6 +74,30 @@ class Aggregate(BaseConf):
                     valid_incidents.append(i)
         return valid_incidents
 
+    def _get_test_incidents_and_repos(
+        self, valid_incidents: list[Incident], issues_arch: str
+    ) -> tuple[defaultdict[list], defaultdict[list]]:
+        test_incidents = defaultdict(list)
+        test_repos = defaultdict(list)
+
+        for inc in valid_incidents:
+            for issue, template in self.test_issues.items():
+                if Repos(template.product, template.version, issues_arch) in inc.channels:
+                    test_incidents[issue].append(inc)
+
+        for issue, incs in test_incidents.items():
+            tmpl = issue.replace("ISSUES", "REPOS")
+            for inc in incs:
+                if self.test_issues[issue].product.startswith("openSUSE"):
+                    test_repos[tmpl].append(
+                        f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/",
+                    )
+                else:
+                    test_repos[tmpl].append(
+                        f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/",
+                    )
+        return test_incidents, test_repos
+
     def __call__(  # noqa: C901
         self,
         incidents: list[Incident],
@@ -94,29 +118,11 @@ class Aggregate(BaseConf):
             if ci_url:
                 full_post["openqa"]["__CI_JOB_URL"] = ci_url
 
-            test_incidents = defaultdict(list)
-            test_repos = defaultdict(list)
-
             # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
             issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
             valid_incidents = self._filter_incidents(incidents)
-            for issue, template in self.test_issues.items():
-                for inc in valid_incidents:
-                    if Repos(template.product, template.version, issues_arch) in inc.channels:
-                        test_incidents[issue].append(inc)
-
-            for issue, incs in test_incidents.items():
-                tmpl = issue.replace("ISSUES", "REPOS")
-                for inc in incs:
-                    if self.test_issues[issue].product.startswith("openSUSE"):
-                        test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/",
-                        )
-                    else:
-                        test_repos[tmpl].append(
-                            f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/",
-                        )
+            test_incidents, test_repos = self._get_test_incidents_and_repos(valid_incidents, issues_arch)
 
             full_post["openqa"]["REPOHASH"] = merge_repohash(
                 sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
