@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from logging import getLogger
 from typing import Any
+
+import requests
 
 from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
 from openqabot.errors import NoRepoFoundError
@@ -74,8 +77,8 @@ class Incidents(BaseConf):
                 f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
-        except Exception:
-            log.exception("")
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            log.exception("Failed to get scheduled jobs for incident %s", inc.id)
 
         if not jobs:
             return False
