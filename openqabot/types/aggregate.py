@@ -49,9 +49,7 @@ class Aggregate(BaseConf):
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
         try:
-            return {
-                key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
-            }
+            return {key: ProdVer(*value.split(":")) for key, value in config["test_issues"].items()}
         except KeyError as e:
             raise NoTestIssuesError from e
 
