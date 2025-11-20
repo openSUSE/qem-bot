@@ -49,13 +49,11 @@ class Aggregate(BaseConf):
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
         try:
-            repos = {
+            return {
                 key: ProdVer(value.split(":")[0], value.split(":")[1]) for key, value in config["test_issues"].items()
             }
         except KeyError as e:
             raise NoTestIssuesError from e
-
-        return repos
 
     def __repr__(self) -> str:
         return f"<Aggregate product: {self.product}>"
