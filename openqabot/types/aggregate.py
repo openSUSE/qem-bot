@@ -8,6 +8,8 @@ from itertools import chain
 from logging import getLogger
 from typing import Any, NamedTuple
 
+import requests
+
 from openqabot import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
@@ -192,8 +194,11 @@ class Aggregate(BaseConf):
                 params={"product": self.product, "arch": arch},
                 headers=token,
             )
-        except Exception:
-            log.exception("")
+        except requests.exceptions.RequestException:
+            log.exception("Request to QEM Dashboard failed")
+            old_jobs = None
+        except requests.exceptions.JSONDecodeError:
+            log.exception("Failed to decode JSON response from QEM Dashboard")
             old_jobs = None
 
         old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
