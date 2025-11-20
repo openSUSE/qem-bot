@@ -368,7 +368,7 @@ def test_inc_passed_aggr_without_results(caplog: LogCaptureFixture) -> None:
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS or Gitea" in messages
+    assert "Approving incidents in IBS or Gitea…" in messages
     assert "No aggregate test results found for SUSE:Maintenance:1:100" in messages
     assert "No aggregate test results found for SUSE:Maintenance:2:200" in messages
     assert "No aggregate test results found for SUSE:Maintenance:3:300" in messages
@@ -385,7 +385,7 @@ def test_inc_without_results(caplog: LogCaptureFixture) -> None:
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS or Gitea" in messages
+    assert "Approving incidents in IBS or Gitea…" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance" not in messages
     assert "End of bot run" in messages
