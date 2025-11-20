@@ -88,7 +88,7 @@ class Approver:
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Start approving incidents in IBS or Gitea")
+        log.info("Approving incidents in IBS or Gitea…")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
