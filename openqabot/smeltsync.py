@@ -43,13 +43,13 @@ class SMELTSync:
 
     @staticmethod
     def _is_inreview(rr_number: dict[str, Any]) -> bool:
-        if rr_number["reviewset"]:
+        if rr_number["reviewSet"]:
             return rr_number["status"]["name"] == "review"
         return False
 
     @staticmethod
     def _is_revoked(rr_number: dict[str, Any]) -> bool:
-        if rr_number["reviewset"]:
+        if rr_number["reviewSet"]:
             return rr_number["status"]["name"] == "revoked"
         return False
 
@@ -59,9 +59,9 @@ class SMELTSync:
 
     @staticmethod
     def _has_qam_review(rr_number: dict[str, Any]) -> bool:
-        if not rr_number["reviewset"]:
+        if not rr_number["reviewSet"]:
             return False
-        rr = (r for r in rr_number["reviewset"] if r["assignedByGroup"])
+        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
         review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
         return bool(review) and review[0]["status"]["name"] in {"review", "new"}
 

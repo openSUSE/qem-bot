@@ -40,7 +40,7 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
                                             "node": {
                                                 "requestId": 1000,
                                                 "status": {"name": request.param[2]},
-                                                "reviewset": {
+                                                "reviewSet": {
                                                     "edges": [
                                                         {
                                                             "node": {
