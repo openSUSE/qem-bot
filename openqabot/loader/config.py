@@ -5,7 +5,7 @@ from __future__ import annotations
 from logging import getLogger
 from pathlib import Path
 
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, YAMLError
 
 from openqabot.errors import NoTestIssuesError
 from openqabot.types import Data
@@ -36,8 +36,8 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception:
-            log.exception("")
+        except YAMLError:
+            log.exception("Failed to load YAML file %s", p)
             continue
 
         try:
@@ -114,8 +114,7 @@ def get_onearch(path: Path) -> set[str]:
 
     try:
         data = loader.load(path)
-    except Exception:
-        log.exception("")
+    except (YAMLError, FileNotFoundError):
         return set()
 
     return set(data)
