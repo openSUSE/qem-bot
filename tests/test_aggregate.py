@@ -38,7 +38,7 @@ def test_aggregate_call() -> None:
     config["archs"] = []
     config["test_issues"] = {}
     acc = Aggregate("", None, None, None, config)
-    res = acc(None, None, None)
+    res = acc([], None, None)
     assert res == []
 
 
