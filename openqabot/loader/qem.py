@@ -139,7 +139,7 @@ def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
     if not settings:
         raise NoAggregateResultsError(inc)
 
-    # is string comparsion ... so we need reversed sort
+    # we need a reverse sort due to doing a string comparison
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
