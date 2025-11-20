@@ -7,10 +7,28 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, YAMLError
 
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import create_logger, get_yml_list
+
+
+def _process_config_file(p: Path, loader: YAML, log: Any) -> None:
+    try:
+        data = loader.load(p)
+        log.info("Processing %s", p)
+        if "settings" in data:
+            settings = data["settings"]
+            if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+                apply_pc_tools_image(settings)
+                if "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" not in settings:
+                    log.error("Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from %s", data)
+            if "PUBLIC_CLOUD_PINT_QUERY" in settings:
+                apply_publiccloud_pint_image(settings)
+                if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
+                    log.error("Failed to get PUBLIC_CLOUD_IMAGE_ID from %s", data)
+    except (YAMLError, FileNotFoundError):
+        log.exception("Failed to load YAML file")
 
 
 def main() -> None:
@@ -37,22 +55,7 @@ def main() -> None:
     log.info("Parsing configuration files from %s", args.configs)
     loader = YAML(typ="safe")
     for p in get_yml_list(Path(args.configs)):
-        try:
-            data = loader.load(p)
-            log.info("Processing %s", p)
-            if "settings" in data:
-                settings = data["settings"]
-                if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-                    apply_pc_tools_image(settings)
-                    if "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" not in settings:
-                        log.error("Failed to get PUBLIC_CLOUD_TOOLS_IMAGE_BASE from %s", data)
-                if "PUBLIC_CLOUD_PINT_QUERY" in settings:
-                    apply_publiccloud_pint_image(settings)
-                    if "PUBLIC_CLOUD_IMAGE_ID" not in settings:
-                        log.error("Failed to get PUBLIC_CLOUD_IMAGE_ID from %s", data)
-        except Exception:  # noqa: PERF203
-            log.exception("")
-            continue
+        _process_config_file(p, loader, log)
 
 
 if __name__ == "__main__":
