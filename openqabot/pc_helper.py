@@ -21,10 +21,10 @@ def get_latest_tools_image(query: str) -> str | None:
     """
     # Get the first not-failing item
     build_results = retried_requests.get(query).json()["build_results"]
-    for build in build_results:
-        if build["failed"] == 0:
-            return "publiccloud_tools_{}.qcow2".format(build["build"])
-    return None
+    return next(
+        ("publiccloud_tools_{}.qcow2".format(build["build"]) for build in build_results if build["failed"] == 0),
+        None,
+    )
 
 
 def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
