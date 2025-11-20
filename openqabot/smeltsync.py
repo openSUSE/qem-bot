@@ -70,20 +70,19 @@ class SMELTSync:
         incident = {}
         incident["isActive"] = True
 
-        rr_number = cls._review_rrequest(inc["requestSet"])
-        if rr_number:
-            in_review = cls._is_inreview(rr_number)
-            approved = cls._is_accepted(rr_number)
-            in_review_qam = cls._has_qam_review(rr_number)
-            revoked = cls._is_revoked(rr_number)
-            # beware . this must be last.
-            rr_number = rr_number["requestId"]
-        # no request in requestest --> defaut values
-        else:
-            in_review = False
-            approved = False
-            in_review_qam = False
-            revoked = False
+        in_review = False
+        approved = False
+        in_review_qam = False
+        revoked = False
+        rr_id = None
+
+        rr = cls._review_rrequest(inc["requestSet"])
+        if rr:
+            in_review = cls._is_inreview(rr)
+            approved = cls._is_accepted(rr)
+            in_review_qam = cls._has_qam_review(rr)
+            revoked = cls._is_revoked(rr)
+            rr_id = rr["requestId"]
 
         if approved or revoked:
             incident["isActive"] = False
@@ -95,7 +94,7 @@ class SMELTSync:
         incident["channels"] = [repo["name"] for repo in inc["repositories"]]
         incident["inReview"] = in_review
         incident["approved"] = approved
-        incident["rr_number"] = rr_number
+        incident["rr_number"] = rr_id
         incident["inReviewQAM"] = in_review_qam
         incident["embargoed"] = bool(inc["crd"])
         incident["priority"] = inc["priority"]
