@@ -434,11 +434,16 @@ def add_packages_from_patchinfo(
 
 
 def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
-    for file_info in files:
-        file_name = file_info.get("filename", "").split("/")[-1]
-        raw_url = file_info.get("raw_url")
-        if file_name == "_patchinfo" and raw_url is not None:
-            add_packages_from_patchinfo(incident, token, raw_url, dry=dry)
+    patchinfo_file = next(
+        (
+            file_info
+            for file_info in files
+            if file_info.get("filename", "").split("/")[-1] == "_patchinfo" and file_info.get("raw_url") is not None
+        ),
+        None,
+    )
+    if patchinfo_file:
+        add_packages_from_patchinfo(incident, token, patchinfo_file["raw_url"], dry=dry)
 
 
 def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
