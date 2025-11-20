@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from functools import cache
 from logging import getLogger
+from operator import itemgetter
 from typing import Any
 
 from .utils import retry5 as retried_requests
@@ -108,28 +109,17 @@ def get_recent_pint_image(
     Get the latest one based on 'publishedon'
     """
     name = re.compile(name_regex)
-    if region == "":
-        region = None
-    recentimage = None
 
-    def is_newer(date1: str, date2: str) -> bool:
-        # Checks if date1 is newer than date2. Expected date format: YYYYMMDD
-        # Because for the format, we can do a simple int comparison
-        return int(date1) > int(date2)
-
-    for image in images:
-        # Apply selection criteria: state and region criteria
-        # can be omitted by setting the corresponding variable to None
-        # This is required, because certain public cloud providers
-        # do not make a distinction on e.g. the region
-        # and thus this check is not needed there
-        if name.match(image["name"]) is None:
-            continue
-        if (state is not None) and (image["state"] != state):
-            continue
-        if (region is not None) and (region != image["region"]):
-            continue
-        # Get latest one based on 'publishedon'
-        if recentimage is None or is_newer(image["publishedon"], recentimage["publishedon"]):  # pragma: no branch
-            recentimage = image
-    return recentimage
+    # Apply selection criteria: state and region criteria can be omitted by setting the corresponding variable to None
+    # This is required, because certain public cloud providers do not make a distinction on e.g. the region and thus
+    # this check is not needed there
+    filtered_images = [
+        image
+        for image in images
+        if name.match(image["name"]) is not None
+        and (state is None or image["state"] == state)
+        and (region is None or region == "" or region == image["region"])
+    ]
+    if not filtered_images:
+        return None
+    return max(filtered_images, key=itemgetter("publishedon"))
