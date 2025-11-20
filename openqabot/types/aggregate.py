@@ -87,15 +87,12 @@ class Aggregate(BaseConf):
 
         for issue, incs in test_incidents.items():
             tmpl = issue.replace("ISSUES", "REPOS")
-            for inc in incs:
-                if self.test_issues[issue].product.startswith("openSUSE"):
-                    test_repos[tmpl].append(
-                        f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/",
-                    )
-                else:
-                    test_repos[tmpl].append(
-                        f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/",
-                    )
+            test_repos[tmpl].extend([
+                f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}/"
+                if self.test_issues[issue].product.startswith("openSUSE")
+                else f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{self.test_issues[issue].product}_{self.test_issues[issue].version}_{issues_arch}/"
+                for inc in incs
+            ])
         return test_incidents, test_repos
 
     def __call__(  # noqa: C901
