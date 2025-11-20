@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from collections.abc import Sequence
+from itertools import chain
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
@@ -124,14 +125,13 @@ def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[D
 def get_incident_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_incident_settings(inc, token, all_incidents=False)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
@@ -175,14 +175,13 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
 def get_aggregate_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_aggregate_settings(inc, token)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any) -> int:
