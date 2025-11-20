@@ -411,12 +411,12 @@ def add_comments_and_referenced_build_results(
     *,
     dry: bool,
 ) -> None:
-    for comment in reversed(comments):
-        body = comment["body"]
-        user_name = comment["user"]["username"]
-        if user_name == "autogits_obs_staging_bot":
-            add_build_results(incident, re.findall(r"https://[^ ]*", body), dry=dry)
-            break
+    bot_comment = next(
+        (comment for comment in reversed(comments) if comment["user"]["username"] == "autogits_obs_staging_bot"),
+        None,
+    )
+    if bot_comment:
+        add_build_results(incident, re.findall(r"https://[^ ]*", bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
