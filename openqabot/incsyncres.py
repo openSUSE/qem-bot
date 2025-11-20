@@ -2,14 +2,11 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from concurrent import futures
+from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING
 
 from .loader.qem import get_active_incidents, get_incident_settings_data
 from .syncres import SyncRes
-
-if TYPE_CHECKING:
-    from .types import Data
 
 log = getLogger("bot.incsyncres")
 
@@ -22,10 +19,7 @@ class IncResultsSync(SyncRes):
         self.active = get_active_incidents(self.token)
 
     def __call__(self) -> int:
-        incidents: list[Data] = []
-
-        for inc in self.active:
-            incidents += get_incident_settings_data(self.token, inc)
+        incidents = list(chain.from_iterable(get_incident_settings_data(self.token, inc) for inc in self.active))
 
         full = {}
 
