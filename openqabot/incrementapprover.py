@@ -94,15 +94,13 @@ class IncrementApprover:
                 build_project,
             )
             obs_requests = self._get_obs_request_list(project=build_project, req_state=tuple(relevant_states))
-            relevant_request = next(
-                (
-                    request
-                    for request in sorted(obs_requests, reverse=True)
-                    for review in request.reviews
-                    if review.by_group == OBS_GROUP and review.state in relevant_states
-                ),
-                None,
+            filtered_requests = (
+                request
+                for request in sorted(obs_requests, reverse=True)
+                for review in request.reviews
+                if review.by_group == OBS_GROUP and review.state in relevant_states
             )
+            relevant_request = next(filtered_requests, None)
         else:
             log.debug("Checking specified request %i", args.request_id)
             relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
