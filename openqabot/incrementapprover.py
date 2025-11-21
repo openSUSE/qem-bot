@@ -8,6 +8,7 @@ import tempfile
 from argparse import Namespace
 from collections import defaultdict
 from functools import cache
+from itertools import starmap
 from logging import getLogger
 from pprint import pformat
 from typing import Any, NamedTuple
@@ -216,11 +217,12 @@ class IncrementApprover:
         openqa_url = self.client.url.geturl()
         for results in list_of_results:
             self._evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
-        reasons_to_disapprove = [
-            f"The following openQA jobs ended up with result '{result}':\n"
-            + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            for result, job_ids in not_ok_jobs.items()
-        ]
+
+        def format_job_reasons(result: str, job_ids: set[str]) -> str:
+            job_urls = "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
+            return f"The following openQA jobs ended up with result '{result}':\n{job_urls}"
+
+        reasons_to_disapprove = list(starmap(format_job_reasons, not_ok_jobs.items()))
         return (ok_jobs, reasons_to_disapprove)
 
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
