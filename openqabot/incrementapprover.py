@@ -382,6 +382,8 @@ class IncrementApprover:
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
             "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
+            "_OBSOLETE": "1",
+            "_ONLY_OBSOLETE_SAME_BUILD": "1",
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config.settings)

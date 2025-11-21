@@ -302,7 +302,7 @@ def test_scheduling_with_no_openqa_jobs(
     )
     assert errors == 0, "no errors"
     for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
-        assert {
+        expected_params = {
             "DISTRI": "sle",
             "VERSION": "16.0",
             "FLAVOR": "Online-Increments",
@@ -310,7 +310,10 @@ def test_scheduling_with_no_openqa_jobs(
             "ARCH": arch,
             "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
             "__CI_JOB_URL": ci_job_url,
-        } in jobs, f"{arch} jobs created"
+            "_ONLY_OBSOLETE_SAME_BUILD": "1",
+            "_OBSOLETE": "1",
+        }
+        assert expected_params in jobs, f"{arch} jobs created"
 
 
 def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) -> None:
@@ -326,6 +329,8 @@ def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) 
         "BUILD": "139.1",
         "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "FOO": "bar",
+        "_OBSOLETE": "1",
+        "_ONLY_OBSOLETE_SAME_BUILD": "1",
     }
     for arch in ["x86_64", "aarch64", "ppc64le"]:
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
