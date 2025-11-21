@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from logging import getLogger
-from typing import Any
+from typing import Any, NamedTuple
 
 import requests
 
@@ -24,6 +24,17 @@ from openqabot.utils import retry3 as retried_requests
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
+
+
+class IncidentProcessingContext(NamedTuple):
+    inc: Incident
+    arch: str
+    flavor: str
+    data: dict[str, Any]
+    token: dict[str, str]
+    ci_url: str | None
+    ignore_onetime: bool
+
 
 log = getLogger("bot.types.incidents")
 
@@ -327,6 +338,27 @@ class Incidents(BaseConf):
         full_post["qem"]["settings"] = settings
         return full_post
 
+    def _process_incident_combination(self, context: IncidentProcessingContext) -> dict[str, Any] | None:
+        context.inc.arch_filter = context.data["archs"]
+        try:
+            return self._handle_incident(
+                context.inc,
+                context.arch,
+                context.flavor,
+                context.data,
+                context.token,
+                context.ci_url,
+                ignore_onetime=context.ignore_onetime,
+            )
+        except NoRepoFoundError as e:
+            log.info(
+                "Project %s can't calculate repohash of incident %i: %s .. skipping",
+                context.inc.project,
+                context.inc.id,
+                e,
+            )
+            return None
+
     def __call__(
         self,
         incidents: list[Incident],
@@ -335,30 +367,20 @@ class Incidents(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any] | None]:
-        ret = []
-
-        for flavor, data in self.flavors.items():
-            archs = data["archs"]
-            for arch in archs:
-                for inc in incidents:
-                    inc.arch_filter = archs  # compute repo hash only for configured archs
-                    try:
-                        ret.append(
-                            self._handle_incident(
-                                inc,
-                                arch,
-                                flavor,
-                                data,
-                                token,
-                                ci_url,
-                                ignore_onetime=ignore_onetime,
-                            ),
-                        )
-                    except NoRepoFoundError as e:
-                        log.info(
-                            "Project %s can't calculate repohash of incident %i: %s .. skipping",
-                            inc.project,
-                            inc.id,
-                            e,
-                        )
-        return [r for r in ret if r]
+        results = [
+            self._process_incident_combination(
+                IncidentProcessingContext(
+                    inc=inc,
+                    arch=arch,
+                    flavor=flavor,
+                    data=data,
+                    token=token,
+                    ci_url=ci_url,
+                    ignore_onetime=ignore_onetime,
+                )
+            )
+            for flavor, data in self.flavors.items()
+            for arch in data["archs"]
+            for inc in incidents
+        ]
+        return [r for r in results if r]
