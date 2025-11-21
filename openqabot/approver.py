@@ -36,11 +36,7 @@ log = getLogger("bot.approver")
 
 
 def _mi2str(inc: IncReq) -> str:
-    return (
-        "{}:{}:{}".format(OBS_MAINT_PRJ, str(inc.inc), str(inc.req))
-        if inc.type is None
-        else "{}:{}".format(inc.type, str(inc.inc))
-    )
+    return f"{OBS_MAINT_PRJ}:{inc.inc}:{inc.req}" if inc.type is None else f"{inc.type}:{inc.inc}"
 
 
 def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
@@ -84,7 +80,7 @@ class Approver:
         else:
             self.single_incident = single_incident
             self.all_incidents = False
-        self.token = {"Authorization": "Token {}".format(args.token)}
+        self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
@@ -145,7 +141,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(r"@review:acceptable_for:incident_{}:(.+?)(?:$|\s)".format(inc), re.DOTALL)
+        regex = re.compile(rf"@review:acceptable_for:incident_{inc}:(.+?)(?:$|\s)", re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
             return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
@@ -248,7 +244,7 @@ class Approver:
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(days=OLDEST_APPROVAL_JOB_DAYS)
 
-        regex = re.compile(r"(.*)Maintenance:/{}/(.*)".format(inc))
+        regex = re.compile(rf"(.*)Maintenance:/{inc}/(.*)")
         for job in older_jobs:
             was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
             if was_ok is not None:
@@ -276,7 +272,7 @@ class Approver:
         if self.is_job_passing(job_result):
             return True
         job_id = job_result["job_id"]
-        url = "{}/t{}".format(self.client.url.geturl(), job_id)
+        url = f"{self.client.url.geturl()}/t{job_id}"
         if job_result.get(f"acceptable_for_{inc}"):
             log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
@@ -294,7 +290,7 @@ class Approver:
     def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
         job_results = get_json(api + str(job_aggr.id), headers=self.token)
         if not job_results:
-            msg = "Job setting {} not found for incident {}".format(str(job_aggr.id), str(inc))
+            msg = f"Job setting {job_aggr.id} not found for incident {inc}"
             raise NoResultsError(msg)
         self.mark_jobs_as_acceptable_for_incident(job_results, inc)
         return all(self.is_job_acceptable(inc, api, r) for r in job_results)
@@ -314,10 +310,7 @@ class Approver:
         return res
 
     def approve(self, inc: IncReq) -> bool:
-        msg = "Request accepted for '{}' based on data in {}".format(
-            OBS_GROUP,
-            QEM_DASHBOARD,
-        )
+        msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
         log.info("Accepting review for %s", _mi2str(inc))
         return self.git_approve(inc, msg) if inc.type == "git" else self.osc_approve(inc, msg)
 

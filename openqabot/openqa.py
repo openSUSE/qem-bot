@@ -78,7 +78,7 @@ class openQAInterface:
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         ret = []
         try:
-            ret = self.openqa.openqa_request("GET", "jobs/{}/comments".format(job_id), retries=self.retries)
+            ret = self.openqa.openqa_request("GET", f"jobs/{job_id}/comments", retries=self.retries)
             ret = [{"text": c.get("text", "")} for c in ret]
         except RequestError as e:
             (_, _, status_code, *_) = e.args
@@ -100,10 +100,7 @@ class openQAInterface:
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         ret = None
         try:
-            ret = self.openqa.openqa_request(
-                "GET",
-                "jobs/{}".format(job_id),
-            )["job"]
+            ret = self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
         except RequestError:
             log.exception("")
         return ret
@@ -113,9 +110,7 @@ class openQAInterface:
         ret = {"data": []}
         try:
             ret = self.openqa.openqa_request(
-                "GET",
-                "/tests/{}/ajax?previous_limit={}&next_limit=0".format(job_id, limit),
-                retries=self.retries,
+                "GET", f"/tests/{job_id}/ajax?previous_limit={limit}&next_limit=0", retries=self.retries
             )
         except RequestError:
             log.exception("")
