@@ -126,7 +126,11 @@ class RepoDiff:
 
     def __call__(self) -> int:
         args = self.args
-        diff, count = self.compute_diff(args.repo_a, args.repo_b)
+        try:
+            diff, count = self.compute_diff(args.repo_a, args.repo_b)
+        except FileNotFoundError as e:
+            log.critical("Fake data file not found. Consider generating that with `--dump-data`: %s", e)
+            raise SystemExit from None
         log.debug(
             "Repo %s contains %i packages that are not in repo %s",
             args.repo_b,
