@@ -8,7 +8,14 @@ from typing import Any
 
 import requests
 
-from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+from openqabot import (
+    DOWNLOAD_BASE,
+    DOWNLOAD_MAINTENANCE,
+    GITEA,
+    OBSOLETE_PARAMS,
+    QEM_DASHBOARD,
+    SMELT_URL,
+)
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
@@ -142,8 +149,7 @@ class Incidents(BaseConf):
         full_post["openqa"]["VERSION"] = self.settings["VERSION"]
         full_post["qem"]["version"] = self.settings["VERSION"]
         full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-        full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
-        full_post["openqa"]["_OBSOLETE"] = "1"
+        full_post["openqa"].update(OBSOLETE_PARAMS)
         full_post["openqa"]["INCIDENT_ID"] = inc.id
 
         if ci_url:

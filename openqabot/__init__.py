@@ -35,3 +35,8 @@ GIT_REVIEW_BOT = os.environ.get("GIT_REVIEW_BOT", OBS_GROUP + "-review")
 BUILD_REGEX = (
     "(?P<product>.*)-(?P<version>[^\\-]*?)-(?P<flavor>\\D+[^\\-]*?)-(?P<arch>[^\\-]*?)-Build(?P<build>.*?)\\.spdx.json"
 )
+
+OBSOLETE_PARAMS = {
+    "_OBSOLETE": "1",
+    "_ONLY_OBSOLETE_SAME_BUILD": "1",
+}
