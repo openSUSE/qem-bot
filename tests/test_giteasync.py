@@ -94,7 +94,7 @@ def fake_osc_http_get(url: str) -> etree.ElementTree:
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124")
     if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124:SLES")
-    raise AssertionError("Code tried to query unexpected OSC URL: " + url)
+    raise AssertionError("Code tried to query unexpected OSC URL: " + url)  # pragma: no cover
 
 
 def noop_osc_http_get(_url: str) -> etree.ElementTree:
@@ -125,6 +125,7 @@ def run_gitea_sync(
     *,
     no_build_results: bool = False,
     allow_failures: bool = True,
+    dry: bool = False,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
@@ -136,7 +137,7 @@ def run_gitea_sync(
     monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
     monkeypatch.setattr(openqabot.loader.gitea, "get_multibuild_data", fake_get_multibuild_data)
     args = Namespace(
-        dry=False,
+        dry=dry,
         fake_data=False,
         token="123",
         gitea_token="456",
@@ -147,6 +148,13 @@ def run_gitea_sync(
         pr_number=None,
     )
     assert GiteaSync(args)() == 0
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
+def test_gitea_sync_on_dry_run_does_not_sync(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    run_gitea_sync(caplog, monkeypatch, dry=True)
+    assert "Dry run, nothing synced" in caplog.text
 
 
 @responses.activate
@@ -246,12 +254,14 @@ def test_extracting_product_name_and_version() -> None:
 
 
 def test_handling_unavailable_build_info(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     monkeypatch.setattr(osc.core, "http_GET", fake_urllib_http_error)
     incident = {}
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
     assert incident["failed_or_unpublished_packages"] == ["bar"]
-    assert "Unable to read build results of project" in caplog.record_tuples[-1][-1]
+    assert "Unable to read build results of project" in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 @responses.activate

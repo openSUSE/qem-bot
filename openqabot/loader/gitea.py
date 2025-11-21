@@ -375,7 +375,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                     build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
                 except urllib.error.HTTPError:
                     unavailable_projects.add(obs_project)
-                    log.exception("Unable to read build results of project %s", build_info_url)
+                    log.info("Unable to read build results of project %s, skipping", build_info_url)
                     continue
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
@@ -464,7 +464,7 @@ def make_incident_from_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]

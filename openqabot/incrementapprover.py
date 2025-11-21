@@ -7,6 +7,7 @@ import re
 import tempfile
 from argparse import Namespace
 from collections import defaultdict
+from functools import cache
 from logging import getLogger
 from pprint import pformat
 from typing import Any, NamedTuple
@@ -69,19 +70,19 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(self, config: IncrementConfig) -> osc.core.Request | None:
+    @cache
+    def _find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
             relevant_states.append("accepted")
         if args.request_id is None:
-            build_project = config.build_project()
             log.debug(
                 "Checking for product increment requests to be reviewed by %s on %s",
                 OBS_GROUP,
                 build_project,
             )
-            obs_requests = osc.core.get_request_list(OBS_URL, project=build_project, req_state=relevant_states)
+            obs_requests = self._get_obs_request_list(project=build_project, req_state=tuple(relevant_states))
             relevant_request = None
             for request in sorted(obs_requests, reverse=True):
                 for review in request.reviews:
@@ -144,6 +145,10 @@ class IncrementApprover:
             self._add_packages_for_action_project(action, action.tgt_project, "images", "local", tgt_packages)
             self._add_packages_for_action_project(action, action.src_project, "product", "local", src_packages)
         return RepoDiff.compute_diff_for_packages("source project", src_packages, "target project", tgt_packages)
+
+    @cache
+    def _get_obs_request_list(self, project: str, req_state: tuple) -> list:
+        return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
     def _request_openqa_job_results(
         self,
@@ -428,7 +433,7 @@ class IncrementApprover:
     def __call__(self) -> int:
         error_count = 0
         for config in self.config:
-            request = self._find_request_on_obs(config)
+            request = self._find_request_on_obs(config.build_project())
             error_count += self._process_request_for_config(request, config)
         for request in self.requests_to_approve.values():
             error_count += self._handle_approval(request)
