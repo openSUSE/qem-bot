@@ -18,7 +18,7 @@ from lxml import etree
 
 from openqabot.openqa import openQAInterface
 
-from . import DOWNLOAD_BASE, OBS_GROUP, OBS_URL
+from . import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff
@@ -382,8 +382,7 @@ class IncrementApprover:
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
             "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
-            "_OBSOLETE": "1",
-            "_ONLY_OBSOLETE_SAME_BUILD": "1",
+            **OBSOLETE_PARAMS,
         }
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config.settings)
