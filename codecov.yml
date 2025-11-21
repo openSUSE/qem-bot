@@ -18,4 +18,5 @@ coverage:
           - utils.py
     patch:
       default:
+        target: 100.0
         branches: null
