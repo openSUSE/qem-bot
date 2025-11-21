@@ -3,7 +3,7 @@
 
 import requests
 
-from . import QEM_DASHBOARD
+from .config import QEM_DASHBOARD
 from .utils import retry5 as retried_requests
 
 

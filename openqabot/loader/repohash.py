@@ -9,7 +9,7 @@ import requests
 from lxml import etree
 from requests.exceptions import RetryError
 
-from openqabot import OBS_DOWNLOAD_URL, OBS_PRODUCTS
+from openqabot.config import OBS_DOWNLOAD_URL, OBS_PRODUCTS
 from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry5 as retried_requests
 

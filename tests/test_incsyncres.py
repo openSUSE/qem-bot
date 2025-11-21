@@ -11,7 +11,7 @@ from _pytest.logging import LogCaptureFixture
 
 import openqabot.incsyncres
 import responses
-from openqabot import QEM_DASHBOARD
+from openqabot.config import QEM_DASHBOARD
 from openqabot.incsyncres import IncResultsSync
 
 

@@ -16,7 +16,7 @@ from lxml import etree
 
 import openqabot.loader.gitea
 import responses
-from openqabot import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
+from openqabot.config import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,

@@ -16,9 +16,9 @@ import osc.conf
 import osc.core
 from lxml import etree
 
+from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from openqabot.openqa import openQAInterface
 
-from . import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff

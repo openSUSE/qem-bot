@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 import zstandard
 from lxml import etree
 
-from . import OBS_DOWNLOAD_URL
+from .config import OBS_DOWNLOAD_URL
 from .utils import retry10 as retried_requests
 
 if TYPE_CHECKING:

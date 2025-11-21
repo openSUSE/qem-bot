@@ -11,7 +11,7 @@ from _pytest.logging import LogCaptureFixture
 from openqa_client.exceptions import RequestError
 
 import responses
-from openqabot import QEM_DASHBOARD
+from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
 from responses import matchers

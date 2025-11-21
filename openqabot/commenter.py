@@ -9,9 +9,9 @@ from typing import Any
 import osc.conf
 import osc.core
 
+from openqabot.config import OBS_URL
 from openqabot.errors import NoResultsError
 
-from . import OBS_URL
 from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI

@@ -17,7 +17,7 @@ from _pytest.logging import LogCaptureFixture
 
 import openqabot
 import responses
-from openqabot import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
+from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig

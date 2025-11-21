@@ -10,7 +10,7 @@ from typing import Any, NamedTuple
 
 import requests
 
-from openqabot import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
+from openqabot.config import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
 from openqabot.dashboard import get_json
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash

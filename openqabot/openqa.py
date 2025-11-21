@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
-from . import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+from openqabot.config import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+
 from .errors import PostOpenQAError
 from .loader.qem import update_job
 from .types import Data
