@@ -16,11 +16,11 @@ import osc.conf
 import osc.core
 from openqa_client.exceptions import RequestError
 
+from openqabot.config import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, OLDEST_APPROVAL_JOB_DAYS, QEM_DASHBOARD
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
 
-from . import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, OLDEST_APPROVAL_JOB_DAYS, QEM_DASHBOARD
 from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
     IncReq,

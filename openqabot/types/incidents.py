@@ -8,7 +8,7 @@ from typing import Any
 
 import requests
 
-from openqabot import (
+from openqabot.config import (
     DOWNLOAD_BASE,
     DOWNLOAD_MAINTENANCE,
     GITEA,

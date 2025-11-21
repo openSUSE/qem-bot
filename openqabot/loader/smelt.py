@@ -10,7 +10,7 @@ import urllib3
 import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
-from openqabot import SMELT
+from openqabot.config import SMELT
 from openqabot.utils import retry10 as retried_requests
 from openqabot.utils import walk
 

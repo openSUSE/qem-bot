@@ -12,7 +12,7 @@ from _pytest.logging import LogCaptureFixture
 
 import openqabot.smeltsync
 import responses
-from openqabot import QEM_DASHBOARD, SMELT
+from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
 from responses import matchers
 
