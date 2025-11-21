@@ -94,10 +94,8 @@ class Incidents(BaseConf):
     def _is_scheduled_job(token: dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
-            jobs = retried_requests.get(
-                f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
-                headers=token,
-            ).json()
+            url = f"{QEM_DASHBOARD}api/incident_settings/{inc.id}"
+            jobs = retried_requests.get(url, headers=token).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
             log.exception("Failed to get scheduled jobs for incident %s", inc.id)
 
