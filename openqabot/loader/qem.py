@@ -83,12 +83,12 @@ def get_incidents_approver(token: dict[str, str]) -> list[IncReq]:
 
 
 def get_single_incident(token: dict[str, str], incident_id: int) -> list[IncReq]:
-    incident = get_json("api/incidents/" + str(incident_id), headers=token)
+    incident = get_json(f"api/incidents/{incident_id}", headers=token)
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
 def get_incident_settings(inc: int, token: dict[str, str], *, all_incidents: bool = False) -> list[JobAggr]:
-    settings = get_json("api/incident_settings/" + str(inc), headers=token)
+    settings = get_json(f"api/incident_settings/{inc}", headers=token)
     if not settings:
         raise NoIncidentResultsError(inc)
 
@@ -137,7 +137,7 @@ def get_incident_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]
 
 
 def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
-    settings = get_json("api/update_settings/" + str(inc), headers=token)
+    settings = get_json(f"api/update_settings/{inc}", headers=token)
     if not settings:
         raise NoAggregateResultsError(inc)
 
@@ -223,7 +223,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
 
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     try:
-        result = patch("api/jobs/" + str(job_id), headers=token, json=data)
+        result = patch(f"api/jobs/{job_id}", headers=token, json=data)
         if result.status_code != 200:
             log.error(result.text)
 
