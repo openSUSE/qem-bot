@@ -7,7 +7,6 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 from openqa_client.exceptions import RequestError
 
 import responses
@@ -59,7 +58,7 @@ def test_bool() -> None:
 
 
 @responses.activate
-def test_post_job_failed(caplog: LogCaptureFixture) -> None:
+def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.retries = 0
@@ -75,7 +74,7 @@ def test_post_job_failed(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_osd_rsp")
-def test_post_job_passed(caplog: LogCaptureFixture) -> None:
+def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.post_job({"foo": "bar"})
@@ -89,7 +88,7 @@ def test_post_job_passed(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
-def test_handle_job_not_found(caplog: LogCaptureFixture) -> None:
+def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
     client.handle_job_not_found(42)
     messages = [x[-1] for x in caplog.record_tuples]

@@ -6,7 +6,6 @@ import logging
 
 import pytest
 import requests
-from _pytest.logging import LogCaptureFixture
 from requests import ConnectionError, HTTPError  # noqa: A004
 
 import openqabot.loader.repohash as rp
@@ -67,7 +66,7 @@ def test_get_max_revison_3() -> None:
 
 
 @responses.activate
-def test_get_max_revison_connectionerror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_connectionerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.ConnectionError("Failed"))
 
@@ -79,7 +78,7 @@ def test_get_max_revison_connectionerror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_httperror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_httperror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.HTTPError("Failed"))
 
@@ -90,7 +89,7 @@ def test_get_max_revison_httperror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_xmlerror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid>")
 
@@ -101,7 +100,7 @@ def test_get_max_revison_xmlerror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_empty_xml(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid></invalid>")
 
@@ -110,7 +109,7 @@ def test_get_max_revison_empty_xml(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_exception(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_exception(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(BufferError("other error"))
     with pytest.raises(BufferError):

@@ -7,7 +7,6 @@ from typing import Any, NamedTuple, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot.openqabot
 import responses
@@ -82,7 +81,7 @@ def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed(caplog: LogCaptureFixture) -> None:
+def test_passed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,
@@ -107,7 +106,7 @@ def test_passed(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_dry(caplog: LogCaptureFixture) -> None:
+def test_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=True,
@@ -131,7 +130,7 @@ def test_dry(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
+def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,
@@ -157,7 +156,7 @@ def test_passed_non_osd(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_exception")
-def test_passed_post_osd_failed(caplog: LogCaptureFixture) -> None:
+def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(
         dry=False,
