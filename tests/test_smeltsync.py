@@ -8,7 +8,6 @@ from collections import namedtuple
 from typing import Any
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot.smeltsync
 import responses
@@ -95,7 +94,7 @@ def fake_dashboard_replyback() -> None:
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_sync_qam_inreview(caplog: LogCaptureFixture) -> None:
+def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
@@ -116,7 +115,7 @@ def test_sync_qam_inreview(caplog: LogCaptureFixture) -> None:
 @pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_no_embragoed_and_priority_value(caplog: LogCaptureFixture) -> None:
+def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     assert len(responses.calls) == 2
@@ -135,7 +134,7 @@ def test_no_embragoed_and_priority_value(caplog: LogCaptureFixture) -> None:
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_sync_approved(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0

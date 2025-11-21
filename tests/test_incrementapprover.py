@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 import osc.conf
 import osc.core
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot
 import responses
@@ -170,7 +169,7 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
 
 
 def prepare_approver(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
@@ -213,7 +212,7 @@ def prepare_approver(
 
 
 def run_approver(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
@@ -245,7 +244,9 @@ def run_approver(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_approval_if_there_are_only_ok_openqa_jobs(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
@@ -253,7 +254,7 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, mo
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skipping_if_rescheduling(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch, reschedule=True)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "have passed" not in last_message
@@ -263,7 +264,7 @@ def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: pytest
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
 def test_skipping_with_failing_openqa_jobs_for_one_config(
-    caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     increment_approver = prepare_approver(caplog, monkeypatch)
     increment_approver.config.append(increment_approver.config[0])
@@ -276,7 +277,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_skipping_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
@@ -290,7 +291,7 @@ def test_skipping_with_no_openqa_jobs(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     ci_job_url = "https://some/ci/job/url"
@@ -360,7 +361,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) 
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
@@ -387,7 +388,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_extra_livepatching_builds_based_on_source_report(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(osc.core, "get_repos_of_project", fake_get_repos_of_project)
@@ -409,7 +410,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
-def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skipping_with_pending_openqa_jobs(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -421,7 +422,7 @@ def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatc
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
 def test_listing_not_ok_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
@@ -431,7 +432,7 @@ def test_listing_not_ok_openqa_jobs(
     assert "http://openqa-instance/tests/20" not in last_message
 
 
-def test_config_parsing(caplog: LogCaptureFixture) -> None:
+def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_config")
     path = Path("tests/fixtures/config-increment-approver")
     configs = [*IncrementConfig.from_config_path(path)]
@@ -464,7 +465,7 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
 
 
-def test_handling_specific_request(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_handling_specific_request(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_request_from_api(apiurl: str, reqid: int) -> None:
         assert apiurl == OBS_URL
         assert reqid == "43"

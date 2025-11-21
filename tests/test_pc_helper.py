@@ -4,7 +4,6 @@ import re
 from unittest.mock import patch
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot.pc_helper
 import responses
@@ -16,7 +15,7 @@ from openqabot.pc_helper import (
 )
 
 
-def test_apply_pc_tools_image(caplog: LogCaptureFixture) -> None:
+def test_apply_pc_tools_image(caplog: pytest.LogCaptureFixture) -> None:
     known_return = "test"
     settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"}
     with patch("openqabot.pc_helper.get_latest_tools_image", return_value=known_return):

@@ -7,7 +7,7 @@ from typing import NamedTuple
 from unittest.mock import patch
 from urllib.parse import urlparse
 
-from _pytest.logging import LogCaptureFixture
+import pytest
 
 import responses
 from openqabot.amqp import AMQP
@@ -60,7 +60,7 @@ def test_call() -> None:
 
 
 @responses.activate
-def test_handling_incident(caplog: LogCaptureFixture) -> None:
+def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
     # define response for get_incident_settings_data
     data = [
         {
@@ -119,7 +119,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
+def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 
@@ -127,7 +127,7 @@ def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
     assert "Aggregate build 12345678-9 done" in messages  # currently noop
 
 
-def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
+def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     fake_job_fail = FakeMethod("suse.openqa.job.fail")
     amqp.on_message(
@@ -139,20 +139,20 @@ def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
     assert not caplog.text
 
 
-def test_on_message_no_build(caplog: LogCaptureFixture) -> None:
+def test_on_message_no_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"NOBUILD": "12345678-9"}))
     assert not caplog.text
 
 
-def test_on_message_bad_build(caplog: LogCaptureFixture) -> None:
+def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "badbuild"}))
     assert not caplog.text
 
 
 @responses.activate
-def test_handle_incident_value_error(caplog: LogCaptureFixture) -> None:
+def test_handle_incident_value_error(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     with patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError):
         amqp.handle_incident(33222, {})

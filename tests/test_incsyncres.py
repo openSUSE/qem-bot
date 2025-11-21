@@ -7,7 +7,6 @@ from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot.incsyncres
 import responses
@@ -31,7 +30,7 @@ def get_a_i(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_clone_dry(caplog: LogCaptureFixture) -> None:
+def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -91,7 +90,7 @@ def test_clone_dry(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
+def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -149,7 +148,7 @@ def test_nogroup_dry(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
+def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -209,7 +208,7 @@ def test_devel_fast_dry(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_devel_dry(caplog: LogCaptureFixture) -> None:
+def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
@@ -273,7 +272,7 @@ def test_devel_dry(caplog: LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_i")
-def test_passed_dry(caplog: LogCaptureFixture) -> None:
+def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
 
     # get_incident_settings_data
