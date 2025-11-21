@@ -26,11 +26,14 @@ from .baseconf import BaseConf
 from .incident import Incident
 
 
-class IncidentProcessingContext(NamedTuple):
+class IncContext(NamedTuple):
     inc: Incident
     arch: str
     flavor: str
     data: dict[str, Any]
+
+
+class IncConfig(NamedTuple):
     token: dict[str, str]
     ci_url: str | None
     ignore_onetime: bool
@@ -122,17 +125,13 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # noqa: PLR0911,C901, PLR0917
-        self,
-        inc: Incident,
-        arch: str,
-        flavor: str,
-        data: dict[str, Any],
-        token: dict[str, str],
-        ci_url: str | None,
-        *,
-        ignore_onetime: bool,
+    def _handle_incident(  # noqa: PLR0911,C901
+        self, ctx: IncContext, cfg: IncConfig
     ) -> dict[str, Any] | None:
+        inc = ctx.inc
+        arch = ctx.arch
+        flavor = ctx.flavor
+        data = ctx.data
         if inc.type == "git" and not inc.ongoing:
             log.info(
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
@@ -163,8 +162,8 @@ class Incidents(BaseConf):
         full_post["openqa"].update(OBSOLETE_PARAMS)
         full_post["openqa"]["INCIDENT_ID"] = inc.id
 
-        if ci_url:
-            full_post["openqa"]["__CI_JOB_URL"] = ci_url
+        if cfg.ci_url:
+            full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
         if inc.staging:
             return None
 
@@ -229,7 +228,7 @@ class Incidents(BaseConf):
         if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
             return None
 
-        if not ignore_onetime and self._is_scheduled_job(token, inc, arch, self.settings["VERSION"], flavor):
+        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, self.settings["VERSION"], flavor):
             log.info(
                 "not scheduling: Flavor: %s, version: %s incident: %s, arch: %s  - exists in openQA",
                 flavor,
@@ -338,23 +337,15 @@ class Incidents(BaseConf):
         full_post["qem"]["settings"] = settings
         return full_post
 
-    def _process_incident_combination(self, context: IncidentProcessingContext) -> dict[str, Any] | None:
-        context.inc.arch_filter = context.data["archs"]
+    def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
+        ctx.inc.arch_filter = ctx.data["archs"]
         try:
-            return self._handle_incident(
-                context.inc,
-                context.arch,
-                context.flavor,
-                context.data,
-                context.token,
-                context.ci_url,
-                ignore_onetime=context.ignore_onetime,
-            )
+            return self._handle_incident(ctx, cfg)
         except NoRepoFoundError as e:
             log.info(
                 "Project %s can't calculate repohash of incident %i: %s .. skipping",
-                context.inc.project,
-                context.inc.id,
+                ctx.inc.project,
+                ctx.inc.id,
                 e,
             )
             return None
@@ -367,17 +358,16 @@ class Incidents(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any] | None]:
+        cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
         results = [
-            self._process_incident_combination(
-                IncidentProcessingContext(
+            self._process_inc_context(
+                IncContext(
                     inc=inc,
                     arch=arch,
                     flavor=flavor,
                     data=data,
-                    token=token,
-                    ci_url=ci_url,
-                    ignore_onetime=ignore_onetime,
-                )
+                ),
+                cfg,
             )
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
