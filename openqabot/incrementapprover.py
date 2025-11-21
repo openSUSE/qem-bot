@@ -260,30 +260,36 @@ class IncrementApprover:
         url = f"{build_project_url}/{sub_path}/?jsontable=1"
         log.debug("Checking for '%s' files on %s", config.build_regex, url)
         rows = retried_requests.get(url).json().get("data", [])
-        res = set()
-        for row in rows:
+
+        def get_build_info_from_row(row: dict[str, Any]) -> BuildInfo | None:
             name = row.get("name", "")
             log.debug("Found file: %s", name)
             m = self._get_regex_match(config.build_regex, name)
-            if m:
-                product = m.group("product")
-                if not self._get_regex_match(config.product_regex, product):
-                    continue  # skip if this config doesn't apply to the product
-                distri = config.distri
-                version = m.group("version")
-                arch = m.group("arch")
-                build = m.group("build")
-                try:
-                    flavor = m.group("flavor") + "-Increments"
-                except IndexError:
-                    flavor = default_flavor
-                if (
-                    config.distri in {"any", distri}
-                    and config.flavor in {"any", flavor}
-                    and config.version in {"any", version}
-                ):
-                    res.add(BuildInfo(distri, product, version, flavor, arch, build))
-        return res
+            if not m:
+                return None
+
+            product = m.group("product")
+            if not self._get_regex_match(config.build_regex, name):
+                return None
+
+            distri = config.distri
+            version = m.group("version")
+            arch = m.group("arch")
+            build = m.group("build")
+            try:
+                flavor = m.group("flavor") + "-Increments"
+            except IndexError:
+                flavor = default_flavor
+
+            if (
+                config.distri in {"any", distri}
+                and config.flavor in {"any", flavor}
+                and config.version in {"any", version}
+            ):
+                return BuildInfo(distri, product, version, flavor, arch, build)
+            return None
+
+        return {build_info for row in rows if (build_info := get_build_info_from_row(row))}
 
     def _extra_builds_for_package(
         self,
