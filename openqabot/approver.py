@@ -88,7 +88,7 @@ class Approver:
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Start approving incidents in IBS or Gitea")
+        log.info("Approving incidents in IBS or Gitea…")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
@@ -120,12 +120,10 @@ class Approver:
         try:
             u_jobs = get_aggregate_settings(inc.inc, self.token)
         except NoResultsError as e:
-            log.info(e)
-
             if any(i.with_aggregate for i in i_jobs):
                 log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
-
+            log.info(e)
             u_jobs = []
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
@@ -139,36 +137,25 @@ class Approver:
         # everything is green --> add incident to approve list
         return True
 
-    def mark_job_as_acceptable_for_incident(self, job_id: int, incident_number: int) -> None:
+    def mark_job_as_acceptable_for_incident(self, job_id: int, inc: int) -> None:
         try:
-            patch(
-                "api/jobs/" + str(job_id) + "/remarks?text=acceptable_for&incident_number=" + str(incident_number),
-                headers=self.token,
-            )
+            patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={inc}", headers=self.token)
         except RequestError as e:
-            log.info(
-                "Unable to mark job %i as acceptable for incident %i: %e",
-                job_id,
-                incident_number,
-                e,
-            )
+            log.info("Unable to mark job %i as acceptable for incident %i: %e", job_id, inc, e)
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
         regex = re.compile(r"@review:acceptable_for:incident_{}:(.+?)(?:$|\s)".format(inc), re.DOTALL)
         try:
-            for comment in self.client.get_job_comments(job_id):
-                sanitized_text = sanitize_comment_text(comment["text"])
-                if regex.search(sanitized_text):
-                    return True
+            comments = self.client.get_job_comments(job_id)
+            return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
         except RequestError:
-            pass
-        return False
+            return False
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
         # Check that valid test result is still present in the dashboard (see https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release request
-        qam_data = get_json("api/jobs/" + str(job), headers=self.token)
+        qam_data = get_json(f"api/jobs/{job}", headers=self.token)
         if not qam_data:
             return False
         if "error" in qam_data:
@@ -206,7 +193,7 @@ class Approver:
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older jobs are too old to be considered",
                 failed_job_id,
                 inc,
             )
@@ -220,7 +207,7 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",
                 failed_job_id,
                 inc,
             )
@@ -282,7 +269,7 @@ class Approver:
                 continue
             job_id = job_result["job_id"]
             if self.is_job_marked_acceptable_for_incident(job_id, inc):
-                job_result["acceptable_for_" + str(inc)] = True
+                job_result[f"acceptable_for_{inc}"] = True
                 self.mark_job_as_acceptable_for_incident(job_id, inc)
 
     def is_job_acceptable(self, inc: int, api: str, job_result: dict) -> bool:
@@ -290,7 +277,7 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = "{}/t{}".format(self.client.url.geturl(), job_id)
-        if job_result.get("acceptable_for_" + str(inc)):
+        if job_result.get(f"acceptable_for_{inc}"):
             log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):

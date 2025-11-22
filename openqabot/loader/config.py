@@ -5,7 +5,7 @@ from __future__ import annotations
 from logging import getLogger
 from pathlib import Path
 
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, YAMLError
 
 from openqabot.errors import NoTestIssuesError
 from openqabot.types import Data
@@ -36,8 +36,8 @@ def load_metadata(
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
-        except Exception:
-            log.exception("")
+        except YAMLError:
+            log.exception("Failed to load YAML file %s", p)
             continue
 
         try:
@@ -49,35 +49,33 @@ def load_metadata(
         if "product" not in data:
             log.debug("Skipping invalid config %s", p)
             continue
-
-        if settings:
-            for key in data:
-                if key == "incidents" and not incidents:
+        for key in data:
+            if key == "incidents" and not incidents:
+                ret.append(
+                    Incidents(
+                        data["product"],
+                        data.get("product_repo"),
+                        data.get("product_version"),
+                        settings,
+                        data[key],
+                        extrasettings,
+                    ),
+                )
+            elif key == "aggregate" and not aggregate:
+                try:
                     ret.append(
-                        Incidents(
+                        Aggregate(
                             data["product"],
                             data.get("product_repo"),
                             data.get("product_version"),
                             settings,
                             data[key],
-                            extrasettings,
                         ),
                     )
-                elif key == "aggregate" and not aggregate:
-                    try:
-                        ret.append(
-                            Aggregate(
-                                data["product"],
-                                data.get("product_repo"),
-                                data.get("product_version"),
-                                settings,
-                                data[key],
-                            ),
-                        )
-                    except NoTestIssuesError:
-                        log.warning("No 'test_issues' in %s config", data["product"])
-                else:
-                    continue
+                except NoTestIssuesError:
+                    log.warning("No 'test_issues' in %s config", data["product"])
+            else:
+                continue
     log.debug("Loaded %i incidents/aggregates", len(ret))
     return ret
 
@@ -116,8 +114,7 @@ def get_onearch(path: Path) -> set[str]:
 
     try:
         data = loader.load(path)
-    except Exception:
-        log.exception("")
+    except (YAMLError, FileNotFoundError):
         return set()
 
     return set(data)

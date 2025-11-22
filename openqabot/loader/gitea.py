@@ -217,19 +217,17 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     project_path = project.replace(":", ":/")
     url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
-    version = ""
     try:
-        for entry in retried_requests.get(url).json()["data"]:
-            name = entry["name"]
-            if not name.startswith(start):
-                continue
-            parts = filter(lambda x: re.search(r"[.\d]+", x), name[len(start) :].split("-"))
-            version = next(parts, "")
-            if len(version) > 0:
-                return version
+        data = retried_requests.get(url).json()["data"]
+        versions = (
+            next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
+            for entry in data
+            if entry["name"].startswith(start)
+        )
+        return next((v for v in versions if len(v) > 0), "")
     except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
         log.warning("Unable to read product version from '%s': %s", url, e)
-    return version
+    return ""
 
 
 def add_channel_for_build_result(
@@ -244,11 +242,14 @@ def add_channel_for_build_result(
         return channel
 
     # read product version from scmsync element if possible, e.g. 15.99
-    product_version = ""
-    for scmsync_element in res.findall("scmsync"):
-        (_, product_version) = get_product_name_and_version_from_scmsync(scmsync_element.text)
-        if len(product_version) > 0:
-            break
+    product_version = next(
+        (
+            pv
+            for _, pv in (get_product_name_and_version_from_scmsync(e.text) for e in res.findall("scmsync"))
+            if len(pv) > 0
+        ),
+        "",
+    )
 
     # read product version from directory listing if the project is for a concrete product
     if len(product_name) != 0 and len(product_version) == 0 and product_name in OBS_PRODUCTS:
@@ -301,14 +302,12 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     if state != "published":
         unpublished_repos.add(channel)
         return
-    for status in res.findall("status"):
-        code = status.get("code")
-        if code == "excluded":
-            continue
-        if code == "succeeded":
-            successful_packages.add(status.get("package"))
-        else:
-            failed_packages.add(status.get("package"))
+    successful_packages.update(
+        status.get("package") for status in res.findall("status") if status.get("code") == "succeeded"
+    )
+    failed_packages.update(
+        status.get("package") for status in res.findall("status") if status.get("code") not in {"excluded", "succeeded"}
+    )
 
 
 def get_multibuild_data(obs_project: str) -> str:
@@ -338,12 +337,11 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     #       problems later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering
     #       to actually relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
-    relevant_archs = set()
-    for flavor in flavors:
-        if flavor.startswith(product_prefix):
-            arch = flavor[prefix_len:]
-            if arch in {"x86_64", "aarch64", "ppc64le", "s390x"}:
-                relevant_archs.add(arch)
+    relevant_archs = {
+        flavor[prefix_len:]
+        for flavor in flavors
+        if flavor.startswith(product_prefix) and flavor[prefix_len:] in {"x86_64", "aarch64", "ppc64le", "s390x"}
+    }
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
@@ -375,7 +373,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                     build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
                 except urllib.error.HTTPError:
                     unavailable_projects.add(obs_project)
-                    log.exception("Unable to read build results of project %s", build_info_url)
+                    log.info("Unable to read build results of project %s, skipping", build_info_url)
                     continue
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
@@ -413,12 +411,12 @@ def add_comments_and_referenced_build_results(
     *,
     dry: bool,
 ) -> None:
-    for comment in reversed(comments):
-        body = comment["body"]
-        user_name = comment["user"]["username"]
-        if user_name == "autogits_obs_staging_bot":
-            add_build_results(incident, re.findall(r"https://[^ ]*", body), dry=dry)
-            break
+    bot_comment = next(
+        (comment for comment in reversed(comments) if comment["user"]["username"] == "autogits_obs_staging_bot"),
+        None,
+    )
+    if bot_comment:
+        add_build_results(incident, re.findall(r"https://[^ ]*", bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
@@ -432,16 +430,20 @@ def add_packages_from_patchinfo(
         patch_info = read_xml("patch-info")
     else:
         patch_info = osc.util.xml.xml_fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).text)
-    for res in patch_info.findall("package"):
-        incident["packages"].append(res.text)
+    incident["packages"].extend(res.text for res in patch_info.findall("package"))
 
 
 def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
-    for file_info in files:
-        file_name = file_info.get("filename", "").split("/")[-1]
-        raw_url = file_info.get("raw_url")
-        if file_name == "_patchinfo" and raw_url is not None:
-            add_packages_from_patchinfo(incident, token, raw_url, dry=dry)
+    patchinfo_file = next(
+        (
+            file_info
+            for file_info in files
+            if file_info.get("filename", "").split("/")[-1] == "_patchinfo" and file_info.get("raw_url") is not None
+        ),
+        None,
+    )
+    if patchinfo_file:
+        add_packages_from_patchinfo(incident, token, patchinfo_file["raw_url"], dry=dry)
 
 
 def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
@@ -464,7 +466,7 @@ def make_incident_from_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.info("Getting info about PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Getting info about PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]
