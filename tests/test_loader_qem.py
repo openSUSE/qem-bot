@@ -1,8 +1,10 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from openqabot.loader.qem import (
     LoaderQemError,
@@ -16,6 +18,9 @@ from openqabot.loader.qem import (
     get_incidents,
     get_incidents_approver,
     get_single_incident,
+    post_job,
+    update_incidents,
+    update_job,
 )
 
 
@@ -239,3 +244,121 @@ def test_get_aggregate_settings(mock_json: MagicMock) -> None:
     assert len(res) == 1
     assert res[0].id == 1
     assert res[0].aggregate
+
+
+@patch("openqabot.loader.qem.patch")
+def test_update_incidents_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_patch.return_value = mock_response
+
+    res = update_incidents({}, {})
+    assert res == 0
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == "INFO"
+    assert "Smelt/Gitea Incidents updated" in caplog.records[0].message
+
+
+def test_update_incidents_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    with patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException):
+        res = update_incidents({}, {})
+    assert res == 1
+    assert len(caplog.records) == 1
+    assert caplog.records[0].levelname == "ERROR"
+    assert "Request to QEM Dashboard failed" in caplog.records[0].message
+
+
+@patch("openqabot.loader.qem.patch")
+def test_update_incidents_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    mock_response.text = '{"error":"Permission denied"}'
+    mock_patch.return_value = mock_response
+
+    res = update_incidents({}, {})
+    assert res == 2
+    assert len(caplog.records) == 2
+    assert caplog.records[0].levelname == "ERROR"
+    assert "Smelt/Gitea Incidents were not synced to dashboard: error 403" in caplog.records[0].message
+    assert caplog.records[1].levelname == "ERROR"
+    assert '{"error":"Permission denied"}' in caplog.records[1].message
+
+
+@patch("openqabot.loader.qem.patch")
+def test_update_incidents_unsuccessful_with_error_text(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    mock_response.text = '{"error":"Permission denied"}'
+    mock_patch.return_value = mock_response
+
+    res = update_incidents({}, {})
+    assert res == 2
+    assert len(caplog.records) == 2
+    assert caplog.records[0].levelname == "ERROR"
+    assert "Smelt/Gitea Incidents were not synced to dashboard: error 403" in caplog.records[0].message
+    assert caplog.records[1].levelname == "ERROR"
+    assert '{"error":"Permission denied"}' in caplog.records[1].message
+
+
+@patch("openqabot.loader.qem.put")
+def test_post_job_success(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_put.return_value = mock_response
+
+    post_job({}, {})
+    assert "error" not in caplog.text
+
+
+@patch("openqabot.loader.qem.put")
+def test_post_job_unsuccessful(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "Error message"
+    mock_put.return_value = mock_response
+
+    post_job({}, {})
+    assert "Error message" in caplog.text
+
+
+def test_post_job_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    with patch("openqabot.loader.qem.put", side_effect=requests.exceptions.RequestException):
+        post_job({}, {})
+    assert "Request to QEM Dashboard failed" in caplog.text
+
+
+@patch("openqabot.loader.qem.patch")
+def test_update_job_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_patch.return_value = mock_response
+
+    update_job({}, 1, {})
+    assert "error" not in caplog.text
+
+
+@patch("openqabot.loader.qem.patch")
+def test_update_job_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "Error message"
+    mock_patch.return_value = mock_response
+
+    update_job({}, 1, {})
+    assert "Error message" in caplog.text
+
+
+def test_update_job_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    with patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException):
+        update_job({}, 1, {})
+    assert "Request to QEM Dashboard failed" in caplog.text
