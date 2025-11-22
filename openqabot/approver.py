@@ -88,7 +88,7 @@ class Approver:
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Start approving incidents in IBS or Gitea")
+        log.info("Approving incidents in IBS or Gitea…")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
@@ -120,12 +120,10 @@ class Approver:
         try:
             u_jobs = get_aggregate_settings(inc.inc, self.token)
         except NoResultsError as e:
-            log.info(e)
-
             if any(i.with_aggregate for i in i_jobs):
                 log.info("No aggregate test results found for %s", _mi2str(inc))
                 return False
-
+            log.info(e)
             u_jobs = []
 
         if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
@@ -157,13 +155,10 @@ class Approver:
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
         regex = re.compile(r"@review:acceptable_for:incident_{}:(.+?)(?:$|\s)".format(inc), re.DOTALL)
         try:
-            for comment in self.client.get_job_comments(job_id):
-                sanitized_text = sanitize_comment_text(comment["text"])
-                if regex.search(sanitized_text):
-                    return True
+            comments = self.client.get_job_comments(job_id)
+            return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
         except RequestError:
-            pass
-        return False
+            return False
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
@@ -206,7 +201,7 @@ class Approver:
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older jobs are too old to be considered",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older jobs are too old to be considered",
                 failed_job_id,
                 inc,
             )
@@ -220,7 +215,7 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s because: Older passing jobs do not have update under test",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",
                 failed_job_id,
                 inc,
             )

@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -10,20 +9,7 @@ import pytest
 
 import responses
 from openqabot.utils import get_yml_list, normalize_results, retry3, walk
-
-log = logging.getLogger(__name__)
-# responses versions older than
-# https://github.com/getsentry/responses/releases/tag/0.17.0
-# do not have "registries" so we need to skip on older versions
-has_registries = False
-try:
-    from responses import registries
-
-    has_registries = True
-except ImportError as e:
-    import logging
-
-    log.info("%s: Likely older python version", e)
+from responses import registries
 
 
 def test_normalize_results() -> None:
@@ -101,21 +87,19 @@ def test_walk(data: list[Any] | dict[str, Any], result: list[Any] | dict[str, An
     assert result == ret
 
 
-if has_registries:
+@responses.activate(registry=registries.OrderedRegistry)
+def test_retry3() -> None:
+    _ = responses.add(responses.GET, "http://host.some", status=503)
+    _ = responses.add(responses.GET, "http://host.some", status=503)
+    rsp3 = responses.add(responses.GET, "http://host.some", status=200)
+    rsp4 = responses.add(responses.GET, "http://host.some", status=404)
 
-    @responses.activate(registry=registries.OrderedRegistry)
-    def test_retry3() -> None:
-        _ = responses.add(responses.GET, "http://host.some", status=503)
-        _ = responses.add(responses.GET, "http://host.some", status=503)
-        rsp3 = responses.add(responses.GET, "http://host.some", status=200)
-        rsp4 = responses.add(responses.GET, "http://host.some", status=404)
-
-        req = retry3.get("http://host.some")
-        assert req.status_code == 200
-        assert rsp3.call_count == 1
-        req = retry3.get("http://host.some")
-        assert req.status_code == 404
-        assert rsp4.call_count == 1
+    req = retry3.get("http://host.some")
+    assert req.status_code == 200
+    assert rsp3.call_count == 1
+    req = retry3.get("http://host.some")
+    assert req.status_code == 404
+    assert rsp4.call_count == 1
 
 
 def test_get_yml_list_single_file_yml(tmp_path: Path) -> None:

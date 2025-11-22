@@ -1,10 +1,13 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from collections.abc import Sequence
+from itertools import chain
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
 from typing import Any, NamedTuple
+
+import requests
 
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
@@ -124,14 +127,13 @@ def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[D
 def get_incident_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_incident_settings(inc, token, all_incidents=False)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
@@ -139,7 +141,7 @@ def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
     if not settings:
         raise NoAggregateResultsError(inc)
 
-    # is string comparsion ... so we need reversed sort
+    # we need a reverse sort due to doing a string comparison
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
@@ -175,14 +177,13 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
 def get_aggregate_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_aggregate_settings(inc, token)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any) -> int:
@@ -192,8 +193,8 @@ def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any)
         retry -= 1
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
-        except Exception:
-            log.exception("")
+        except requests.exceptions.RequestException:
+            log.exception("Request to QEM Dashboard failed")
             return 1
         if ret.status_code == 200:
             log.info("Smelt/Gitea Incidents updated")
@@ -216,8 +217,8 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")
 
 
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
@@ -226,5 +227,5 @@ def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")

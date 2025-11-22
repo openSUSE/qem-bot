@@ -208,14 +208,13 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
     # Inc 3 part needs aggregates
     # Inc 4 dont need aggregates
 
-    class NosettingsResultsError(NoResultsError):
+    class NoSettingsResultsError(NoResultsError):
         def __init__(self) -> None:
             super().__init__("No results for settings")
 
     def f_inc_settins(inc: int, _token: str, **_kwargs: Any) -> list[JobAggr]:
         if "inc" in request.param:
-            msg = "No results for settings"
-            raise NoResultsError(msg)
+            raise NoSettingsResultsError
         results = {
             1: [JobAggr(i, aggregate=False, with_aggregate=True) for i in range(1000, 1010)],
             2: [JobAggr(i, aggregate=False, with_aggregate=True) for i in range(2000, 2010)],
@@ -233,8 +232,7 @@ def fake_qem(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) ->
 
     def f_aggr_settings(inc: int, _token: str) -> list[JobAggr]:
         if "aggr" in request.param:
-            msg = "No results for settings"
-            raise NoResultsError(msg)
+            raise NoSettingsResultsError
         results = {
             5: [],
             4: [],
@@ -370,7 +368,7 @@ def test_inc_passed_aggr_without_results(caplog: LogCaptureFixture) -> None:
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS or Gitea" in messages
+    assert "Approving incidents in IBS or Gitea…" in messages
     assert "No aggregate test results found for SUSE:Maintenance:1:100" in messages
     assert "No aggregate test results found for SUSE:Maintenance:2:200" in messages
     assert "No aggregate test results found for SUSE:Maintenance:3:300" in messages
@@ -387,7 +385,7 @@ def test_inc_without_results(caplog: LogCaptureFixture) -> None:
     assert approver() == 0
     assert len(caplog.records) >= 1, "we rely on log messages in tests"
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Start approving incidents in IBS or Gitea" in messages
+    assert "Approving incidents in IBS or Gitea…" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance" not in messages
     assert "End of bot run" in messages
