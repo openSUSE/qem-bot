@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from _pytest.logging import LogCaptureFixture
+import pytest
 
 from openqabot.loader.config import get_onearch, load_metadata, read_products
 from openqabot.types import Data
@@ -21,7 +21,7 @@ def test_singlearch_error() -> None:
     assert result == set()
 
 
-def test_load_metadata_aggregate(caplog: LogCaptureFixture) -> None:
+def test_load_metadata_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     result = load_metadata(__root__, aggregate=False, incidents=True, extrasettings=set())
 
@@ -32,7 +32,7 @@ def test_load_metadata_aggregate(caplog: LogCaptureFixture) -> None:
     assert "No 'test_issues' in BAD15SP3 config" in messages
 
 
-def test_load_metadata_aggregate_file(caplog: LogCaptureFixture) -> None:
+def test_load_metadata_aggregate_file(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     file_path = Path(__file__).parent / "fixtures/config/05_normal.yml"
     result = load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
@@ -40,7 +40,7 @@ def test_load_metadata_aggregate_file(caplog: LogCaptureFixture) -> None:
     assert "<Aggregate product: SOME15SP3>" in str(result[0])
 
 
-def test_load_metadata_incidents(caplog: LogCaptureFixture) -> None:
+def test_load_metadata_incidents(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
     result = load_metadata(__root__, aggregate=True, incidents=False, extrasettings=set())
@@ -51,7 +51,7 @@ def test_load_metadata_incidents(caplog: LogCaptureFixture) -> None:
     assert "Skipping invalid config" in messages[0]
 
 
-def test_load_metadata_all(caplog: LogCaptureFixture) -> None:
+def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
     result = load_metadata(__root__, aggregate=False, incidents=False, extrasettings=set())
@@ -65,7 +65,7 @@ def test_load_metadata_all(caplog: LogCaptureFixture) -> None:
     assert "No 'test_issues' in BAD15SP3 config" in messages
 
 
-def test_read_products(caplog: LogCaptureFixture) -> None:
+def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
     result = read_products(__root__)
@@ -102,7 +102,7 @@ def test_read_products(caplog: LogCaptureFixture) -> None:
     assert any(x.endswith("with no 'DISTRI' settings") for x in messages)
 
 
-def test_read_products_file(caplog: LogCaptureFixture) -> None:
+def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
     result = read_products(Path(__file__).parent / "fixtures/config/05_normal.yml")

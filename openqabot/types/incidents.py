@@ -2,10 +2,20 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from logging import getLogger
 from typing import Any
 
-from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+import requests
+
+from openqabot.config import (
+    DOWNLOAD_BASE,
+    DOWNLOAD_MAINTENANCE,
+    GITEA,
+    OBSOLETE_PARAMS,
+    QEM_DASHBOARD,
+    SMELT_URL,
+)
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
@@ -45,19 +55,20 @@ class Incidents(BaseConf):
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        ret = {}
-        for flavor, data in config.items():
-            ret[flavor] = {}
-            for key, value in data.items():
-                if key == "issues":
-                    ret[flavor][key] = {
+        return {
+            flavor: {
+                key: (
+                    {
                         template: Incidents.product_version_from_issue_channel(channel)
                         for template, channel in value.items()
                     }
-                else:
-                    ret[flavor][key] = value
-
-        return ret
+                    if key == "issues"
+                    else value
+                )
+                for key, value in data.items()
+            }
+            for flavor, data in config.items()
+        }
 
     @staticmethod
     def _repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
@@ -73,8 +84,8 @@ class Incidents(BaseConf):
                 f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
                 headers=token,
             ).json()
-        except Exception:
-            log.exception("")
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            log.exception("Failed to get scheduled jobs for incident %s", inc.id)
 
         if not jobs:
             return False
@@ -85,16 +96,13 @@ class Incidents(BaseConf):
         revs = inc.revisions_with_fallback(arch, ver)
         if not revs:
             return False
-        for job in jobs:
-            if (
-                job["flavor"] == flavor
-                and job["arch"] == arch
-                and job["version"] == ver
-                and job["settings"]["REPOHASH"] == revs
-            ):
-                return True
-
-        return False
+        return any(
+            job["flavor"] == flavor
+            and job["arch"] == arch
+            and job["version"] == ver
+            and job["settings"]["REPOHASH"] == revs
+            for job in jobs
+        )
 
     def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
         return (
@@ -141,8 +149,7 @@ class Incidents(BaseConf):
         full_post["openqa"]["VERSION"] = self.settings["VERSION"]
         full_post["qem"]["version"] = self.settings["VERSION"]
         full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-        full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
-        full_post["openqa"]["_OBSOLETE"] = "1"
+        full_post["openqa"].update(OBSOLETE_PARAMS)
         full_post["openqa"]["INCIDENT_ID"] = inc.id
 
         if ci_url:
@@ -246,22 +253,23 @@ class Incidents(BaseConf):
         full_post["qem"]["withAggregate"] = True
         aggregate_job = data.get("aggregate_job", True)
 
-        if not aggregate_job:
-            pos = set(data.get("aggregate_check_true", []))
-            neg = set(data.get("aggregate_check_false", []))
-
-            if pos and not pos.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if not (neg and pos):
-                full_post["qem"]["withAggregate"] = False
-
         # some arch specific packages doesn't have aggregate tests
         if not self.singlearch.isdisjoint(set(inc.packages)):
             full_post["qem"]["withAggregate"] = False
+
+        def _should_aggregate(data: dict[str, Any], openqa_keys: set[str]) -> bool:
+            pos = set(data.get("aggregate_check_true", []))
+            neg = set(data.get("aggregate_check_false", []))
+
+            if pos and not pos.isdisjoint(openqa_keys):
+                return False
+            if neg and neg.isdisjoint(openqa_keys):
+                return False
+            return neg and pos
+
+        if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
+            full_post["qem"]["withAggregate"] = False
+            log.info("Aggregate not needed for incident %s", inc.id)
 
         delta_prio = data.get("override_priority", 0)
 

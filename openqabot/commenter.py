@@ -9,9 +9,9 @@ from typing import Any
 import osc.conf
 import osc.core
 
+from openqabot.config import OBS_URL
 from openqabot.errors import NoResultsError
 
-from . import OBS_URL
 from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
@@ -47,15 +47,16 @@ class Commenter:
                 continue
 
             state = "none"
-            if any(j["status"] in ("running") for j in i_jobs + u_jobs):
+            all_jobs = i_jobs + u_jobs
+            if any(j["status"] == "running" for j in all_jobs):
                 log.info("%s needs to wait a bit longer", inc)
-            elif any(j["status"] not in {"passed", "softfailed"} for j in i_jobs + u_jobs):
+            elif any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
                 log.info("There is a failed job for %s", inc)
                 state = "failed"
             else:
                 state = "passed"
 
-            msg = self.summarize_message(i_jobs + u_jobs)
+            msg = self.summarize_message(all_jobs)
             self.osc_comment(inc, msg, state)
 
         return 0

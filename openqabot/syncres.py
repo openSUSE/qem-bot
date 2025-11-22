@@ -6,7 +6,7 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any
 
-from . import ALLOW_DEVELOPMENT_GROUPS
+from .config import ALLOW_DEVELOPMENT_GROUPS
 from .loader.qem import post_job
 from .openqa import openQAInterface
 from .types import Data
