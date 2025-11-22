@@ -17,7 +17,7 @@ tidy:
 
 .PHONY: only-test-with-coverage
 only-test-with-coverage:
-	python3 -m pytest -v --cov --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
+	python3 -m pytest -v --cov --cov-branch --cov-fail-under=90 --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
 
