@@ -13,11 +13,10 @@ from urllib.parse import urlparse
 import osc.conf
 import osc.core
 import pytest
-from _pytest.logging import LogCaptureFixture
 
 import openqabot
 import responses
-from openqabot import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
+from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
@@ -134,20 +133,18 @@ def fake_get_repos_of_project(url: str, prj: str) -> List[Repo]:
     assert url == OBS_URL
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST":
         return [Repo("images", "local")]
-    if prj == "SUSE:Products:SLE-Product-SLES:16.0":
-        return [Repo("product", "local")]
-    return []
+    # example for "SUSE:Products:SLE-Product-SLES:16.0":
+    return [Repo("product", "local")]
 
 
 def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) -> List[str]:
     assert url == OBS_URL
-    if package != "000productcompose:sles_aarch64" or arch != "local":
-        return []
+    assert package == "000productcompose:sles_aarch64"
+    assert arch == "local"
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "images":
         return ["SLES-16.0-aarch64-Build160.4-Source.report", "foo"]
-    if prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
-        return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
-    return []
+    # example for prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
+    return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
 
 
 def fake_get_binary_file(  # noqa: PLR0917
@@ -157,8 +154,8 @@ def fake_get_binary_file(  # noqa: PLR0917
     assert package == "000productcompose:sles_aarch64"
     assert arch == "local"
     assert repo in {"images", "product"}
-    if filename == "SLES-16.0-aarch64-Build160.4-Source.report":
-        Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
+    assert filename == "SLES-16.0-aarch64-Build160.4-Source.report"
+    Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
 
 
 def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str) -> None:
@@ -170,7 +167,7 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
 
 
 def prepare_approver(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
@@ -213,7 +210,7 @@ def prepare_approver(
 
 
 def run_approver(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
@@ -245,7 +242,9 @@ def run_approver(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_approval_if_there_are_only_ok_openqa_jobs(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     run_approver(caplog, monkeypatch)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
@@ -253,7 +252,7 @@ def test_approval_if_there_are_only_ok_openqa_jobs(caplog: LogCaptureFixture, mo
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skipping_if_rescheduling(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch, reschedule=True)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "have passed" not in last_message
@@ -263,7 +262,7 @@ def test_skipping_if_rescheduling(caplog: LogCaptureFixture, monkeypatch: pytest
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
 def test_skipping_with_failing_openqa_jobs_for_one_config(
-    caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     increment_approver = prepare_approver(caplog, monkeypatch)
     increment_approver.config.append(increment_approver.config[0])
@@ -276,7 +275,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_skipping_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
@@ -290,7 +289,7 @@ def test_skipping_with_no_openqa_jobs(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     ci_job_url = "https://some/ci/job/url"
@@ -302,7 +301,7 @@ def test_scheduling_with_no_openqa_jobs(
     )
     assert errors == 0, "no errors"
     for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
-        assert {
+        expected_params = {
             "DISTRI": "sle",
             "VERSION": "16.0",
             "FLAVOR": "Online-Increments",
@@ -310,7 +309,10 @@ def test_scheduling_with_no_openqa_jobs(
             "ARCH": arch,
             "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
             "__CI_JOB_URL": ci_job_url,
-        } in jobs, f"{arch} jobs created"
+            "_ONLY_OBSOLETE_SAME_BUILD": "1",
+            "_OBSOLETE": "1",
+        }
+        assert expected_params in jobs, f"{arch} jobs created"
 
 
 def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) -> None:
@@ -326,6 +328,8 @@ def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) 
         "BUILD": "139.1",
         "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "FOO": "bar",
+        "_OBSOLETE": "1",
+        "_ONLY_OBSOLETE_SAME_BUILD": "1",
     }
     for arch in ["x86_64", "aarch64", "ppc64le"]:
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
@@ -355,7 +359,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: List, messages: List) 
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
@@ -382,7 +386,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 @responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_extra_livepatching_builds_based_on_source_report(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(osc.core, "get_repos_of_project", fake_get_repos_of_project)
@@ -404,7 +408,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
-def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_skipping_with_pending_openqa_jobs(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
@@ -416,7 +420,7 @@ def test_skipping_with_pending_openqa_jobs(caplog: LogCaptureFixture, monkeypatc
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
 def test_listing_not_ok_openqa_jobs(
-    caplog: LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     run_approver(caplog, monkeypatch)
@@ -426,7 +430,7 @@ def test_listing_not_ok_openqa_jobs(
     assert "http://openqa-instance/tests/20" not in last_message
 
 
-def test_config_parsing(caplog: LogCaptureFixture) -> None:
+def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_config")
     path = Path("tests/fixtures/config-increment-approver")
     configs = [*IncrementConfig.from_config_path(path)]
@@ -459,7 +463,7 @@ def test_config_parsing(caplog: LogCaptureFixture) -> None:
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
 
 
-def test_handling_specific_request(caplog: LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_handling_specific_request(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_request_from_api(apiurl: str, reqid: int) -> None:
         assert apiurl == OBS_URL
         assert reqid == "43"

@@ -7,6 +7,8 @@ import re
 import tempfile
 from argparse import Namespace
 from collections import defaultdict
+from functools import cache
+from itertools import starmap
 from logging import getLogger
 from pprint import pformat
 from typing import Any, NamedTuple
@@ -15,9 +17,9 @@ import osc.conf
 import osc.core
 from lxml import etree
 
+from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from openqabot.openqa import openQAInterface
 
-from . import DOWNLOAD_BASE, OBS_GROUP, OBS_URL
 from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff
@@ -62,32 +64,33 @@ class ApprovalStatus(NamedTuple):
 class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
         self.args = args
-        self.token = {"Authorization": "Token {}".format(args.token)}
+        self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
         self.package_diff = {}
         self.requests_to_approve = {}
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def _find_request_on_obs(self, config: IncrementConfig) -> osc.core.Request | None:
+    @cache
+    def _find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
             relevant_states.append("accepted")
         if args.request_id is None:
-            build_project = config.build_project()
             log.debug(
                 "Checking for product increment requests to be reviewed by %s on %s",
                 OBS_GROUP,
                 build_project,
             )
-            obs_requests = osc.core.get_request_list(OBS_URL, project=build_project, req_state=relevant_states)
-            relevant_request = None
-            for request in sorted(obs_requests, reverse=True):
-                for review in request.reviews:
-                    if review.by_group == OBS_GROUP and review.state in relevant_states:
-                        relevant_request = request
-                        break
+            obs_requests = self._get_obs_request_list(project=build_project, req_state=tuple(relevant_states))
+            filtered_requests = (
+                request
+                for request in sorted(obs_requests, reverse=True)
+                for review in request.reviews
+                if review.by_group == OBS_GROUP and review.state in relevant_states
+            )
+            relevant_request = next(filtered_requests, None)
         else:
             log.debug("Checking specified request %i", args.request_id)
             relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
@@ -145,6 +148,10 @@ class IncrementApprover:
             self._add_packages_for_action_project(action, action.src_project, "product", "local", src_packages)
         return RepoDiff.compute_diff_for_packages("source project", src_packages, "target project", tgt_packages)
 
+    @cache
+    def _get_obs_request_list(self, project: str, req_state: tuple) -> list:
+        return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
+
     def _request_openqa_job_results(
         self,
         build_info: BuildInfo,
@@ -171,7 +178,7 @@ class IncrementApprover:
         build_info: BuildInfo,
         params: list[dict[str, str]],
     ) -> bool | None:
-        actual_states = set(next((res.keys() for res in results), []))
+        actual_states = set(results[0].keys()) if results else set()
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
@@ -210,10 +217,12 @@ class IncrementApprover:
         openqa_url = self.client.url.geturl()
         for results in list_of_results:
             self._evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
-        reasons_to_disapprove = []  # compose list of blocking jobs
-        for result, job_ids in not_ok_jobs.items():
-            job_list = "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            reasons_to_disapprove.append(f"The following openQA jobs ended up with result '{result}':\n{job_list}")
+
+        def format_job_reasons(result: str, job_ids: set[str]) -> str:
+            job_urls = "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
+            return f"The following openQA jobs ended up with result '{result}':\n{job_urls}"
+
+        reasons_to_disapprove = list(starmap(format_job_reasons, not_ok_jobs.items()))
         return (ok_jobs, reasons_to_disapprove)
 
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
@@ -240,30 +249,36 @@ class IncrementApprover:
         url = f"{build_project_url}/{sub_path}/?jsontable=1"
         log.debug("Checking for '%s' files on %s", config.build_regex, url)
         rows = retried_requests.get(url).json().get("data", [])
-        res = set()
-        for row in rows:
+
+        def get_build_info_from_row(row: dict[str, Any]) -> BuildInfo | None:
             name = row.get("name", "")
             log.debug("Found file: %s", name)
             m = re.search(config.build_regex, name)
-            if m:
-                product = m.group("product")
-                if not re.search(config.product_regex, product):
-                    continue  # skip if this config doesn't apply to the product
-                distri = config.distri
-                version = m.group("version")
-                arch = m.group("arch")
-                build = m.group("build")
-                try:
-                    flavor = m.group("flavor") + "-Increments"
-                except IndexError:
-                    flavor = default_flavor
-                if (
-                    config.distri in {"any", distri}
-                    and config.flavor in {"any", flavor}
-                    and config.version in {"any", version}
-                ):
-                    res.add(BuildInfo(distri, product, version, flavor, arch, build))
-        return res
+            if not m:
+                return None
+
+            product = m.group("product")
+            if not re.search(config.product_regex, product):
+                return None
+
+            distri = config.distri
+            version = m.group("version")
+            arch = m.group("arch")
+            build = m.group("build")
+            try:
+                flavor = m.group("flavor") + "-Increments"
+            except IndexError:
+                flavor = default_flavor
+
+            if (
+                config.distri in {"any", distri}
+                and config.flavor in {"any", flavor}
+                and config.version in {"any", version}
+            ):
+                return BuildInfo(distri, product, version, flavor, arch, build)
+            return None
+
+        return {build_info for row in rows if (build_info := get_build_info_from_row(row)) is not None}
 
     def _extra_builds_for_package(
         self,
@@ -360,6 +375,7 @@ class IncrementApprover:
             "BUILD": build_info.build,
             "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
         }
+        base_params.update(OBSOLETE_PARAMS)
         IncrementApprover._populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config.settings)
         extra_params = []
@@ -428,7 +444,7 @@ class IncrementApprover:
     def __call__(self) -> int:
         error_count = 0
         for config in self.config:
-            request = self._find_request_on_obs(config)
+            request = self._find_request_on_obs(config.build_project())
             error_count += self._process_request_for_config(request, config)
         for request in self.requests_to_approve.values():
             error_count += self._handle_approval(request)

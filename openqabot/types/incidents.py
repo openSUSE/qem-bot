@@ -2,10 +2,20 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from logging import getLogger
-from typing import Any
+from typing import Any, NamedTuple
 
-from openqabot import DOWNLOAD_BASE, DOWNLOAD_MAINTENANCE, GITEA, QEM_DASHBOARD, SMELT_URL
+import requests
+
+from openqabot.config import (
+    DOWNLOAD_BASE,
+    DOWNLOAD_MAINTENANCE,
+    GITEA,
+    OBSOLETE_PARAMS,
+    QEM_DASHBOARD,
+    SMELT_URL,
+)
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
@@ -14,6 +24,20 @@ from openqabot.utils import retry3 as retried_requests
 from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
+
+
+class IncContext(NamedTuple):
+    inc: Incident
+    arch: str
+    flavor: str
+    data: dict[str, Any]
+
+
+class IncConfig(NamedTuple):
+    token: dict[str, str]
+    ci_url: str | None
+    ignore_onetime: bool
+
 
 log = getLogger("bot.types.incidents")
 
@@ -45,19 +69,20 @@ class Incidents(BaseConf):
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        ret = {}
-        for flavor, data in config.items():
-            ret[flavor] = {}
-            for key, value in data.items():
-                if key == "issues":
-                    ret[flavor][key] = {
+        return {
+            flavor: {
+                key: (
+                    {
                         template: Incidents.product_version_from_issue_channel(channel)
                         for template, channel in value.items()
                     }
-                else:
-                    ret[flavor][key] = value
-
-        return ret
+                    if key == "issues"
+                    else value
+                )
+                for key, value in data.items()
+            }
+            for flavor, data in config.items()
+        }
 
     @staticmethod
     def _repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
@@ -69,12 +94,10 @@ class Incidents(BaseConf):
     def _is_scheduled_job(token: dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
-            jobs = retried_requests.get(
-                f"{QEM_DASHBOARD}api/incident_settings/{inc.id}",
-                headers=token,
-            ).json()
-        except Exception:
-            log.exception("")
+            url = f"{QEM_DASHBOARD}api/incident_settings/{inc.id}"
+            jobs = retried_requests.get(url, headers=token).json()
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            log.exception("Failed to get scheduled jobs for incident %s", inc.id)
 
         if not jobs:
             return False
@@ -85,16 +108,13 @@ class Incidents(BaseConf):
         revs = inc.revisions_with_fallback(arch, ver)
         if not revs:
             return False
-        for job in jobs:
-            if (
-                job["flavor"] == flavor
-                and job["arch"] == arch
-                and job["version"] == ver
-                and job["settings"]["REPOHASH"] == revs
-            ):
-                return True
-
-        return False
+        return any(
+            job["flavor"] == flavor
+            and job["arch"] == arch
+            and job["version"] == ver
+            and job["settings"]["REPOHASH"] == revs
+            for job in jobs
+        )
 
     def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
         return (
@@ -103,17 +123,13 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _handle_incident(  # noqa: PLR0911,C901, PLR0917
-        self,
-        inc: Incident,
-        arch: str,
-        flavor: str,
-        data: dict[str, Any],
-        token: dict[str, str],
-        ci_url: str | None,
-        *,
-        ignore_onetime: bool,
+    def _handle_incident(  # noqa: PLR0911,C901
+        self, ctx: IncContext, cfg: IncConfig
     ) -> dict[str, Any] | None:
+        inc = ctx.inc
+        arch = ctx.arch
+        flavor = ctx.flavor
+        data = ctx.data
         if inc.type == "git" and not inc.ongoing:
             log.info(
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
@@ -141,12 +157,11 @@ class Incidents(BaseConf):
         full_post["openqa"]["VERSION"] = self.settings["VERSION"]
         full_post["qem"]["version"] = self.settings["VERSION"]
         full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-        full_post["openqa"]["_ONLY_OBSOLETE_SAME_BUILD"] = "1"
-        full_post["openqa"]["_OBSOLETE"] = "1"
+        full_post["openqa"].update(OBSOLETE_PARAMS)
         full_post["openqa"]["INCIDENT_ID"] = inc.id
 
-        if ci_url:
-            full_post["openqa"]["__CI_JOB_URL"] = ci_url
+        if cfg.ci_url:
+            full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
         if inc.staging:
             return None
 
@@ -211,7 +226,7 @@ class Incidents(BaseConf):
         if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
             return None
 
-        if not ignore_onetime and self._is_scheduled_job(token, inc, arch, self.settings["VERSION"], flavor):
+        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, self.settings["VERSION"], flavor):
             log.info(
                 "not scheduling: Flavor: %s, version: %s incident: %s, arch: %s  - exists in openQA",
                 flavor,
@@ -246,22 +261,23 @@ class Incidents(BaseConf):
         full_post["qem"]["withAggregate"] = True
         aggregate_job = data.get("aggregate_job", True)
 
-        if not aggregate_job:
-            pos = set(data.get("aggregate_check_true", []))
-            neg = set(data.get("aggregate_check_false", []))
-
-            if pos and not pos.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if neg and neg.isdisjoint(full_post["openqa"].keys()):
-                full_post["qem"]["withAggregate"] = False
-                log.info("Aggregate not needed for incident %s", inc.id)
-            if not (neg and pos):
-                full_post["qem"]["withAggregate"] = False
-
         # some arch specific packages doesn't have aggregate tests
         if not self.singlearch.isdisjoint(set(inc.packages)):
             full_post["qem"]["withAggregate"] = False
+
+        def _should_aggregate(data: dict[str, Any], openqa_keys: set[str]) -> bool:
+            pos = set(data.get("aggregate_check_true", []))
+            neg = set(data.get("aggregate_check_false", []))
+
+            if pos and not pos.isdisjoint(openqa_keys):
+                return False
+            if neg and neg.isdisjoint(openqa_keys):
+                return False
+            return neg and pos
+
+        if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
+            full_post["qem"]["withAggregate"] = False
+            log.info("Aggregate not needed for incident %s", inc.id)
 
         delta_prio = data.get("override_priority", 0)
 
@@ -319,6 +335,19 @@ class Incidents(BaseConf):
         full_post["qem"]["settings"] = settings
         return full_post
 
+    def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
+        ctx.inc.arch_filter = ctx.data["archs"]
+        try:
+            return self._handle_incident(ctx, cfg)
+        except NoRepoFoundError as e:
+            log.info(
+                "Project %s can't calculate repohash of incident %i: %s .. skipping",
+                ctx.inc.project,
+                ctx.inc.id,
+                e,
+            )
+            return None
+
     def __call__(
         self,
         incidents: list[Incident],
@@ -327,30 +356,19 @@ class Incidents(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any] | None]:
-        ret = []
-
-        for flavor, data in self.flavors.items():
-            archs = data["archs"]
-            for arch in archs:
-                for inc in incidents:
-                    inc.arch_filter = archs  # compute repo hash only for configured archs
-                    try:
-                        ret.append(
-                            self._handle_incident(
-                                inc,
-                                arch,
-                                flavor,
-                                data,
-                                token,
-                                ci_url,
-                                ignore_onetime=ignore_onetime,
-                            ),
-                        )
-                    except NoRepoFoundError as e:
-                        log.info(
-                            "Project %s can't calculate repohash of incident %i: %s .. skipping",
-                            inc.project,
-                            inc.id,
-                            e,
-                        )
-        return [r for r in ret if r]
+        cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
+        results = [
+            self._process_inc_context(
+                IncContext(
+                    inc=inc,
+                    arch=arch,
+                    flavor=flavor,
+                    data=data,
+                ),
+                cfg,
+            )
+            for flavor, data in self.flavors.items()
+            for arch in data["archs"]
+            for inc in incidents
+        ]
+        return [r for r in results if r]

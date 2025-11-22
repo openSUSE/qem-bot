@@ -9,9 +9,9 @@ from typing import Any
 import osc.conf
 import osc.core
 
+from openqabot.config import OBS_URL
 from openqabot.errors import NoResultsError
 
-from . import OBS_URL
 from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
@@ -23,7 +23,7 @@ log = getLogger("bot.commenter")
 class Commenter:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
-        self.token = {"Authorization": "Token {}".format(args.token)}
+        self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
         self.incidents = get_incidents(self.token)
         osc.conf.get_config(override_apiurl=OBS_URL)
@@ -47,15 +47,16 @@ class Commenter:
                 continue
 
             state = "none"
-            if any(j["status"] in ("running") for j in i_jobs + u_jobs):
+            all_jobs = i_jobs + u_jobs
+            if any(j["status"] == "running" for j in all_jobs):
                 log.info("%s needs to wait a bit longer", inc)
-            elif any(j["status"] not in {"passed", "softfailed"} for j in i_jobs + u_jobs):
+            elif any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
                 log.info("There is a failed job for %s", inc)
                 state = "failed"
             else:
                 state = "passed"
 
-            msg = self.summarize_message(i_jobs + u_jobs)
+            msg = self.summarize_message(all_jobs)
             self.osc_comment(inc, msg, state)
 
         return 0
@@ -76,7 +77,7 @@ class Commenter:
         info = {}
         info["state"] = state
         for key in inc.revisions:
-            info["revision_{}_{}".format(key.version, key.arch)] = inc.revisions[key]
+            info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
 
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
@@ -114,7 +115,7 @@ class Commenter:
                 # workaround for experiments of some QAM devs
                 log.warning("group missing in %s", job["job_id"])
                 continue
-            gl = "{!s}@{!s}".format(Commenter.emd(job["job_group"]), Commenter.emd(job["flavor"]))
+            gl = f"{Commenter.escape_for_markdown(job['job_group'])}@{Commenter.escape_for_markdown(job['flavor'])}"
             if gl not in groups:
                 groupurl = osc.core.makeurl(
                     self.client.openqa.baseurl,
@@ -128,7 +129,7 @@ class Commenter:
                     },
                 )
                 groups[gl] = {
-                    "title": "__Group [{!s}]({!s})__\n".format(gl, groupurl),
+                    "title": f"__Group [{gl}]({groupurl})__\n",
                     "passed": 0,
                     "unfinished": 0,
                     "failed": [],
@@ -163,7 +164,7 @@ class Commenter:
         return msg.rstrip("\n")
 
     @staticmethod
-    def emd(string: str) -> str:
+    def escape_for_markdown(string: str) -> str:
         return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:

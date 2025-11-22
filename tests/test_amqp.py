@@ -7,11 +7,11 @@ from typing import NamedTuple
 from unittest.mock import patch
 from urllib.parse import urlparse
 
-from _pytest.logging import LogCaptureFixture
+import pytest
 
 import responses
-from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
+from openqabot.config import QEM_DASHBOARD
 
 
 class Namespace(NamedTuple):
@@ -60,7 +60,7 @@ def test_call() -> None:
 
 
 @responses.activate
-def test_handling_incident(caplog: LogCaptureFixture) -> None:
+def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
     # define response for get_incident_settings_data
     data = [
         {
@@ -119,7 +119,7 @@ def test_handling_incident(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
+def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 
@@ -127,7 +127,7 @@ def test_handling_aggregate(caplog: LogCaptureFixture) -> None:
     assert "Aggregate build 12345678-9 done" in messages  # currently noop
 
 
-def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
+def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     fake_job_fail = FakeMethod("suse.openqa.job.fail")
     amqp.on_message(
@@ -139,20 +139,20 @@ def test_on_message_bad_routing_key(caplog: LogCaptureFixture) -> None:
     assert not caplog.text
 
 
-def test_on_message_no_build(caplog: LogCaptureFixture) -> None:
+def test_on_message_no_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"NOBUILD": "12345678-9"}))
     assert not caplog.text
 
 
-def test_on_message_bad_build(caplog: LogCaptureFixture) -> None:
+def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "badbuild"}))
     assert not caplog.text
 
 
 @responses.activate
-def test_handle_incident_value_error(caplog: LogCaptureFixture) -> None:
+def test_handle_incident_value_error(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     with patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError):
         amqp.handle_incident(33222, {})
@@ -165,36 +165,62 @@ def test_handle_incident_updates_dashboard_entry() -> None:
         patch("openqabot.amqp.get_incident_settings_data", return_value=[0]),
         patch("openqabot.amqp.compare_incident_data", return_value=True),
         patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0]),
-        patch("openqabot.amqp.AMQP._update_dashboard_entry", return_value=True) as update_dashboard_entry_mock,
+        patch("openqabot.amqp.AMQP._fetch_openqa_results", return_value=True) as fetch_openqa_results_mock,
     ):
         amqp.handle_incident(42, {})
-        update_dashboard_entry_mock.assert_called()
+        fetch_openqa_results_mock.assert_called()
 
 
-def test_update_dashboard_entry_calls_post_result() -> None:
+def test_fetch_openqa_results_calls_post_result() -> None:
     job = {"id": 42}
     r = {"job_id": 42}
     message = job
     with (
         patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
-        patch("openqabot.syncres.SyncRes.normalize_data", return_value=r),
+        patch("openqabot.amqp.AMQP._normalize_data", return_value=r) as normalize_data_mock,
         patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]) as get_jobs_mock,
     ):
-        amqp._update_dashboard_entry(job, {}, {"id": 43})  # noqa: SLF001
-        post_result_mock.assert_not_called()
-        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
-        post_result_mock.assert_called_once()
+        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+        post_result_mock.assert_called_once_with(r)
+        normalize_data_mock.assert_called_once_with({}, job)
+        get_jobs_mock.assert_called_once_with({})
+
+
+def test_fetch_openqa_results_unfiltered() -> None:
+    job = {"id": 42}
+    message = job
     with (
         patch("openqabot.amqp.AMQP.filter_jobs", return_value=False),
-        patch("openqabot.syncres.SyncRes.normalize_data", return_value=r),
         patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
     ):
-        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
+        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
         post_result_mock.assert_not_called()
+
+
+def test_fetch_openqa_results_key_error() -> None:
+    job = {"id": 42}
+    message = job
     with (
         patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
-        patch("openqabot.syncres.SyncRes.normalize_data", side_effect=KeyError),
+        patch("openqabot.amqp.AMQP._normalize_data", return_value=None),
         patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
     ):
-        amqp._update_dashboard_entry(job, {}, message)  # noqa: SLF001
+        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+        post_result_mock.assert_not_called()
+
+
+def test_fetch_openqa_results_no_id() -> None:
+    job = {"id": 42}
+    r = {"job_id": 42}
+    message = {"id": 43}
+    with (
+        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
+        patch("openqabot.amqp.AMQP._normalize_data", return_value=r),
+        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
+        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
+    ):
+        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
         post_result_mock.assert_not_called()

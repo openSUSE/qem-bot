@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import chain
 from logging import getLogger
 
 from .loader.config import read_products
@@ -19,9 +20,9 @@ class AggregateResultsSync(SyncRes):
         self.product = read_products(args.configs)
 
     def __call__(self) -> int:
-        update_setting = []
-        for product in self.product:
-            update_setting += get_aggregate_settings_data(self.token, product)
+        update_setting = list(
+            chain.from_iterable(get_aggregate_settings_data(self.token, product) for product in self.product)
+        )
 
         job_results = {}
         with ThreadPoolExecutor() as executor:
@@ -29,18 +30,12 @@ class AggregateResultsSync(SyncRes):
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
 
-        results = []
-        for key, values in job_results.items():
-            for v in values:
-                if not self.filter_jobs(v):
-                    continue
-
-                try:
-                    r = self.normalize_data(key, v)
-                except KeyError:
-                    continue
-
-                results.append(r)
+        results = [
+            r
+            for key, values in job_results.items()
+            for v in values
+            if self.filter_jobs(v) and (r := self._normalize_data(key, v))
+        ]
 
         for r in results:
             self.post_result(r)

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
+from unittest.mock import patch
 
 import pytest
 import requests
-from _pytest.logging import LogCaptureFixture
 from requests import ConnectionError, HTTPError  # noqa: A004
 
 import openqabot.loader.repohash as rp
@@ -67,7 +67,7 @@ def test_get_max_revison_3() -> None:
 
 
 @responses.activate
-def test_get_max_revison_connectionerror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_connectionerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.ConnectionError("Failed"))
 
@@ -79,7 +79,7 @@ def test_get_max_revison_connectionerror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_httperror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_httperror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.HTTPError("Failed"))
 
@@ -90,7 +90,7 @@ def test_get_max_revison_httperror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_xmlerror(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid>")
 
@@ -101,7 +101,7 @@ def test_get_max_revison_xmlerror(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_empty_xml(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid></invalid>")
 
@@ -110,11 +110,29 @@ def test_get_max_revison_empty_xml(caplog: LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_exception(caplog: LogCaptureFixture) -> None:
+def test_get_max_revison_exception(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(BufferError("other error"))
     with pytest.raises(BufferError):
         rp.get_max_revision(repos, arch, PROJECT)
+
+
+@responses.activate
+def test_get_max_revison_slfo_product_not_in_obs_products(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
+    repos = [("SLFO-Module", "1.1.99")]
+    arch = "x86_64"
+    project = "SLFO"
+
+    with (
+        patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SomeProduct"),
+        patch("openqabot.loader.repohash.OBS_PRODUCTS", new_callable=set),
+        patch("openqabot.loader.repohash.gitea.compute_repo_url"),
+    ):
+        ret = rp.get_max_revision(repos, arch, project)
+
+    assert ret == 0
+    assert "skipping repo '1.1.99' as product 'SomeProduct' is not considered" in caplog.text
 
 
 def test_merge_repohash() -> None:
