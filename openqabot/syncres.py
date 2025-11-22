@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 
 from argparse import Namespace
 from logging import getLogger
@@ -40,6 +41,12 @@ class SyncRes:
         ret["build"] = data.build
 
         return ret
+
+    def _normalize_data(self, key: Data, job: dict[str, Any]) -> dict[str, Any] | None:
+        try:
+            return self.normalize_data(key, job)
+        except KeyError:
+            return None
 
     def _is_in_devel_group(self, data: Data) -> bool:
         return not ALLOW_DEVELOPMENT_GROUPS and (
