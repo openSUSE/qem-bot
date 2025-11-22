@@ -28,17 +28,12 @@ class IncResultsSync(SyncRes):
             for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()
 
-        results = []
-        for key, value in full.items():
-            for v in value:
-                if not self.filter_jobs(v):
-                    continue
-                try:
-                    r = self.normalize_data(key, v)
-                except KeyError:  # pragma: no cover
-                    continue
-
-                results.append(r)
+        results = [
+            r
+            for key, value in full.items()
+            for v in value
+            if self.filter_jobs(v) and (r := self._normalize_data(key, v))
+        ]
 
         for r in results:
             self.post_result(r)
