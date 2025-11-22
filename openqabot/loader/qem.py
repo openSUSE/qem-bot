@@ -1,10 +1,13 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 from collections.abc import Sequence
+from itertools import chain
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
 from typing import Any, NamedTuple
+
+import requests
 
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
@@ -80,12 +83,12 @@ def get_incidents_approver(token: dict[str, str]) -> list[IncReq]:
 
 
 def get_single_incident(token: dict[str, str], incident_id: int) -> list[IncReq]:
-    incident = get_json("api/incidents/" + str(incident_id), headers=token)
+    incident = get_json(f"api/incidents/{incident_id}", headers=token)
     return [IncReq(incident["number"], incident["rr_number"])]
 
 
 def get_incident_settings(inc: int, token: dict[str, str], *, all_incidents: bool = False) -> list[JobAggr]:
-    settings = get_json("api/incident_settings/" + str(inc), headers=token)
+    settings = get_json(f"api/incident_settings/{inc}", headers=token)
     if not settings:
         raise NoIncidentResultsError(inc)
 
@@ -124,22 +127,21 @@ def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[D
 def get_incident_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_incident_settings(inc, token, all_incidents=False)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
-    settings = get_json("api/update_settings/" + str(inc), headers=token)
+    settings = get_json(f"api/update_settings/{inc}", headers=token)
     if not settings:
         raise NoAggregateResultsError(inc)
 
-    # is string comparsion ... so we need reversed sort
+    # we need a reverse sort due to doing a string comparison
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
     # use all data from day (some jobs have set onetime=True)
     # which causes need to use data from both runs
@@ -175,14 +177,13 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
 def get_aggregate_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
     settings = get_aggregate_settings(inc, token)
 
-    ret = []
+    all_data = []
     for job_aggr in settings:
         data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
-        ret += data
         if "error" in data:
             raise ValueError(data["error"])
-
-    return ret
+        all_data.append(data)
+    return list(chain.from_iterable(all_data))
 
 
 def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any) -> int:
@@ -192,8 +193,8 @@ def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any)
         retry -= 1
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
-        except Exception:
-            log.exception("")
+        except requests.exceptions.RequestException:
+            log.exception("Request to QEM Dashboard failed")
             return 1
         if ret.status_code == 200:
             log.info("Smelt/Gitea Incidents updated")
@@ -216,15 +217,15 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")
 
 
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     try:
-        result = patch("api/jobs/" + str(job_id), headers=token, json=data)
+        result = patch(f"api/jobs/{job_id}", headers=token, json=data)
         if result.status_code != 200:
             log.error(result.text)
 
-    except Exception:
-        log.exception("")
+    except requests.exceptions.RequestException:
+        log.exception("Request to QEM Dashboard failed")

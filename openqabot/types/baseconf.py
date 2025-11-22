@@ -31,11 +31,11 @@ class BaseConf(ABC):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
-        pass
+        pass  # pragma: no cover
 
     @abstractstaticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        pass
+        pass  # pragma: no cover
 
     def filter_embargoed(self, flavor: str) -> bool:
         return any(k.startswith("PUBLIC") for k in self.settings) or any(

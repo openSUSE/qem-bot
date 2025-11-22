@@ -3,13 +3,15 @@
 import logging
 import re
 from typing import NamedTuple
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
 from _pytest.logging import LogCaptureFixture
+from openqa_client.exceptions import RequestError
 
 import responses
-from openqabot import QEM_DASHBOARD
+from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
 from responses import matchers
@@ -66,6 +68,9 @@ def test_post_job_failed(caplog: LogCaptureFixture) -> None:
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
+    error = RequestError("POST", "no.where", "500", "no text")
+    with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
+        client.post_job({"foo": "bar"})
 
 
 @responses.activate
@@ -92,3 +97,12 @@ def test_handle_job_not_found(caplog: LogCaptureFixture) -> None:
     assert len(responses.calls) == 1
     assert "Job 42 not found in openQA, marking as obsolete on dashboard" in messages
     assert "job not found" in messages  # the 404 fixture is supposed to match
+
+
+def test_get_methods_handle_errors_gracefully() -> None:
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    error = RequestError("GET", "no.where", "500", "no text")
+    with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
+        assert client.get_job_comments(42) == []
+        assert not client.get_single_job(42)
+        assert client.get_older_jobs(42, 0) == {"data": []}

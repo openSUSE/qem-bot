@@ -10,7 +10,7 @@ from pathlib import Path
 
 from ruamel.yaml import YAML
 
-from openqabot import OBS_DOWNLOAD_URL
+from openqabot.config import OBS_DOWNLOAD_URL
 from openqabot.utils import get_yml_list
 
 log = getLogger("bot.increment_config")

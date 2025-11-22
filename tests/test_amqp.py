@@ -10,8 +10,8 @@ from urllib.parse import urlparse
 from _pytest.logging import LogCaptureFixture
 
 import responses
-from openqabot import QEM_DASHBOARD
 from openqabot.amqp import AMQP
+from openqabot.config import QEM_DASHBOARD
 
 
 class Namespace(NamedTuple):

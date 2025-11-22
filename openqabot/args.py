@@ -4,7 +4,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import AMQP_URL, BUILD_REGEX, OBS_GROUP
+from .config import AMQP_URL, BUILD_REGEX, OBS_GROUP
 
 
 def do_full_schedule(args: Namespace) -> int:
