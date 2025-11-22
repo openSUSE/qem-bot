@@ -53,13 +53,7 @@ def get_incidents(token: dict[str, str]) -> list[Incident]:
     if "error" in incidents:
         raise LoaderQemError(incidents)
 
-    xs = []
-    for i in incidents:
-        incident = Incident.create(i)
-        if incident:
-            xs.append(incident)
-
-    return xs
+    return [incident for i in incidents if (incident := Incident.create(i))]
 
 
 def get_active_incidents(token: dict[str, str]) -> Sequence[int]:
