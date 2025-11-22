@@ -14,6 +14,7 @@ coverage:
       fully_covered:
         target: 100.0
         paths:
+          - tests/
           - errors.py
           - utils.py
     patch:
