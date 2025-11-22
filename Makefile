@@ -15,8 +15,8 @@ tidy:
 	ruff check --fix
 	ruff format
 
-.PHONY: test-with-coverage
-test-with-coverage:
+.PHONY: only-test-with-coverage
+only-test-with-coverage:
 	python3 -m pytest -v --cov --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
@@ -26,6 +26,9 @@ checkstyle: ruff
 
 .PHONY: test
 test: only-test checkstyle
+
+.PHONY: test-with-coverage
+test-with-coverage: only-test-with-coverage checkstyle
 
 .PHONY: test-all-commands-unstable
 test-all-commands-unstable:
