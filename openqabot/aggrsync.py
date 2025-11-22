@@ -30,18 +30,12 @@ class AggregateResultsSync(SyncRes):
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
 
-        results = []
-        for key, values in job_results.items():
-            for v in values:
-                if not self.filter_jobs(v):
-                    continue
-
-                try:
-                    r = self.normalize_data(key, v)
-                except KeyError:
-                    continue
-
-                results.append(r)
+        results = [
+            r
+            for key, values in job_results.items()
+            for v in values
+            if self.filter_jobs(v) and (r := self._normalize_data(key, v))
+        ]
 
         for r in results:
             self.post_result(r)
