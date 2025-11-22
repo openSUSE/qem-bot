@@ -81,21 +81,11 @@ class AMQP(SyncRes):
                 return self.handle_aggregate(build_nr, message)
         return None
 
-    def _update_dashboard_entry(self, job: dict[str, Any], inc: Data, message: dict[str, Any]) -> None:
-        if not self.filter_jobs(job):
-            return
-        try:
-            AMQP.operation = "incident"
-            r = self.normalize_data(inc, job)
-        except KeyError:
-            return
-        # Post update about matching openQA job into dashboard database
-        if r["job_id"] == message["id"]:
-            self.post_result(r)
-
     def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:
-        for v in self.client.get_jobs(inc):
-            self._update_dashboard_entry(v, inc, message)
+        AMQP.operation = "incident"
+        for job in self.client.get_jobs(inc):
+            if self.filter_jobs(job) and (r := self._normalize_data(inc, job)) and r["job_id"] == message["id"]:
+                self.post_result(r)
 
     def handle_incident(self, inc_nr: int, message: dict[str, Any]) -> None:
         # Load Data about current incident from dashboard database
