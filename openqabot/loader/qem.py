@@ -118,15 +118,16 @@ def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[D
     ]
 
 
-def get_incident_results(inc: int, token: dict[str, str]) -> list[dict[str, Any]]:
+def get_incident_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any]]:
     settings = get_incident_settings(inc, token, all_incidents=False)
 
-    all_data = []
-    for job_aggr in settings:
+    def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
         if "error" in data:
             raise ValueError(data["error"])
-        all_data.append(data)
+        return data
+
+    all_data = (_get_job_data(job_aggr) for job_aggr in settings)
     return list(chain.from_iterable(all_data))
 
 
