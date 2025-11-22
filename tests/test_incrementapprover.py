@@ -133,20 +133,18 @@ def fake_get_repos_of_project(url: str, prj: str) -> List[Repo]:
     assert url == OBS_URL
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST":
         return [Repo("images", "local")]
-    if prj == "SUSE:Products:SLE-Product-SLES:16.0":
-        return [Repo("product", "local")]
-    return []
+    # example for "SUSE:Products:SLE-Product-SLES:16.0":
+    return [Repo("product", "local")]
 
 
 def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) -> List[str]:
     assert url == OBS_URL
-    if package != "000productcompose:sles_aarch64" or arch != "local":
-        return []
+    assert package == "000productcompose:sles_aarch64"
+    assert arch == "local"
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "images":
         return ["SLES-16.0-aarch64-Build160.4-Source.report", "foo"]
-    if prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
-        return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
-    return []
+    # example for prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
+    return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
 
 
 def fake_get_binary_file(  # noqa: PLR0917
@@ -156,8 +154,8 @@ def fake_get_binary_file(  # noqa: PLR0917
     assert package == "000productcompose:sles_aarch64"
     assert arch == "local"
     assert repo in {"images", "product"}
-    if filename == "SLES-16.0-aarch64-Build160.4-Source.report":
-        Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
+    assert filename == "SLES-16.0-aarch64-Build160.4-Source.report"
+    Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
 
 
 def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str) -> None:
