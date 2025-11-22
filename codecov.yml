@@ -14,9 +14,21 @@ coverage:
       fully_covered:
         target: 100.0
         paths:
+          - openqabot/__init__.py
+          - openqabot/amqp.py
+          - openqabot/config.py
+          - openqabot/dashboard.py
+          - openqabot/errors.py
+          - openqabot/giteasync.py
+          - openqabot/incsyncres.py
+          - openqabot/loader/__init__.py
+          - openqabot/openqabot.py
+          - openqabot/syncres.py
+          - openqabot/types/__init__.py
+          - openqabot/types/baseconf.py
+          - openqabot/utc.py
+          - openqabot/utils.py
           - tests/
-          - errors.py
-          - utils.py
     patch:
       default:
         target: 100.0
