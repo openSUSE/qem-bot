@@ -67,10 +67,10 @@ def normalize_results(result: str) -> str:
 
 
 def compare_incident_data(inc: Data, message: dict[str, Any]) -> bool:
-    for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION"):
-        if key in message and getattr(inc, key.lower()) != message[key]:
-            return False
-    return True
+    return all(
+        key not in message or getattr(inc, key.lower()) == message[key]
+        for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION")
+    )
 
 
 def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
