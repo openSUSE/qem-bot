@@ -33,6 +33,7 @@ qem-bot = "openqabot.main:main"
 
 [project.optional-dependencies]
 dev = [
+    "pyright",
     "pytest",
     "pytest-cov",
     "coverage",
@@ -181,3 +182,23 @@ docstring-code-format = true
 [tool.ruff.lint.flake8-copyright]
 author = "SUSE LLC"
 notice-rgx = "Copyright"
+
+[tool.pyright]
+include = ["openqabot", "tests", "*.py"]
+reportArgumentType = false
+reportAttributeAccessIssue = false
+reportOptionalMemberAccess = false
+reportOptionalSubscript = false
+reportReturnType = false
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportUndefinedVariable = false
+reportOperatorIssue = false
+reportGeneralTypeIssues = false
+reportUnusedExcept = false
+reportInvalidTypeArguments = false
+reportCallIssue = false
+reportPrivateImportUsage = false
+reportAssignmentType = false
+reportPossiblyUnboundVariable = false
+reportOptionalIterable = false

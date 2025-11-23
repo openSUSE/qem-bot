@@ -15,6 +15,10 @@ tidy:
 	ruff check --fix
 	ruff format
 
+.PHONY: typecheck
+typecheck:
+	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated
+
 .PHONY: only-test-with-coverage
 only-test-with-coverage:
 	python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
@@ -22,7 +26,7 @@ only-test-with-coverage:
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: ruff
+checkstyle: ruff typecheck
 
 .PHONY: test
 test: only-test checkstyle
