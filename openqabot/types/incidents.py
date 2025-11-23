@@ -132,6 +132,7 @@ class Incidents(BaseConf):
         data = ctx.data
         if inc.type == "git" and not inc.ongoing:
             log.info(
+                # ruff: noqa: E501 line-too-long
                 "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
                 inc.id,
                 arch,

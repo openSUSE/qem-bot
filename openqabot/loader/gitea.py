@@ -91,13 +91,14 @@ def compute_repo_url(
     path: str = "repodata/repomd.xml",
 ) -> str:
     # return codestream repo if product name is empty
+    start = f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}"
     if product_name == "":
         # assing something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
-        return f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}/{path}"
+        return f"{start}/{path}"
 
     # return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
-    return f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}/repo/{product_name}-{repo[2]}-{arch}/{path}"
+    return f"{start}/repo/{product_name}-{repo[2]}-{arch}/{path}"
 
 
 def compute_repo_url_for_job_setting(
@@ -332,10 +333,11 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
             return None
 
     # determine from the flavors we got what architectures are actually expected to be present
+
     # note: The build info will contain result elements for archs like `local` and `ppc64le` that and the published
-    #       flag set even though no repos for those products are actually present. Considering these would lead to
-    #       problems later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering
-    #       to actually relevant ones.
+    # flag set even though no repos for those products are actually present. Considering these would lead to problems
+    # later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering to actually
+    # relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {
         flavor[prefix_len:]
@@ -474,12 +476,15 @@ def make_incident_from_pr(
         incident = {
             "number": number,
             "project": repo["name"],
-            "emu": False,  # "Emergency Maintenance Update", a flag used to raise a priority in scheduler, see openqabot/types/incidents.py#L227
+            # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
+            # see openqabot/types/incidents.py#L227
+            "emu": False,
             "isActive": pr["state"] == "open",
             "inReviewQAM": False,
             "inReview": False,
             "approved": False,
-            "embargoed": False,  # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
+            # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
+            "embargoed": False,
             "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
             "rr_number": None,
             "packages": [],

@@ -38,6 +38,7 @@ class LoaderQemError(Exception):
 class NoIncidentResultsError(NoResultsError):
     def __init__(self, inc: int) -> None:
         super().__init__(
+            # ruff: noqa: E501 line-too-long
             f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
         )
 

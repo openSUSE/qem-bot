@@ -49,6 +49,7 @@ def fake_gitea_api() -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
     issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
+    # ruff: noqa: E501 line-too-long
     patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
     patchinfo_data = Path("responses/patch-info.xml").read_bytes()
     responses.add(GET, pulls_url + "?state=open&page=1", json=read_json("pulls"))

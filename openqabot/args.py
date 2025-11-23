@@ -249,7 +249,8 @@ def get_parser() -> ArgumentParser:
         required=False,
         type=str,
         default="TEST",
-        help="The project on OBS to monitor, schedule jobs for (if --schedule is specified) and approve (if all tests passed)",
+        help="""The project on OBS to monitor.
+        Schedule jobs for (if --schedule is specified) and approve (if all tests passed)""",
     )
     cmdincrementapprove.add_argument(
         "--diff-project-suffix",

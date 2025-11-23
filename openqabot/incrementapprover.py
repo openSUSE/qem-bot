@@ -76,7 +76,7 @@ class IncrementApprover:
             match = re.search(pattern, string)
         except re.PatternError:
             log.warning(
-                "Pattern `%s` did not compile successfully. Considering search as non-match and returning empty result.",
+                "Pattern `%s` did not compile successfully. Considering as non-match and returning empty result.",
                 pattern,
             )
         return match
@@ -252,7 +252,8 @@ class IncrementApprover:
         return 0
 
     def _determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
-        # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync plugin
+        # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync
+        # plugin
         build_project_url = config.build_project_url()
         sub_path = config.build_listing_sub_path
         url = f"{build_project_url}/{sub_path}/?jsontable=1"

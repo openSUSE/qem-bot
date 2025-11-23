@@ -128,7 +128,6 @@ extend-select =[
 ]
 
 ignore = [
-    "E501",   # line-too-long
     "D100",   # missing-module-docstring
     "D101",   # missing-class-docstring
     "D102",   # missing-method-docstring

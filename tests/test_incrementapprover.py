@@ -412,6 +412,7 @@ def test_skipping_with_pending_openqa_jobs(caplog: pytest.LogCaptureFixture, mon
     run_approver(caplog, monkeypatch)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
+        # ruff: noqa: E501 line-too-long
         "Skipping approval, some jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments are in pending states (running, scheduled)"
         in messages
     )

@@ -150,7 +150,9 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
-        # Check that valid test result is still present in the dashboard (see https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release request
+        # Check that valid test result is still present in the dashboard (see
+        # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
+        # request
         qam_data = get_json(f"api/jobs/{job}", headers=self.token)
         if not qam_data:
             return False
@@ -203,7 +205,7 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",
+                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",  # noqa: E501 line-too-long
                 failed_job_id,
                 inc,
             )
@@ -211,7 +213,7 @@ class Approver:
 
         if not self.validate_job_qam(job["id"]):
             log.info(
-                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request",
+                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request",  # noqa: E501 line-too-long
                 failed_job_id,
                 job["id"],
                 inc,
@@ -250,7 +252,7 @@ class Approver:
             if was_ok is not None:
                 return was_ok
         log.info(
-            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate.",
+            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate.",  # noqa: E501 line-too-long
             failed_job_id,
             inc,
         )

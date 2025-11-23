@@ -40,6 +40,7 @@ def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
                 settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
             )
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
+        # ruff: noqa: E501 line-too-long
         log_error = f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
         log.warning("%s : %s", log_error, e)
     finally:
