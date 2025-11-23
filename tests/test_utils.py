@@ -103,8 +103,10 @@ def test_retry3() -> None:
 
 
 def test_get_yml_list_single_file_yml(tmp_path: Path) -> None:
-    """Create a folder with a single .yml file
-    Call the function with the path of the file
+    """Tests get_yml_list with single files.
+
+    Creates a folder with a single .yml file.
+    Calls get_yml_list with the path of the file
     The expected behavior is the function to return
     a single element list with the file Path.
     """

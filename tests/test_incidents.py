@@ -130,12 +130,6 @@ def test_incidents_call_with_issues() -> None:
 
 @pytest.fixture
 def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Aggregate is using requests to get old jobs
-    from the QEM dashboard.
-    At the moment the mock returned value
-    is harcoded to [{}].
-    """
-
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
@@ -204,7 +198,9 @@ def test_incidents_call_with_packages() -> None:
 
 @pytest.mark.usefixtures("request_mock")
 def test_incidents_call_with_params_expand() -> None:
-    """Product configuration has 4 settings.
+    """Tests incidents call.
+
+    Product configuration has 4 settings.
     Incident configuration has only 1 flavor.
     The only flavor is using params_expand.
     set of setting in product and flavor:
@@ -299,7 +295,9 @@ def test_incidents_call_with_params_expand_distri_version() -> None:
 
 @pytest.mark.usefixtures("request_mock")
 def test_incidents_call_with_params_expand_isolated() -> None:
-    """Product configuration has 4 settings.
+    """Tests incidents call.
+
+    Product configuration has 4 settings.
     Incident configuration has 2 flavors.
     Only the first flavor is using params_expand, the other is not.
     Test that POST for the second exactly and only contains the product settings.

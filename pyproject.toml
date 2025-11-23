@@ -151,7 +151,6 @@ ignore = [
     "PLR0914", # too-many-locals
     "PLR0915", # too-many-statements
     "PLR2004", # magic-value-comparison
-    "D205", # missing-blank-line-after-summary
     "D200", # unnecessary-multiline-docstring
     "D211", # blank-line-before-class
     "D213", # multi-line-summary-second-line

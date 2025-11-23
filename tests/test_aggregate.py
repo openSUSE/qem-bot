@@ -40,12 +40,6 @@ def test_aggregate_call() -> None:
 
 @pytest.fixture
 def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Aggregate is using requests to get old jobs
-    from the QEM dashboard.
-    At the moment the mock returned value
-    is harcoded to [{}].
-    """
-
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
@@ -75,10 +69,6 @@ def test_aggregate_call_with_archs() -> None:
 
 @pytest.fixture
 def incident_mock() -> Callable[..., Any]:
-    """Simulate an incident class, reimplementing it in the simplest
-    possible way that is accepted by Aggregate.
-    """
-
     class Repos(NamedTuple):
         product: str
         version: str
