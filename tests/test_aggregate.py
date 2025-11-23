@@ -9,9 +9,7 @@ from openqabot.types.aggregate import Aggregate
 
 
 def test_aggregate_constructor() -> None:
-    """What is the bare minimal set of arguments
-    needed by the constructor?
-    """
+    """Test for the bare minimal set of arguments needed by the constructor."""
     config = {}
     config["FLAVOR"] = "None"
     config["archs"] = None
@@ -20,7 +18,7 @@ def test_aggregate_constructor() -> None:
 
 
 def test_aggregate_printable() -> None:
-    """Try the printable"""
+    """Try the printable."""
     config = {}
     config["FLAVOR"] = "None"
     config["archs"] = None
@@ -30,9 +28,7 @@ def test_aggregate_printable() -> None:
 
 
 def test_aggregate_call() -> None:
-    """What is the bare minimal set of arguments
-    needed by the callable?
-    """
+    """Test for the bare minimal set of arguments needed by the callable."""
     config = {}
     config["FLAVOR"] = "None"
     config["archs"] = []
@@ -47,7 +43,7 @@ def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
-    is harcoded to [{}]
+    is harcoded to [{}].
     """
 
     class MockResponse:
@@ -67,7 +63,7 @@ def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.usefixtures("request_mock")
 def test_aggregate_call_with_archs() -> None:
-    """Configure an archs to enter in the function main loop"""
+    """Configure an archs to enter in the function main loop."""
     my_config = {}
     my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
@@ -80,7 +76,7 @@ def test_aggregate_call_with_archs() -> None:
 @pytest.fixture
 def incident_mock() -> Callable[..., Any]:
     """Simulate an incident class, reimplementing it in the simplest
-    possible way that is accepted by Aggregate
+    possible way that is accepted by Aggregate.
     """
 
     class Repos(NamedTuple):
@@ -105,7 +101,7 @@ def incident_mock() -> Callable[..., Any]:
 
 @pytest.mark.usefixtures("request_mock")
 def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any]) -> None:
-    """Test with a valid incident"""
+    """Test with a valid incident."""
     my_config = {}
     my_config["FLAVOR"] = "None"
     my_config["archs"] = ["ciao"]
@@ -121,7 +117,7 @@ def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any]) -> N
 
 @pytest.mark.usefixtures("request_mock")
 def test_aggregate_call_pc_pint(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
+    """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image."""
 
     def mockreturn(_settings: Any) -> dict[str, str]:
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
@@ -144,7 +140,7 @@ def test_aggregate_call_pc_pint(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_aggregate_call_pc_pint_with_incidents(
     incident_mock: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image"""
+    """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image."""
 
     def mockreturn(_settings: Any) -> dict[str, str]:
         return {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}

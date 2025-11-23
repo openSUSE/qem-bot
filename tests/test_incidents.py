@@ -12,9 +12,7 @@ from openqabot.types.incidents import Incidents
 
 
 def test_incidents_constructor() -> None:
-    """What is the bare minimal set of arguments
-    needed by the constructor?
-    """
+    """Test for the bare minimal set of arguments needed by the constructor."""
     test_config = {}
     test_config["FLAVOR"] = {}
     Incidents(
@@ -28,7 +26,7 @@ def test_incidents_constructor() -> None:
 
 
 def test_incidents_printable() -> None:
-    """Try the printable"""
+    """Try the printable."""
     test_config = {}
     test_config["FLAVOR"] = {}
     inc = Incidents(
@@ -43,9 +41,7 @@ def test_incidents_printable() -> None:
 
 
 def test_incidents_call() -> None:
-    """What is the bare minimal set of arguments
-    needed by the callable?
-    """
+    """Test for the bare minimal set of arguments needed by the callable."""
     test_config = {}
     test_config["FLAVOR"] = {}
     inc = Incidents(
@@ -76,7 +72,7 @@ def test_incidents_call_with_flavors() -> None:
 
 
 class MyIncident_0:
-    """The simpler possible implementation of Incident class"""
+    """The simpler possible implementation of Incident class."""
 
     def __init__(self) -> None:
         self.id = None
@@ -137,7 +133,7 @@ def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
     """Aggregate is using requests to get old jobs
     from the QEM dashboard.
     At the moment the mock returned value
-    is harcoded to [{}]
+    is harcoded to [{}].
     """
 
     class MockResponse:
@@ -214,7 +210,7 @@ def test_incidents_call_with_params_expand() -> None:
     set of setting in product and flavor:
     - match on SOMETHING: flavor value has to win
     - flavor set extend product set SOMETHING_NEW:
-    - one setting is only at product level SOMETHING_ELSE
+    - one setting is only at product level SOMETHING_ELSE.
     """
     test_config = {}
     test_config["FLAVOR"] = {

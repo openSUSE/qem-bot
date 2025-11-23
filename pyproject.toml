@@ -152,7 +152,6 @@ ignore = [
     "PLR0915", # too-many-statements
     "PLR2004", # magic-value-comparison
     "D415", # missing-terminal-punctuation
-    "D400", # missing-trailing-period
     "D205", # missing-blank-line-after-summary
     "D200", # unnecessary-multiline-docstring
     "D211", # blank-line-before-class

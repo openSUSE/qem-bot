@@ -106,7 +106,7 @@ def test_get_yml_list_single_file_yml(tmp_path: Path) -> None:
     """Create a folder with a single .yml file
     Call the function with the path of the file
     The expected behavior is the function to return
-    a single element list with the file Path
+    a single element list with the file Path.
     """
     for ext in ("yml", "yaml"):
         d = tmp_path / f"it_is_a_folder_for_{ext}"
@@ -132,7 +132,7 @@ def test_get_yml_list_folder_with_single_file_yml(tmp_path: Path) -> None:
 
 
 def test_get_yml_list_folder_with_multiple_files(tmp_path: Path) -> None:
-    """Create a folder with 10 files in it, 5 has a valid extension"""
+    """Create a folder with 10 files in it, 5 has a valid extension."""
     d = tmp_path / "it_is_a_folder"
     d.mkdir()
     for ext in ("txt", "yml", "yaml"):
