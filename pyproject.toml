@@ -151,7 +151,6 @@ ignore = [
     "PLR0914", # too-many-locals
     "PLR0915", # too-many-statements
     "PLR2004", # magic-value-comparison
-    "D200", # unnecessary-multiline-docstring
     "D213", # multi-line-summary-second-line
     "PLW2901", # redefined-loop-name
     "PLW0127", # self-assigning-variable
