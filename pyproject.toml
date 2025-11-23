@@ -137,7 +137,6 @@ ignore = [
     "D105",   # missing-magic-method-docstring
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
-    "Q000",   # bad-quotes (inline)
     "N801",   # invalid-class-name
     "N802",   # invalid-function-name
     "N803",   # invalid-argument-name
