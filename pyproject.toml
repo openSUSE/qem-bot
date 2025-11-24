@@ -3,7 +3,7 @@ name = "qem-bot"
 dynamic = ["version"]
 description = "Tool for scheduling maintenance tests on openQA based on [SMELT](https://tools.io.suse.de/smelt) incidents and Gitea PRs."
 readme = "Readme.md"
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 license = "MIT"
 authors = [
     { name = "SUSE LLC" },
