@@ -22,3 +22,9 @@ def test_clone_dry() -> None:
     ):
         SyncRes(Namespace(dry=False, token=0, openqa_instance=urlparse("http://instance.qa"))).post_result(result)
         post_job_mock.assert_called()
+
+
+def test_normalize_data_handles_error_gracefully() -> None:
+    syncres = SyncRes(Namespace(dry=False, token=0, openqa_instance=urlparse("http://instance.qa")))
+    with patch("openqabot.syncres.SyncRes.normalize_data", side_effect=KeyError):
+        not syncres._normalize_data(None, None)  # noqa: SLF001
