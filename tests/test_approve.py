@@ -829,3 +829,15 @@ def test_was_older_job_ok_too_old(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         "Cannot ignore aggregate failure 1 for update 1. Reason: Older jobs are too old to be considered" in caplog.text
     )
+
+
+def test_was_ok_before_invalid_date(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    def f_get_older_jobs(*_args: Any, **_kwds: Any) -> dict:
+        return {"data": [{"build": "invalid-date"}]}
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(approver_instance.client, "get_older_jobs", f_get_older_jobs)
+
+    caplog.set_level(logging.INFO)
+    assert not approver_instance.was_ok_before(1, 1)
+    assert "Could not parse build date invalid-da. Won't try to look at older jobs for approval." in caplog.text
