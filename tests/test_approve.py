@@ -7,6 +7,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from typing import Any, NamedTuple, NoReturn
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -829,6 +830,21 @@ def test_was_older_job_ok_too_old(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         "Cannot ignore aggregate failure 1 for update 1. Reason: Older jobs are too old to be considered" in caplog.text
     )
+
+
+def test_was_ok_before_no_suitable_older_jobs(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def f_get_older_jobs(*_args: Any, **_kwds: Any) -> dict:
+        return {"data": [{"build": "20240101XY", "result": "failed", "id": 123}]}
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(approver_instance.client, "get_older_jobs", f_get_older_jobs)
+
+    caplog.set_level(logging.INFO)
+    with patch("openqabot.approver.Approver._was_older_job_ok"):
+        assert not approver_instance.was_ok_before(1, 1)
+    assert "Older usable jobs did not succeed. Run out of jobs to evaluate." in caplog.text
 
 
 def test_was_ok_before_invalid_date(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:

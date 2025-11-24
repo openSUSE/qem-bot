@@ -16,6 +16,7 @@ coverage:
         paths:
           - openqabot/__init__.py
           - openqabot/amqp.py
+          - openqabot/approver.py
           - openqabot/config.py
           - openqabot/dashboard.py
           - openqabot/errors.py
