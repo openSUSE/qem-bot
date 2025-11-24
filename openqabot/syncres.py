@@ -59,11 +59,11 @@ class SyncRes:
             return False
 
         if data["clone_id"]:
-            log.info("Job '%s' already has a clone, ignoring", data["clone_id"])
+            log.debug("Job '%s' already has a clone, ignoring", data["clone_id"])
             return False
 
         if self._is_in_devel_group(data):
-            log.info("Ignoring job '%s' in development group '%s'", data["id"], data["group"])
+            log.debug("Ignoring job '%s' in development group '%s'", data["id"], data["group"])
             return False
 
         return True
