@@ -137,7 +137,7 @@ class Approver:
         try:
             patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={inc}", headers=self.token)
         except RequestError as e:
-            log.info("Unable to mark job %i as acceptable for incident %i: %e", job_id, inc, e)
+            log.info("Unable to mark job %i as acceptable for incident %i: %s", job_id, inc, e)
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
