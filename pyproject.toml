@@ -41,6 +41,13 @@ dev = [
     "ruff",
 ]
 
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
 [tool.setuptools]
 include-package-data = true
 zip-safe = false
