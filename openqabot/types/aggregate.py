@@ -93,7 +93,7 @@ class Aggregate(BaseConf):
 
         for issue, incs in test_incidents.items():
             tmpl = issue.replace("ISSUES", "REPOS")
-            test_repos[tmpl].extend([self._get_repo_url(inc, issue, issues_arch) for inc in incs])
+            test_repos[tmpl].extend(self._get_repo_url(inc, issue, issues_arch) for inc in incs)
         return test_incidents, test_repos
 
     def _get_repo_url(self, inc: Incident, issue: str, issues_arch: str) -> str:
