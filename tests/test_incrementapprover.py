@@ -519,3 +519,21 @@ def test_get_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture, monke
     approver = prepare_approver(caplog, monkeypatch)
     approver._get_regex_match("[", "some string")  # noqa: SLF001
     assert "Pattern `[` did not compile successfully" in caplog.text
+
+
+def test_find_request_on_obs_with_request_id(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
+        assert apiurl == OBS_URL
+        assert reqid == "43"
+        req = osc.core.Request()
+        req.reqid = 43
+        req.state = type("state", (), {"to_xml": lambda: True})
+        req.reviews = [ReviewState("review", OBS_GROUP)]
+        req.to_str = lambda: "<request />"
+        return req
+
+    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
+    approver = prepare_approver(caplog, monkeypatch, request_id=43)
+    approver._find_request_on_obs("foo")  # noqa: SLF001
+    assert "Checking specified request 43" in caplog.text
+    assert "<request />" in caplog.text
