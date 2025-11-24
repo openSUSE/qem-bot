@@ -23,6 +23,7 @@ coverage:
           - openqabot/incsyncres.py
           - openqabot/loader/__init__.py
           - openqabot/loader/smelt.py
+          - openqabot/main.py
           - openqabot/openqabot.py
           - openqabot/syncres.py
           - openqabot/types/__init__.py
