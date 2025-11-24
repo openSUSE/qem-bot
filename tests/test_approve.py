@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 import osc.conf
 import osc.core
 import pytest
+from openqa_client.exceptions import RequestError
 
 import openqabot.approver
 import responses
@@ -753,3 +754,17 @@ def test_approval_unblocked_with_various_comment_formats(
         f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
         1,
     )
+
+
+@responses.activate
+def test_is_job_marked_acceptable_for_incident_request_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def f_get_job_comments(*_args: Any, **_kwds: Any) -> NoReturn:
+        msg = "Get out"
+        raise RequestError(msg, url="http://foo.bar", status_code=404, text="Not Found")
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(approver_instance.client, "get_job_comments", f_get_job_comments)
+
+    assert not approver_instance.is_job_marked_acceptable_for_incident(1, 1)
