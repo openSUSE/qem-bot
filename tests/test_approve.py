@@ -5,6 +5,7 @@
 import io
 import logging
 import re
+from datetime import datetime, timedelta
 from typing import Any, NamedTuple, NoReturn
 from urllib.error import HTTPError
 from urllib.parse import urlparse
@@ -19,6 +20,7 @@ import responses
 from openqabot.approver import QEM_DASHBOARD, Approver
 from openqabot.errors import NoResultsError
 from openqabot.loader.qem import IncReq, JobAggr
+from openqabot.utc import UTC
 from responses import matchers
 
 
@@ -803,3 +805,14 @@ def test_validate_job_qam_status_not_passed(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(openqabot.approver, "get_json", f_get_json)
 
     assert not approver_instance.validate_job_qam(1)
+
+
+def test_was_older_job_ok_invalid_date(caplog: pytest.LogCaptureFixture) -> None:
+    approver_instance = Approver(args)
+    job = {"build": "invalid-date", "result": "passed", "id": 123}
+    oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
+    regex = re.compile(r".*")
+
+    caplog.set_level(logging.INFO)
+    assert approver_instance._was_older_job_ok(1, 1, job, oldest_build_usable, regex) is None  # noqa: SLF001
+    assert "Could not parse build date invalid-da. Won't consider this job as alternative for approval." in caplog.text
