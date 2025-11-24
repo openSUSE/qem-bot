@@ -162,13 +162,14 @@ for consideration or create an issue with a code change proposal.
 ### Local testing
 
 Ensure you have the dependencies for development installed. The easiest
-way to get them is via pip:
+way to get them is via:
 
-    pip install -e ".[dev]"
+    sudo zypper in python3-uv
+    uv sync [--all-extras]
 
 There are currently only limited automatic tests available. Run `make test`
-or `pytest` to execute Python-based unit tests. Run e.g.
-`pytest tests/test_amqp.py` to execute a single test.
+or `uv run pytest` to execute Python-based unit tests. Run e.g.
+`uv run pytest tests/test_amqp.py` to execute a single test.
 
 Run `make checkstyle` to check coding style and `make lint` for linting.
 

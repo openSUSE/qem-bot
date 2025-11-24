@@ -36,7 +36,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "coverage",
-    "responses>=0.21.0",
+    "responses",
     "urllib3",
     "ruff",
 ]

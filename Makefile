@@ -1,23 +1,29 @@
+UV := uv run
+
 .PHONY: all
 all:
 
+.PHONY: sync
+sync:
+	uv sync --extra dev
+
 .PHONY: only-test
 only-test:
-	python3 -m pytest
+	$(UV) pytest
 
 .PHONY: ruff
 ruff:
-	ruff check
-	ruff format --check
+	$(UV) ruff check
+	$(UV) ruff format --check
 
 .PHONY: tidy
 tidy:
-	ruff check --fix
-	ruff format
+	$(UV) ruff check --fix
+	$(UV) ruff format
 
 .PHONY: test-with-coverage
 test-with-coverage:
-	python3 -m pytest -v --cov --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
+	$(UV) pytest -v --cov --cov-branch --cov-fail-under=72 --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
 
