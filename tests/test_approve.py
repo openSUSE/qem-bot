@@ -768,3 +768,18 @@ def test_is_job_marked_acceptable_for_incident_request_error(
     monkeypatch.setattr(approver_instance.client, "get_job_comments", f_get_job_comments)
 
     assert not approver_instance.is_job_marked_acceptable_for_incident(1, 1)
+
+
+def test_mark_job_as_acceptable_for_incident_request_error(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    def f_patch(*_args: Any, **_kwds: Any) -> NoReturn:
+        msg = "Patch failed"
+        raise RequestError(msg, url="http://foo.bar", status_code=500, text="Internal Server Error")
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(openqabot.approver, "patch", f_patch)
+
+    caplog.set_level(logging.INFO)
+    approver_instance.mark_job_as_acceptable_for_incident(1, 1)
+    assert "Unable to mark job 1 as acceptable for incident 1" in caplog.text
