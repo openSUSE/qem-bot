@@ -783,3 +783,23 @@ def test_mark_job_as_acceptable_for_incident_request_error(
     caplog.set_level(logging.INFO)
     approver_instance.mark_job_as_acceptable_for_incident(1, 1)
     assert "Unable to mark job 1 as acceptable for incident 1" in caplog.text
+
+
+def test_validate_job_qam_no_qam_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    def f_get_json(*_args: Any, **_kwds: Any) -> None:
+        return None
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(openqabot.approver, "get_json", f_get_json)
+
+    assert not approver_instance.validate_job_qam(1)
+
+
+def test_validate_job_qam_status_not_passed(monkeypatch: pytest.MonkeyPatch) -> None:
+    def f_get_json(*_args: Any, **_kwds: Any) -> dict[str, str]:
+        return {"status": "failed"}
+
+    approver_instance = Approver(args)
+    monkeypatch.setattr(openqabot.approver, "get_json", f_get_json)
+
+    assert not approver_instance.validate_job_qam(1)
