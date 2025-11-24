@@ -464,7 +464,9 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
 
 
-def test_handling_specific_request(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_specified_obs_request_not_found_skips_approval(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
     def fake_request_from_api(apiurl: str, reqid: int) -> None:
         assert apiurl == OBS_URL
         assert reqid == "43"
@@ -474,6 +476,26 @@ def test_handling_specific_request(caplog: pytest.LogCaptureFixture, monkeypatch
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Checking specified request 43" in messages
     assert "Skipping approval, no relevant requests in states new/review/accepted" in messages
+
+
+def test_specified_obs_request_found_renders_request(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
+        assert apiurl == OBS_URL
+        assert reqid == "43"
+        req = osc.core.Request()
+        req.reqid = 43
+        req.state = type("state", (), {"to_xml": lambda: True})
+        req.reviews = [ReviewState("review", OBS_GROUP)]
+        req.to_str = lambda: "<request />"
+        return req
+
+    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
+    approver = prepare_approver(caplog, monkeypatch, request_id=43)
+    approver._find_request_on_obs("foo")  # noqa: SLF001
+    assert "Checking specified request 43" in caplog.text
+    assert "<request />" in caplog.text
 
 
 def test_config_parsing_from_args() -> None:
@@ -491,3 +513,9 @@ def test_config_parsing_from_args() -> None:
     assert config[0].packages == []
     assert config[0].archs == set()
     assert config[0].settings == {}
+
+
+def test_get_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+    approver = prepare_approver(caplog, monkeypatch)
+    approver._get_regex_match("[", "some string")  # noqa: SLF001
+    assert "Pattern `[` did not compile successfully" in caplog.text

@@ -74,7 +74,7 @@ class IncrementApprover:
         match = None
         try:
             match = re.search(pattern, string)
-        except re.PatternError:
+        except re.error:
             log.warning(
                 "Pattern `%s` did not compile successfully. Considering as non-match and returning empty result.",
                 pattern,
