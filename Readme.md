@@ -162,9 +162,16 @@ for consideration or create an issue with a code change proposal.
 ### Local testing
 
 Ensure you have the dependencies for development installed. The easiest
-way to get them is via pip:
+way to get them is via uv:
 
-    pip install -e ".[dev]"
+    uv sync
+
+For local development, you can use `uv` to create a virtual environment and
+install dependencies:
+
+    uv venv
+    source .venv/bin/activate
+    uv sync
 
 There are currently only limited automatic tests available. Run `make test`
 or `pytest` to execute Python-based unit tests. Run e.g.

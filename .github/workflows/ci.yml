@@ -14,12 +14,14 @@ jobs:
         run: ruff format --check
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
-          cache: 'pip'
+          python-version-file: "pyproject.toml"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
       - name: Setup enviroment
-        run: pip install -e .[dev]
+        run: uv sync
       - name: Run tests + cov report
-        run: make test-with-coverage
+        run: uv run make test-with-coverage
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v5
         with:
