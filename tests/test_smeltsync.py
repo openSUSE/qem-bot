@@ -148,3 +148,65 @@ def test_sync_approved(
     assert not responses.calls[1].response.json()[0]["isActive"]
     assert responses.calls[1].response.json()[0]["approved"]
     assert responses.calls[1].response.json()[0]["embargoed"]
+
+
+@responses.activate
+@pytest.mark.parametrize("fake_qem", [()], indirect=True)
+@pytest.mark.parametrize(
+    "fake_smelt_api",
+    [["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600]],
+    indirect=True,
+)
+@pytest.mark.usefixtures("fake_qem", "fake_smelt_api")
+def test_sync_dry_run(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.smeltsync")
+    assert SMELTSync(_namespace(dry=True, token="123", retry=False))() == 0
+    assert "Dry run, nothing synced" in caplog.text
+
+
+def test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully() -> None:
+    request_set = [{"requestId": 1, "status": {"name": "declined"}}]
+    assert SMELTSync._review_rrequest(request_set) is None  # noqa: SLF001
+    request_set = [{"requestId": 1, "status": {"name": "review"}}]
+    assert SMELTSync._review_rrequest(request_set) is not None  # noqa: SLF001
+    assert SMELTSync._review_rrequest([]) is None  # noqa: SLF001
+
+
+def test_is_inreview() -> None:
+    rr_number = {"status": {"name": "new"}, "reviewSet": [{"foo": "bar"}]}
+    assert not SMELTSync._is_inreview(rr_number)  # noqa: SLF001
+    rr_number = {"status": {"name": "review"}, "reviewSet": [{"foo": "bar"}]}
+    assert SMELTSync._is_inreview(rr_number)  # noqa: SLF001
+    rr_number = {"status": {"name": "new"}, "reviewSet": []}
+    assert not SMELTSync._is_inreview(rr_number)  # noqa: SLF001
+
+
+def test_is_revoked() -> None:
+    rr_number = {"status": {"name": "new"}, "reviewSet": [{"foo": "bar"}]}
+    assert not SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+    rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
+    assert SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+    rr_number = {"status": {"name": "new"}, "reviewSet": []}
+    assert not SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+
+
+def test_create_record_no_request_set() -> None:
+    inc = {
+        "project": "SUSE:Maintenance:123",
+        "emu": False,
+        "packages": [],
+        "repositories": [],
+        "crd": None,
+        "priority": 0,
+        "requestSet": [],
+    }
+    record = SMELTSync._create_record(inc)  # noqa: SLF001
+    assert not record["inReview"]
+    assert not record["approved"]
+    assert not record["inReviewQAM"]
+    assert record["rr_number"] is None
+
+
+def test_is_revoked_true() -> None:
+    rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
+    assert SMELTSync._is_revoked(rr_number)  # noqa: SLF001
