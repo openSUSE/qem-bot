@@ -1,3 +1,5 @@
+SOURCE_FILES ?= $(shell git ls-files "**.py")
+
 .PHONY: all
 all:
 
@@ -15,6 +17,16 @@ tidy:
 	ruff format
 	ruff check --fix
 
+.PHONY: check-maintainability
+check-maintainability:
+	@echo "Checking maintainability (grade B or worse) …"
+	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
+
+.PHONY: check-code-health
+check-code-health:
+	@echo "Checking code health…"
+	@vulture ${SOURCE_FILES} --min-confidence 80
+
 .PHONY: typecheck
 typecheck:
 	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated --warnings
@@ -26,7 +38,7 @@ only-test-with-coverage:
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: ruff typecheck
+checkstyle: ruff check-maintainability check-code-health typecheck
 
 .PHONY: test
 test: only-test checkstyle
