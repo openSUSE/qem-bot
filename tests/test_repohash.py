@@ -118,6 +118,25 @@ def test_get_max_revision_exception(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
+def test_get_max_revision_retry_error(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    repos = [("SLES", "15SP3")]
+    arch = "x86_64"
+    project = "SUSE:Maintenance:12345"
+
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=requests.exceptions.RetryError("Max retries exceeded"),
+    )
+
+    with pytest.raises(NoRepoFoundError):
+        rp.get_max_revision(repos, arch, project)
+
+    assert "not found -- skipping incident" in caplog.records[0].msg
+
+
+@responses.activate
 def test_get_max_revision_slfo_product_not_in_obs_products(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     repos = [("SLFO-Module", "1.1.99")]
