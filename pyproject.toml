@@ -36,11 +36,14 @@ dev = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "pyupgrade",
     "coverage",
+    "radon",
     "responses>=0.21.0",
     "urllib3",
     "ruff",
     "pytest-mock",
+    "vulture",
 ]
 
 [tool.coverage.run]
