@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
 import responses
 from openqabot.types import ArchVer, Repos
-from openqabot.types.incidents import Incidents
+from openqabot.types.incident import Incident
+from openqabot.types.incidents import IncConfig, IncContext, Incidents
 
 
 def test_incidents_constructor() -> None:
@@ -442,3 +444,76 @@ def test_gitea_incidents() -> None:
             assert s["INCIDENT_REPO"] == f"{expected_repo}-{arch}/"
             assert s["REPOHASH"] == repo_hash
             assert s["VERSION"] == product_ver
+
+
+def test_handle_incident_git_not_ongoing() -> None:
+    inc_data = {
+        "number": 123,
+        "rr_number": 1,
+        "project": "SUSE:Maintenance:123",
+        "inReview": True,
+        "isActive": False,
+        "inReviewQAM": False,
+        "approved": True,
+        "embargoed": False,
+        "packages": ["foo"],
+        "channels": ["SUSE:Updates:SLE-Product-SLES:15-SP3:x86_64"],
+        "emu": False,
+        "type": "git",
+    }
+    inc = Incident(inc_data)
+    # inc.ongoing is False now
+
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "", "DISTRI": None},
+        config=test_config,
+        extrasettings=None,
+    )
+
+    ctx = IncContext(inc=inc, arch="", flavor="AAA", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is None
+
+
+def test_handle_incident_with_ci_url(mocker: MockerFixture) -> None:
+    inc_data = {
+        "number": 123,
+        "rr_number": 1,
+        "project": "SUSE:Maintenance:123",
+        "inReview": True,
+        "isActive": True,
+        "inReviewQAM": True,
+        "approved": False,
+        "embargoed": False,
+        "packages": ["foo"],
+        "channels": ["SUSE:Updates:SLE-Product-SLES:15-SP3:x86_64"],
+        "emu": False,
+        "type": "smelt",
+    }
+    inc = Incident(inc_data)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLE-Product-SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo="SLE-Product-SLES",
+        product_version="15-SP3",
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    incidents_obj.singlearch = set()
+
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url="http://my-ci.com/123", ignore_onetime=True)
+
+    mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+
+    assert result is not None
+    assert result["openqa"]["__CI_JOB_URL"] == "http://my-ci.com/123"
