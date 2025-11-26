@@ -21,3 +21,9 @@ chmod 600 /var/lib/data/qem/ssh/id_rsa
 ```
 6. `for quadlet in qem-bot/containers/systemd/*; do ln -s "$PWD/$quadlet" /etc/containers/systemd/; done`
 7. `systemctl daemon-reload && systemctl start qem-bot-gitea-sync`
+
+# Minimal containerized environment for tests and coverage development
+
+0. `podman build -t qem-bot-dev . -f Podmanfile.dev`
+1. `podman run --rm -it -v "$PWD":/app:Z qem-bot-dev python -m pytest -v --cov --cov-branch --cov-report=term-missing`
+2. `podman run --rm -it -v "$PWD":/app:Z -w /app qem-bot-dev python -m pytest -v --cov --cov-branch --cov-report=term-missing tests/<test to run>.py`
