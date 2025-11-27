@@ -17,7 +17,7 @@ tidy:
 
 .PHONY: typecheck
 typecheck:
-	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated
+	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated --warnings
 
 .PHONY: only-test-with-coverage
 only-test-with-coverage:
