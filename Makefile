@@ -12,8 +12,8 @@ ruff:
 
 .PHONY: tidy
 tidy:
-	ruff check --fix
 	ruff format
+	ruff check --fix
 
 .PHONY: typecheck
 typecheck:
