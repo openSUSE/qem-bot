@@ -5,12 +5,12 @@
 import logging
 import re
 import urllib.error
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any, NamedTuple
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.parse import urljoin
 
-import osc.core
 import pytest
 from lxml import etree
 
@@ -87,6 +87,12 @@ def fake_repo() -> None:
     url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
     responses.add(GET, url, body=listing)
+
+
+@pytest.fixture
+def mock_http_get_fixture() -> Generator[MagicMock, Any, Any]:
+    with patch("osc.core.http_GET") as mock_obj:
+        yield mock_obj
 
 
 def fake_osc_http_get(url: str) -> etree.ElementTree:
@@ -257,9 +263,9 @@ def test_extracting_product_name_and_version() -> None:
     assert prod_ver == ("SLES", "15.99")
 
 
-def test_handling_unavailable_build_info(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_handling_unavailable_build_info(caplog: pytest.LogCaptureFixture, mock_http_get_fixture: MagicMock) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    monkeypatch.setattr(osc.core, "http_GET", fake_urllib_http_error)
+    mock_http_get_fixture.side_effect = fake_urllib_http_error
     incident = {}
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
