@@ -1,7 +1,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, NoReturn
+from unittest.mock import patch
 
 import pytest
 
@@ -34,11 +36,12 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_good() -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
-    monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
+    with patch("openqabot.types.incident.get_max_revision", side_effect=fake):
+        yield
 
 
 @pytest.fixture
