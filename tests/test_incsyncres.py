@@ -3,12 +3,13 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
+from collections.abc import Generator
 from typing import Any, NamedTuple
+from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
 
-import openqabot.incsyncres
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.incsyncres import IncResultsSync
@@ -21,11 +22,12 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def get_a_i(monkeypatch: pytest.MonkeyPatch) -> None:
+def get_a_i() -> Generator[None, None, None]:
     def fake(*_args: Any) -> list[int]:
         return [100]
 
-    monkeypatch.setattr(openqabot.incsyncres, "get_active_incidents", fake)
+    with patch("openqabot.incsyncres.get_active_incidents", side_effect=fake):
+        yield
 
 
 @responses.activate
