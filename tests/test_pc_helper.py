@@ -38,63 +38,81 @@ def test_pint_query_uses_cache() -> None:
         get_mock.assert_called_once()
 
 
-def test_apply_publiccloud_pint_image(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(openqabot.pc_helper, "pint_query", lambda *_args, **_kwargs: {"images": []})
-    monkeypatch.setattr(
-        openqabot.pc_helper,
-        "get_recent_pint_image",
-        lambda *_args, **_kwargs: {"name": "test", "state": "active", "image_id": "111"},
-    )
-    settings = {}
-    apply_publiccloud_pint_image(settings)
-    assert settings["PUBLIC_CLOUD_IMAGE_ID"] is None
-    assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
-    assert "PUBLIC_CLOUD_PINT_NAME" not in settings
-    assert "PUBLIC_CLOUD_PINT_REGION" not in settings
-    assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
-    assert "PUBLIC_CLOUD_REGION" not in settings
+def test_apply_publiccloud_pint_image() -> None:
+    with (
+        patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []}),
+        patch(
+            "openqabot.pc_helper.get_recent_pint_image",
+            side_effect=lambda *_args, **_kwargs: {"name": "test", "state": "active", "image_id": "111"},
+        ),
+    ):
+        settings = {}
+        apply_publiccloud_pint_image(settings)
+        assert settings["PUBLIC_CLOUD_IMAGE_ID"] is None
+        assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
+        assert "PUBLIC_CLOUD_PINT_NAME" not in settings
+        assert "PUBLIC_CLOUD_PINT_REGION" not in settings
+        assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+        assert "PUBLIC_CLOUD_REGION" not in settings
 
-    settings = {
-        "PUBLIC_CLOUD_PINT_QUERY": "test",
-        "PUBLIC_CLOUD_PINT_NAME": "test",
-        "PUBLIC_CLOUD_PINT_FIELD": "image_id",
-    }
-    apply_publiccloud_pint_image(settings)
-    assert settings["PUBLIC_CLOUD_IMAGE_ID"] == "111"
-    assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
-    assert "PUBLIC_CLOUD_PINT_NAME" not in settings
-    assert "PUBLIC_CLOUD_PINT_REGION" not in settings
-    assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
-    assert "PUBLIC_CLOUD_REGION" not in settings
+    with (
+        patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []}),
+        patch(
+            "openqabot.pc_helper.get_recent_pint_image",
+            side_effect=lambda *_args, **_kwargs: {"name": "test", "state": "active", "image_id": "111"},
+        ),
+    ):
+        settings = {
+            "PUBLIC_CLOUD_PINT_QUERY": "test",
+            "PUBLIC_CLOUD_PINT_NAME": "test",
+            "PUBLIC_CLOUD_PINT_FIELD": "image_id",
+        }
+        apply_publiccloud_pint_image(settings)
+        assert settings["PUBLIC_CLOUD_IMAGE_ID"] == "111"
+        assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
+        assert "PUBLIC_CLOUD_PINT_NAME" not in settings
+        assert "PUBLIC_CLOUD_PINT_REGION" not in settings
+        assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+        assert "PUBLIC_CLOUD_REGION" not in settings
 
-    settings = {
-        "PUBLIC_CLOUD_PINT_QUERY": "test",
-        "PUBLIC_CLOUD_PINT_NAME": "test",
-        "PUBLIC_CLOUD_PINT_FIELD": "image_id",
-        "PUBLIC_CLOUD_PINT_REGION": "south",
-    }
-    apply_publiccloud_pint_image(settings)
-    assert settings["PUBLIC_CLOUD_IMAGE_ID"] == "111"
-    assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
-    assert settings["PUBLIC_CLOUD_REGION"] == "south"
-    assert "PUBLIC_CLOUD_PINT_NAME" not in settings
-    assert "PUBLIC_CLOUD_PINT_REGION" not in settings
-    assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+    with (
+        patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []}),
+        patch(
+            "openqabot.pc_helper.get_recent_pint_image",
+            side_effect=lambda *_args, **_kwargs: {"name": "test", "state": "active", "image_id": "111"},
+        ),
+    ):
+        settings = {
+            "PUBLIC_CLOUD_PINT_QUERY": "test",
+            "PUBLIC_CLOUD_PINT_NAME": "test",
+            "PUBLIC_CLOUD_PINT_FIELD": "image_id",
+            "PUBLIC_CLOUD_PINT_REGION": "south",
+        }
+        apply_publiccloud_pint_image(settings)
+        assert settings["PUBLIC_CLOUD_IMAGE_ID"] == "111"
+        assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
+        assert settings["PUBLIC_CLOUD_REGION"] == "south"
+        assert "PUBLIC_CLOUD_PINT_NAME" not in settings
+        assert "PUBLIC_CLOUD_PINT_REGION" not in settings
+        assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
 
-    monkeypatch.setattr(openqabot.pc_helper, "get_recent_pint_image", lambda *_args, **_kwargs: None)
-    settings = {
-        "PUBLIC_CLOUD_PINT_QUERY": "test",
-        "PUBLIC_CLOUD_PINT_NAME": "test",
-        "PUBLIC_CLOUD_PINT_FIELD": "image_id",
-        "PUBLIC_CLOUD_PINT_REGION": "south",
-    }
-    apply_publiccloud_pint_image(settings)
-    assert settings["PUBLIC_CLOUD_IMAGE_ID"] is None
-    assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
-    assert settings["PUBLIC_CLOUD_REGION"] == "south"
-    assert "PUBLIC_CLOUD_PINT_NAME" not in settings
-    assert "PUBLIC_CLOUD_PINT_REGION" not in settings
-    assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+    with (
+        patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []}),
+        patch("openqabot.pc_helper.get_recent_pint_image", side_effect=lambda *_args, **_kwargs: None),
+    ):
+        settings = {
+            "PUBLIC_CLOUD_PINT_QUERY": "test",
+            "PUBLIC_CLOUD_PINT_NAME": "test",
+            "PUBLIC_CLOUD_PINT_FIELD": "image_id",
+            "PUBLIC_CLOUD_PINT_REGION": "south",
+        }
+        apply_publiccloud_pint_image(settings)
+        assert settings["PUBLIC_CLOUD_IMAGE_ID"] is None
+        assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
+        assert settings["PUBLIC_CLOUD_REGION"] == "south"
+        assert "PUBLIC_CLOUD_PINT_NAME" not in settings
+        assert "PUBLIC_CLOUD_PINT_REGION" not in settings
+        assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
 
 
 def test_get_recent_pint_image() -> None:
