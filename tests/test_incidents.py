@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import patch
+from collections.abc import Generator
 
 import pytest
+from pytest_mock import MockerFixture
 
 import responses
 from openqabot.types import ArchVer, Repos
@@ -131,17 +131,14 @@ def test_incidents_call_with_issues() -> None:
 
 
 @pytest.fixture
-def request_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+def request_mock(mocker: MockerFixture) -> Generator[None, None, None]:
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
         def json() -> list[dict]:
             return [{"flavor": None}]
 
-    def mock_get(*_args: Any, **_kwargs: Any) -> MockResponse:
-        return MockResponse()
-
-    monkeypatch.setattr("openqabot.types.incidents.retried_requests.get", mock_get)
+    return mocker.patch("openqabot.types.incidents.retried_requests.get", return_value=MockResponse())
 
 
 class MyIncident_2(MyIncident_1):
@@ -347,14 +344,11 @@ class MyIncident_4(MyIncident_3):
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_incidents_call_public_cloud_pint_query(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_incidents_call_public_cloud_pint_query(mocker: MockerFixture) -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
-    monkeypatch.setattr(
-        "openqabot.types.incidents.apply_publiccloud_pint_image",
-        lambda *_args, **_kwargs: {"PUBLIC_CLOUD_IMAGE_ID": 1234},
-    )
+    mocker.patch("openqabot.types.incidents.apply_publiccloud_pint_image", return_value={"PUBLIC_CLOUD_IMAGE_ID": 1234})
 
     inc = Incidents(
         product="",
