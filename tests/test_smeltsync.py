@@ -4,19 +4,23 @@
 
 import logging
 import re
-from collections import namedtuple
-from typing import Any
+from collections.abc import Generator
+from typing import Any, NamedTuple
+from unittest.mock import patch
 
 import pytest
 
-import openqabot.smeltsync
 import responses
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
 from responses import matchers
 
+
 # Fake Namespace for SyncRes initialization
-_namespace = namedtuple("Namespace", ("dry", "token", "retry"))  # noqa: PYI024
+class _namespace(NamedTuple):
+    dry: bool
+    token: str
+    retry: bool
 
 
 @pytest.fixture
@@ -66,11 +70,12 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
-def fake_qem(monkeypatch: pytest.MonkeyPatch) -> None:
+def fake_qem() -> Generator[None, None, None]:
     def f_active_inc(*_args: Any) -> list[str]:
         return ["100"]
 
-    monkeypatch.setattr(openqabot.smeltsync, "get_active_incidents", f_active_inc)
+    with patch("openqabot.smeltsync.get_active_incidents", side_effect=f_active_inc):
+        yield
 
 
 @pytest.fixture
