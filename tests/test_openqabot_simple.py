@@ -3,7 +3,9 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
+from collections.abc import Generator
 from typing import Any, NamedTuple, NoReturn
+from unittest.mock import patch
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -12,7 +14,6 @@ import openqabot.openqabot
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
-from openqabot.openqabot import OpenQABot
 
 
 class Namespace(NamedTuple):
@@ -27,7 +28,7 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_openqa_passed() -> Generator[None, None, None]:
     class FakeClient:
         def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
@@ -39,11 +40,12 @@ def mock_openqa_passed(monkeypatch: pytest.MonkeyPatch) -> None:
         def post_job(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
+    with patch("openqabot.openqabot.openQAInterface", FakeClient):
+        yield
 
 
 @pytest.fixture
-def mock_openqa_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_openqa_exception() -> Generator[None, None, None]:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -51,11 +53,12 @@ def mock_openqa_exception(monkeypatch: pytest.MonkeyPatch) -> None:
         def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:
             raise PostOpenQAError
 
-    monkeypatch.setattr(openqabot.openqabot, "openQAInterface", FakeClient)
+    with patch("openqabot.openqabot.openQAInterface", FakeClient):
+        yield
 
 
 @pytest.fixture
-def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_runtime() -> Generator[None, None, None]:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -66,17 +69,18 @@ def mock_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
     def f_load_metadata(*_args: Any, **_kwds: Any) -> list[FakeWorker]:
         return [FakeWorker()]
 
-    monkeypatch.setattr(openqabot.openqabot, "load_metadata", f_load_metadata)
-
     def f_get_incidents(*_args: Any, **_kwds: Any) -> list[int]:
         return [123]
-
-    monkeypatch.setattr(openqabot.openqabot, "get_incidents", f_get_incidents)
 
     def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()
 
-    monkeypatch.setattr(openqabot.openqabot, "get_onearch", f_get_onearch)
+    with (
+        patch("openqabot.openqabot.load_metadata", side_effect=f_load_metadata),
+        patch("openqabot.openqabot.get_incidents", side_effect=f_get_incidents),
+        patch("openqabot.openqabot.get_onearch", side_effect=f_get_onearch),
+    ):
+        yield
 
 
 @responses.activate
@@ -93,7 +97,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_incidents=False,
     )
-    bot = OpenQABot(args)
+    bot = openqabot.openqabot.OpenQABot(args)
 
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar", json={"id": 234})
     bot()
@@ -118,7 +122,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_incidents=False,
     )
-    bot = OpenQABot(args)
+    bot = openqabot.openqabot.OpenQABot(args)
 
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
@@ -142,7 +146,7 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_incidents=False,
     )
-    bot = OpenQABot(args)
+    bot = openqabot.openqabot.OpenQABot(args)
 
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
@@ -168,7 +172,7 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_incidents=False,
     )
-    bot = OpenQABot(args)
+    bot = openqabot.openqabot.OpenQABot(args)
 
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
