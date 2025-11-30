@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pytest
 
-import openqabot.types.incident
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
@@ -45,11 +44,12 @@ def mock_good() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_ex(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_ex() -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
-    monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
+    with patch("openqabot.types.incident.get_max_revision", side_effect=fake):
+        yield
 
 
 @pytest.mark.usefixtures("mock_good")
