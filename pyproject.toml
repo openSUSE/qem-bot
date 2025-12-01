@@ -144,7 +144,6 @@ ignore = [
     "UP032",
     "PLC0415", # import-outside-toplevel
     "PLC1802", # use-implicit-booleaness-not-len
-    "F821",
     "PLR0912", # too-many-branches
     "PLR0913", # too-many-arguments
     "PLR0914", # too-many-locals

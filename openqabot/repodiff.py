@@ -104,10 +104,10 @@ class RepoDiff:
     @staticmethod
     def compute_diff_for_packages(
         repo_a: str,
-        packages_by_arch_a: DefaultDict[str, Set[Package]],
+        packages_by_arch_a: defaultdict[str, set[Package]],
         repo_b: str,
-        packages_by_arch_b: DefaultDict[str, Set[Package]],
-    ) -> Tuple[DefaultDict[str, Set[Package]], int]:
+        packages_by_arch_b: defaultdict[str, set[Package]],
+    ) -> tuple[defaultdict[str, set[Package]], int]:
         diff_by_arch = defaultdict(set)
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
@@ -119,7 +119,7 @@ class RepoDiff:
             diff_by_arch[arch] = diff
         return (diff_by_arch, count)
 
-    def compute_diff(self, repo_a: str, repo_b: str) -> Tuple[DefaultDict[str, Set[Package]], int]:
+    def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
         packages_by_arch_a = self._load_packages(repo_a)
         packages_by_arch_b = self._load_packages(repo_b)
         return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)

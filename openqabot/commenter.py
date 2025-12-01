@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
 from typing import Any
