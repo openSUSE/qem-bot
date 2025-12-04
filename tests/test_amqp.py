@@ -4,10 +4,10 @@
 import json
 import logging
 from typing import NamedTuple
-from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
+from pytest_mock import MockerFixture  # Added import for MockerFixture
 
 import responses
 from openqabot.amqp import AMQP
@@ -44,19 +44,20 @@ def test_init_no_url() -> None:
     amqp.stop()
 
 
-def test_call() -> None:
-    with patch("openqabot.amqp.pika"):
-        args_with_url = Namespace(
-            dry=True,
-            token="ToKeN",
-            openqa_instance=urlparse("http://instance.qa"),
-            url="amqp://test.url",
-            gitea_token=None,
-        )
-        amqp_with_url = AMQP(args_with_url)
-        amqp_with_url()
-        amqp_with_url.channel.start_consuming.assert_called_once()
-        amqp_with_url.connection.close.assert_called_once()
+def test_call(mocker: MockerFixture) -> None:  # Added mocker type hint
+    mocker.patch("openqabot.amqp.pika")
+
+    args_with_url = Namespace(
+        dry=True,
+        token="ToKeN",
+        openqa_instance=urlparse("http://instance.qa"),
+        url="amqp://test.url",
+        gitea_token=None,
+    )
+    amqp_with_url = AMQP(args_with_url)
+    amqp_with_url()
+    amqp_with_url.channel.start_consuming.assert_called_once()
+    amqp_with_url.connection.close.assert_called_once()
 
 
 @responses.activate
@@ -152,75 +153,76 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handle_incident_value_error(caplog: pytest.LogCaptureFixture) -> None:
+def test_handle_incident_value_error(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:  # Added mocker type hint
     caplog.set_level(logging.DEBUG)
-    with patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError):
-        amqp.handle_incident(33222, {})
+    mocker.patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError)
+    amqp.handle_incident(33222, {})
     assert not caplog.text
 
 
-def test_handle_incident_updates_dashboard_entry() -> None:
-    with (
-        patch("openqabot.approver.get_single_incident"),
-        patch("openqabot.amqp.get_incident_settings_data", return_value=[0]),
-        patch("openqabot.amqp.compare_incident_data", return_value=True),
-        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0]),
-        patch("openqabot.amqp.AMQP._fetch_openqa_results", return_value=True) as fetch_openqa_results_mock,
-    ):
-        amqp.handle_incident(42, {})
-        fetch_openqa_results_mock.assert_called()
+def test_handle_incident_updates_dashboard_entry(mocker: MockerFixture) -> None:  # Added mocker type hint
+    mocker.patch("openqabot.approver.get_single_incident")
+    mocker.patch("openqabot.amqp.get_incident_settings_data", return_value=[0])
+    mocker.patch("openqabot.amqp.compare_incident_data", return_value=True)
+    mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0])
+    fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP._fetch_openqa_results", return_value=True)
+
+    amqp.handle_incident(42, {})
+    fetch_openqa_results_mock.assert_called()
 
 
-def test_fetch_openqa_results_calls_post_result() -> None:
+def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture) -> None:  # Added mocker type hint
     job = {"id": 42}
     r = {"job_id": 42}
     message = job
-    with (
-        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
-        patch("openqabot.amqp.AMQP._normalize_data", return_value=r) as normalize_data_mock,
-        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
-        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]) as get_jobs_mock,
-    ):
-        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
-        post_result_mock.assert_called_once_with(r)
-        normalize_data_mock.assert_called_once_with({}, job)
-        get_jobs_mock.assert_called_once_with({})
+
+    mocker.patch("openqabot.amqp.AMQP.filter_jobs", return_value=True)
+    normalize_data_mock = mocker.patch("openqabot.amqp.AMQP._normalize_data", return_value=r)
+    post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
+    get_jobs_mock = mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
+
+    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    post_result_mock.assert_called_once_with(r)
+    normalize_data_mock.assert_called_once_with({}, job)
+    get_jobs_mock.assert_called_once_with({})
 
 
-def test_fetch_openqa_results_unfiltered() -> None:
+def test_fetch_openqa_results_unfiltered(mocker: MockerFixture) -> None:  # Added mocker type hint
     job = {"id": 42}
     message = job
-    with (
-        patch("openqabot.amqp.AMQP.filter_jobs", return_value=False),
-        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
-        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
-    ):
-        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
-        post_result_mock.assert_not_called()
+
+    mocker.patch("openqabot.amqp.AMQP.filter_jobs", return_value=False)
+    post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
+    mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
+
+    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    post_result_mock.assert_not_called()
 
 
-def test_fetch_openqa_results_key_error() -> None:
+def test_fetch_openqa_results_key_error(mocker: MockerFixture) -> None:  # Added mocker type hint
     job = {"id": 42}
     message = job
-    with (
-        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
-        patch("openqabot.amqp.AMQP._normalize_data", return_value=None),
-        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
-        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
-    ):
-        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
-        post_result_mock.assert_not_called()
+
+    mocker.patch("openqabot.amqp.AMQP.filter_jobs", return_value=True)
+    mocker.patch("openqabot.amqp.AMQP._normalize_data", return_value=None)
+    post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
+    mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
+
+    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    post_result_mock.assert_not_called()
 
 
-def test_fetch_openqa_results_no_id() -> None:
+def test_fetch_openqa_results_no_id(mocker: MockerFixture) -> None:  # Added mocker type hint
     job = {"id": 42}
     r = {"job_id": 42}
     message = {"id": 43}
-    with (
-        patch("openqabot.amqp.AMQP.filter_jobs", return_value=True),
-        patch("openqabot.amqp.AMQP._normalize_data", return_value=r),
-        patch("openqabot.amqp.AMQP.post_result") as post_result_mock,
-        patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job]),
-    ):
-        amqp._fetch_openqa_results({}, message)  # noqa: SLF001
-        post_result_mock.assert_not_called()
+
+    mocker.patch("openqabot.amqp.AMQP.filter_jobs", return_value=True)
+    mocker.patch("openqabot.amqp.AMQP._normalize_data", return_value=r)
+    post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
+    mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
+
+    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    post_result_mock.assert_not_called()
