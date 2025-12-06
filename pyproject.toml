@@ -31,7 +31,7 @@ Homepage = "https://github.com/openSUSE/qem-bot"
 [project.scripts]
 qem-bot = "openqabot.main:main"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pyright",
     "pytest",
