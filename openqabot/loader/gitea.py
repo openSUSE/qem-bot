@@ -124,6 +124,7 @@ def compute_repo_url_for_job_setting(
 
 
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
+    log.debug("Loading open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
     open_prs = []

@@ -19,7 +19,7 @@ PROJECT = "SUSE:Maintenance:12345"
 
 
 @responses.activate
-def test_get_max_revison_manager_aarch64() -> None:
+def test_get_max_revision_manager_aarch64() -> None:
     repos = [("SLE-Module-SUSE-Manager-Server", "4.1")]
     arch = "aarch64"
 
@@ -28,7 +28,7 @@ def test_get_max_revison_manager_aarch64() -> None:
 
 
 @responses.activate
-def test_get_max_revison_opensuse() -> None:
+def test_get_max_revision_opensuse() -> None:
     repos = [("openSUSE-SLE", "4.1")]
     arch = "aarch64"
     opensuse = BASE_XML % "256"
@@ -60,14 +60,14 @@ def add_sles_sled_response(sled_body: str | ConnectionError | HTTPError | Buffer
 
 
 @responses.activate
-def test_get_max_revison_3() -> None:
+def test_get_max_revision_3() -> None:
     add_sles_sled_response(BASE_XML % "257")
     ret = rp.get_max_revision(repos, arch, PROJECT)
     assert ret == 257
 
 
 @responses.activate
-def test_get_max_revison_connectionerror(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.ConnectionError("Failed"))
 
@@ -79,7 +79,7 @@ def test_get_max_revison_connectionerror(caplog: pytest.LogCaptureFixture) -> No
 
 
 @responses.activate
-def test_get_max_revison_httperror(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_httperror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(requests.HTTPError("Failed"))
 
@@ -90,7 +90,7 @@ def test_get_max_revison_httperror(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid>")
 
@@ -101,7 +101,7 @@ def test_get_max_revison_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid></invalid>")
 
@@ -110,7 +110,7 @@ def test_get_max_revison_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_exception(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     add_sles_sled_response(BufferError("other error"))
     with pytest.raises(BufferError):
@@ -118,7 +118,26 @@ def test_get_max_revison_exception(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_get_max_revison_slfo_product_not_in_obs_products(caplog: pytest.LogCaptureFixture) -> None:
+def test_get_max_revision_retry_error(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    repos = [("SLES", "15SP3")]
+    arch = "x86_64"
+    project = "SUSE:Maintenance:12345"
+
+    responses.add(
+        responses.GET,
+        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
+        body=requests.exceptions.RetryError("Max retries exceeded"),
+    )
+
+    with pytest.raises(NoRepoFoundError):
+        rp.get_max_revision(repos, arch, project)
+
+    assert "not found -- skipping incident" in caplog.records[0].msg
+
+
+@responses.activate
+def test_get_max_revision_slfo_product_not_in_obs_products(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     repos = [("SLFO-Module", "1.1.99")]
     arch = "x86_64"

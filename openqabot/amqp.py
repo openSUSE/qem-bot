@@ -60,9 +60,9 @@ class AMQP(SyncRes):
 
     def on_message(
         self,
-        unused_channel: pika.channel.Channel,  # noqa: ARG002 Unused method argument
+        _: pika.channel.Channel,
         method: pika.spec.Basic.Deliver,
-        unused_properties: pika.spec.BasicProperties,  # noqa: ARG002 Unused method argument
+        __: pika.spec.BasicProperties,
         body: bytes,
     ) -> None:
         message = json.loads(body)
@@ -78,7 +78,6 @@ class AMQP(SyncRes):
                 build_nr = match.group(0)
                 log.debug("Received AMQP message: %s", pformat(message))
                 log.info("Aggregate build %s done", build_nr)
-                return self.handle_aggregate(build_nr, message)
         return None
 
     def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:
@@ -103,6 +102,3 @@ class AMQP(SyncRes):
         # Try to approve incident
         approve = Approver(self.args, inc_nr)
         approve()
-
-    def handle_aggregate(self, unused_build: str, unused_message: dict[str, Any]) -> None:  # noqa: ARG002 Unused method argument
-        return
