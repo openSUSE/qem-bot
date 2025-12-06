@@ -66,18 +66,17 @@ class AMQP(SyncRes):
         body: bytes,
     ) -> None:
         message = json.loads(body)
-        if method.routing_key == "suse.openqa.job.done" and "BUILD" in message:
-            match = build_inc_regex.match(message["BUILD"])
-            if match:
-                inc_nr = match.group(1)
-                log.debug("Received AMQP message: %s", pformat(message))
-                log.info("Job for incident %s done", inc_nr)
-                return self.handle_incident(inc_nr, message)
-            match = build_agg_regex.match(message["BUILD"])
-            if match:
-                build_nr = match.group(0)
-                log.debug("Received AMQP message: %s", pformat(message))
-                log.info("Aggregate build %s done", build_nr)
+        if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
+            return None
+        if match := build_inc_regex.match(message["BUILD"]):
+            inc_nr = match.group(1)
+            log.debug("Received AMQP message: %s", pformat(message))
+            log.info("Job for incident %s done", inc_nr)
+            return self.handle_incident(inc_nr, message)
+        if match := build_agg_regex.match(message["BUILD"]):
+            build_nr = match.group(0)
+            log.debug("Received AMQP message: %s", pformat(message))
+            log.info("Aggregate build %s done", build_nr)
         return None
 
     def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:
