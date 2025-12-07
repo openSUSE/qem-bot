@@ -3,9 +3,9 @@
 from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, NoReturn
-from unittest.mock import patch
 
 import pytest
+from pytest_mock import MockerFixture
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types import ArchVer, Repos
@@ -35,21 +35,19 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good() -> Generator[None, None, None]:
+def mock_good(mocker: MockerFixture) -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
-    with patch("openqabot.types.incident.get_max_revision", side_effect=fake):
-        yield
+    return mocker.patch("openqabot.types.incident.get_max_revision", side_effect=fake)
 
 
 @pytest.fixture
-def mock_ex() -> Generator[None, None, None]:
+def mock_ex(mocker: MockerFixture) -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
-    with patch("openqabot.types.incident.get_max_revision", side_effect=fake):
-        yield
+    return mocker.patch("openqabot.types.incident.get_max_revision", side_effect=fake)
 
 
 @pytest.mark.usefixtures("mock_good")
