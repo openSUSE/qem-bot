@@ -8,11 +8,12 @@ import urllib.error
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, NamedTuple
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from urllib.parse import urljoin
 
 import pytest
 from lxml import etree
+from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
@@ -90,9 +91,8 @@ def fake_repo() -> None:
 
 
 @pytest.fixture
-def mock_http_get_fixture() -> Generator[MagicMock, Any, Any]:
-    with patch("osc.core.http_GET") as mock_obj:
-        yield mock_obj
+def mock_http_get_fixture(mocker: MockerFixture) -> Generator[MagicMock, Any, Any]:
+    return mocker.patch("osc.core.http_GET")
 
 
 def fake_osc_http_get(url: str) -> etree.ElementTree:
@@ -126,6 +126,7 @@ def fake_get_multibuild_data(obs_project: str) -> str:
 
 
 def run_gitea_sync(
+    mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
     *,
     no_build_results: bool = False,
@@ -140,37 +141,35 @@ def run_gitea_sync(
     get_config_patch_target = "osc.conf.get_config"
     get_multibuild_data_patch_target = "openqabot.loader.gitea.get_multibuild_data"
 
-    with (
-        patch(http_get_patch_target, side_effect=noop_osc_http_get if no_build_results else fake_osc_http_get),
-        patch(xml_parse_patch_target, side_effect=fake_osc_xml_parse),
-        patch(get_config_patch_target, side_effect=fake_osc_get_config),
-        patch(get_multibuild_data_patch_target, side_effect=fake_get_multibuild_data),
-    ):
-        args = Namespace(
-            dry=dry,
-            fake_data=False,
-            token="123",
-            gitea_token="456",
-            retry=False,
-            gitea_repo="products/SLFO",
-            allow_build_failures=allow_failures,
-            consider_unrequested_prs=False,
-            pr_number=None,
-        )
-        assert GiteaSync(args)() == 0
+    mocker.patch(http_get_patch_target, side_effect=noop_osc_http_get if no_build_results else fake_osc_http_get)
+    mocker.patch(xml_parse_patch_target, side_effect=fake_osc_xml_parse)
+    mocker.patch(get_config_patch_target, side_effect=fake_osc_get_config)
+    mocker.patch(get_multibuild_data_patch_target, side_effect=fake_get_multibuild_data)
+    args = Namespace(
+        dry=dry,
+        fake_data=False,
+        token="123",
+        gitea_token="456",
+        retry=False,
+        gitea_repo="products/SLFO",
+        allow_build_failures=allow_failures,
+        consider_unrequested_prs=False,
+        pr_number=None,
+    )
+    assert GiteaSync(args)() == 0
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_gitea_sync_on_dry_run_does_not_sync(caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(caplog, dry=True)
+def test_gitea_sync_on_dry_run_does_not_sync(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_gitea_sync(mocker, caplog, dry=True)
     assert "Dry run, nothing synced" in caplog.text
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_product_repo(caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(caplog)
+def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_gitea_sync(mocker, caplog)
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
@@ -205,27 +204,28 @@ def test_sync_with_product_repo(caplog: pytest.LogCaptureFixture) -> None:
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback")
 def test_sync_with_product_version_from_repo_listing(
+    mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    with patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard"):  # has no scmsync so repo listing is used
-        run_gitea_sync(caplog)
+    mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
+    run_gitea_sync(mocker, caplog)
 
-        expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
-        incident = responses.calls[-1].response.json()[0]
-        channels = incident["channels"]
-        for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
-            channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
-            assert channel in channels
-        requests_to_download_repo = [r for r in responses.calls if r.request.url.startswith(OBS_DOWNLOAD_URL)]
-        assert len(requests_to_download_repo) == 1
+    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+    incident = responses.calls[-1].response.json()[0]
+    channels = incident["channels"]
+    for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
+        channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
+        assert channel in channels
+    requests_to_download_repo = [r for r in responses.calls if r.request.url.startswith(OBS_DOWNLOAD_URL)]
+    assert len(requests_to_download_repo) == 1
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-@patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")
-@patch("openqabot.loader.gitea.OBS_PRODUCTS", "")
-def test_sync_with_codestream_repo(caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(caplog)
+def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")
+    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", "")
+    run_gitea_sync(mocker, caplog)
 
     # expect the codestream repo to be used
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
@@ -244,8 +244,8 @@ def test_sync_with_codestream_repo(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_without_results(caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(caplog, no_build_results=True, allow_failures=False)
+def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_gitea_sync(mocker, caplog, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
     m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages
