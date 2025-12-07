@@ -4,11 +4,11 @@
 
 import logging
 from collections.abc import Generator
-from typing import Any, NamedTuple
-from unittest.mock import patch
+from typing import NamedTuple
 from urllib.parse import urlparse
 
 import pytest
+from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import QEM_DASHBOARD
@@ -22,12 +22,8 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def get_a_i() -> Generator[None, None, None]:
-    def fake(*_args: Any) -> list[int]:
-        return [100]
-
-    with patch("openqabot.incsyncres.get_active_incidents", side_effect=fake):
-        yield
+def get_a_i(mocker: MockerFixture) -> Generator[None, None, None]:
+    return mocker.patch("openqabot.incsyncres.get_active_incidents", return_value=[100])
 
 
 @responses.activate
