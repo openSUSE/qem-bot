@@ -1,10 +1,11 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests
+from pytest_mock import MockerFixture
 
 from openqabot.loader.qem import (
     LoaderQemError,
@@ -24,8 +25,8 @@ from openqabot.loader.qem import (
 )
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incidents_simple(get_json_mock: MagicMock) -> None:
+def test_get_incidents_simple(mocker: MockerFixture) -> None:
+    get_json_mock = mocker.patch("openqabot.loader.qem.get_json")
     get_json_mock.return_value = [
         {
             "id": 1,
@@ -50,16 +51,14 @@ def test_get_incidents_simple(get_json_mock: MagicMock) -> None:
     get_json_mock.assert_called_once_with("api/incidents", headers={}, verify=True)
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incidents_error(get_json_mock: MagicMock) -> None:
-    get_json_mock.return_value = {"error": "some error"}
-
+def test_get_incidents_error(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "some error"})
     with pytest.raises(LoaderQemError):
         get_incidents({})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incidents_create_none(get_json_mock: MagicMock) -> None:
+def test_get_incidents_create_none(mocker: MockerFixture) -> None:
+    get_json_mock = mocker.patch("openqabot.loader.qem.get_json")
     get_json_mock.return_value = [
         {
             "id": 1,
@@ -77,14 +76,13 @@ def test_get_incidents_create_none(get_json_mock: MagicMock) -> None:
         }
     ]
 
-    with patch("openqabot.loader.qem.Incident.create", return_value=None):
-        res = get_incidents({})
-        assert len(res) == 0
+    mocker.patch("openqabot.loader.qem.Incident.create", return_value=None)
+    res = get_incidents({})
+    assert len(res) == 0
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_active_incidents(mock_json: MagicMock) -> None:
-    mock_json.return_value = [{"number": 1}, {"number": 2}]
+def test_get_active_incidents(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 1}, {"number": 2}])
 
     res = get_active_incidents({})
 
@@ -92,8 +90,8 @@ def test_get_active_incidents(mock_json: MagicMock) -> None:
     assert res == [1, 2]
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incidents_approver(mock_json: MagicMock) -> None:
+def test_get_incidents_approver(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {
             "number": 1,
@@ -116,9 +114,8 @@ def test_get_incidents_approver(mock_json: MagicMock) -> None:
     assert res[0].scm_info == "foo"
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_single_incident(mock_json: MagicMock) -> None:
-    mock_json.return_value = {"number": 1, "rr_number": 123}
+def test_get_single_incident(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123})
 
     res = get_single_incident({}, 1)
 
@@ -128,16 +125,15 @@ def test_get_single_incident(mock_json: MagicMock) -> None:
     mock_json.assert_called_once_with("api/incidents/1", headers={})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_no_settings(mock_json: MagicMock) -> None:
-    mock_json.return_value = []
+def test_get_incident_settings_no_settings(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value=[])
 
     with pytest.raises(NoIncidentResultsError):
         get_incident_settings(1, {})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_all_incidents(mock_json: MagicMock) -> None:
+def test_get_incident_settings_all_incidents(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {"RRID": 1}, "withAggregate": False},
         {"id": 2, "settings": {"RRID": 2}, "withAggregate": False},
@@ -150,8 +146,8 @@ def test_get_incident_settings_all_incidents(mock_json: MagicMock) -> None:
     assert res[1].id == 2
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_multiple_rrids(mock_json: MagicMock) -> None:
+def test_get_incident_settings_multiple_rrids(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {"RRID": 1}, "withAggregate": False},
         {"id": 2, "settings": {"RRID": 2}, "withAggregate": False},
@@ -165,8 +161,8 @@ def test_get_incident_settings_multiple_rrids(mock_json: MagicMock) -> None:
     assert res[1].id == 3
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_no_rrids(mock_json: MagicMock) -> None:
+def test_get_incident_settings_no_rrids(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {}, "withAggregate": False},
         {"id": 2, "settings": {}, "withAggregate": False},
@@ -177,8 +173,8 @@ def test_get_incident_settings_no_rrids(mock_json: MagicMock) -> None:
     assert len(res) == 2
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_data(mock_json: MagicMock) -> None:
+def test_get_incident_settings_data(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {
             "id": 1,
@@ -202,20 +198,17 @@ def test_get_incident_settings_data(mock_json: MagicMock) -> None:
     mock_json.assert_called_once_with("api/incident_settings/1", headers={})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_incident_settings_data_error(mock_json: MagicMock) -> None:
-    mock_json.return_value = {"error": "foo"}
+def test_get_incident_settings_data_error(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "foo"})
 
     res = get_incident_settings_data({}, 1)
 
     assert len(res) == 0
 
 
-@patch("openqabot.loader.qem.get_json")
-@patch("openqabot.loader.qem.get_incident_settings")
-def test_get_incident_results(mock_settings: MagicMock, mock_json: MagicMock) -> None:
-    mock_settings.return_value = [MagicMock(id=1)]
-    mock_json.return_value = [{"foo": "bar"}]
+def test_get_incident_results(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"foo": "bar"}])
+    mock_settings = mocker.patch("openqabot.loader.qem.get_incident_settings", return_value=[MagicMock(id=1)])
 
     res = get_incident_results(1, {})
 
@@ -225,19 +218,15 @@ def test_get_incident_results(mock_settings: MagicMock, mock_json: MagicMock) ->
     mock_json.assert_called_once_with("api/jobs/incident/1", headers={})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_aggregate_settings_no_settings(mock_json: MagicMock) -> None:
-    mock_json.return_value = []
+def test_get_aggregate_settings_no_settings(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value=[])
 
     with pytest.raises(NoAggregateResultsError):
         get_aggregate_settings(1, {})
 
 
-@patch("openqabot.loader.qem.get_json")
-def test_get_aggregate_settings(mock_json: MagicMock) -> None:
-    mock_json.return_value = [
-        {"id": 1, "build": "20220101-1"},
-    ]
+def test_get_aggregate_settings(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value=[{"id": 1, "build": "20220101-1"}])
 
     res = get_aggregate_settings(1, {})
 
@@ -246,12 +235,11 @@ def test_get_aggregate_settings(mock_json: MagicMock) -> None:
     assert res[0].aggregate
 
 
-@patch("openqabot.loader.qem.patch")
-def test_update_incidents_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_patch.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
     res = update_incidents({}, {})
     assert res == 0
@@ -260,23 +248,22 @@ def test_update_incidents_success(mock_patch: MagicMock, caplog: pytest.LogCaptu
     assert "Smelt/Gitea Incidents updated" in caplog.records[0].message
 
 
-def test_update_incidents_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_update_incidents_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
-    with patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException):
-        res = update_incidents({}, {})
+    mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
+    res = update_incidents({}, {})
     assert res == 1
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "ERROR"
     assert "Request to QEM Dashboard failed" in caplog.records[0].message
 
 
-@patch("openqabot.loader.qem.patch")
-def test_update_incidents_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_incidents_unsuccessful(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 403
     mock_response.text = '{"error":"Permission denied"}'
-    mock_patch.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
     res = update_incidents({}, {})
     assert res == 2
@@ -287,13 +274,12 @@ def test_update_incidents_unsuccessful(mock_patch: MagicMock, caplog: pytest.Log
     assert '{"error":"Permission denied"}' in caplog.records[1].message
 
 
-@patch("openqabot.loader.qem.patch")
-def test_update_incidents_unsuccessful_with_error_text(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_incidents_unsuccessful_with_error_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 403
     mock_response.text = '{"error":"Permission denied"}'
-    mock_patch.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
     res = update_incidents({}, {})
     assert res == 2
@@ -304,61 +290,57 @@ def test_update_incidents_unsuccessful_with_error_text(mock_patch: MagicMock, ca
     assert '{"error":"Permission denied"}' in caplog.records[1].message
 
 
-@patch("openqabot.loader.qem.put")
-def test_post_job_success(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_post_job_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_put.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.put", return_value=mock_response)
 
     post_job({}, {})
     assert "error" not in caplog.text
 
 
-@patch("openqabot.loader.qem.put")
-def test_post_job_unsuccessful(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_post_job_unsuccessful(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 400
     mock_response.text = "Error message"
-    mock_put.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.put", return_value=mock_response)
 
     post_job({}, {})
     assert "Error message" in caplog.text
 
 
-def test_post_job_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_post_job_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
-    with patch("openqabot.loader.qem.put", side_effect=requests.exceptions.RequestException):
-        post_job({}, {})
+    mocker.patch("openqabot.loader.qem.put", side_effect=requests.exceptions.RequestException)
+    post_job({}, {})
     assert "Request to QEM Dashboard failed" in caplog.text
 
 
-@patch("openqabot.loader.qem.patch")
-def test_update_job_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_job_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 200
-    mock_patch.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
     update_job({}, 1, {})
     assert "error" not in caplog.text
 
 
-@patch("openqabot.loader.qem.patch")
-def test_update_job_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.ERROR)
+def test_update_job_unsuccessful(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mock_response = MagicMock()
     mock_response.status_code = 400
     mock_response.text = "Error message"
-    mock_patch.return_value = mock_response
+    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
+    caplog.set_level(logging.ERROR)
 
     update_job({}, 1, {})
     assert "Error message" in caplog.text
 
 
-def test_update_job_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_update_job_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
-    with patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException):
-        update_job({}, 1, {})
+    mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
+    update_job({}, 1, {})
     assert "Request to QEM Dashboard failed" in caplog.text
