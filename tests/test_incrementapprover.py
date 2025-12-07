@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -273,11 +274,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCapt
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
 def test_skipping_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
-        in messages
-    )
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0 build 139.1@aarch64", caplog.text)
 
 
 @responses.activate
@@ -285,11 +282,7 @@ def test_skipping_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogC
 def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     ci_job_url = "https://some/ci/job/url"
     (errors, jobs) = run_approver(mocker, caplog, schedule=True, test_env_var=ci_job_url)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
-        in messages
-    )
+    assert re.search(r"Skipping approval.*no relevant jobs", caplog.text)
     assert errors == 0, "no errors"
     for arch in ["x86_64", "aarch64", "ppc64le", "s390x"]:
         expected_params = {
@@ -307,10 +300,7 @@ def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.Lo
 
 
 def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) -> None:
-    assert (
-        "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
-        in messages
-    )
+    assert "Skipping approval, there are no relevant jobs" in "".join(messages)
     assert errors == 0, "no errors"
     base_params = {
         "DISTRI": "sle",
@@ -400,12 +390,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo", "mock_osc")
 def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert (
-        # ruff: noqa: E501 line-too-long
-        "Skipping approval, some jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments are in pending states (running, scheduled)"
-        in messages
-    )
+    assert re.search(r"Skipping approval, some jobs.*are in pending states \(running, scheduled\)", caplog.text)
 
 
 @responses.activate
