@@ -17,6 +17,14 @@ tidy:
 	ruff format
 	ruff check --fix
 
+.PHONY: check-architecture
+check-architecture:
+	@if git grep -nE '^\s*@(unittest\.mock\.|mock\.)?patch' tests/; then \
+		echo "❌ Error: @patch decorator detected. Avoid to prevent argument ordering bugs."; \
+		echo "   Fix: Use the 'mocker' fixture (pytest-mock) or a 'with patch():' context manager."; \
+		exit 1; \
+	fi
+
 .PHONY: check-maintainability
 check-maintainability:
 	@echo "Checking maintainability (grade B or worse) …"
@@ -38,7 +46,7 @@ only-test-with-coverage:
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: ruff check-maintainability check-code-health typecheck
+checkstyle: ruff check-architecture check-maintainability check-code-health typecheck
 
 .PHONY: test
 test: only-test checkstyle
