@@ -8,13 +8,13 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
+from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
-import osc.conf
 import osc.core
 import pytest
+from pytest_mock import MockerFixture
 
-import openqabot
 import responses
 from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
@@ -168,7 +168,6 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
 
 def prepare_approver(
     caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
     reschedule: bool = False,
@@ -179,9 +178,7 @@ def prepare_approver(
 ) -> IncrementApprover:
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
-    monkeypatch.setattr(osc.core, "get_request_list", fake_get_request_list)
-    monkeypatch.setattr(osc.core, "change_review_state", fake_change_review_state)
-    monkeypatch.setattr(osc.conf, "get_config", fake_osc_get_config)
+
     args = Namespace(
         dry=False,
         token="not-secret",
@@ -210,8 +207,8 @@ def prepare_approver(
 
 
 def run_approver(
+    mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
     *,
     schedule: bool = False,
     reschedule: bool = False,
@@ -220,15 +217,11 @@ def run_approver(
     config: IncrementConfig | None = None,
     request_id: int | None = None,
 ) -> tuple[int, list]:
-    jobs = []
-    monkeypatch.setattr(
-        openqabot.openqa.openQAInterface,
-        "post_job",
-        lambda _self, data: jobs.append(data),
-    )
+    jobs: list[Any] = []
+    mock_post_job = MagicMock()
+    mocker.patch("openqabot.openqa.openQAInterface.post_job", new=mock_post_job)
     increment_approver = prepare_approver(
         caplog,
-        monkeypatch,
         schedule=schedule,
         reschedule=reschedule,
         diff_project_suffix=diff_project_suffix,
@@ -237,34 +230,38 @@ def run_approver(
         request_id=request_id,
     )
     errors = increment_approver()
+    jobs = [call_args.args[0] for call_args in mock_post_job.call_args_list]
     return (errors, jobs)
 
 
+@pytest.fixture
+def mock_osc(mocker: MockerFixture) -> None:
+    mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
+    mocker.patch("osc.core.change_review_state", side_effect=fake_change_review_state)
+    mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
+
+
 @responses.activate
-@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_approval_if_there_are_only_ok_openqa_jobs(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    run_approver(caplog, monkeypatch)
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
+def test_approval_if_there_are_only_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_approver(mocker, caplog)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "All 2 jobs on openQA have passed/softfailed" in last_message
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo")
-def test_skipping_if_rescheduling(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
-    run_approver(caplog, monkeypatch, reschedule=True)
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
+def test_skipping_if_rescheduling(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_approver(mocker, caplog, reschedule=True)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "have passed" not in last_message
     assert "Re-scheduling jobs for" in last_message
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
-def test_skipping_with_failing_openqa_jobs_for_one_config(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    increment_approver = prepare_approver(caplog, monkeypatch)
+@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo", "mock_osc")
+def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCaptureFixture) -> None:
+    increment_approver = prepare_approver(caplog)
     increment_approver.config.append(increment_approver.config[0])
     increment_approver()
     last_message = [x[-1] for x in caplog.record_tuples][-1]
@@ -273,12 +270,9 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
-def test_skipping_with_no_openqa_jobs(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    run_approver(caplog, monkeypatch)
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
+def test_skipping_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_approver(mocker, caplog)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -287,13 +281,10 @@ def test_skipping_with_no_openqa_jobs(
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
-def test_scheduling_with_no_openqa_jobs(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
+def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     ci_job_url = "https://some/ci/job/url"
-    (errors, jobs) = run_approver(caplog, monkeypatch, schedule=True, test_env_var=ci_job_url)
+    (errors, jobs) = run_approver(mocker, caplog, schedule=True, test_env_var=ci_job_url)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         "Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@aarch64 of flavor Online-Increments"
@@ -357,16 +348,15 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
 def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
     args = {
+        "mocker": mocker,
         "caplog": caplog,
-        "monkeypatch": monkeypatch,
         "schedule": True,
         "diff_project_suffix": "PUBLISH/product",
         "config": next(configs),
@@ -384,22 +374,22 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
+@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
 def test_scheduling_extra_livepatching_builds_based_on_source_report(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    monkeypatch.setattr(osc.core, "get_repos_of_project", fake_get_repos_of_project)
-    monkeypatch.setattr(osc.core, "get_binarylist", fake_get_binarylist)
-    monkeypatch.setattr(osc.core, "get_binary_file", fake_get_binary_file)
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    configs = IncrementConfig.from_config_file(path)
     args = {
+        "mocker": mocker,
         "caplog": caplog,
-        "monkeypatch": monkeypatch,
         "schedule": True,
         "diff_project_suffix": "source-report",
-        "config": next(IncrementConfig.from_config_file(path)),
+        "config": next(configs),
     }
+    mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
+    mocker.patch("osc.core.get_binarylist", side_effect=fake_get_binarylist)
+    mocker.patch("osc.core.get_binary_file", side_effect=fake_get_binary_file)
     (errors, jobs) = run_approver(**args)
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Computing source report diff for request 42" in messages
@@ -407,9 +397,9 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
-def test_skipping_with_pending_openqa_jobs(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
-    run_approver(caplog, monkeypatch)
+@pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo", "mock_osc")
+def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_approver(mocker, caplog)
     messages = [x[-1] for x in caplog.record_tuples]
     assert (
         # ruff: noqa: E501 line-too-long
@@ -419,12 +409,9 @@ def test_skipping_with_pending_openqa_jobs(caplog: pytest.LogCaptureFixture, mon
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
-def test_listing_not_ok_openqa_jobs(
-    caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    run_approver(caplog, monkeypatch)
+@pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo", "mock_osc")
+def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    run_approver(mocker, caplog)
     last_message = [x[-1] for x in caplog.record_tuples][-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
     assert "http://openqa-instance/tests/21" in last_message
@@ -464,23 +451,25 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
 
 
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
 def test_specified_obs_request_not_found_skips_approval(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     def fake_request_from_api(apiurl: str, reqid: int) -> None:
         assert apiurl == OBS_URL
         assert reqid == "43"
 
-    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
-    run_approver(caplog, monkeypatch, request_id=43)
+    mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
+    run_approver(mocker, caplog, request_id=43)
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Checking specified request 43" in messages
     assert "Skipping approval, no relevant requests in states new/review/accepted" in messages
 
 
-def test_specified_obs_request_found_renders_request(
-    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_specified_obs_request_found_renders_request(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
         assert apiurl == OBS_URL
         assert reqid == "43"
@@ -491,8 +480,8 @@ def test_specified_obs_request_found_renders_request(
         req.to_str = lambda: "<request />"
         return req
 
-    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
-    approver = prepare_approver(caplog, monkeypatch, request_id=43)
+    mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
+    approver = prepare_approver(caplog, request_id=43)
     approver._find_request_on_obs("foo")  # noqa: SLF001
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
@@ -515,13 +504,18 @@ def test_config_parsing_from_args() -> None:
     assert config[0].settings == {}
 
 
-def test_get_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
-    approver = prepare_approver(caplog, monkeypatch)
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_get_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
     approver._get_regex_match("[", "some string")  # noqa: SLF001
     assert "Pattern `[` did not compile successfully" in caplog.text
 
 
-def test_find_request_on_obs_with_request_id(caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch) -> None:
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_find_request_on_obs_with_request_id(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+
     def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
         assert apiurl == OBS_URL
         assert reqid == "43"
@@ -532,8 +526,8 @@ def test_find_request_on_obs_with_request_id(caplog: pytest.LogCaptureFixture, m
         req.to_str = lambda: "<request />"
         return req
 
-    monkeypatch.setattr(osc.core.Request, "from_api", fake_request_from_api)
-    approver = prepare_approver(caplog, monkeypatch, request_id=43)
+    mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
+    approver = prepare_approver(caplog, request_id=43)
     approver._find_request_on_obs("foo")  # noqa: SLF001
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
