@@ -40,10 +40,6 @@ def f_inc_approver(*_args: Any) -> list[IncReq]:
     ]
 
 
-def f_inc_single_approver(_token: dict[str, str], i: int) -> list[IncReq]:
-    return [f_inc_approver()[i - 1]]
-
-
 @dataclass(frozen=True)
 class CommentFormatTestCase:
     comment_text: str
@@ -276,7 +272,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator
         }
         return results.get(inc)
 
-    mocker.patch("openqabot.approver.get_single_incident", side_effect=f_inc_single_approver)
+    mocker.patch("openqabot.approver.get_single_incident", side_effect=lambda _, i: [f_inc_approver()[i - 1]])
     mocker.patch("openqabot.approver.get_incidents_approver", side_effect=f_inc_approver)
     mocker.patch("openqabot.approver.get_incident_settings", side_effect=f_inc_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
