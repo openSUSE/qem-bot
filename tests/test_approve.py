@@ -817,57 +817,53 @@ def test_mark_job_as_acceptable_for_incident_request_error(
     assert "Unable to mark job 1 as acceptable for incident 1" in caplog.text
 
 
-def test_validate_job_qam_no_qam_data(mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    "json_data", [pytest.param(None, id="no_qam_data"), pytest.param({"status": "failed"}, id="status_not_passed")]
+)
+def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) -> None:
     approver_instance = Approver(args)
-    mocker.patch("openqabot.approver.get_json", return_value=None)
+    mocker.patch("openqabot.approver.get_json", return_value=json_data)
     assert not approver_instance.validate_job_qam(1)
 
 
-def test_validate_job_qam_status_not_passed(mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    ("job", "log_message"),
+    [
+        ({"build": "invalid-date", "result": "passed", "id": 123}, "Could not parse build date"),
+        ({"build": "20200101-1", "result": "passed", "id": 123}, "Older jobs are too old"),
+    ],
+)
+def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
     approver_instance = Approver(args)
-    mocker.patch("openqabot.approver.get_json", return_value={"status": "failed"})
-    assert not approver_instance.validate_job_qam(1)
-
-
-def test_was_older_job_ok_invalid_date(caplog: pytest.LogCaptureFixture) -> None:
-    approver_instance = Approver(args)
-    job = {"build": "invalid-date", "result": "passed", "id": 123}
-    oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
-    regex = re.compile(r".*")
-
-    caplog.set_level(logging.INFO)
-    assert approver_instance._was_older_job_ok(1, 1, job, oldest_build_usable, regex) is None  # noqa: SLF001
-    assert "Could not parse build date invalid-da. Won't consider this job as alternative for approval." in caplog.text
-
-
-def test_was_older_job_ok_too_old(caplog: pytest.LogCaptureFixture) -> None:
-    approver_instance = Approver(args)
-    job = {"build": "20200101-1", "result": "passed", "id": 123}
     oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
     regex = re.compile(r".*")
 
     caplog.set_level(logging.INFO)
     assert not approver_instance._was_older_job_ok(1, 1, job, oldest_build_usable, regex)  # noqa: SLF001
-    assert (
-        "Cannot ignore aggregate failure 1 for update 1. Reason: Older jobs are too old to be considered" in caplog.text
-    )
+    assert log_message in caplog.text
 
 
-def test_was_ok_before_no_suitable_older_jobs(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    ("older_jobs_data", "log_message"),
+    [
+        pytest.param(
+            {"build": "20240101XY", "result": "failed", "id": 123},
+            "Older usable jobs did not succeed",
+            id="no_suitable_older_jobs",
+        ),
+        pytest.param(
+            {"build": "invalid-date"},
+            "Could not parse build date invalid-da",
+            id="invalid_date",
+        ),
+    ],
+)
+def test_was_ok_before_no_suitable_older_jobs(
+    older_jobs_data: dict, log_message: str, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
     approver_instance = Approver(args)
     caplog.set_level(logging.INFO)
-    mocker.patch(
-        "openqabot.openqa.openQAInterface.get_older_jobs",
-        return_value={"data": [{"build": "20240101XY", "result": "failed", "id": 123}]},
-    )
+    mocker.patch("openqabot.openqa.openQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
     mocker.patch("openqabot.approver.Approver._was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
-    assert "Older usable jobs did not succeed. Run out of jobs to evaluate." in caplog.text
-
-
-def test_was_ok_before_invalid_date(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    approver_instance = Approver(args)
-    caplog.set_level(logging.INFO)
-    mocker.patch("openqabot.openqa.openQAInterface.get_older_jobs", return_value={"data": [{"build": "invalid-date"}]})
-    assert not approver_instance.was_ok_before(1, 1)
-    assert "Could not parse build date invalid-da. Won't try to look at older jobs for approval." in caplog.text
+    assert log_message in caplog.text
