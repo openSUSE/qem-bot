@@ -279,6 +279,22 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
 
+def with_fake_qem(mode: str) -> Generator[None, None, None]:
+    """Local meta-decorator that sets the behavior marker and triggers the fixture injection.
+
+    Use examples:
+    @with_fake_qem("NoResultsError isn't raised")
+    ...
+    @with_fake_qem("inc")
+    """
+
+    def decorator(test_func: object) -> object:
+        test_func = pytest.mark.qem_behavior(mode)(test_func)
+        return pytest.mark.usefixtures("fake_qem")(test_func)
+
+    return decorator
+
+
 @pytest.fixture
 def f_osconf(mocker: MockerFixture) -> Generator[None, None, None]:
     return mocker.patch("osc.conf.get_config")
@@ -353,8 +369,7 @@ def approver(incident: int = 0) -> int:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem")
+@with_fake_qem("NoResultsError isn't raised")
 def test_no_jobs(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     responses.add(responses.GET, re.compile(f"{QEM_DASHBOARD}api/jobs/.*/.*"), json={})
@@ -366,8 +381,8 @@ def test_no_jobs(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_single_incident_mocks")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_incident_mocks")
 def test_single_incident_failed_not_approved(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     approver(incident=1)
@@ -380,8 +395,8 @@ def test_single_incident_failed_not_approved(caplog: pytest.LogCaptureFixture) -
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_single_incident_mocks")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_incident_mocks")
 def test_single_incident_passed_is_approved(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     approver(incident=4)
@@ -389,8 +404,8 @@ def test_single_incident_passed_is_approved(caplog: pytest.LogCaptureFixture) ->
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs")
 def test_all_passed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -406,8 +421,8 @@ def test_all_passed(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("aggr")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+@with_fake_qem("aggr")
+@pytest.mark.usefixtures("fake_two_passed_jobs")
 def test_inc_passed_aggr_without_results(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -424,8 +439,8 @@ def test_inc_passed_aggr_without_results(caplog: pytest.LogCaptureFixture) -> No
 
 
 @responses.activate
-@pytest.mark.qem_behavior("inc")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs")
+@with_fake_qem("inc")
+@pytest.mark.usefixtures("fake_two_passed_jobs")
 def test_inc_without_results(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -439,13 +454,8 @@ def test_inc_without_results(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures(
-    "fake_qem",
-    "fake_two_passed_jobs",
-    "fake_responses_for_creating_pr_review",
-    "f_osconf",
-)
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_403_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.GIT_REVIEW_BOT", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -457,8 +467,8 @@ def test_403_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_404_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch(
@@ -471,8 +481,8 @@ def test_404_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_500_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ObsHTTPError(500, "Not allowed", "sd", None))
@@ -483,8 +493,8 @@ def test_500_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_qem", "fake_two_passed_jobs", "f_osconf")
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ArbitraryObsError)
@@ -493,13 +503,8 @@ def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerF
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures(
-    "fake_qem",
-    "fake_two_passed_jobs",
-    "fake_responses_for_creating_pr_review",
-    "f_osconf",
-)
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.GIT_REVIEW_BOT", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -524,13 +529,8 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
-@pytest.mark.usefixtures(
-    "fake_qem",
-    "fake_two_passed_jobs",
-    "fake_openqa_comment_api",
-    "fake_responses_updating_job",
-)
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "fake_openqa_comment_api", "fake_responses_updating_job")
 def test_one_incident_failed(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(
         responses.GET,
@@ -558,9 +558,8 @@ def test_one_incident_failed(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures(
-    "fake_qem",
     "fake_openqa_comment_api",
     "fake_responses_updating_job",
     "fake_openqa_older_jobs_api",
@@ -582,14 +581,13 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     [{"incident": 2}],
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "fake_qem",
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
@@ -613,7 +611,7 @@ def test_approval_unblocked_via_openqa_comment(
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     [
@@ -626,7 +624,6 @@ def test_approval_unblocked_via_openqa_comment(
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "fake_qem",
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
@@ -654,14 +651,13 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     [{"incident": 22}],
     indirect=True,
 )
 @pytest.mark.usefixtures(
-    "fake_qem",
     "fake_responses_for_unblocking_incidents_via_openqa_comments",
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
@@ -673,9 +669,9 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(caplog: pytest.Lo
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
-@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
+@pytest.mark.usefixtures("fake_responses_for_unblocking_incidents_via_older_ok_result")
 @pytest.mark.parametrize(
     ("mock_json", "approved"),
     [
@@ -699,9 +695,9 @@ def test_approval_via_openqa_older_ok_job(caplog: pytest.LogCaptureFixture, mock
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
-@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
+@pytest.mark.usefixtures("fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -716,13 +712,13 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_incidents_via_older_ok_result",
     [2222],
     indirect=True,
 )
-@pytest.mark.usefixtures("fake_qem", "fake_responses_for_unblocking_incidents_via_older_ok_result")
+@pytest.mark.usefixtures("fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
@@ -730,7 +726,7 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(caplog
 
 
 @responses.activate
-@pytest.mark.qem_behavior("NoResultsError isn't raised")
+@with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "case",
     [
@@ -753,7 +749,7 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(caplog
     ],
     ids=lambda c: c.description,
 )
-@pytest.mark.usefixtures("fake_qem", "fake_openqa_older_jobs_api", "fake_dashboard_remarks_api")
+@pytest.mark.usefixtures("fake_openqa_older_jobs_api", "fake_dashboard_remarks_api")
 def test_approval_unblocked_with_various_comment_formats(
     case: CommentFormatTestCase,
     caplog: pytest.LogCaptureFixture,
