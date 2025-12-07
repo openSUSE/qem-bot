@@ -51,6 +51,9 @@ fail_under = 94
 show_missing = true
 skip_covered = true
 
+[tool.pytest.ini_options]
+markers = ["qem_behavior(mode): configure the fake_qem fixture behavior"]
+
 [tool.setuptools]
 include-package-data = true
 zip-safe = false
