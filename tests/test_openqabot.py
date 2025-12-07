@@ -7,6 +7,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_mock import MockerFixture
 
 from openqabot.main import main  # SUT
 
@@ -25,11 +26,7 @@ def test_no_args_prints_help() -> None:
         main()
 
 
-@patch("openqabot.args.ArgumentParser.parse_args")
-def test_main_configs_not_dir_triggers_error_and_exit(
-    mock_parse_args: MagicMock,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_main_configs_not_dir_triggers_error_and_exit(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mock_configs_path = MagicMock()
     mock_configs_path.is_dir.return_value = False
 
@@ -37,7 +34,7 @@ def test_main_configs_not_dir_triggers_error_and_exit(
     mock_args.configs = mock_configs_path
     mock_args.token = "dummy_token"  # noqa: S105
     del mock_args.no_config
-    mock_parse_args.return_value = mock_args
+    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
 
     mock_sys_exit = MagicMock(side_effect=SystemExit(1))
     caplog.set_level(logging.ERROR)
