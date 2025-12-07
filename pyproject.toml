@@ -176,6 +176,10 @@ docstring-code-format = true
 author = "SUSE LLC"
 notice-rgx = "Copyright"
 
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"os.system".msg = "Use `subprocess.run` or `sh` library instead."
+"subprocess.call".msg = "Use `subprocess.run` with `check=True`."
+
 [tool.pyright]
 include = ["openqabot", "tests", "*.py"]
 reportArgumentType = false
