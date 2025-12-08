@@ -246,15 +246,14 @@ def mock_osc(mocker: MockerFixture) -> None:
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
 def test_approval_if_there_are_only_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
-    assert "All 2 jobs on openQA have passed/softfailed" in last_message
+    assert "All 2 jobs on openQA have passed/softfailed" in caplog.messages[-1]
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
 def test_skipping_if_rescheduling(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog, reschedule=True)
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    last_message = caplog.messages[-1]
     assert "have passed" not in last_message
     assert "Re-scheduling jobs for" in last_message
 
@@ -265,7 +264,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCapt
     increment_approver = prepare_approver(caplog)
     increment_approver.config.append(increment_approver.config[0])
     increment_approver()
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    last_message = caplog.messages[-1]
     assert "have passed" not in last_message
     assert "ended up with result 'failed':\n - http://openqa-instance/tests/21" in last_message
 
@@ -352,15 +351,14 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
         "config": next(configs),
     }
     (errors, jobs) = run_approver(**args)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert_run_with_extra_livepatching(errors, jobs, messages)
+    assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
 
     config = next(configs)
     config.packages.append("foobar")  # make the filter for packages not match
     args["config"] = config
     (errors, jobs) = run_approver(**args)
     assert jobs == []
-    assert any("filtered out via 'packages' or 'archs'" in m[-1] for m in caplog.record_tuples)
+    assert "filtered out via 'packages' or 'archs'" in caplog.text
 
 
 @responses.activate
@@ -370,20 +368,14 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
-    args = {
-        "mocker": mocker,
-        "caplog": caplog,
-        "schedule": True,
-        "diff_project_suffix": "source-report",
-        "config": next(configs),
-    }
     mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
     mocker.patch("osc.core.get_binarylist", side_effect=fake_get_binarylist)
     mocker.patch("osc.core.get_binary_file", side_effect=fake_get_binary_file)
-    (errors, jobs) = run_approver(**args)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Computing source report diff for request 42" in messages
-    assert_run_with_extra_livepatching(errors, jobs, messages)
+    (errors, jobs) = run_approver(
+        mocker, caplog, schedule=True, diff_project_suffix="source-report", config=next(configs)
+    )
+    assert "Computing source report diff for request 42" in caplog.messages
+    assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
 
 
 @responses.activate
@@ -397,7 +389,7 @@ def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo", "mock_osc")
 def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    last_message = [x[-1] for x in caplog.record_tuples][-1]
+    last_message = caplog.messages[-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
     assert "http://openqa-instance/tests/21" in last_message
     assert "http://openqa-instance/tests/20" not in last_message
@@ -431,9 +423,8 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     configs = IncrementConfig.from_config_path(path)
     assert [*configs] == []
-    messages = [x[-1][0:52] for x in caplog.record_tuples]
-    assert "Unable to load config file 'tests/fixtures/config/01" in messages
-    assert "Reading config file 'tests/fixtures/config/03_no_tes" in messages
+    assert "Unable to load config file 'tests/fixtures/config/01" in caplog.text
+    assert "Reading config file 'tests/fixtures/config/03_no_tes" in caplog.text
 
 
 @responses.activate
@@ -447,9 +438,8 @@ def test_specified_obs_request_not_found_skips_approval(
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     run_approver(mocker, caplog, request_id=43)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Checking specified request 43" in messages
-    assert "Skipping approval, no relevant requests in states new/review/accepted" in messages
+    assert "Checking specified request 43" in caplog.messages
+    assert "Skipping approval, no relevant requests in states new/review/accepted" in caplog.messages
 
 
 @responses.activate
