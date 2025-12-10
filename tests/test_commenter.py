@@ -1,0 +1,456 @@
+# Copyright SUSE LLC
+# SPDX-License-Identifier: MIT
+from __future__ import annotations
+
+import logging
+from argparse import Namespace
+from typing import Any, Callable
+from unittest.mock import MagicMock, Mock
+
+import pytest
+from pytest_mock import MockerFixture
+
+from openqabot.commenter import Commenter
+from openqabot.errors import NoResultsError
+from openqabot.types import ArchVer
+from openqabot.types.incident import Incident
+
+
+@pytest.fixture
+def make_job() -> Callable[..., dict[str, str | int]]:
+    def _make_job(**overrides: Any) -> dict[str, str | int]:
+        defaults = {
+            "job_id": 1,
+            "name": "test_job",
+            "status": "passed",
+            "job_group": "foo",
+            "flavor": "test-flavor",
+            "version": "something",
+            "group_id": 42,
+            "distri": "slowroll",
+            "build": "12.34",
+        }
+        return {**defaults, **overrides}
+
+    return _make_job
+
+
+@pytest.fixture
+def make_comment_api() -> Callable[..., MagicMock]:
+    def _make_comment_api(
+        comments: list | None = None,
+        comment_find_results: list[tuple] | None = None,
+        marker: str = "comment 1\ncomment 2\ncomment 3",
+    ) -> MagicMock:
+        mock = MagicMock()
+        mock.get_comments.return_value = comments
+        mock.add_marker.return_value = marker
+        mock.truncate.return_value = marker
+        mock.comment_find.side_effect = comment_find_results or [(None, None)]
+        return mock
+
+    return _make_comment_api
+
+
+@pytest.fixture
+def mock_args() -> Namespace:
+    return Namespace(dry=True, token="test_token")  # noqa: S106
+
+
+@pytest.fixture
+def mock_incident_smelt() -> Mock:
+    mock_incident = Mock(spec=Incident)
+    mock_incident.id = 1
+    mock_incident.type = "smelt"
+    mock_incident.revisions = {}
+    return mock_incident
+
+
+@pytest.fixture
+def mock_incident_smelt_with_revisions() -> Mock:
+    mock_incident = Mock(spec=Incident)
+    mock_incident.id = 2
+    mock_incident.type = "smelt"
+    mock_incident.revisions = {
+        ArchVer("x86_64", "15-SP4"): 12345,
+        ArchVer("aarch64", "15-SP4"): 12346,
+    }
+    return mock_incident
+
+
+def mock_commenter_setup(
+    mocker: MockerFixture, incident: Mock | None = None, baseurl: str | None = None
+) -> tuple[MagicMock, MagicMock]:
+    mock_client = mocker.patch("openqabot.commenter.openQAInterface")
+    mock_client.return_value.openqa.baseurl = baseurl
+    incidents = [incident] if incident else []
+    mocker.patch("openqabot.commenter.get_incidents", return_value=incidents)
+    mocker.patch("openqabot.commenter.osc.conf.get_config")
+    mock_comment_api = mocker.patch("openqabot.commenter.CommentAPI")
+
+    return mock_client, mock_comment_api
+
+
+def test_commenter_init(mocker: MockerFixture, mock_args: Namespace) -> None:
+    mock_client, _ = mock_commenter_setup(mocker, incident=MagicMock())
+
+    c = Commenter(mock_args)
+
+    assert c.dry
+    assert c.token == {"Authorization": "Token test_token"}
+    assert c.client == mock_client.return_value
+
+
+def test_commenter_call(mock_args: Namespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident = Mock(spec=Incident)
+    mock_incident.id = 1
+    mock_incident.type = "maintenance"
+    mock_commenter_setup(mocker, incident=mock_incident)
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "Skipping incident 1 of type maintenance" in caplog.text
+
+
+def test_commenter_call_value_error_incident_results(
+    mocker: MockerFixture, mock_args: Namespace, mock_incident_smelt: Mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_commenter_setup(mocker, incident=mock_incident_smelt)
+    mocker.patch("openqabot.commenter.get_incident_results", side_effect=ValueError("get_incident_results error"))
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "get_incident_results error" in caplog.text
+
+
+def test_commenter_call_value_error_aggregate_results(
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_commenter_setup(mocker, incident=mock_incident_smelt)
+    mocker.patch("openqabot.commenter.get_incident_results", return_value=0)
+    mocker.patch("openqabot.commenter.get_aggregate_results", side_effect=ValueError("get_aggregate_results error"))
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "get_aggregate_results error" in caplog.text
+
+
+def test_commenter_call_no_results_error_incident_results(
+    mocker: MockerFixture, mock_args: Namespace, mock_incident_smelt: Mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_commenter_setup(mocker, incident=mock_incident_smelt)
+    mocker.patch("openqabot.commenter.get_incident_results", side_effect=NoResultsError("No incident results"))
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "No incident results" in caplog.text
+
+
+def test_commenter_call_running_jobs(
+    mocker: MockerFixture,
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    make_job: Callable,
+) -> None:
+    caplog.set_level(logging.INFO)
+    mock_incident_smelt.rr = 274060
+    mock_commenter_setup(mocker, incident=mock_incident_smelt, baseurl="https://openqa.opensuse.org")
+    mocker.patch(
+        "openqabot.commenter.get_incident_results", return_value=[make_job(name="test_running", status="running")]
+    )
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+    mock_osc_comment = mocker.patch.object(Commenter, "osc_comment")
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "needs to wait a bit longer" in caplog.text
+    call_args = mock_osc_comment.call_args[0]
+    assert call_args[2] == "none"
+
+
+def test_commenter_call_failed_jobs(
+    mocker: MockerFixture,
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    make_job: Callable,
+) -> None:
+    caplog.set_level(logging.INFO)
+    mock_incident_smelt.rr = 274060
+    mock_commenter_setup(mocker, incident=mock_incident_smelt, baseurl="https://openqa.opensuse.org")
+    mocker.patch(
+        "openqabot.commenter.get_incident_results", return_value=[make_job(name="test_failed", status="failed")]
+    )
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+    mock_osc_comment = mocker.patch.object(Commenter, "osc_comment")
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    assert "There is a failed job for " in caplog.text
+    call_args = mock_osc_comment.call_args[0]
+    assert call_args[2] == "failed"
+
+
+def test_commenter_call_passed_jobs(
+    mocker: MockerFixture,
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+) -> None:
+    mock_incident_smelt.rr = 274060
+    mock_commenter_setup(mocker, incident=mock_incident_smelt)
+    mocker.patch(
+        "openqabot.commenter.get_incident_results",
+        return_value=[{"job_id": 1, "name": "test_passed", "status": "passed"}],
+    )
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+    mock_osc_comment = mocker.patch.object(Commenter, "osc_comment")
+
+    c = Commenter(mock_args)
+    ret = c()
+
+    assert ret == 0
+    call_args = mock_osc_comment.call_args[0]
+    assert call_args[2] == "passed"
+
+
+def test_osc_comment_no_request(
+    mock_args: Namespace, mock_incident_smelt: Mock, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident_smelt.rr = None
+
+    mock_commenter_setup(mocker)
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    assert "Skipping comment -- no request defined" in caplog.text
+
+
+def test_osc_comment_no_msg(
+    mock_args: Namespace, mock_incident_smelt: Mock, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    mock_incident_smelt.rr = 274060
+
+    mock_commenter_setup(mocker)
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "", "")
+
+    assert "Skipping empty comment" in caplog.text
+
+
+def test_osc_comment_dry_run(
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    make_comment_api: Callable,
+    mocker: MockerFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident_smelt.rr = 274060
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
+    mock_comment_api.return_value = comment_api
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    assert "Would write comment to request" in caplog.text
+    assert not comment_api.add_comment.called
+
+
+def test_osc_comment_with_revision(
+    mock_args: Namespace,
+    mock_incident_smelt_with_revisions: Mock,
+    caplog: pytest.LogCaptureFixture,
+    make_comment_api: Callable,
+    mocker: MockerFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident_smelt_with_revisions.rr = 274060
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
+    mock_comment_api.return_value = comment_api
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt_with_revisions, "Test message", "passed")
+
+    assert "Would write comment to request" in caplog.text
+    assert not comment_api.add_comment.called
+
+
+def test_osc_comment_no_comment(
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    make_comment_api: Callable,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident_smelt.rr = 274060
+    mock_incident_smelt.revisions = {}
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    mock_comment_api.return_value = make_comment_api(comment_find_results=[(None, None), (None, None)])
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    assert "No comment with this state, looking without the state filter" in caplog.text
+    assert "No comment to replace found" in caplog.text
+
+
+def test_osc_comment_similar_exists(
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    make_comment_api: Callable,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_incident_smelt.rr = 274060
+    mock_incident_smelt.revisions = {}
+    existing_comment = {"id": 42, "comment": "comment 1\ncomment 2\ncomment 3"}
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    mock_comment_api.return_value = make_comment_api(
+        comments=[existing_comment], comment_find_results=[(existing_comment, None)]
+    )
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    assert "Previous comment is too similar" in caplog.text
+    assert not mock_comment_api.add_comment.called
+
+
+def test_osc_comment_delete_existing_not_similar_not_dry(
+    mock_args: Namespace, mock_incident_smelt: Mock, mocker: MockerFixture, make_comment_api: Callable
+) -> None:
+    mock_args.dry = False
+    mock_incident_smelt.rr = 274060
+    mock_incident_smelt.revisions = {}
+    existing_comment = {"id": 42, "comment": "foo bar"}
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    comment_api = make_comment_api(
+        comments=[existing_comment],
+        comment_find_results=[(existing_comment, None)],
+    )
+    mock_comment_api.return_value = comment_api
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    comment_api.delete.assert_called_once_with(42)
+    comment_api.add_comment.assert_called_once()
+
+
+def test_osc_comment_replace_not_dry(
+    mock_args: Namespace, mock_incident_smelt: Mock, mocker: MockerFixture, make_comment_api: Callable
+) -> None:
+    mock_args.dry = False
+
+    mock_incident_smelt.rr = 274060
+    mock_incident_smelt.revisions = {}
+
+    existing_comment = {"id": 42, "comment": "Old comment"}
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    comment_api = make_comment_api(
+        comments=[existing_comment],
+        comment_find_results=[(None, None), (existing_comment, None)],
+    )
+    mock_comment_api.return_value = comment_api
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    comment_api.delete.assert_called_once_with(42)
+    comment_api.add_comment.assert_called_once()
+
+
+def test_osc_comment_replace_dry_run(
+    mock_args: Namespace,
+    mock_incident_smelt: Mock,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    make_comment_api: Callable,
+) -> None:
+    caplog.set_level(logging.INFO)
+    mock_incident_smelt.rr = 274060
+    mock_incident_smelt.revisions = {}
+
+    existing_comment = {"id": 42, "comment": "Old comment"}
+
+    _, mock_comment_api = mock_commenter_setup(mocker)
+    comment_api = make_comment_api(
+        comments=[existing_comment],
+        comment_find_results=[(None, None), (existing_comment, None)],
+        marker="comment 1\ncomment 2",
+    )
+    mock_comment_api.return_value = comment_api
+
+    c = Commenter(mock_args)
+    c.osc_comment(mock_incident_smelt, "Test message", "passed")
+
+    assert "Would delete comment 42" in caplog.text
+    assert "Would write comment to request" in caplog.text
+    assert not comment_api.delete.called
+    assert not comment_api.add_comment.called
+
+
+def test_summarize_message_one_passed_job(mock_args: Namespace, mocker: MockerFixture, make_job: Callable) -> None:
+    mock_commenter_setup(mocker, baseurl="https://openqa.opensuse.org")
+
+    c = Commenter(mock_args)
+    result = c.summarize_message([make_job()])
+
+    assert "foo" in result
+    assert "test-flavor" in result
+    assert "1 tests passed" in result
+
+
+def test_summarize_message_multiple_jobs_same_group(
+    mock_args: Namespace, mocker: MockerFixture, make_job: Callable
+) -> None:
+    mock_commenter_setup(mocker, baseurl="https://openqa.opensuse.org")
+
+    c = Commenter(mock_args)
+    result = c.summarize_message([make_job(name="test_job_1"), make_job(job_id=2, name="test_job_2")])
+
+    assert "foo" in result
+    assert "test-flavor" in result
+    assert "2 tests passed" in result
+
+
+def test_summarize_message_job_status_none(mock_args: Namespace, make_job: Callable, mocker: MockerFixture) -> None:
+    mock_commenter_setup(mocker, baseurl="https://openqa.opensuse.org")
+
+    c = Commenter(mock_args)
+    result = c.summarize_message([make_job(status="none")])
+
+    assert "foo" in result
+    assert "1 unfinished tests" in result
