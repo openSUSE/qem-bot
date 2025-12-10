@@ -423,7 +423,7 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     configs = IncrementConfig.from_config_path(path)
     assert [*configs] == []
-    assert "Unable to load config file 'tests/fixtures/config/01" in caplog.text
+    assert "Ignoring file 'tests/fixtures/config/01_single.yml' as it contains no valid increment config" in caplog.text
     assert "Reading config file 'tests/fixtures/config/03_no_tes" in caplog.text
 
 
