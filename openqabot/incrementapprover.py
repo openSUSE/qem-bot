@@ -10,7 +10,7 @@ from collections import defaultdict
 from functools import cache
 from logging import getLogger
 from pprint import pformat
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeAlias
 
 import osc.conf
 import osc.core
@@ -29,6 +29,9 @@ log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
 default_flavor = "Online-Increments"
+
+
+OpenQAResults: TypeAlias = list[dict[str, dict[str, dict[str, Any]]]]
 
 
 class BuildInfo(NamedTuple):
@@ -165,11 +168,7 @@ class IncrementApprover:
     def _get_obs_request_list(self, project: str, req_state: tuple) -> list:
         return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
-    def _request_openqa_job_results(
-        self,
-        params: list[dict[str, str]],
-        info_str: str,
-    ) -> list[dict[str, dict[str, dict[str, Any]]]]:
+    def _request_openqa_job_results(self, params: list[dict[str, str]], info_str: str) -> OpenQAResults:
         log.debug("Checking openQA job results for %s", info_str)
         query_params = (
             {
@@ -187,7 +186,7 @@ class IncrementApprover:
 
     def _check_openqa_jobs(
         self,
-        results: list[dict[str, dict[str, dict[str, Any]]]],
+        results: OpenQAResults,
         build_info: BuildInfo,
         params: list[dict[str, str]],
     ) -> bool | None:
@@ -210,7 +209,7 @@ class IncrementApprover:
 
     def _evaluate_openqa_job_results(
         self,
-        results: dict[str, dict[str, dict[str, Any]]],
+        results: OpenQAResults,
         ok_jobs: set[int],
         not_ok_jobs: dict[str, set[str]],
     ) -> None:
@@ -221,10 +220,7 @@ class IncrementApprover:
                 else:
                     not_ok_jobs[result].update(info["job_ids"])
 
-    def _evaluate_list_of_openqa_job_results(
-        self,
-        list_of_results: list[dict[str, dict[str, dict[str, Any]]]],
-    ) -> tuple[set[int], list[str]]:
+    def _evaluate_list_of_openqa_job_results(self, list_of_results: OpenQAResults) -> tuple[set[int], list[str]]:
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         openqa_url = self.client.url.geturl()
