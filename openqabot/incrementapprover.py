@@ -32,6 +32,7 @@ default_flavor = "Online-Increments"
 
 
 OpenQAResults: TypeAlias = list[dict[str, dict[str, dict[str, Any]]]]
+ScheduleParams: TypeAlias = list[dict[str, str]]
 
 
 class BuildInfo(NamedTuple):
@@ -168,7 +169,7 @@ class IncrementApprover:
     def _get_obs_request_list(self, project: str, req_state: tuple) -> list:
         return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
-    def _request_openqa_job_results(self, params: list[dict[str, str]], info_str: str) -> OpenQAResults:
+    def _request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         log.debug("Checking openQA job results for %s", info_str)
         query_params = (
             {
@@ -184,12 +185,7 @@ class IncrementApprover:
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
-    def _check_openqa_jobs(
-        self,
-        results: OpenQAResults,
-        build_info: BuildInfo,
-        params: list[dict[str, str]],
-    ) -> bool | None:
+    def _check_openqa_jobs(self, results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
@@ -374,7 +370,7 @@ class IncrementApprover:
 
     def _make_scheduling_parameters(
         self, request: osc.core.Request | None, config: IncrementConfig, build_info: BuildInfo
-    ) -> list[dict[str, str]]:
+    ) -> ScheduleParams:
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -401,7 +397,7 @@ class IncrementApprover:
             extra_params.append({})
         return [merge_dicts(base_params, p) for p in extra_params]
 
-    def _schedule_openqa_jobs(self, build_info: BuildInfo, params: list[dict[str, str]]) -> int:
+    def _schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         error_count = 0
         for p in params:
             log.info("Scheduling jobs for %s", build_info.string_with_params(p))
