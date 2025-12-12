@@ -36,11 +36,14 @@ dev = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "pyupgrade",
     "coverage",
+    "radon",
     "responses>=0.21.0",
     "urllib3",
     "ruff",
     "pytest-mock",
+    "vulture",
 ]
 
 [tool.coverage.run]
@@ -50,6 +53,9 @@ branch = true
 fail_under = 94
 show_missing = true
 skip_covered = true
+
+[tool.pytest.ini_options]
+markers = ["qem_behavior(mode): configure the fake_qem fixture behavior"]
 
 [tool.setuptools]
 include-package-data = true

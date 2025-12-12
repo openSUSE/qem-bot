@@ -1,11 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, NoReturn
 
 import pytest
+from pytest_mock import MockerFixture
 
-import openqabot.types.incident
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
@@ -34,19 +35,19 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_good(mocker: MockerFixture) -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
-    monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
+    return mocker.patch("openqabot.types.incident.get_max_revision", side_effect=fake)
 
 
 @pytest.fixture
-def mock_ex(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_ex(mocker: MockerFixture) -> Generator[None, None, None]:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 
-    monkeypatch.setattr(openqabot.types.incident, "get_max_revision", fake)
+    return mocker.patch("openqabot.types.incident.get_max_revision", side_effect=fake)
 
 
 @pytest.mark.usefixtures("mock_good")
