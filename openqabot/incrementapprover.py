@@ -151,12 +151,15 @@ class IncrementApprover:
     def _compute_packages_of_request_from_source_report(
         self, request: osc.core.Request | None
     ) -> tuple[defaultdict[str, set[Package]], int]:
-        tgt_packages = defaultdict(set)
-        src_packages = defaultdict(set)
+        repo_a = defaultdict(set)
+        repo_b = defaultdict(set)
         for action in request.actions:
-            self._add_packages_for_action_project(action, action.tgt_project, "images", "local", tgt_packages)
-            self._add_packages_for_action_project(action, action.src_project, "product", "local", src_packages)
-        return RepoDiff.compute_diff_for_packages("source project", src_packages, "target project", tgt_packages)
+            log.debug("Checking action '%s' -> '%s' of request %s", action.src_project, action.tgt_project, request.id)
+            # add packages for target project (e.g. `SUSE:Products:SLE-Product-SLES:16.0:aarch64`), that is repo "A"
+            self._add_packages_for_action_project(action, action.tgt_project, "images", "local", repo_a)
+            # add packages for source project (e.g. `SUSE:SLFO:Products:SLES:16.0:TEST`), that is repo "B"
+            self._add_packages_for_action_project(action, action.src_project, "product", "local", repo_b)
+        return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
 
     @cache
     def _get_obs_request_list(self, project: str, req_state: tuple) -> list:

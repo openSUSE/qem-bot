@@ -121,8 +121,8 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
     req.reviews = [ReviewState("review", OBS_GROUP)]
     req.actions = [
         Action(
-            tgt_project="SUSE:Products:SLE-Product-SLES:16.0:TEST",
-            src_project="SUSE:Products:SLE-Product-SLES:16.0",
+            tgt_project="SUSE:Products:SLE-Product-SLES:16.0",
+            src_project="SUSE:Products:SLE-Product-SLES:16.0:TEST",
             src_package="000productcompose:sles_aarch64",
         )
     ]
@@ -132,18 +132,18 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
 def fake_get_repos_of_project(url: str, prj: str) -> list[Repo]:
     assert url == OBS_URL
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST":
-        return [Repo("images", "local")]
+        return [Repo("product", "local")]
     # example for "SUSE:Products:SLE-Product-SLES:16.0":
-    return [Repo("product", "local")]
+    return [Repo("images", "local")]
 
 
 def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) -> list[str]:
     assert url == OBS_URL
     assert package == "000productcompose:sles_aarch64"
     assert arch == "local"
-    if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "images":
+    if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "product":
         return ["SLES-16.0-aarch64-Build160.4-Source.report", "foo"]
-    # example for prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "product":
+    # example for prj == "SUSE:Products:SLE-Product-SLES:16.0" and repo == "images":
     return ["SLES-16.0-aarch64-Build160.4-Source.report", "bar"]
 
 
