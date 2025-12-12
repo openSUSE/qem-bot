@@ -8,6 +8,7 @@ import tempfile
 from argparse import Namespace
 from collections import defaultdict
 from functools import cache
+from itertools import chain
 from logging import getLogger
 from pprint import pformat
 from typing import Any, NamedTuple, TypeAlias
@@ -209,12 +210,10 @@ class IncrementApprover:
         ok_jobs: set[int],
         not_ok_jobs: dict[str, set[str]],
     ) -> None:
-        for state in final_states:
-            for result, info in results.get(state, {}).items():
-                if result in ok_results:
-                    ok_jobs.update(set(info["job_ids"]))
-                else:
-                    not_ok_jobs[result].update(info["job_ids"])
+        all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
+        for result, info in all_items:
+            destination = ok_jobs if result in ok_results else not_ok_jobs[result]
+            destination.update(info["job_ids"])
 
     def _evaluate_list_of_openqa_job_results(self, list_of_results: OpenQAResults) -> tuple[set[int], list[str]]:
         ok_jobs = set()  # keep track of ok jobs
