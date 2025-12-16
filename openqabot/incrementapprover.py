@@ -191,7 +191,7 @@ class IncrementApprover:
         build_info: BuildInfo,
         params: list[dict[str, str]],
     ) -> bool | None:
-        actual_states = set(results[0].keys()) if results else set()
+        actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
