@@ -38,7 +38,7 @@ def test_pint_query_uses_cache(mocker: MockerFixture) -> None:
     get_mock.assert_called_once()
 
 
-def test_apply_publiccloud_pint_image(mocker: MockerFixture) -> None:
+def test_apply_publiccloud_pint_image_empty_settings(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []})
     mocker.patch(
         "openqabot.pc_helper.get_recent_pint_image",
@@ -53,6 +53,8 @@ def test_apply_publiccloud_pint_image(mocker: MockerFixture) -> None:
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
     assert "PUBLIC_CLOUD_REGION" not in settings
 
+
+def test_apply_publiccloud_pint_image_simple_settings(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []})
     mocker.patch(
         "openqabot.pc_helper.get_recent_pint_image",
@@ -71,6 +73,8 @@ def test_apply_publiccloud_pint_image(mocker: MockerFixture) -> None:
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
     assert "PUBLIC_CLOUD_REGION" not in settings
 
+
+def test_apply_publiccloud_pint_image_different_region(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []})
     mocker.patch(
         "openqabot.pc_helper.get_recent_pint_image",
@@ -90,6 +94,8 @@ def test_apply_publiccloud_pint_image(mocker: MockerFixture) -> None:
     assert "PUBLIC_CLOUD_PINT_REGION" not in settings
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
 
+
+def test_apply_publiccloud_pint_image_no_recent_image_found(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.pc_helper.pint_query", side_effect=lambda *_args, **_kwargs: {"images": []})
     mocker.patch("openqabot.pc_helper.get_recent_pint_image", side_effect=lambda *_args, **_kwargs: None)
     settings = {
