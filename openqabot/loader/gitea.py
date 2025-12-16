@@ -127,21 +127,22 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
     log.debug("Loading open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
-    open_prs = []
-    page = 1
     if number is not None:
         pr = get_json(f"repos/{repo}/pulls/{number}", token)
         log.debug("PR %i: %s", number, pr)
-        open_prs.append(pr)
-        return open_prs
-    while True:
-        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
-        prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
-        if not isinstance(prs_on_page, list) or len(prs_on_page) <= 0:
-            break
-        open_prs.extend(prs_on_page)
-        page += 1
-    return open_prs
+        return [pr]
+
+    def iter_pr_pages() -> Any:
+        page = 1
+        while True:
+            # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
+            prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
+            if not isinstance(prs_on_page, list) or not prs_on_page:
+                return
+            yield prs_on_page
+            page += 1
+
+    return [pr for page in iter_pr_pages() for pr in page]
 
 
 def review_pr(
