@@ -20,6 +20,7 @@ from openqabot.config import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,
+    add_packages_from_files,
     compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
@@ -281,3 +282,14 @@ def test_computing_repo_url() -> None:
     url = compute_repo_url_for_job_setting("base", repos, ["Foo", "Foo-Bar"], "16.0")
     expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
+
+
+def test_adding_packages_from_files() -> None:
+    incident = {"packages": []}
+    files = [
+        {"filename": "foo/_patchinfo", "raw_url": "foo"},
+        {"filename": "bar/_patchinfo", "raw_url": "bar"},
+        {"filename": "baz/_patchinfo", "raw_url": None},
+    ]
+    add_packages_from_files(incident, {}, files, dry=True)
+    assert incident["packages"] == ["tree", "tree"], "package added twice (once for each patchinfo with raw_url)"
