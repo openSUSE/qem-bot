@@ -21,6 +21,7 @@ from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
+from openqabot.utils import merge_dicts
 from responses import GET
 
 
@@ -75,6 +76,26 @@ class Repo:
 @pytest.fixture
 def fake_no_jobs() -> None:
     responses.add(GET, openqa_url, json={})
+
+
+@pytest.fixture
+def fake_no_jobs_matching_params() -> None:
+    base_params = {"distri": "sle", "version": "16.0", "build": "139.1"}
+    json_by_arch = {
+        "aarch64": {},
+        "x86_64": {},
+        "s390x": {},
+        "ppc64le": {},
+    }
+    for flavor in ("Online-Increments", "Foo-Increments"):
+        for arch, json in json_by_arch.items():
+            params = {"arch": arch, "flavor": flavor}
+            responses.add(
+                GET,
+                openqa_url,
+                json=json,
+                match=[responses.matchers.query_param_matcher(merge_dicts(base_params, params))],
+            )
 
 
 @pytest.fixture
@@ -270,10 +291,34 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCapt
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo", "mock_osc")
-def test_skipping_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    run_approver(mocker, caplog)
-    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0 build 139.1@aarch64", caplog.text)
+@pytest.mark.usefixtures("fake_no_jobs_matching_params", "fake_product_repo", "mock_osc")
+def test_skipping_with_no_openqa_jobs(
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    increment_approver = prepare_approver(caplog)
+    additional_config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="Online-Increments",
+        project_base="OBS:PROJECT",
+        build_project_suffix="TEST",
+        diff_project_suffix="none",
+        build_listing_sub_path="product",
+        build_regex=BUILD_REGEX,
+        settings={"FLAVOR": "Foo-Increments"},
+    )
+    increment_approver.config.append(additional_config)
+    assert len(increment_approver.config) == 2
+    increment_approver()
+    messages = [x[-1] for x in caplog.record_tuples]
+    for flavor in ("Online-Increments", "Foo-Increments"):
+        for arch in ("aarch64", "x86_64"):
+            assert (
+                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor {flavor}"
+                in messages
+            )
+    assert "Not approving for the following reasons:" in messages[-1]
 
 
 @responses.activate
