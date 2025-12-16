@@ -271,7 +271,7 @@ class IncrementApprover:
                 return None
 
             product = m.group("product")
-            if not self._get_regex_match(config.build_regex, name):
+            if not self._get_regex_match(config.product_regex, product):
                 return None
 
             distri = config.distri
