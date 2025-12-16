@@ -257,40 +257,24 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     unpublished_repos: set[str],
     failed_packages: set[str],
 ) -> None:
-    state = res.get("state")
     project = res.get("project")
-    product_name = get_product_name(project)
-    arch = res.get("arch")
-    # read Git hash from scminfo element
-    scm_info_key = "scminfo_" + product_name if len(product_name) != 0 else "scminfo"
-    for scminfo_element in res.findall("scminfo"):
-        found_scminfo = scminfo_element.text
-        existing_scminfo = incident.get(scm_info_key)
-        if len(found_scminfo) > 0:
-            if existing_scminfo is None or found_scminfo == existing_scminfo:
-                incident[scm_info_key] = found_scminfo
-            else:
-                log.warning(
-                    "Found inconsistent scminfo for PR %i and project %s, found '%s' and previously got '%s'",
-                    incident["number"],
-                    project,
-                    found_scminfo,
-                    existing_scminfo,
-                )
-    # add channel for this build result
-    channel = add_channel_for_build_result(project, arch, product_name, res, projects)
-    if product_name not in OBS_PRODUCTS:
+    product = get_product_name(project)
+    scm_key = f"scminfo_{product}" if product else "scminfo"
+    for found in (e.text for e in res.findall("scminfo") if e.text):
+        if (existing := incident.get(scm_key)) and found != existing:
+            msg = "Found inconsistent scminfo for PR %s and project %s: found '%s' vs '%s'"
+            log.warning(msg, incident["number"], project, found, existing)
+            continue
+        incident[scm_key] = found
+    channel = add_channel_for_build_result(project, res.get("arch"), product, res, projects)
+    if product not in OBS_PRODUCTS:
         return
-    # require only relevant projects to be built/published
-    if state != "published":
+    if res.get("state") != "published":
         unpublished_repos.add(channel)
         return
-    successful_packages.update(
-        status.get("package") for status in res.findall("status") if status.get("code") == "succeeded"
-    )
-    failed_packages.update(
-        status.get("package") for status in res.findall("status") if status.get("code") not in {"excluded", "succeeded"}
-    )
+    statuses = res.findall("status")
+    successful_packages.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
+    failed_packages.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
 
 
 def get_multibuild_data(obs_project: str) -> str:
