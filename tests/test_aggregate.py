@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 from collections.abc import Callable, Generator
 from typing import Any, NamedTuple
-from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_mock import MockerFixture
 
 from openqabot.types.aggregate import Aggregate
 
@@ -40,11 +40,10 @@ def test_aggregate_call() -> None:
 
 
 @pytest.fixture
-def request_mock() -> Generator[None, None, None]:
-    mock_response = MagicMock()
+def request_mock(mocker: MockerFixture) -> Generator[None, None, None]:
+    mock_response = mocker.Mock()
     mock_response.json.return_value = [{}]
-    with patch("openqabot.dashboard.retried_requests.get", return_value=mock_response):
-        yield
+    return mocker.patch("openqabot.dashboard.retried_requests.get", return_value=mock_response)
 
 
 @pytest.mark.usefixtures("request_mock")
@@ -89,11 +88,8 @@ def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any]) -> N
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     acc = Aggregate("", None, None, settings={}, config=my_config)
-    res = acc(
-        incidents=[incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")],
-        token=None,
-        ci_url=None,
-    )
+    incidents = [incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")]
+    res = acc(incidents=incidents, token=None, ci_url=None)
     assert len(res) == 1
 
 
@@ -101,7 +97,7 @@ PINT_IMAGE_MOCK = {"PUBLIC_CLOUD_IMAGE_ID": "Hola"}
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint() -> None:
+def test_aggregate_call_pc_pint(mocker: MockerFixture) -> None:
     """Test with setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image."""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -109,12 +105,12 @@ def test_aggregate_call_pc_pint() -> None:
     my_config["test_issues"] = {}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
     acc = Aggregate("", None, None, settings=my_settings, config=my_config)
-    with patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=PINT_IMAGE_MOCK):
-        acc(incidents=[], token=None, ci_url=None)
+    mocker.patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=PINT_IMAGE_MOCK)
+    acc(incidents=[], token=None, ci_url=None)
 
 
 @pytest.mark.usefixtures("request_mock")
-def test_aggregate_call_pc_pint_with_incidents(incident_mock: Callable[..., Any]) -> None:
+def test_aggregate_call_pc_pint_with_incidents(mocker: MockerFixture, incident_mock: Callable[..., Any]) -> None:
     """Test with incident and setting PUBLIC_CLOUD_PINT_QUERY to call apply_publiccloud_pint_image."""
     my_config = {}
     my_config["FLAVOR"] = "None"
@@ -122,10 +118,7 @@ def test_aggregate_call_pc_pint_with_incidents(incident_mock: Callable[..., Any]
     my_config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
     my_settings = {"PUBLIC_CLOUD_PINT_QUERY": None}
     acc = Aggregate("", None, None, settings=my_settings, config=my_config)
-    with patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=PINT_IMAGE_MOCK):
-        ret = acc(
-            incidents=[incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")],
-            token=None,
-            ci_url=None,
-        )
-        assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
+    mocker.patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=PINT_IMAGE_MOCK)
+    incidents = [incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")]
+    ret = acc(incidents=incidents, token=None, ci_url=None)
+    assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
