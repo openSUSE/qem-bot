@@ -4,6 +4,8 @@ import logging
 from pathlib import Path
 
 import pytest
+from pytest_mock import MockerFixture
+from ruamel.yaml import YAMLError
 
 from openqabot.loader.config import get_onearch, load_metadata, read_products
 from openqabot.types import Data
@@ -131,3 +133,11 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
         build="",
         product="SOME15SP3",
     )
+
+
+def test_invalid_yaml_file_is_skipped(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mock_yaml_class = mocker.patch("openqabot.loader.config.YAML")
+    mock_yaml_class.return_value.load.side_effect = YAMLError("Simulated YAML error")
+    file_path = Path(__file__).parent / "fixtures/config/simulated_invalid.yml"
+    load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
+    assert f"Failed to load YAML file {file_path}" in caplog.messages

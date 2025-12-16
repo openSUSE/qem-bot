@@ -24,6 +24,7 @@ coverage:
           - openqabot/giteasync.py
           - openqabot/incsyncres.py
           - openqabot/loader/__init__.py
+          - openqabot/loader/config.py
           - openqabot/loader/smelt.py
           - openqabot/main.py
           - openqabot/openqabot.py
