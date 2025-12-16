@@ -167,10 +167,10 @@ class IncrementApprover:
 
     def _request_openqa_job_results(
         self,
-        build_info: BuildInfo,
         params: list[dict[str, str]],
+        info_str: str,
     ) -> list[dict[str, dict[str, dict[str, Any]]]]:
-        log.debug("Checking openQA job results for %s", build_info)
+        log.debug("Checking openQA job results for %s", info_str)
         query_params = (
             {
                 "distri": p["DISTRI"],
@@ -196,7 +196,7 @@ class IncrementApprover:
         if len(actual_states) == 0:
             log.info(
                 "Skipping approval, there are no relevant jobs on openQA for %s",
-                build_info.string_with_params(params[0] if len(params) > 0 else {}),
+                (" or ".join([build_info.string_with_params(param) for param in params]) if len(params) > 0 else {}),
             )
             return None
         if len(pending_states):
@@ -435,8 +435,8 @@ class IncrementApprover:
             if len(params) < 1:
                 log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
                 continue
-            info_str = build_info.string_with_params(params[0])
-            res = self._request_openqa_job_results(build_info, params)
+            info_str = "or".join([build_info.string_with_params(p) for p in params])
+            res = self._request_openqa_job_results(params, info_str)
             if self.args.reschedule:
                 approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
                 error_count += self._schedule_openqa_jobs(build_info, params)
