@@ -4,25 +4,25 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
-from openqabot.loader.gitea import get_open_prs, get_product_version_from_repo_listing, post_json
+from openqabot.loader import gitea
 
 
 def test_post_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocked_post = mocker.Mock()
     mocked_post.ok = False
     mocker.patch("openqabot.loader.gitea.retried_requests.post", return_value=mocked_post)
-    post_json("foo", None, None, host="my.host")
+    gitea.post_json("foo", None, None, host="my.host")
     assert "Unable to POST my.host/api/v1/foo" in caplog.text
 
 
 def test_get_open_prs_returns_empty_on_dry_run(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.read_json", return_value=42)
-    assert get_open_prs(None, None, dry=True, number=None) == 42
+    assert gitea.get_open_prs(None, None, dry=True, number=None) == 42
 
 
 def test_get_open_prs_returns_specified_pr(mocker: MockerFixture) -> None:
     mocked_get_json = mocker.patch("openqabot.loader.gitea.get_json", return_value=42)
-    assert get_open_prs("my_token", "my_repo", dry=False, number=1) == [42]
+    assert gitea.get_open_prs("my_token", "my_repo", dry=False, number=1) == [42]
     mocked_get_json.assert_called_once_with("repos/my_repo/pulls/1", "my_token")
 
 
@@ -30,5 +30,16 @@ def test_get_product_version_from_repo_listing(mocker: MockerFixture, caplog: py
     mocked_get = mocker.Mock()
     mocked_get.json.side_effect = requests.exceptions.RequestException
     mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mocked_get)
-    assert get_product_version_from_repo_listing("foo:bar", None, None) == ""
+    assert gitea.get_product_version_from_repo_listing("foo:bar", None, None) == ""
     assert "Unable to read product version" in caplog.text
+
+
+def test_add_build_result_inconsistent_scminfo_is_ignored(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch("openqabot.loader.gitea.get_product_name", return_value=None)
+    res = mocker.Mock()
+    res.findall.return_value = [mocker.Mock()]
+    mocker.patch("openqabot.loader.gitea.add_channel_for_build_result")
+    gitea.add_build_result({"scminfo": 1, "number": 42}, res, None, None, None, None)
+    assert "Found inconsistent scminfo" in caplog.text
