@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.error
+from collections import Counter
 from concurrent import futures
 from functools import lru_cache
 from logging import getLogger
@@ -172,7 +173,7 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: dict[str, Any], users: list[str]) -> bool:
+def is_review_requested_by(review: dict[str, Any], users: tuple[str] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -181,35 +182,17 @@ def is_review_requested_by(review: dict[str, Any], users: list[str]) -> bool:
 
 
 def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
-    approvals = 0
-    changes_requested = 0
-    review_requested = 0
-    pending = 0
-    pending_qam = 0
-    reviews_by_qam = 0
-    for review in reviews:
-        # ignore dismissed reviews
-        if review.get("dismissed", True):
-            continue
-        # accumulate number of reviews per state
-        state = review.get("state", "")
-        if is_review_requested_by(review, [OBS_GROUP, GIT_REVIEW_BOT]):
-            reviews_by_qam += 1
-            if state == "APPROVED":
-                approvals += 1
-            elif state == "PENDING":
-                pending_qam += 1
-            elif state == "REQUEST_CHANGES":
-                changes_requested += 1
-            elif state == "REQUEST_REVIEW":
-                pending_qam += 1
-                review_requested += 1
-        elif state in {"PENDING", "REQUEST_REVIEW"}:
-            pending += 1
-    incident["approved"] = approvals > 0 and changes_requested + review_requested == 0
-    incident["inReview"] = pending + pending_qam > 0
-    incident["inReviewQAM"] = pending_qam > 0
-    return reviews_by_qam
+    PENDING_STATES = {"PENDING", "REQUEST_REVIEW"}
+    open_reviews = [r for r in reviews if not r.get("dismissed", True)]
+    qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
+    has_other_pending = any(r.get("state", "") in PENDING_STATES for r in open_reviews if not is_review_requested_by(r))
+    counts = Counter(qam_states)
+    qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
+    qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
+    incident["approved"] = (counts["APPROVED"] > 0) and (qam_blocking == 0)
+    incident["inReviewQAM"] = qam_pending > 0
+    incident["inReview"] = has_other_pending or (qam_pending > 0)
+    return len(qam_states)
 
 
 @lru_cache(maxsize=512)
