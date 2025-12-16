@@ -402,7 +402,7 @@ class IncrementApprover:
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
-        return [*(merge_dicts(base_params, p) for p in extra_params)]
+        return [merge_dicts(base_params, p) for p in extra_params]
 
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: list[dict[str, str]]) -> int:
         error_count = 0
