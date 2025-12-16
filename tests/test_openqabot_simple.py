@@ -5,10 +5,10 @@
 import logging
 from collections.abc import Generator
 from typing import Any, NamedTuple, NoReturn
-from unittest.mock import patch
 from urllib.parse import ParseResult, urlparse
 
 import pytest
+from pytest_mock import MockerFixture
 
 import openqabot.openqabot
 import responses
@@ -28,7 +28,7 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def mock_openqa_passed() -> Generator[None, None, None]:
+def mock_openqa_passed(mocker: MockerFixture) -> Generator[None, None, None]:
     class FakeClient:
         def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
@@ -40,12 +40,11 @@ def mock_openqa_passed() -> Generator[None, None, None]:
         def post_job(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    with patch("openqabot.openqabot.openQAInterface", FakeClient):
-        yield
+    return mocker.patch("openqabot.openqabot.openQAInterface", FakeClient)
 
 
 @pytest.fixture
-def mock_openqa_exception() -> Generator[None, None, None]:
+def mock_openqa_exception(mocker: MockerFixture) -> Generator[None, None, None]:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -53,12 +52,11 @@ def mock_openqa_exception() -> Generator[None, None, None]:
         def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:
             raise PostOpenQAError
 
-    with patch("openqabot.openqabot.openQAInterface", FakeClient):
-        yield
+    return mocker.patch("openqabot.openqabot.openQAInterface", FakeClient)
 
 
 @pytest.fixture
-def mock_runtime() -> Generator[None, None, None]:
+def mock_runtime(mocker: MockerFixture) -> Generator[None, None, None]:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -75,12 +73,9 @@ def mock_runtime() -> Generator[None, None, None]:
     def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()
 
-    with (
-        patch("openqabot.openqabot.load_metadata", side_effect=f_load_metadata),
-        patch("openqabot.openqabot.get_incidents", side_effect=f_get_incidents),
-        patch("openqabot.openqabot.get_onearch", side_effect=f_get_onearch),
-    ):
-        yield
+    mocker.patch("openqabot.openqabot.load_metadata", side_effect=f_load_metadata)
+    mocker.patch("openqabot.openqabot.get_incidents", side_effect=f_get_incidents)
+    mocker.patch("openqabot.openqabot.get_onearch", side_effect=f_get_onearch)
 
 
 @responses.activate
