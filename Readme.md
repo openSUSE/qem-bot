@@ -179,6 +179,16 @@ or `pytest` to execute Python-based unit tests. Run e.g.
 
 Run `make checkstyle` to check coding style and `make lint` for linting.
 
+Run `check-maintainability` to check maintainability. This requires the tool
+`radon`. You can also check individual files displaying the exact percentage via
+e.g. `radon mi --show tests/test_loader_incrementconfig.py`. Note that this kind
+of metric is not about specific bad patterns but rather counts constructs like
+`if` statements. Check out the
+[Radon documentation](https://radon.readthedocs.io/en/latest/intro.html) for
+details. There is also
+[documentation about the thresholds](https://radon.readthedocs.io/en/latest/commandline.html#the-mi-command)
+for the grades.
+
 Another simple way for at least syntax correctness checks is to just call
 `python3 ./qem-bot.py --help` to show the help text if the source can be correctly
 parsed. The next recommended way for testing is to call `qem-bot.py` with the
