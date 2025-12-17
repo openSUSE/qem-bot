@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -21,6 +22,7 @@ from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.incrementconfig import IncrementConfig
+from openqabot.repodiff import Package
 from openqabot.utils import merge_dicts
 from responses import GET
 
@@ -78,24 +80,40 @@ def fake_no_jobs() -> None:
     responses.add(GET, openqa_url, json={})
 
 
-@pytest.fixture
-def fake_no_jobs_matching_params() -> None:
+def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> list[responses.Response]:
+    list_of_params = []
     base_params = {"distri": "sle", "version": "16.0", "build": "139.1"}
-    json_by_arch = {
-        "aarch64": {},
-        "x86_64": {},
-        "s390x": {},
-        "ppc64le": {},
-    }
+    json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
     for flavor in ("Online-Increments", "Foo-Increments"):
         for arch, json in json_by_arch.items():
-            params = {"arch": arch, "flavor": flavor}
-            responses.add(
-                GET,
-                openqa_url,
-                json=json,
-                match=[responses.matchers.query_param_matcher(merge_dicts(base_params, params))],
-            )
+            list_of_params.append(({"arch": arch, "flavor": flavor}, json))
+    list_of_params.append((
+        {"arch": "x86_64", "flavor": "Additional-Foo-Increments", "build": "139.1-additional-build"},
+        additional_builds_json,
+    ))
+    return [
+        responses.add(
+            GET,
+            openqa_url,
+            json=json,
+            match=[responses.matchers.query_param_matcher(merge_dicts(base_params, params))],
+        )
+        for (params, json) in list_of_params
+    ]
+
+
+def make_passing_and_failing_job() -> dict:
+    return {"done": {"passed": {"job_ids": [20]}, "failed": {"job_ids": [21]}}}
+
+
+@pytest.fixture
+def fake_no_jobs_with_param_matching() -> None:
+    return fake_openqa_responses_with_param_matching({})
+
+
+@pytest.fixture
+def fake_only_jobs_of_additional_builds_with_param_matching() -> None:
+    return fake_openqa_responses_with_param_matching(make_passing_and_failing_job())
 
 
 @pytest.fixture
@@ -105,11 +123,7 @@ def fake_pending_jobs() -> None:
 
 @pytest.fixture
 def fake_not_ok_jobs() -> None:
-    responses.add(
-        GET,
-        openqa_url,
-        json={"done": {"passed": {"job_ids": [20]}, "failed": {"job_ids": [21]}}},
-    )
+    responses.add(GET, openqa_url, json=make_passing_and_failing_job())
 
 
 @pytest.fixture
@@ -128,6 +142,15 @@ def fake_product_repo() -> None:
         OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1",
         json=read_json("test-product-repo"),
     )
+
+
+@pytest.fixture
+def fake_package_diff(mocker: MockerFixture) -> None:
+    # assume the package "foo" has changed for x86_64 only (so additional_builds will only lead to an addtional
+    # build on x86_64)
+    package_diff = defaultdict(set)
+    package_diff["x86_64"] = {Package("foo", "1", "2", "3", "x86_64")}
+    mocker.patch("openqabot.incrementapprover.IncrementApprover._package_diff", return_value=package_diff)
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:
@@ -228,6 +251,34 @@ def prepare_approver(
     return IncrementApprover(args)
 
 
+def prepare_approver_with_additional_config(caplog: pytest.LogCaptureFixture) -> IncrementApprover:
+    increment_approver = prepare_approver(caplog)
+    product_regex = "^SLES$"  # only consider "SLES" and not "SLES-SAP" which is also in "test-product-repo.json"
+    increment_approver.config[0].product_regex = product_regex
+    additional_config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="Online-Increments",
+        project_base="OBS:PROJECT",
+        build_project_suffix="TEST",
+        diff_project_suffix="mocked",
+        build_listing_sub_path="product",
+        product_regex="^SLES$",
+        build_regex=BUILD_REGEX,
+        settings={"FLAVOR": "Foo-Increments"},
+        additional_builds=[
+            {
+                "build_suffix": "additional-build",
+                "package_name_regex": ".*",
+                "settings": {"FLAVOR": "Additional-Foo-Increments"},
+            }
+        ],
+    )
+    increment_approver.config.append(additional_config)
+    assert len(increment_approver.config) == 2
+    return increment_approver
+
+
 def run_approver(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
@@ -291,34 +342,63 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCapt
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs_matching_params", "fake_product_repo", "mock_osc")
-def test_skipping_with_no_openqa_jobs(
+@pytest.mark.usefixtures("fake_product_repo", "fake_package_diff", "mock_osc")
+def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products_are_considered(
     caplog: pytest.LogCaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
+    fake_no_jobs_with_param_matching: list[responses.Response],
 ) -> None:
-    increment_approver = prepare_approver(caplog)
-    additional_config = IncrementConfig(
-        distri="sle",
-        version="16.0",
-        flavor="Online-Increments",
-        project_base="OBS:PROJECT",
-        build_project_suffix="TEST",
-        diff_project_suffix="none",
-        build_listing_sub_path="product",
-        build_regex=BUILD_REGEX,
-        settings={"FLAVOR": "Foo-Increments"},
-    )
-    increment_approver.config.append(additional_config)
-    assert len(increment_approver.config) == 2
+    # configure increment approver with additional config to check whether scheduled products of all configs
+    # are considered
+    increment_approver = prepare_approver_with_additional_config(caplog)
     increment_approver()
+    for resp in fake_no_jobs_with_param_matching:
+        assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
+
     messages = [x[-1] for x in caplog.record_tuples]
-    for flavor in ("Online-Increments", "Foo-Increments"):
-        for arch in ("aarch64", "x86_64"):
+    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
+        assert (
+            f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Online-Increments"
+            in messages
+        )
+        if arch == "x86_64":
             assert (
-                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor {flavor}"
+                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments or SLESv16.0 build 139.1-additional-build@{arch} of flavor Additional-Foo-Increments"
                 in messages
-            )
+            ), "the scheduled product for the additional_builds is considered for x86_64 as well"
+        else:
+            assert (
+                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments"
+                in messages
+            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
     assert "Not approving for the following reasons:" in messages[-1]
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "fake_package_diff", "mock_osc")
+def test_skipping_with_only_jobs_of_additional_builds_present(
+    caplog: pytest.LogCaptureFixture,
+    fake_only_jobs_of_additional_builds_with_param_matching: list[responses.Response],
+) -> None:
+    increment_approver = prepare_approver_with_additional_config(caplog)
+    increment_approver()
+    for resp in fake_only_jobs_of_additional_builds_with_param_matching:
+        assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
+
+    messages = [x[-1] for x in caplog.record_tuples]
+    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
+        assert (
+            f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Online-Increments"
+            in messages
+        )
+        if arch != "x86_64":
+            assert (
+                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments"
+                in messages
+            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
+    assert "Not approving for the following reasons:" in messages[-1]
+    assert (
+        "The following openQA jobs ended up with result 'failed':\n - http://openqa-instance/tests/21" in messages[-1]
+    )
 
 
 @responses.activate

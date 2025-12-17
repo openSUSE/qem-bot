@@ -331,6 +331,7 @@ class IncrementApprover:
         config: IncrementConfig,
         build_info: BuildInfo,
     ) -> list[dict[str, str]]:
+
         def handle_package(p: Package) -> dict[str, str] | None:
             return self._extra_builds_for_package(p, config, build_info)
 
