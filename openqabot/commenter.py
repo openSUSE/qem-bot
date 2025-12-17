@@ -71,18 +71,15 @@ class Commenter:
             log.debug("Skipping empty comment")
             return
 
-        kw = {}
-        kw["request_id"] = str(inc.rr)
-
         bot_name = "openqa"
-        info = {}
-        info["state"] = state
+        info = {"state": state}
         for key in inc.revisions:
             info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
 
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
 
+        kw = {"request_id": str(inc.rr)}
         comments = self.commentapi.get_comments(**kw)
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
