@@ -18,6 +18,7 @@ coverage:
           - openqabot/__init__.py
           - openqabot/amqp.py
           - openqabot/approver.py
+          - openqabot/args.py
           - openqabot/config.py
           - openqabot/dashboard.py
           - openqabot/errors.py
