@@ -28,7 +28,6 @@ from .utils import retry10 as retried_requests
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
-default_flavor = "Online-Increments"
 
 
 class BuildInfo(NamedTuple):
@@ -67,7 +66,7 @@ class IncrementApprover:
         self.client = openQAInterface(args)
         self.package_diff = {}
         self.requests_to_approve = {}
-        self.config = IncrementConfig.from_args(args)
+        self.config = list(IncrementConfig.from_args(args))
         osc.conf.get_config(override_apiurl=OBS_URL)
 
     def _get_regex_match(self, pattern: str, string: str) -> re.Match | None:
@@ -171,16 +170,31 @@ class IncrementApprover:
         info_str: str,
     ) -> list[dict[str, dict[str, dict[str, Any]]]]:
         log.debug("Checking openQA job results for %s", info_str)
-        query_params = (
-            {
-                "distri": p["DISTRI"],
-                "version": p["VERSION"],
-                "flavor": p["FLAVOR"],
-                "arch": p["ARCH"],
-                "build": p["BUILD"],
-            }
-            for p in params
-        )
+        query_params = []
+        for p in params:
+            if p["FLAVOR"]:
+                query_params += [
+                    {
+                        "distri": p["DISTRI"],
+                        "version": p["VERSION"],
+                        "flavor": p["FLAVOR"],
+                        "arch": p["ARCH"],
+                        "build": p["BUILD"],
+                    }
+                ]
+            else:
+                for c in self.config:
+                    flavor = c.settings.get("FLAVOR", None)
+                    if flavor:
+                        query_params += [
+                            {
+                                "distri": p["DISTRI"],
+                                "version": p["VERSION"],
+                                "flavor": flavor,
+                                "arch": p["ARCH"],
+                                "build": p["BUILD"],
+                            }
+                        ]
         res = [self.client.get_scheduled_product_stats(p) for p in query_params]
         log.debug("Job statistics:\n%s", pformat(res))
         return res
@@ -281,7 +295,7 @@ class IncrementApprover:
             try:
                 flavor = m.group("flavor") + "-Increments"
             except IndexError:
-                flavor = default_flavor
+                flavor = None
 
             if (
                 config.distri in {"any", distri}
