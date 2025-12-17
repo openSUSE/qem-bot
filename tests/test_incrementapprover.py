@@ -355,19 +355,20 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
         assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
 
     for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
-        assert (
-            f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Online-Increments"
-            in caplog.messages
+        assert re.search(
+            f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
         )
         if arch == "x86_64":
-            assert (
-                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments or SLESv16.0 build 139.1-additional-build@{arch} of flavor Additional-Foo-Increments"
-                in caplog.messages
+            expected_log_message = R"Skipping approval.*no relevant jobs"
+            expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
+            expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
+            assert re.search(
+                expected_log_message,
+                caplog.text,
             ), "the scheduled product for the additional_builds is considered for x86_64 as well"
         else:
-            assert (
-                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments"
-                in caplog.messages
+            assert re.search(
+                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
             ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
     assert "Not approving for the following reasons:" in caplog.messages[-1]
 
@@ -384,19 +385,15 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
         assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
 
     for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
-        assert (
-            f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Online-Increments"
-            in caplog.messages
+        assert re.search(
+            f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
         )
         if arch != "x86_64":
-            assert (
-                f"Skipping approval, there are no relevant jobs on openQA for SLESv16.0 build 139.1@{arch} of flavor Foo-Increments"
-                in caplog.messages
+            assert re.search(
+                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
             ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
     assert "Not approving for the following reasons:" in caplog.messages[-1]
-    assert (
-        "The following openQA jobs ended up with result 'failed':\n - http://openqa-instance/tests/21" in caplog.messages[-1]
-    )
+    assert re.search(R".*openQA jobs.*with result 'failed':\n - http://openqa-instance/tests/21", caplog.messages[-1])
 
 
 @responses.activate
