@@ -167,12 +167,13 @@ class Commenter:
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])
+        name = job["name"]
         if job["status"] not in {"passed", "failed", "softfailed"}:
             rstring = job["status"]
             if rstring == "none":
                 return None
-            return "\n- [{!s}]({!s}) is {!s}".format(job["name"], testurl, rstring)
+            return f"\n- [{name}]({testurl}) is {rstring}"
 
         if job["status"] == "failed":  # rare case: fail without module fails
-            return "\n- [{!s}]({!s}) failed".format(job["name"], testurl)
+            return f"\n- [{name}]({testurl}) failed"
         return ""
