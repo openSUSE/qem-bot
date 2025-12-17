@@ -81,10 +81,14 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     return copy
 
 
-def __retry(retries: int | None, backoff_factor: float) -> Session:
+def number_of_retries(fallback: int = 3) -> int:
+    return int(os.environ.get("QEM_BOT_RETRIES", 0 if "PYTEST_VERSION" in os.environ else fallback))
+
+
+def make_retry_session(retries: int | None, backoff_factor: float) -> Session:
     adapter = HTTPAdapter(
         max_retries=Retry(
-            None if "PYTEST_VERSION" in os.environ else retries,
+            number_of_retries(retries),
             backoff_factor=backoff_factor,
             status_forcelist=frozenset({403, 413, 429, 503}),
         ),
@@ -96,7 +100,7 @@ def __retry(retries: int | None, backoff_factor: float) -> Session:
     return http
 
 
-no_retry = __retry(None, 0)
-retry3 = __retry(3, 2)
-retry5 = __retry(5, 1)
-retry10 = __retry(10, 0.1)
+no_retry = make_retry_session(None, 0)
+retry3 = make_retry_session(3, 2)
+retry5 = make_retry_session(5, 1)
+retry10 = make_retry_session(10, 0.1)

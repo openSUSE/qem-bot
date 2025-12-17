@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pytest_mock import MockerFixture
 
 import responses
-from openqabot.utils import get_yml_list, normalize_results, retry3, walk
+from openqabot.utils import get_yml_list, make_retry_session, normalize_results, walk
 from responses import registries
 
 
@@ -88,12 +89,15 @@ def test_walk(data: list[Any] | dict[str, Any], result: list[Any] | dict[str, An
 
 
 @responses.activate(registry=registries.OrderedRegistry)
-def test_retry3() -> None:
+def test_make_retry_session(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.utils.number_of_retries", return_value=3)
+
     _ = responses.add(responses.GET, "http://host.some", status=503)
     _ = responses.add(responses.GET, "http://host.some", status=503)
     rsp3 = responses.add(responses.GET, "http://host.some", status=200)
     rsp4 = responses.add(responses.GET, "http://host.some", status=404)
 
+    retry3 = make_retry_session(3, 2)
     req = retry3.get("http://host.some")
     assert req.status_code == 200
     assert rsp3.call_count == 1
