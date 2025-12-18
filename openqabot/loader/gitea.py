@@ -322,7 +322,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     product_name = get_product_name(obs_project)
     if product_name == "":
         return None
-    product_prefix = product_name.replace(":", "_").lower() + "_"
+    product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     prefix_len = len(product_prefix)
     if dry:
         multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
@@ -419,7 +419,7 @@ def add_comments_and_referenced_build_results(
         None,
     )
     if bot_comment:
-        add_build_results(incident, re.findall(r"https://[^ ]*", bot_comment["body"]), dry=dry)
+        add_build_results(incident, re.findall(r"https://[^ \n]*", bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
