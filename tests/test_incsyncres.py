@@ -78,9 +78,11 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
-        "Getting openQA tests results for Data(incident=100, settings_id=110, "
-        "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-        "build='123', product='')",
+        (
+            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
+            "build='123', product='')"
+        ),
         "Job '1234' already has a clone, ignoring",
         "End of bot run",
     ]
@@ -137,9 +139,11 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
-        "Getting openQA tests results for Data(incident=100, settings_id=110, "
-        "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-        "build='123', product='')",
+        (
+            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
+            "build='123', product='')"
+        ),
         "End of bot run",
     ]
 
@@ -196,9 +200,11 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
-        "Getting openQA tests results for Data(incident=100, settings_id=110, "
-        "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-        "build='123', product='')",
+        (
+            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
+            "build='123', product='')"
+        ),
         "Ignoring job '1234' in development group 'Devel FakeGroup'",
         "End of bot run",
     ]
@@ -260,9 +266,11 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
-        "Getting openQA tests results for Data(incident=100, settings_id=110, "
-        "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-        "build='123', product='')",
+        (
+            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
+            "build='123', product='')"
+        ),
         "Ignoring job '1234' in development group 'FakeGroup'",
         "End of bot run",
     ]
@@ -324,22 +332,26 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
         "Getting settings for 100",
-        "Getting openQA tests results for Data(incident=100, settings_id=110, "
-        "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-        "build='123', product='')",
+        (
+            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
+            "build='123', product='')"
+        ),
         "Posting results of incident job 1234 with status passed",
-        "Full post data: {'arch': 'arch',\n"
-        " 'build': '123',\n"
-        " 'distri': 'linux',\n"
-        " 'flavor': 'FakeFlavor',\n"
-        " 'group_id': 10,\n"
-        " 'incident_settings': 110,\n"
-        " 'job_group': 'FakeGroup',\n"
-        " 'job_id': 1234,\n"
-        " 'name': 'FakeName',\n"
-        " 'status': 'passed',\n"
-        " 'update_settings': None,\n"
-        " 'version': '13.3'}",
+        (
+            "Full post data: {'arch': 'arch',\n"
+            " 'build': '123',\n"
+            " 'distri': 'linux',\n"
+            " 'flavor': 'FakeFlavor',\n"
+            " 'group_id': 10,\n"
+            " 'incident_settings': 110,\n"
+            " 'job_group': 'FakeGroup',\n"
+            " 'job_id': 1234,\n"
+            " 'name': 'FakeName',\n"
+            " 'status': 'passed',\n"
+            " 'update_settings': None,\n"
+            " 'version': '13.3'}"
+        ),
         "Dry run -- data in dashboard untouched",
         "End of bot run",
     ]
