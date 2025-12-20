@@ -159,7 +159,7 @@ def fake_osc_get_config(override_apiurl: str) -> None:
 
 def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
     assert url == OBS_URL
-    assert project == "OBS:PROJECT:TEST"
+    assert "OBS:PROJECT" in project
     req = osc.core.Request()
     req.reqid = 42
     req.state = "review"
@@ -577,3 +577,28 @@ def test_find_request_on_obs_with_request_id(mocker: MockerFixture, caplog: pyte
     approver._find_request_on_obs("foo")  # noqa: SLF001
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo")
+def test_find_request_on_obs_caching(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    # We mock get_request_list to track call counts
+    mock_get_requests = mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
+    mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
+
+    approver = prepare_approver(caplog)
+
+    # First call for a project
+    res1 = approver._find_request_on_obs("OBS:PROJECT:TEST")  # noqa: SLF001
+    assert mock_get_requests.call_count == 1
+    assert res1.reqid == 42
+
+    # Second call for the same project - should hit the cache
+    res2 = approver._find_request_on_obs("OBS:PROJECT:TEST")  # noqa: SLF001
+    assert mock_get_requests.call_count == 1
+    assert res1 == res2
+
+    # Call for a different project - should miss the cache
+    mock_get_requests.return_value = []
+    approver._find_request_on_obs("OBS:PROJECT:OTHER")  # noqa: SLF001
+    assert mock_get_requests.call_count == 2
