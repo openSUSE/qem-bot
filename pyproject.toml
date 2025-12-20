@@ -207,3 +207,20 @@ reportPrivateImportUsage = false
 reportAssignmentType = false
 reportPossiblyUnboundVariable = false
 reportOptionalIterable = false
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
+possibly-missing-attribute = "ignore"
+invalid-argument-type = "ignore"
+non-subscriptable = "ignore"
+unsupported-operator = "ignore"
+invalid-return-type = "ignore"
+invalid-assignment = "ignore"
+no-matching-overload = "ignore"
+invalid-method-override = "ignore"
+unresolved-import = "ignore"
+call-non-callable = "ignore"
+deprecated = "ignore"
+invalid-type-arguments = "ignore"
+invalid-parameter-default = "ignore"
+not-iterable = "ignore"
