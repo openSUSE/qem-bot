@@ -201,7 +201,9 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
     try:
-        data = retried_requests.get(url).json()["data"]
+        r = retried_requests.get(url)
+        r.raise_for_status()
+        data = r.json()["data"]
         versions = (
             next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
             for entry in data
