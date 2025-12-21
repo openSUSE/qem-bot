@@ -27,6 +27,8 @@ from openqabot.utils import retry10 as retried_requests
 if TYPE_CHECKING:
     from openqabot.types import Repos
 
+ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
+
 log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -314,9 +316,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     # relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {
-        flavor[prefix_len:]
-        for flavor in flavors
-        if flavor.startswith(product_prefix) and flavor[prefix_len:] in {"x86_64", "aarch64", "ppc64le", "s390x"}
+        flavor[prefix_len:] for flavor in flavors if flavor.startswith(product_prefix) and flavor[prefix_len:] in ARCHS
     }
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
