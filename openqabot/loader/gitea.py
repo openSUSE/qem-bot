@@ -204,15 +204,21 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
         r = retried_requests.get(url)
         r.raise_for_status()
         data = r.json()["data"]
-        versions = (
-            next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
-            for entry in data
-            if entry["name"].startswith(start)
-        )
-        return next((v for v in versions if len(v) > 0), "")
-    except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+    except requests.exceptions.HTTPError as e:
+        log.info("Ignoring repository '%s' (%s->%s): %s", repository, product_name, project, e)
+        return ""
+    except requests.exceptions.RequestException as e:
         log.warning("Unable to read product version from '%s': %s", url, e)
-    return ""
+        return ""
+    except json.JSONDecodeError as e:
+        log.info("Invalid JSON document at '%s': %s. Ignoring", url, e)
+        return ""
+    versions = (
+        next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
+        for entry in data
+        if entry["name"].startswith(start)
+    )
+    return next((v for v in versions if len(v) > 0), "")
 
 
 def add_channel_for_build_result(
