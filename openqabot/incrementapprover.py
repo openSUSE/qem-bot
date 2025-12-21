@@ -112,7 +112,7 @@ class IncrementApprover:
         if relevant_request is None:
             log.info("Skipping approval, no relevant requests in states %s", "/".join(relevant_states))
         else:
-            log.debug("Found request %s", relevant_request.id)
+            log.info("Found product increment request on %s: %s", build_project, relevant_request.id)
             if hasattr(relevant_request.state, "to_xml"):
                 log.debug(relevant_request.to_str())
         return relevant_request
@@ -243,7 +243,9 @@ class IncrementApprover:
             self._approve_on_obs(str(reqid), message)
             log.info("Approving %s: %s", id_msg, message)
         else:
-            log.info("Not approving %s for the following reasons:\n%s", id_msg, "\n".join(reasons_to_disapprove))
+            reasons_str = "\n\t".join(reasons_to_disapprove)
+            end_str = f"End of reasons for not approving {id_msg}"
+            log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
 
     def _determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
@@ -353,7 +355,7 @@ class IncrementApprover:
             diff_key = "request:" + str(request.id)
             package_diff = self.package_diff.get(diff_key)
             if package_diff is None:
-                log.debug("Computing source report diff for request %s", request.id)
+                log.info("Computing source report diff for request %s", request.id)
                 package_diff = self._compute_packages_of_request_from_source_report(request)[0]
                 log.debug("Packages updated by request %s: %s", request.id, pformat(package_diff))
         elif config.diff_project_suffix != "none":
@@ -426,10 +428,12 @@ class IncrementApprover:
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
             params = self._make_scheduling_parameters(request, config, build_info)
+            log.debug("Prepared scheduling parameters: %s", params)
             if len(params) < 1:
                 log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
                 continue
             info_str = "or".join([build_info.string_with_params(p) for p in params])
+            log.debug("Requesting openQA job results for OBS request ID '%s' for %s", request_id, info_str)
             res = self._request_openqa_job_results(params, info_str)
             if self.args.reschedule:
                 approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
