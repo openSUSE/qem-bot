@@ -31,11 +31,11 @@ class Commenter:
         self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
-        log.info("Start commenting incidents in IBS")
+        log.info("Starting to comment incidents in IBS")
 
         for inc in self.incidents:
             if inc.type != "smelt":
-                log.debug("Skipping incident %i of type %s", inc.id, inc.type)
+                log.debug("Incident %s skipped: Not a SMELT incident (type: %s)", inc.id, inc.type)
                 continue
             try:
                 i_jobs = get_incident_results(inc.id, self.token)
@@ -50,9 +50,9 @@ class Commenter:
             state = "none"
             all_jobs = i_jobs + u_jobs
             if any(j["status"] == "running" for j in all_jobs):
-                log.info("%s needs to wait a bit longer", inc)
+                log.info("Postponing comment for %s: Some tests are still running", inc)
             elif any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
-                log.info("There is a failed job for %s", inc)
+                log.info("Creating 'failed' comment for %s: At least one job failed", inc)
                 state = "failed"
             else:
                 state = "passed"
@@ -64,7 +64,7 @@ class Commenter:
 
     def osc_comment(self, inc: Incident, msg: str, state: str) -> None:
         if inc.rr is None:
-            log.debug("Skipping comment -- no request defined")
+            log.debug("Comment skipped for incident %s: No release request defined", inc.id)
             return
 
         if not msg:
@@ -86,7 +86,7 @@ class Commenter:
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
         if comment is not None and comment["comment"].count("\n") == msg.count("\n"):
-            log.debug("Previous comment is too similar")
+            log.debug("Comment skipped: Previous comment is too similar")
             return
 
         if comment is None:
@@ -94,16 +94,16 @@ class Commenter:
             comment, _ = self.commentapi.comment_find(comments, bot_name)
 
         if comment is None:
-            log.debug("No comment to replace found")
+            log.debug("No previous comment found to replace")
         elif not self.dry:
             self.commentapi.delete(comment["id"])
         else:
-            log.info("Would delete comment %s", comment["id"])
+            log.info("Dry run: Would delete comment %s", comment["id"])
 
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Would write comment to request %s", inc)
+            log.info("Dry run: Would write comment to request %s", inc)
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:  # noqa: C901
@@ -111,7 +111,7 @@ class Commenter:
         for job in jobs:
             if "job_group" not in job:
                 # workaround for experiments of some QAM devs
-                log.warning("group missing in %s", job["job_id"])
+                log.warning("Job %s skipped: Missing 'job_group'", job["job_id"])
                 continue
             gl = f"{Commenter.escape_for_markdown(job['job_group'])}@{Commenter.escape_for_markdown(job['flavor'])}"
             if gl not in groups:

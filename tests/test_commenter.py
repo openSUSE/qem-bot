@@ -112,7 +112,7 @@ def test_commenter_call(mock_args: Namespace, caplog: pytest.LogCaptureFixture, 
     ret = c()
 
     assert ret == 0
-    assert "Skipping incident 1 of type maintenance" in caplog.text
+    assert "Incident 1 skipped: Not a SMELT incident (type: maintenance)" in caplog.text
 
 
 def test_commenter_call_value_error_incident_results(
@@ -181,7 +181,7 @@ def test_commenter_call_running_jobs(
     ret = c()
 
     assert ret == 0
-    assert "needs to wait a bit longer" in caplog.text
+    assert "Postponing comment for" in caplog.text
     call_args = mock_osc_comment.call_args[0]
     assert call_args[2] == "none"
 
@@ -206,7 +206,7 @@ def test_commenter_call_failed_jobs(
     ret = c()
 
     assert ret == 0
-    assert "There is a failed job for " in caplog.text
+    assert "At least one job failed" in caplog.text
     call_args = mock_osc_comment.call_args[0]
     assert call_args[2] == "failed"
 
@@ -243,7 +243,7 @@ def test_osc_comment_no_request(
     c = Commenter(mock_args)
     c.osc_comment(mock_incident_smelt, "Test message", "passed")
 
-    assert "Skipping comment -- no request defined" in caplog.text
+    assert "Comment skipped for incident" in caplog.text
 
 
 def test_osc_comment_no_msg(
@@ -320,7 +320,7 @@ def test_osc_comment_no_comment(
     c.osc_comment(mock_incident_smelt, "Test message", "passed")
 
     assert "No comment with this state, looking without the state filter" in caplog.text
-    assert "No comment to replace found" in caplog.text
+    assert "No previous comment found to replace" in caplog.text
 
 
 def test_osc_comment_similar_exists(
