@@ -52,19 +52,19 @@ class openQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
-            log.exception("openQA returned %s", e.args[-1])
-            log.exception("Post failed with %s", pformat(settings))
+            log.exception("openQA API error: %s", e.args[-1])
+            log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
-            log.exception("Post failed with %s", pformat(settings))
+            log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
 
     def handle_job_not_found(self, job_id: int) -> None:
-        log.info("Job %s not found in openQA, marking as obsolete on dashboard", job_id)
+        log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
-        log.info("Getting openQA tests results for %s", pformat(data))
+        log.info("Fetching openQA jobs for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
         param["latest"] = "1"
@@ -86,9 +86,9 @@ class openQAInterface:
             if status_code == 404:
                 self.handle_job_not_found(job_id)
             else:
-                log.exception("")
+                log.exception("openQA API error when fetching comments for job %s", job_id)
         except requests.exceptions.RequestException:
-            log.exception("")
+            log.exception("openQA API error when fetching comments for job %s", job_id)
         return ret
 
     @lru_cache(maxsize=256)
@@ -103,7 +103,7 @@ class openQAInterface:
         try:
             ret = self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
         except RequestError:
-            log.exception("")
+            log.exception("openQA API error when fetching job %s", job_id)
         return ret
 
     @lru_cache(maxsize=256)
@@ -114,7 +114,7 @@ class openQAInterface:
                 "GET", f"/tests/{job_id}/ajax?previous_limit={limit}&next_limit=0", retries=self.retries
             )
         except RequestError:
-            log.exception("")
+            log.exception("openQA API error when fetching older jobs for job %s", job_id)
         return ret
 
     def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:

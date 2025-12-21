@@ -70,6 +70,9 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
     error = RequestError("POST", "no.where", "500", "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert any("openQA API error" in m for m in messages)
+    assert any("Job POST failed for settings" in m for m in messages)
 
 
 @responses.activate
@@ -94,7 +97,7 @@ def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert len(messages) == 2
     assert len(responses.calls) == 1
-    assert "Job 42 not found in openQA, marking as obsolete on dashboard" in messages
+    assert "Job 42 not found on openQA, marking as obsolete on dashboard" in messages
     assert "job not found" in messages  # the 404 fixture is supposed to match
 
 

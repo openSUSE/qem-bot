@@ -79,7 +79,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
         "No API key for instance.qa: only GET requests will be allowed",
         "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -140,7 +140,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
         "No API key for instance.qa: only GET requests will be allowed",
         "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -201,7 +201,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
         "No API key for instance.qa: only GET requests will be allowed",
         "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -267,7 +267,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
         "No API key for instance.qa: only GET requests will be allowed",
         "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -333,7 +333,7 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
         "No API key for instance.qa: only GET requests will be allowed",
         "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
