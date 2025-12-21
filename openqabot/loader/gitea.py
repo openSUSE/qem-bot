@@ -188,6 +188,11 @@ def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
     return len(qam_states)
 
 
+def _extract_version(name: str, prefix: str) -> str:
+    remainder = name.removeprefix(prefix)
+    return next((part for part in remainder.split("-") if re.search(r"[.\d]+", part)), "")
+
+
 @lru_cache(maxsize=512)
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     project_path = project.replace(":", ":/")
@@ -206,11 +211,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     except json.JSONDecodeError as e:
         log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
         return ""
-    versions = (
-        next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
-        for entry in data
-        if entry["name"].startswith(start)
-    )
+    versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
     return next((v for v in versions if len(v) > 0), "")
 
 
