@@ -103,7 +103,7 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
     assert "Starting to sync incidents from smelt to dashboard" in messages
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 2
@@ -144,7 +144,7 @@ def test_sync_approved(
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
     assert "Starting to sync incidents from smelt to dashboard" in messages
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 2

@@ -143,7 +143,7 @@ def get_active_incidents() -> set[int]:
         try:
             validate(instance=ndata, schema=ACTIVE_INC_SCHEMA)
         except ValidationError:
-            log.exception("Invalid data from SMELT received")
+            log.exception("SMELT API error: Invalid data structure received for active incidents")
             return set()
         incidents = ndata["data"]["incidents"]
         active.update(x["node"]["incidentId"] for x in incidents["edges"])
@@ -151,7 +151,7 @@ def get_active_incidents() -> set[int]:
         if has_next:
             cursor = incidents["pageInfo"]["endCursor"]
 
-    log.info("Loaded %s active incidents", len(active))
+    log.info("Loaded %s active incidents from SMELT", len(active))
 
     return active
 
@@ -159,16 +159,16 @@ def get_active_incidents() -> set[int]:
 def get_incident(incident: int) -> dict[str, Any] | None:
     query = INCIDENT % {"incident": incident}
 
-    log.info("Getting info about incident %s from SMELT", incident)
+    log.info("Fetching details for incident %s from SMELT", incident)
     inc_result = get_json(query)
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
     except ValidationError:
-        log.exception("Invalid data from SMELT for incident %s", incident)
+        log.exception("SMELT API error: Invalid data for incident %s", incident)
         return None
     except Exception:
-        log.exception("Unknown error for incident %s", incident)
+        log.exception("SMELT API error: Unexpected error for incident %s", incident)
         return None
 
     return inc_result
