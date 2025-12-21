@@ -403,9 +403,9 @@ class IncrementApprover:
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         error_count = 0
         for p in params:
-            log.info("Scheduling jobs for %s", build_info.string_with_params(p))
+            suffix = f": {p}" if self.args.dry else ""
+            log.info("Scheduling jobs for %s%s", build_info.string_with_params(p), suffix)
             if self.args.dry:
-                log.info(p)
                 continue
             try:
                 self.client.post_job(p)
