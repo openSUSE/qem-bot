@@ -70,7 +70,7 @@ class IncrementConfig:
     @staticmethod
     def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
         try:
-            log.info("Reading config file '%s'", file_path)
+            log.debug("Reading config file '%s'", file_path)
             return map(
                 IncrementConfig.from_config_entry,
                 YAML(typ="safe").load(file_path).get("product_increments", []),

@@ -19,7 +19,6 @@ def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) ->
     configs = list(IncrementConfig.from_config_file(invalid_yaml_file))
 
     assert configs == []
-    mock_logger.info.assert_any_call("Reading config file '%s'", invalid_yaml_file)
     mock_logger.info.assert_any_call("Unable to load config file '%s': %s", invalid_yaml_file, ANY)
 
 
