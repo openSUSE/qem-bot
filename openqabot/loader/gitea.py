@@ -44,7 +44,7 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GIT
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
-        log.error("Unable to POST %s: %s", url, res.text)
+        log.error("Gitea API error: POST to %s failed: %s", url, res.text)
 
 
 def read_utf8(name: str) -> str:
@@ -122,7 +122,7 @@ def compute_repo_url_for_job_setting(
 
 
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
-    log.debug("Loading open PRs from '%s'%s", repo, ", dry-run" if dry else "")
+    log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
     if number is not None:
@@ -205,13 +205,13 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
         r.raise_for_status()
         data = r.json()["data"]
     except requests.exceptions.HTTPError as e:
-        log.info("Ignoring repository '%s' (%s->%s): %s", repository, product_name, project, e)
+        log.warning("Repo ignored: Could not query repository '%s' (%s->%s): %s", repository, product_name, project, e)
         return ""
     except requests.exceptions.RequestException as e:
-        log.warning("Unable to read product version from '%s': %s", url, e)
+        log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
         return ""
     except json.JSONDecodeError as e:
-        log.info("Invalid JSON document at '%s': %s. Ignoring", url, e)
+        log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
         return ""
     versions = (
         next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
@@ -250,7 +250,7 @@ def add_channel_for_build_result(
     if len(product_version) > 0:
         channel = f"{channel}#{product_version}"
     elif len(product_name) > 0:
-        log.warning("Unable to determine product version for build result %s:%s, not adding channel", project, arch)
+        log.warning("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
 
     projects.add(channel)
@@ -270,7 +270,7 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in (e.text for e in res.findall("scminfo") if e.text):
         if (existing := incident.get(scm_key)) and found != existing:
-            msg = "Found inconsistent scminfo for PR %s and project %s: found '%s' vs '%s'"
+            msg = "PR %s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
             log.warning(msg, incident["number"], project, found, existing)
             continue
         incident[scm_key] = found
@@ -303,7 +303,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
         try:
             multibuild_data = get_multibuild_data(obs_project)
         except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-            log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
+            log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
             return None
 
     # determine from the flavors we got what architectures are actually expected to be present
@@ -349,7 +349,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                     build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
                 except urllib.error.HTTPError:
                     unavailable_projects.add(obs_project)
-                    log.info("Unable to read build results of project %s, skipping", build_info_url)
+                    log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
                     continue
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
@@ -364,13 +364,13 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                 )
     if len(unpublished_repos) > 0:
         log.info(
-            "Some repos for PR %i have not been published yet: %s",
+            "PR %i: Some repos not published yet: %s",
             incident["number"],
             ", ".join(unpublished_repos),
         )
     if len(failed_packages) > 0:
         log.info(
-            "Some packages for PR %i have failed: %s",
+            "PR %i: Some packages failed: %s",
             incident["number"],
             ", ".join(failed_packages),
         )
@@ -420,7 +420,7 @@ def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], fil
 def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
     failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
-        log.info("Skipping PR %i, not all packages succeeded and published", number)
+        log.warning("PR %i skipped: Not all packages succeeded or published", number)
         return False
     if len(incident["successful_packages"]) < 1:
         info = "Skipping PR %i, no packages have been built/published (there are %i failed/unpublished packages)"
@@ -437,7 +437,7 @@ def make_incident_from_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.debug("Getting info about PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Fetching info for PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]
@@ -475,21 +475,21 @@ def make_incident_from_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
-            log.info("Skipping PR %s, no reviews by %s", number, OBS_GROUP)
+            log.info("PR %s skipped: No reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(incident, comments, dry=dry)
         if len(incident["channels"]) == 0:
-            log.info("Skipping PR %s, no channels found/considered", number)
+            log.info("PR %s skipped: No channels found", number)
             return None
         if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
             return None
         add_packages_from_files(incident, token, files, dry=dry)
         if len(incident["packages"]) == 0:
-            log.info("Skipping PR %s, no packages found/considered", number)
+            log.info("PR %s skipped: No packages found", number)
             return None
 
     except Exception:
-        log.exception("Unable to process PR %s", pr.get("number", "?"))
+        log.exception("Gitea API error: Unable to process PR %s", pr.get("number", "?"))
         return None
     return incident
 

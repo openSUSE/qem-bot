@@ -168,7 +168,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
     assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
-    assert "Getting info about PR 131 from Gitea" in messages
+    assert "Fetching info for PR 131 from Gitea" in messages
     assert "Updating info about 1 incidents" in messages
     assert len(responses.calls) == 25
     assert len(responses.calls[-1].response.json()) == 1
@@ -264,7 +264,7 @@ def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.L
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
     assert incident["failed_or_unpublished_packages"] == ["bar"]
-    assert "Unable to read build results of project" in caplog.text
+    assert "Build results for project bar unreadable, skipping:" in caplog.text
     assert "Traceback" not in caplog.text
 
 
