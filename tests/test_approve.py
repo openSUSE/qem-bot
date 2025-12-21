@@ -77,14 +77,14 @@ def add_two_passed_response() -> None:
 def assert_incident_approved(messages: list[str], inc_str: str) -> None:
     assert f"{inc_str} has at least one failed job in incident tests" not in messages
     assert "Incidents to approve:" in messages
-    assert "End of bot run" in messages
+    assert "Incident approval process finished" in messages
     assert f"* {inc_str}" in messages
 
 
 def assert_incident_not_approved(messages: list[str], inc_str: str, reason: str) -> None:
     assert reason in messages
     assert "Incidents to approve:" in messages
-    assert "End of bot run" in messages
+    assert "Incident approval process finished" in messages
     assert f"* {inc_str}" not in messages
 
 
@@ -376,7 +376,7 @@ def test_no_jobs(caplog: pytest.LogCaptureFixture) -> None:
     approver()
     assert "SUSE:Maintenance:4:400 has at least one failed job in incident tests" in caplog.messages
     assert "Incidents to approve:" in caplog.messages
-    assert "End of bot run" in caplog.messages
+    assert "Incident approval process finished" in caplog.messages
     assert "* SUSE:Maintenance:4:400" not in caplog.messages
 
 
@@ -415,7 +415,7 @@ def test_all_passed(caplog: pytest.LogCaptureFixture) -> None:
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
         "Incidents to approve:",
-        "End of bot run",
+        "Incident approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -427,13 +427,13 @@ def test_inc_passed_aggr_without_results(caplog: pytest.LogCaptureFixture) -> No
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     expected = [
-        "Approving incidents in IBS or Gitea…",
         "No aggregate test results found for SUSE:Maintenance:1:100",
         "No aggregate test results found for SUSE:Maintenance:2:200",
         "No aggregate test results found for SUSE:Maintenance:3:300",
+        "Starting approving incidents in IBS or Gitea…",
         "Incidents to approve:",
         "* SUSE:Maintenance:4:400",
-        "End of bot run",
+        "Incident approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -445,9 +445,9 @@ def test_inc_without_results(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     expected = [
-        "Approving incidents in IBS or Gitea…",
+        "Starting approving incidents in IBS or Gitea…",
         "Incidents to approve:",
-        "End of bot run",
+        "Incident approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
     assert "* SUSE:Maintenance" not in caplog.messages
@@ -475,7 +475,7 @@ def test_404_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
         "osc.core.change_review_state", side_effect=ObsHTTPError(404, "Not Found", None, io.BytesIO(b"review state"))
     )
     assert Approver(args)() == 1
-    assert "Received 'Not Found'. Request 100 removed or problem on OBS side: review state" in caplog.messages, (
+    assert "OBS API error for request 100 (removed or server issue): Not Found - review state" in caplog.messages, (
         "Expected handling of 404 responses logged"
     )
 
@@ -487,7 +487,7 @@ def test_500_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ObsHTTPError(500, "Not allowed", "sd", None))
     assert Approver(args)() == 1
-    assert "Received error 500, reason: 'Not allowed' for Request 400 - problem on OBS side" in caplog.messages, (
+    assert "OBS API error for request 400: 500 - Not allowed" in caplog.messages, (
         "Expected handling of 500 responses logged"
     )
 
@@ -499,7 +499,7 @@ def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerF
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ArbitraryObsError)
     assert Approver(args)() == 1
-    assert "Fake OBS exception" in caplog.text
+    assert "OBS API error: Failed to approve request" in caplog.text
 
 
 @responses.activate
@@ -512,17 +512,17 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
     assert Approver(args)() == 0
     expected = [
         "Incidents to approve:",
-        "End of bot run",
+        "Incident approval process finished",
         "* SUSE:Maintenance:1:100",
-        "Accepting review for SUSE:Maintenance:1:100",
+        "Approving SUSE:Maintenance:1:100",
         "* SUSE:Maintenance:2:200",
-        "Accepting review for SUSE:Maintenance:2:200",
+        "Approving SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
-        "Accepting review for SUSE:Maintenance:3:300",
+        "Approving SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
-        "Accepting review for SUSE:Maintenance:4:400",
+        "Approving SUSE:Maintenance:4:400",
         "* git:5",
-        "Accepting review for git:5",
+        "Approving git:5",
     ]
     assert_log_messages(caplog.messages, expected)
     assert len(responses.calls) == 76
@@ -552,7 +552,7 @@ def test_one_incident_failed(caplog: pytest.LogCaptureFixture) -> None:
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
         "Incidents to approve:",
-        "End of bot run",
+        "Incident approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -575,7 +575,7 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture) -> None:
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
         "Incidents to approve:",
-        "End of bot run",
+        "Incident approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -600,7 +600,7 @@ def test_approval_unblocked_via_openqa_comment(
     assert approver() == 0
     expected = [
         "* SUSE:Maintenance:2:200",
-        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment",
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
     assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
@@ -635,7 +635,7 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver() == 0
     expected = [
-        "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment",
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
     assert "* SUSE:Maintenance:2:200" not in caplog.messages, "incident not approved due to one unacceptable failure"
@@ -646,7 +646,8 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
         "another failing job with comment marked as acceptable despite previous unacceptable failure"
     )
     assert (
-        "Ignoring failed job http://instance.qa/t100004 for incident 2 due to openQA comment" not in caplog.messages
+        "Ignoring failed job http://instance.qa/t100004 for incident 2 (manually marked as acceptable)"
+        not in caplog.messages
     ), "log message only present for jobs before unacceptable failure"
 
 
@@ -773,7 +774,10 @@ def test_approval_unblocked_with_various_comment_formats(
     )
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" in caplog.messages
-    assert "Ignoring failed job http://instance.qa/t100002 for incident 2 due to openQA comment" in caplog.messages
+    assert (
+        "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)"
+        in caplog.messages
+    )
     responses.assert_call_count(
         f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
         1,
@@ -827,7 +831,7 @@ def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pyte
 
     caplog.set_level(logging.INFO)
     assert not approver_instance._was_older_job_ok(1, 1, job, oldest_build_usable, regex)  # noqa: SLF001
-    assert log_message in caplog.text
+    assert any(log_message in m for m in caplog.messages)
 
 
 @pytest.mark.parametrize(
@@ -835,12 +839,12 @@ def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pyte
     [
         pytest.param(
             {"build": "20240101XY", "result": "failed", "id": 123},
-            "Older usable jobs did not succeed",
+            "No suitable older jobs found",
             id="no_suitable_older_jobs",
         ),
         pytest.param(
             {"build": "invalid-date"},
-            "Could not parse build date invalid-da",
+            "Could not parse build date",
             id="invalid_date",
         ),
     ],
@@ -853,4 +857,4 @@ def test_was_ok_before_no_suitable_older_jobs(
     mocker.patch("openqabot.openqa.openQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
     mocker.patch("openqabot.approver.Approver._was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
-    assert log_message in caplog.text
+    assert any(log_message in m for m in caplog.messages)
