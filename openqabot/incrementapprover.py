@@ -228,18 +228,16 @@ class IncrementApprover:
         ]
         return (ok_jobs, reasons_to_disapprove)
 
+    def _approve_on_obs(self, reqid: str, msg: str) -> None:
+        if self.args.dry:
+            return
+        osc.core.change_review_state(apiurl=OBS_URL, reqid=reqid, newstate="accepted", by_group=OBS_GROUP, message=msg)
+
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
         reasons_to_disapprove = approval_status.reasons_to_disapprove
         if len(reasons_to_disapprove) == 0:
             message = f"All {len(approval_status.ok_jobs)} jobs on openQA have {'/'.join(sorted(ok_results))}"
-            if not self.args.dry:
-                osc.core.change_review_state(
-                    apiurl=OBS_URL,
-                    reqid=str(approval_status.request.reqid),
-                    newstate="accepted",
-                    by_group=OBS_GROUP,
-                    message=message,
-                )
+            self._approve_on_obs(str(approval_status.request.reqid), message)
         else:
             message = "Not approving for the following reasons:\n" + "\n".join(reasons_to_disapprove)
         log.info(message)
