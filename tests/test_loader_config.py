@@ -30,8 +30,8 @@ def test_load_metadata_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
 
     messages = sorted([m[-1] for m in caplog.record_tuples])
-    assert "Skipping invalid config" in messages[3]
-    assert "No 'test_issues' in BAD15SP3 config" in messages
+    assert any("Configuration skipped: Missing 'product'" in m for m in messages)
+    assert "Aggregate configuration skipped: Missing 'test_issues' for product BAD15SP3" in messages
 
 
 def test_load_metadata_aggregate_file(caplog: pytest.LogCaptureFixture) -> None:
@@ -49,8 +49,8 @@ def test_load_metadata_incidents(caplog: pytest.LogCaptureFixture) -> None:
 
     assert str(result[0]) == "<Incidents product: SOME15SP3>"
 
-    messages = [m[-1] for m in caplog.record_tuples if m[-1].startswith("Skipping")]
-    assert "Skipping invalid config" in messages[0]
+    messages = [m[-1] for m in caplog.record_tuples if "skipped" in m[-1].lower() or "invalid" in m[-1].lower()]
+    assert any("Configuration skipped" in m for m in messages)
 
 
 def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
@@ -63,8 +63,8 @@ def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
     assert str(result[1]) == "<Incidents product: SOME15SP3>"
 
     messages = sorted([m[-1] for m in caplog.record_tuples])
-    assert "Skipping invalid config" in messages[3]
-    assert "No 'test_issues' in BAD15SP3 config" in messages
+    assert any("Configuration skipped" in m for m in messages)
+    assert "Aggregate configuration skipped: Missing 'test_issues' for product BAD15SP3" in messages
 
 
 def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
@@ -98,10 +98,10 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     )
 
     messages = [m[-1] for m in caplog.record_tuples]
-    assert any(x.endswith("invalid format") for x in messages)
-    assert any(x.endswith("empty config") for x in messages)
-    assert any(x.endswith("with no 'aggregate' settings") for x in messages)
-    assert any(x.endswith("with no 'DISTRI' settings") for x in messages)
+    assert any(x.endswith("has invalid format") for x in messages)
+    assert any(x.endswith("is empty") for x in messages)
+    assert any(x.endswith("missing required setting 'aggregate'") for x in messages)
+    assert any(x.endswith("missing required setting 'DISTRI'") for x in messages)
 
 
 def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
@@ -140,4 +140,4 @@ def test_invalid_yaml_file_is_skipped(mocker: MockerFixture, caplog: pytest.LogC
     mock_yaml_class.return_value.load.side_effect = YAMLError("Simulated YAML error")
     file_path = Path(__file__).parent / "fixtures/config/simulated_invalid.yml"
     load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
-    assert f"Failed to load YAML file {file_path}" in caplog.messages
+    assert f"YAML load failed: File {file_path}" in caplog.messages
