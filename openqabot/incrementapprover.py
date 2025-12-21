@@ -355,9 +355,9 @@ class IncrementApprover:
             diff_key = "request:" + str(request.id)
             package_diff = self.package_diff.get(diff_key)
             if package_diff is None:
-                log.info("Computing source report diff for request %s", request.id)
+                log.info("Computing source report diff for OBS request ID %s", request.id)
                 package_diff = self._compute_packages_of_request_from_source_report(request)[0]
-                log.debug("Packages updated by request %s: %s", request.id, pformat(package_diff))
+                log.debug("Packages updated by OBS request ID %s: %s", request.id, pformat(package_diff))
         elif config.diff_project_suffix != "none":
             # compute diff by comparing repositories if "diff_project_suffix" is configured
             build_project = config.build_project() + repo_sub_path

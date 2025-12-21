@@ -494,7 +494,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
     (errors, jobs) = run_approver(
         mocker, caplog, schedule=True, diff_project_suffix="source-report", config=next(configs)
     )
-    assert "Computing source report diff for request 42" in caplog.messages
+    assert "Computing source report diff for OBS request ID 42" in caplog.messages
     assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
 
 
