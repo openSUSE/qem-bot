@@ -208,7 +208,7 @@ def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: s
     assert reqid == "42"
     assert newstate == "accepted"
     assert by_group == OBS_GROUP
-    assert message == "All 2 jobs on openQA have passed/softfailed"
+    assert message == "All 2 openQA jobs have passed/softfailed"
 
 
 def prepare_approver(
@@ -318,7 +318,7 @@ def mock_osc(mocker: MockerFixture) -> None:
 @pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
 def test_approval_if_there_are_only_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    assert "All 2 jobs on openQA have passed/softfailed" in caplog.messages[-1]
+    assert "Approving OBS request ID '42': All 2 openQA jobs have passed/softfailed" in caplog.messages[-1]
 
 
 @responses.activate
@@ -370,7 +370,7 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
             assert re.search(
                 f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
             ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
-    assert "Not approving for the following reasons:" in caplog.messages[-1]
+    assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
 
 
 @responses.activate
@@ -392,7 +392,7 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
             assert re.search(
                 f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
             ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
-    assert "Not approving for the following reasons:" in caplog.messages[-1]
+    assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
     assert re.search(R".*openQA jobs.*with result 'failed':\n - http://openqa-instance/tests/21", caplog.messages[-1])
 
 

@@ -235,12 +235,15 @@ class IncrementApprover:
 
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
         reasons_to_disapprove = approval_status.reasons_to_disapprove
+        reqid = approval_status.request.reqid
+        id_msg = f"OBS request ID '{reqid}'"
         if len(reasons_to_disapprove) == 0:
-            message = f"All {len(approval_status.ok_jobs)} jobs on openQA have {'/'.join(sorted(ok_results))}"
-            self._approve_on_obs(str(approval_status.request.reqid), message)
+            results_str = "/".join(sorted(ok_results))
+            message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
+            self._approve_on_obs(str(reqid), message)
+            log.info("Approving %s: %s", id_msg, message)
         else:
-            message = "Not approving for the following reasons:\n" + "\n".join(reasons_to_disapprove)
-        log.info(message)
+            log.info("Not approving %s for the following reasons:\n%s", id_msg, "\n".join(reasons_to_disapprove))
         return 0
 
     def _determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
