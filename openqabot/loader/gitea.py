@@ -336,8 +336,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
     failed_packages = set()
     projects = set()
     for url in obs_urls:
-        project_match = re.search(r".*/project/show/(.*)", url)
-        if project_match:
+        if project_match := re.search(r".*/project/show/(.*)", url):
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
             relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
@@ -354,26 +353,11 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
                     continue
-                add_build_result(
-                    incident,
-                    res,
-                    projects,
-                    successful_packages,
-                    unpublished_repos,
-                    failed_packages,
-                )
+                add_build_result(incident, res, projects, successful_packages, unpublished_repos, failed_packages)
     if len(unpublished_repos) > 0:
-        log.info(
-            "PR %i: Some repos not published yet: %s",
-            incident["number"],
-            ", ".join(unpublished_repos),
-        )
+        log.info("PR %i: Some repos not published yet: %s", incident["number"], ", ".join(unpublished_repos))
     if len(failed_packages) > 0:
-        log.info(
-            "PR %i: Some packages failed: %s",
-            incident["number"],
-            ", ".join(failed_packages),
-        )
+        log.info("PR %i: Some packages failed: %s", incident["number"], ", ".join(failed_packages))
     incident["channels"] = [*projects]
     incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos, *unavailable_projects]
     incident["successful_packages"] = [*successful_packages]
