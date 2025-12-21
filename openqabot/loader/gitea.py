@@ -109,18 +109,9 @@ def compute_repo_url_for_job_setting(
 ) -> str:
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
-    return ",".join(
-        (
-            compute_repo_url(
-                base,
-                p,
-                (repo.product, repo.version, product_version),
-                repo.arch,
-                "",
-            )
-            for p in (product_names if isinstance(product_names, list) else [product_names])
-        ),
-    )
+    product_list = product_names if isinstance(product_names, list) else [product_names]
+    repo_tuple = (repo.product, repo.version, product_version)
+    return ",".join(compute_repo_url(base, p, repo_tuple, repo.arch, "") for p in product_list)
 
 
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
