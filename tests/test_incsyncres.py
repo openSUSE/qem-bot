@@ -77,7 +77,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
             "Getting openQA tests results for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
@@ -138,7 +138,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
             "Getting openQA tests results for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
@@ -199,7 +199,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
             "Getting openQA tests results for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
@@ -265,7 +265,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
             "Getting openQA tests results for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
@@ -331,7 +331,7 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
             "Getting openQA tests results for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
