@@ -73,14 +73,14 @@ class Incident:
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod
-    def create(cls, incident_data: dict) -> Incident | None:
+    def create(cls, data: dict) -> Incident | None:
         try:
-            return cls(incident_data)
+            return cls(data)
         except EmptyChannelsError:
-            log.info("Project %s has empty channels - check incident in SMELT", incident_data.get("project"))
+            log.info("Incident %s ignored: No channels found for project %s", data.get("number"), data.get("project"))
             return None
         except EmptyPackagesError:
-            log.info("Project %s has empty packages - check incident in SMELT", incident_data.get("project"))
+            log.info("Incident %s ignored: No packages found for project %s", data.get("number"), data.get("project"))
             return None
 
     def compute_revisions_for_product_repo(
@@ -101,7 +101,7 @@ class Incident:
                 arch_ver = ArchVer(arch, "12")
             return self.revisions[arch_ver]
         except KeyError:
-            log.debug("Incident %s does not have %s arch in %s", self.id, arch, ver)
+            log.debug("Incident %s: Architecture %s not found for version %s", self.id, arch, ver)
             return None
 
     @staticmethod
