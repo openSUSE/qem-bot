@@ -187,10 +187,10 @@ class Aggregate(BaseConf):
                 headers=token,
             )
         except requests.exceptions.RequestException:
-            log.exception("Request to QEM Dashboard failed")
+            log.exception("Dashboard API error: Could not fetch previous aggregate jobs")
             old_jobs = None
         except requests.exceptions.JSONDecodeError:
-            log.exception("Failed to decode JSON response from QEM Dashboard")
+            log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
             old_jobs = None
 
         old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
@@ -204,7 +204,7 @@ class Aggregate(BaseConf):
             )
         except SameBuildExistsError:
             log.info(
-                "For %s aggreagate on %s there is existing build",
+                "Aggregate for %s on %s skipped: A build with the same RepoHash already exists",
                 self.product,
                 arch,
             )
