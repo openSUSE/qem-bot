@@ -34,17 +34,14 @@ def apply_pc_tools_image(settings: dict[str, Any]) -> dict[str, Any]:
     Use PUBLIC_CLOUD_TOOLS_IMAGE_QUERY to get latest tools image and set it into
     PUBLIC_CLOUD_TOOLS_IMAGE_BASE
     """
+    query_key = "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"
     try:
-        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-            settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(
-                settings["PUBLIC_CLOUD_TOOLS_IMAGE_QUERY"],
-            )
+        if query_key in settings:
+            settings["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] = get_latest_tools_image(settings[query_key])
     except BaseException as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-        # ruff: noqa: E501 line-too-long
-        log_error = f"PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed PUBLIC_CLOUD_TOOLS_IMAGE_QUERY={settings['PUBLIC_CLOUD_TOOLS_IMAGE_QUERY']}"
-        log.warning("%s : %s", log_error, e)
+        log.warning("Public Cloud image base handling failed: Query %s: %s", settings[query_key], e)
     finally:
-        settings.pop("PUBLIC_CLOUD_TOOLS_IMAGE_QUERY", None)
+        settings.pop(query_key, None)
     return settings
 
 

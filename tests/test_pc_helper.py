@@ -28,7 +28,7 @@ def test_apply_pc_tools_image(mocker: MockerFixture, caplog: pytest.LogCaptureFi
     settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"}
     mocker.patch("openqabot.pc_helper.get_latest_tools_image", side_effect=BaseException)
     apply_pc_tools_image(settings)
-    assert "PUBLIC_CLOUD_TOOLS_IMAGE_BASE handling failed" in caplog.text
+    assert "Public Cloud image base handling failed" in caplog.text
 
 
 def test_pint_query_uses_cache(mocker: MockerFixture) -> None:
