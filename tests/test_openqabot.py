@@ -36,7 +36,8 @@ def test_main_configs_not_dir_triggers_error_and_exit(mocker: MockerFixture, cap
     with pytest.raises(SystemExit):
         main()
     sys_exit_spy.assert_called_once_with(1)
-    assert "not a valid directory with config files" in caplog.text
+    assert "Configuration error" in caplog.text
+    assert "is not a valid directory" in caplog.text
 
 
 def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
