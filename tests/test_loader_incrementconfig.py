@@ -19,7 +19,7 @@ def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) ->
     configs = list(IncrementConfig.from_config_file(invalid_yaml_file))
 
     assert configs == []
-    mock_logger.info.assert_any_call("Unable to load config file '%s': %s", invalid_yaml_file, ANY)
+    mock_logger.info.assert_any_call("Increment configuration skipped: Could not load '%s': %s", invalid_yaml_file, ANY)
 
 
 def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
@@ -50,8 +50,8 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     configs = IncrementConfig.from_config_path(path)
     assert [*configs] == []
-    assert "Ignoring file 'tests/fixtures/config/01_single.yml' as it contains no valid increment config" in caplog.text
-    assert "Reading config file 'tests/fixtures/config/03_no_tes" in caplog.text
+    assert "File 'tests/fixtures/config/01_single.yml' skipped: Not a valid increment configuration" in caplog.text
+    assert "Loading increment configuration from 'tests/fixtures/config/03_no_tes" in caplog.text
 
 
 def test_config_parsing_from_args() -> None:

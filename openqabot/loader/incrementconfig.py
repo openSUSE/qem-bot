@@ -70,16 +70,16 @@ class IncrementConfig:
     @staticmethod
     def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
         try:
-            log.debug("Reading config file '%s'", file_path)
+            log.debug("Loading increment configuration from '%s'", file_path)
             return map(
                 IncrementConfig.from_config_entry,
                 YAML(typ="safe").load(file_path).get("product_increments", []),
             )
         except AttributeError:
-            log.debug("Ignoring file '%s' as it contains no valid increment config", file_path)
+            log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
             return iter(())
         except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-            log.info("Unable to load config file '%s': %s", file_path, e)
+            log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
             return iter(())
 
     @staticmethod
