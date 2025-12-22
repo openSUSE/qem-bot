@@ -71,10 +71,7 @@ class Aggregate(BaseConf):
             if any((incident.livepatch, incident.staging)):
                 return False
             if self.filter_embargoed(self.flavor) and incident.embargoed:
-                log.debug(
-                    "Incident %s is skipped because filtering embargoed is on and incident has embargoed True",
-                    incident.id,
-                )
+                log.debug("Incident %s skipped: Embargoed and embargo-filtering enabled", incident.id)
                 return False
             return True
 
