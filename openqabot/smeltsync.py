@@ -22,14 +22,14 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Starting to sync incidents from smelt to dashboard")
+        log.info("Syncing SMELT incidents to QEM Dashboard")
 
         data = self._create_list(self.incidents)
-        log.info("Updating info about %s incidents", len(data))
+        log.info("Updating %d incidents on QEM Dashboard", len(data))
         log.debug("Data: %s", pformat(data))
 
         if self.dry:
-            log.info("Dry run, nothing synced")
+            log.info("Dry run: Skipping dashboard update")
             return 0
         return update_incidents(self.token, data, retry=self.retry)
 
