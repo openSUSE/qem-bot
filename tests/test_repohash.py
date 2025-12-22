@@ -74,7 +74,7 @@ def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> N
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "not found -- skipping incident" in caplog.records[0].msg
+    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
     assert "Maintenance:/12345" in caplog.records[0].args[0]
 
 
@@ -86,7 +86,7 @@ def test_get_max_revision_httperror(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "not found -- skipping incident" in caplog.records[0].msg
+    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
 
 
 @responses.activate
@@ -97,7 +97,7 @@ def test_get_max_revision_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "not found -- skipping incident" in caplog.records[0].msg
+    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
 
 
 @responses.activate
@@ -107,6 +107,8 @@ def test_get_max_revision_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
 
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
+
+    assert "RepoHash calculation failed: No revision tag found in %s" in caplog.records[0].msg
 
 
 @responses.activate
@@ -133,7 +135,7 @@ def test_get_max_revision_retry_error(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, project)
 
-    assert "not found -- skipping incident" in caplog.records[0].msg
+    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
 
 
 @responses.activate
@@ -151,7 +153,7 @@ def test_get_max_revision_slfo_product_not_in_obs_products(caplog: pytest.LogCap
         ret = rp.get_max_revision(repos, arch, project)
 
     assert ret == 0
-    assert "skipping repo '1.1.99' as product 'SomeProduct' is not considered" in caplog.text
+    assert "Repository 1.1.99 skipped: Product SomeProduct is not in considered products" in caplog.text
 
 
 def test_merge_repohash() -> None:

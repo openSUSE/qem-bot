@@ -35,7 +35,7 @@ def get_max_revision(
                 product_name = gitea.get_product_name(repo[1])
                 if product_name not in OBS_PRODUCTS:
                     log.info(
-                        "skipping repo '%s' as product '%s' is not considered",
+                        "Repository %s skipped: Product %s is not in considered products",
                         repo[1],
                         product_name,
                     )
@@ -43,7 +43,7 @@ def get_max_revision(
             if product_version is not None:
                 repo = (repo[0], repo[1], product_version)
             url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
-            log.debug("computing repohash for '%s' via: %s", repo[1], url)
+            log.debug("Computing RepoHash for %s from %s", repo[1], url)
         # openSUSE and SLE incidents have different handling of architecture
         elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
@@ -59,11 +59,11 @@ def get_max_revision(
             requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("%s not found -- skipping incident", url)
+            log.info("Incident skipped: RepoHash metadata not found at %s", url)
             raise NoRepoFoundError from e
 
         if cs is None:
-            log.error("%s's revision is None", url)
+            log.error("RepoHash calculation failed: No revision tag found in %s", url)
             raise NoRepoFoundError
         max_rev = max(max_rev, int(str(cs.text)))
 
