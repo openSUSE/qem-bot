@@ -40,6 +40,6 @@ class AggregateResultsSync(SyncRes):
         for r in results:
             self.post_result(r)
 
-        log.info("End of bot run")
+        log.info("Aggregate results sync completed")
 
         return 0

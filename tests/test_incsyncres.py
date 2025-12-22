@@ -84,7 +84,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
             "build='123', product='')"
         ),
         "Job '1234' already has a clone, ignoring",
-        "End of bot run",
+        "Incident results sync completed",
     ]
 
 
@@ -144,7 +144,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "End of bot run",
+        "Incident results sync completed",
     ]
 
 
@@ -206,7 +206,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
             "build='123', product='')"
         ),
         "Ignoring job '1234' in development group 'Devel FakeGroup'",
-        "End of bot run",
+        "Incident results sync completed",
     ]
 
 
@@ -272,7 +272,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
             "build='123', product='')"
         ),
         "Ignoring job '1234' in development group 'FakeGroup'",
-        "End of bot run",
+        "Incident results sync completed",
     ]
 
 
@@ -353,5 +353,5 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
             " 'version': '13.3'}"
         ),
         "Dry run -- data in dashboard untouched",
-        "End of bot run",
+        "Incident results sync completed",
     ]
