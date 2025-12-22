@@ -56,7 +56,7 @@ class RepoDiff:
         return repo_data_raw
 
     def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any]:
-        log.debug("Requesting %s", url)
+        log.debug("Fetching repository data from %s", url)
         name = "responses/" + name.replace("/", "_")
         if self.args is not None and self.args.fake_data:
             if as_json:
@@ -77,10 +77,10 @@ class RepoDiff:
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
-            log.warning("Unable to find repo data file under %s", url)
+            log.warning("Repository metadata not found: Primary repodata missing in %s", url)
             return None
         repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
-        log.debug("Parsing %s", repo_data_file)
+        log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> defaultdict[str, set[Package]]:
@@ -88,7 +88,7 @@ class RepoDiff:
         packages_by_arch = defaultdict(set)
         if repo_data is None:
             return packages_by_arch
-        log.debug("Loading packages for %s", project)
+        log.debug("Loading package list for project %s", project)
         for package in repo_data.iterfind(package_tag):
             if package.get("type") != "rpm":
                 continue
@@ -112,8 +112,8 @@ class RepoDiff:
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
             packages_a = packages_by_arch_a[arch]
-            log.debug("Found %i packages for %s in repo %s", len(packages_a), arch, repo_a)
-            log.debug("Found %i packages for %s in repo %s", len(packages_b), arch, repo_b)
+            log.debug("Found %d packages for architecture %s in repository %s", len(packages_a), arch, repo_a)
+            log.debug("Found %d packages for architecture %s in repository %s", len(packages_b), arch, repo_b)
             diff = packages_b - packages_a
             count += len(diff)
             diff_by_arch[arch] = diff
@@ -129,10 +129,10 @@ class RepoDiff:
         try:
             diff, count = self.compute_diff(args.repo_a, args.repo_b)
         except FileNotFoundError as e:
-            log.critical("Fake data file not found. Consider generating that with `--dump-data`: %s", e)
+            log.critical("Failed to load fake data: %s (use --dump-data to generate it)", e)
             raise SystemExit from None
         log.debug(
-            "Repo %s contains %i packages that are not in repo %s",
+            "Repository %s has %d new packages compared to %s",
             args.repo_b,
             count,
             args.repo_a,
