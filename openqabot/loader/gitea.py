@@ -244,7 +244,7 @@ def add_channel_for_build_result(
     if len(product_version) > 0:
         channel = f"{channel}#{product_version}"
     elif len(product_name) > 0:
-        log.warning("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
+        log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
 
     projects.add(channel)
