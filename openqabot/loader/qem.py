@@ -209,7 +209,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
     try:
         result = put("api/jobs", headers=token, json=data)
         if result.status_code != 200:
-            log.error(result.text)
+            log.error("Dashboard API error: Could not post job: %s", result.text)
 
     except requests.exceptions.RequestException:
         log.exception("QEM Dashboard API request failed")
@@ -219,7 +219,7 @@ def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None
     try:
         result = patch(f"api/jobs/{job_id}", headers=token, json=data)
         if result.status_code != 200:
-            log.error(result.text)
+            log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 
     except requests.exceptions.RequestException:
         log.exception("QEM Dashboard API request failed")

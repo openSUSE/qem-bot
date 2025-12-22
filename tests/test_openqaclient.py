@@ -98,7 +98,7 @@ def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     assert len(messages) == 2
     assert len(responses.calls) == 1
     assert "Job 42 not found on openQA, marking as obsolete on dashboard" in messages
-    assert "job not found" in messages  # the 404 fixture is supposed to match
+    assert any("job not found" in m for m in messages)  # the 404 fixture is supposed to match
 
 
 def test_get_methods_handle_errors_gracefully() -> None:
