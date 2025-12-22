@@ -110,7 +110,7 @@ class IncrementApprover:
             log.debug("Checking specified request %i", args.request_id)
             relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
         if relevant_request is None:
-            log.info("Skipping approval, no relevant requests in states %s", "/".join(relevant_states))
+            log.info("Skipping approval: No relevant requests in states %s", "/".join(relevant_states))
         else:
             log.info("Found product increment request on %s: %s", build_project, relevant_request.id)
             if hasattr(relevant_request.state, "to_xml"):
@@ -191,13 +191,13 @@ class IncrementApprover:
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
-                "Skipping approval, there are no relevant jobs on openQA for %s",
+                "Skipping approval: There are no relevant jobs on openQA for %s",
                 (" or ".join([build_info.string_with_params(param) for param in params]) if len(params) > 0 else {}),
             )
             return None
         if len(pending_states):
             log.info(
-                "Skipping approval, some jobs on openQA for %s are in pending states (%s)",
+                "Skipping approval: Some jobs on openQA for %s are in pending states (%s)",
                 build_info,
                 ", ".join(sorted(pending_states)),
             )

@@ -419,7 +419,7 @@ def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.Lo
 
 
 def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) -> None:
-    assert "Skipping approval, there are no relevant jobs" in "".join(messages)
+    assert "Skipping approval: There are no relevant jobs" in "".join(messages)
     assert errors == 0, "no errors"
     base_params = {
         "DISTRI": "sle",
@@ -502,7 +502,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo", "mock_osc")
 def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
-    assert re.search(r"Skipping approval, some jobs.*are in pending states \(running, scheduled\)", caplog.text)
+    assert re.search(r"Skipping approval: Some jobs.*are in pending states \(running, scheduled\)", caplog.text)
 
 
 @responses.activate
@@ -527,7 +527,7 @@ def test_specified_obs_request_not_found_skips_approval(
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     run_approver(mocker, caplog, request_id=43)
     assert "Checking specified request 43" in caplog.messages
-    assert "Skipping approval, no relevant requests in states new/review/accepted" in caplog.messages
+    assert "Skipping approval: No relevant requests in states new/review/accepted" in caplog.messages
 
 
 @responses.activate
