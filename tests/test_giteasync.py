@@ -241,7 +241,7 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCapt
 def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_gitea_sync(mocker, caplog, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
-    m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
+    m = "Skipping PR 124: No packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages
 
 

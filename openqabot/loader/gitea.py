@@ -396,10 +396,10 @@ def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], fil
 def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
     failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
-        log.warning("PR %i skipped: Not all packages succeeded or published", number)
+        log.info("Skipping PR %i: Not all packages succeeded or published", number)
         return False
     if len(incident["successful_packages"]) < 1:
-        info = "Skipping PR %i, no packages have been built/published (there are %i failed/unpublished packages)"
+        info = "Skipping PR %i: No packages have been built/published (there are %i failed/unpublished packages)"
         log.info(info, number, failed_or_unpublished_packages)
         return False
     return True
