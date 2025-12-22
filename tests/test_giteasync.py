@@ -157,7 +157,7 @@ def run_gitea_sync(
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
 def test_gitea_sync_on_dry_run_does_not_sync(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_gitea_sync(mocker, caplog, dry=True)
-    assert "Dry run, nothing synced" in caplog.text
+    assert "Dry run: Skipping dashboard update" in caplog.text
 
 
 @responses.activate
@@ -167,9 +167,9 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
-    assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
+    assert "Loaded 7 active PRs from products/SLFO" in messages
     assert "Fetching info for PR 131 from Gitea" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Updating 1 incidents on QEM Dashboard" in messages
     assert len(responses.calls) == 25
     assert len(responses.calls[-1].response.json()) == 1
     incident = responses.calls[-1].response.json()[0]
