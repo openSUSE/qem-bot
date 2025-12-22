@@ -38,13 +38,10 @@ class GiteaSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Syncing Gitea PRs to QEM Dashboard")
-
         data = self.incidents
-        log.info("Updating %d incidents on QEM Dashboard", len(data))
-        log.debug("Data: %s", pformat(data))
-
+        log.debug("Data for %d incidents: %s", len(data), pformat(data))
         if self.dry:
-            log.info("Dry run: Skipping dashboard update")
+            log.info("Dry run: Would update QEM Dashboard data for %d incidents", len(data))
             return 0
+        log.info("Syncing Gitea PRs to QEM Dashboard: Considering %d incidents", len(data))
         return update_incidents(self.dashboard_token, data, params={"type": "git"}, retry=self.retry)
