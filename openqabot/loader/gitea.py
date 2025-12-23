@@ -119,7 +119,11 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
     if dry:
         return read_json("pulls")
     if number is not None:
-        pr = get_json(f"repos/{repo}/pulls/{number}", token)
+        try:
+            pr = get_json(f"repos/{repo}/pulls/{number}", token)
+        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError):
+            log.exception("PR #%s ignored: Could not read PR metadata", number)
+            return []
         log.debug("PR %i: %s", number, pr)
         return [pr]
 
@@ -208,7 +212,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     except requests.exceptions.RequestException as e:
         log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
         return ""
-    except json.JSONDecodeError as e:
+    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
         log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
         return ""
     versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
