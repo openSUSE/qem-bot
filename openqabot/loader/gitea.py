@@ -137,7 +137,14 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
             yield prs_on_page
             page += 1
 
-    return [pr for page in iter_pr_pages() for pr in page]
+    try:
+        return [pr for page in iter_pr_pages() for pr in page]
+    except requests.exceptions.JSONDecodeError:
+        log.exception("Gitea API error: Invalid JSON received for open PRs")
+        return []
+    except requests.exceptions.RequestException:
+        log.exception("Gitea API error: Could not fetch open PRs")
+        return []
 
 
 def review_pr(
