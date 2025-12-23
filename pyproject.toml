@@ -51,7 +51,7 @@ dev = [
 branch = true
 
 [tool.coverage.report]
-fail_under = 93
+fail_under = 100
 show_missing = true
 skip_covered = true
 
