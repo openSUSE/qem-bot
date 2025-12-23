@@ -12,7 +12,9 @@ from openqabot.loader.qem import (
     NoAggregateResultsError,
     NoIncidentResultsError,
     get_active_incidents,
+    get_aggregate_results,
     get_aggregate_settings,
+    get_aggregate_settings_data,
     get_incident_results,
     get_incident_settings,
     get_incident_settings_data,
@@ -218,6 +220,14 @@ def test_get_incident_results(mocker: MockerFixture) -> None:
     mock_json.assert_called_once_with("api/jobs/incident/1", headers={})
 
 
+def test_get_incident_results_error(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "foo"})
+    mocker.patch("openqabot.loader.qem.get_incident_settings", return_value=[MagicMock(id=1)])
+
+    with pytest.raises(ValueError, match="foo"):
+        get_incident_results(1, {})
+
+
 def test_get_aggregate_settings_no_settings(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value=[])
 
@@ -233,6 +243,38 @@ def test_get_aggregate_settings(mocker: MockerFixture) -> None:
     assert len(res) == 1
     assert res[0].id == 1
     assert res[0].aggregate
+
+
+def test_get_aggregate_settings_data(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"id": 1, "build": "build"}])
+    from openqabot.types import Data
+
+    data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
+    res = get_aggregate_settings_data({}, data)
+
+    assert len(res) == 1
+    assert res[0].settings_id == 1
+    mock_json.assert_called_once_with("api/update_settings?product=product&arch=arch", headers={})
+
+
+def test_get_aggregate_results(mocker: MockerFixture) -> None:
+    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"foo": "bar"}])
+    mock_settings = mocker.patch("openqabot.loader.qem.get_aggregate_settings", return_value=[MagicMock(id=1)])
+
+    res = get_aggregate_results(1, {})
+
+    assert len(res) == 1
+    assert res[0]["foo"] == "bar"
+    mock_settings.assert_called_once_with(1, {})
+    mock_json.assert_called_once_with("api/jobs/update/1", headers={})
+
+
+def test_get_aggregate_results_error(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "foo"})
+    mocker.patch("openqabot.loader.qem.get_aggregate_settings", return_value=[MagicMock(id=1)])
+
+    with pytest.raises(ValueError, match="foo"):
+        get_aggregate_results(1, {})
 
 
 def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
