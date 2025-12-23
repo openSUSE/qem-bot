@@ -228,3 +228,17 @@ def test_inc_rev_non_matching_version(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
     inc.compute_revisions_for_product_repo(None, None)
     assert ArchVer("x86_64", "unknown") in inc.revisions
+
+
+def test_inc_rev_empty_channels() -> None:
+    from unittest.mock import MagicMock
+
+    inc = MagicMock(spec=Incident)
+    inc.id = 123
+    inc.channels = []
+    inc.arch_filter = []
+    inc.project = "project"
+    inc.compute_revisions_for_product_repo = Incident.compute_revisions_for_product_repo.__get__(inc, Incident)
+    inc._rev = Incident._rev  # noqa: SLF001
+    with pytest.raises(NoRepoFoundError):
+        inc.compute_revisions_for_product_repo(None, None)
