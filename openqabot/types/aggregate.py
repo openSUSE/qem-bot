@@ -121,12 +121,14 @@ class Aggregate(BaseConf):
 
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)
-            if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+            if not settings or not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+                log.info("No tools image found for %s", self)
                 return None
 
         if "PUBLIC_CLOUD_PINT_QUERY" in settings:
             settings = apply_publiccloud_pint_image(settings)
-            if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+            if not settings or not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+                log.info("No PINT image found for %s", self)
                 return None
 
         full_post["openqa"].update(settings)
@@ -192,6 +194,10 @@ class Aggregate(BaseConf):
         except requests.exceptions.JSONDecodeError:
             log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
             old_jobs = None
+
+        if not old_jobs:
+            log.info("No aggregate jobs found for %s on arch %s", self, arch)
+            return None
 
         old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
         old_build = old_jobs[0].get("build", "") if old_jobs else ""
