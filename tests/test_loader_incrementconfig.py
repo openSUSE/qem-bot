@@ -70,3 +70,17 @@ def test_config_parsing_from_args() -> None:
     assert config[0].packages == []
     assert config[0].archs == set()
     assert config[0].settings == {}
+
+
+def test_config_parsing_from_args_with_path() -> None:
+    class MinimalNs(NamedTuple):
+        increment_config: Path
+        distri: str
+        version: str
+        flavor: str
+
+    path = Path("tests/fixtures/config-increment-approver")
+    config = IncrementConfig.from_args(MinimalNs(path, "sle", "16.0", "Online-Increments"))
+    assert len(config) == 2
+    assert config[0].distri == "foo"
+    assert config[1].distri == "bar"
