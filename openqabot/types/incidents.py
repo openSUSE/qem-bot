@@ -291,9 +291,10 @@ class Incidents(BaseConf):
                 delta_prio += 10
             if inc.emu:
                 delta_prio = -20
-            # override default prio only for specific jobs
-            if delta_prio:
-                full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
+
+        # override default prio only for specific jobs
+        if delta_prio:
+            full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
         # add custom vars to job settings
         if "params_expand" in data and any(
