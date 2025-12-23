@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, NoReturn
@@ -115,6 +116,23 @@ def test_inc_nochannels2() -> None:
         Incident(bad_data)
 
 
+def test_inc_create(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+
+    # Test EmptyChannelsError
+    bad_data = deepcopy(test_data)
+    bad_data["channels"] = []
+    assert Incident.create(bad_data) is None
+    assert "ignored: No channels found for project" in caplog.text
+
+    # Test EmptyPackagesError
+    caplog.clear()
+    bad_data = deepcopy(test_data)
+    bad_data["packages"] = []
+    assert Incident.create(bad_data) is None
+    assert "ignored: No packages found for project" in caplog.text
+
+
 @pytest.mark.usefixtures("mock_good")
 def test_inc_revisions() -> None:
     incident = Incident(test_data)
@@ -152,3 +170,61 @@ def test_slfo_channels_and_revisions() -> None:
     incident.compute_revisions_for_product_repo(None, None)
     assert incident.channels == expected_channels
     assert incident.revisions == expected_revisions
+
+
+@pytest.mark.usefixtures("mock_good")
+def test_inc_arch_filter() -> None:
+    inc = Incident(test_data)
+    inc.arch_filter = ["aarch64"]
+    # x86_64 should be skipped in _rev
+    inc.compute_revisions_for_product_repo(None, None)
+    assert ArchVer("aarch64", "15-SP4") in inc.revisions
+    assert ArchVer("x86_64", "15.4") not in inc.revisions
+
+
+def test_inc_rev_multiple_repos(mocker: MockerFixture) -> None:
+    data = deepcopy(test_data)
+    data["channels"].append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
+    inc = Incident(data)
+    mock_get_max = mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
+    inc.compute_revisions_for_product_repo(None, None)
+    # verify get_max_revision was called with both repos for x86_64
+    args = mock_get_max.call_args_list[0][0]
+    assert len(args[0]) == 2
+
+
+def test_inc_rev_no_repo_found(mocker: MockerFixture) -> None:
+    inc = Incident(test_data)
+    mocker.patch("openqabot.types.incident.get_max_revision", return_value=0)
+    with pytest.raises(NoRepoFoundError):
+        inc.compute_revisions_for_product_repo(None, None)
+
+
+def test_inc_repr_no_rrid() -> None:
+    data = deepcopy(test_data)
+    data["rr_number"] = None
+    inc = Incident(data)
+    assert repr(inc) == f"<Incident: {data['project']}>"
+
+
+def test_inc_is_livepatch_false() -> None:
+    data = deepcopy(test_data)
+    data["packages"] = ["kernel-default", "kernel-livepatch"]
+    inc = Incident(data)
+    assert not inc.livepatch
+
+
+def test_inc_rev_product_repo_list(mocker: MockerFixture) -> None:
+    inc = Incident(test_data)
+    mock_get_max = mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
+    inc.compute_revisions_for_product_repo(["repo1", "repo2"], None)
+    assert mock_get_max.call_args[0][3] == "repo2"
+
+
+def test_inc_rev_non_matching_version(mocker: MockerFixture) -> None:
+    data = deepcopy(test_data)
+    data["channels"] = ["SUSE:Updates:Product:unknown:x86_64"]
+    inc = Incident(data)
+    mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
+    inc.compute_revisions_for_product_repo(None, None)
+    assert ArchVer("x86_64", "unknown") in inc.revisions
