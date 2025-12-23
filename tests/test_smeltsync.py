@@ -215,3 +215,13 @@ def test_create_record_no_request_set() -> None:
 def test_is_revoked_true() -> None:
     rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
     assert SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_correct_status_passes() -> None:
+    rr_number = {"reviewSet": [{"assignedByGroup": {"name": "qam-openqa"}, "status": {"name": "review"}}]}
+    assert SMELTSync._has_qam_review(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_empty_set_fails() -> None:
+    rr_number = {"reviewSet": []}
+    assert not SMELTSync._has_qam_review(rr_number)  # noqa: SLF001
