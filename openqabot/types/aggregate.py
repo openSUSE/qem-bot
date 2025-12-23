@@ -188,11 +188,11 @@ class Aggregate(BaseConf):
                 params={"product": self.product, "arch": arch},
                 headers=token,
             )
-        except requests.exceptions.RequestException:
-            log.exception("Dashboard API error: Could not fetch previous aggregate jobs")
-            old_jobs = None
         except requests.exceptions.JSONDecodeError:
             log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
+            old_jobs = None
+        except requests.exceptions.RequestException:
+            log.exception("Dashboard API error: Could not fetch previous aggregate jobs")
             old_jobs = None
 
         if not old_jobs:
