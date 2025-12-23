@@ -71,10 +71,7 @@ class Aggregate(BaseConf):
             if any((incident.livepatch, incident.staging)):
                 return False
             if self.filter_embargoed(self.flavor) and incident.embargoed:
-                log.debug(
-                    "Incident %s is skipped because filtering embargoed is on and incident has embargoed True",
-                    incident.id,
-                )
+                log.debug("Incident %s skipped: Embargoed and embargo-filtering enabled", incident.id)
                 return False
             return True
 
@@ -124,12 +121,14 @@ class Aggregate(BaseConf):
 
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)
-            if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+            if not settings or not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
+                log.info("No tools image found for %s", self)
                 return None
 
         if "PUBLIC_CLOUD_PINT_QUERY" in settings:
             settings = apply_publiccloud_pint_image(settings)
-            if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+            if not settings or not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
+                log.info("No PINT image found for %s", self)
                 return None
 
         full_post["openqa"].update(settings)
@@ -189,12 +188,16 @@ class Aggregate(BaseConf):
                 params={"product": self.product, "arch": arch},
                 headers=token,
             )
-        except requests.exceptions.RequestException:
-            log.exception("Request to QEM Dashboard failed")
-            old_jobs = None
         except requests.exceptions.JSONDecodeError:
-            log.exception("Failed to decode JSON response from QEM Dashboard")
+            log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
             old_jobs = None
+        except requests.exceptions.RequestException:
+            log.exception("Dashboard API error: Could not fetch previous aggregate jobs")
+            old_jobs = None
+
+        if not old_jobs:
+            log.info("No aggregate jobs found for %s on arch %s", self, arch)
+            return None
 
         old_repohash = old_jobs[0].get("repohash", "") if old_jobs else ""
         old_build = old_jobs[0].get("build", "") if old_jobs else ""
@@ -207,7 +210,7 @@ class Aggregate(BaseConf):
             )
         except SameBuildExistsError:
             log.info(
-                "For %s aggreagate on %s there is existing build",
+                "Aggregate for %s on %s skipped: A build with the same RepoHash already exists",
                 self.product,
                 arch,
             )

@@ -103,9 +103,9 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
-    assert "Starting to sync incidents from smelt to dashboard" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in messages
+    assert "Updating 1 incidents on QEM Dashboard" in messages
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
     incident = responses.calls[1].response.json()[0]
@@ -144,9 +144,9 @@ def test_sync_approved(
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
-    assert "Starting to sync incidents from smelt to dashboard" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in messages
+    assert "Updating 1 incidents on QEM Dashboard" in messages
     assert len(responses.calls) == 2
     assert len(responses.calls[1].response.json()) == 1
     assert not responses.calls[1].response.json()[0]["inReviewQAM"]
@@ -166,7 +166,7 @@ def test_sync_approved(
 def test_sync_dry_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.smeltsync")
     assert SMELTSync(_namespace(dry=True, token="123", retry=False))() == 0
-    assert "Dry run, nothing synced" in caplog.text
+    assert "Dry run: Skipping dashboard update" in caplog.text
 
 
 def test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully() -> None:
@@ -215,3 +215,13 @@ def test_create_record_no_request_set() -> None:
 def test_is_revoked_true() -> None:
     rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
     assert SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_correct_status_passes() -> None:
+    rr_number = {"reviewSet": [{"assignedByGroup": {"name": "qam-openqa"}, "status": {"name": "review"}}]}
+    assert SMELTSync._has_qam_review(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_empty_set_fails() -> None:
+    rr_number = {"reviewSet": []}
+    assert not SMELTSync._has_qam_review(rr_number)  # noqa: SLF001

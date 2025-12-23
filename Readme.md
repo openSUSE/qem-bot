@@ -20,11 +20,11 @@ updates information about incidents and related openQA tests.
 
     positional arguments:
       {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
-        full-run            Full schedule for Maintenance Incidents in openqa
-        incidents-run       Incidents only schedule for Maintenance Incidents in
-                            openqa
-        updates-run         updates only schedule for Maintenance Incidents in
-                            openqa
+        full-run            Full schedule for Maintenance Incidents in openQA
+        incidents-run       Incidents-only schedule for Maintenance Incidents in
+                            openQA
+        updates-run         Updates-only schedule for Maintenance Incidents in
+                            openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
         inc-approve         Approve incidents which passed tests
@@ -42,10 +42,10 @@ updates information about incidents and related openQA tests.
       -t TOKEN, --token TOKEN
                             Token for qem dashboard api
       -i OPENQA_INSTANCE, --openqa-instance OPENQA_INSTANCE
-                            OpenQA instance to use Other instances than OSD do not
+                            The openQA instance to use. Instances other than OSD do not
                             update dashboard database
       -s SINGLEARCH, --singlearch SINGLEARCH
-                            Yaml config with list of singlearch packages for
+                            YAML config with list of singlearch packages for
                             incidents run
       -r RETRY, --retry RETRY
                             Number of retries
@@ -54,7 +54,7 @@ updates information about incidents and related openQA tests.
 
 * For every incident in SMELT an entry should show up in qem-dashboard
   (`smelt-sync`)
-* For every incident in qem-dashboard incident and aggregate tests are
+* For every incident in qem-dashboard, incident and aggregate tests are
   triggered (`incidents-run+updates-run`)
 * Results from incident + aggregate tests show up on the dashboard
   (`inc-sync-results+aggr-sync-results`)
@@ -69,8 +69,8 @@ SUSE-internal CI setup.
 
 ## Misc
 
-**Token** is required but if isn't used https://openqa.suse.de or is invoked with
-`--dry` argument any string is sufficient -> see [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
+**Token** is required, but if it isn't used https://openqa.suse.de or is invoked with
+`--dry` argument any string is sufficient. See [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
 
 ## Commenting in IBS
 
@@ -204,12 +204,12 @@ python3 ./qem-bot.py --configs metadata -t 1234 --dry inc-approve
 
 This should walk over the list of current incidents pending approval.
 
-It is possible to run qem-bot inside container, please see
+It is possible to run qem-bot inside a container, please see
 [docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
 
 #### Local integration testing with qem-dashboard and openQA
-Checkout [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
-the instructions from its README to setup up. Then all you need to do to start
+Check out [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
+the instructions from its README to set up. Then all you need to do to start
 the dashboard is:
 
 ```
@@ -261,7 +261,7 @@ To fake test results you can use an SQL command like
 `update jobs set state = 'done', result = 'softfailed' where state = 'scheduled';`
 on your local openQA database.
 
-If you want to re-try these steps from scratch you need to clean-up incident
+If you want to re-try these steps from scratch you need to clean up incident
 settings from the qem-dashboard database with an SQL command like
 `delete from incident_openqa_settings where id >= …;`.
 
@@ -285,7 +285,7 @@ You can also test the increment approval, e.g.:
 ./bot-ng.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
 ```
 
-In production you should specify the config via `--config`, though. Checkout
+In production you should specify the config via `--config`, though. Check out
 [the config documentation](doc/config.md) for details. It also explains what
 this command does step by step.
 

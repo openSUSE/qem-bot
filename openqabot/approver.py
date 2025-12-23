@@ -41,26 +41,17 @@ def _mi2str(inc: IncReq) -> str:
 
 def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
     if e.code == 403:
-        log.info(
-            "Received '%s'. Request %s likely already approved, ignoring",
-            e.reason,
-            inc.req,
-        )
+        log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, inc.req)
         return True
     if e.code == 404:
         log.info(
-            "Received '%s'. Request %s removed or problem on OBS side: %s",
-            e.reason,
+            "OBS API error for request %s (removed or server issue): %s - %s",
             inc.req,
+            e.reason,
             e.read().decode(),
         )
         return False
-    log.error(
-        "Received error %s, reason: '%s' for Request %s - problem on OBS side",
-        e.code,
-        e.reason,
-        inc.req,
-    )
+    log.error("OBS API error for request %s: %s - %s", inc.req, e.code, e.reason)
     return False
 
 
@@ -84,7 +75,7 @@ class Approver:
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Approving incidents in IBS or Gitea…")
+        log.info("Starting approving incidents in IBS or Gitea…")
         increqs = (
             get_single_incident(self.token, self.single_incident)
             if self.single_incident
@@ -103,7 +94,7 @@ class Approver:
             for inc in incidents_to_approve:
                 overall_result &= self.approve(inc)
 
-        log.info("End of bot run")
+        log.info("Incident approval process finished")
 
         return 0 if overall_result else 1
 
@@ -111,7 +102,7 @@ class Approver:
         try:
             i_jobs = get_incident_settings(inc.inc, self.token, all_incidents=self.all_incidents)
         except NoResultsError as e:
-            log.info(e)
+            log.info("Approval check for %s skipped: %s", _mi2str(inc), e)
             return False
         try:
             u_jobs = get_aggregate_settings(inc.inc, self.token)
@@ -157,16 +148,10 @@ class Approver:
         if not qam_data:
             return False
         if "error" in qam_data:
-            log.info(
-                "Cannot find job %s in the dashboard database to make sure it is valid",
-                job,
-            )
+            log.info("Job %s not found in dashboard database, cannot validate", job)
             return False
         if qam_data["status"] != "passed":
-            log.info(
-                'Job %s is not recorded as "passed" in the qam-dashboard database',
-                job,
-            )
+            log.info("Job %s not 'passed' in dashboard database", job)
             return False
         return True
 
@@ -182,16 +167,13 @@ class Approver:
         try:
             job_build_date = datetime.strptime(job_build, "%Y%m%d").astimezone(UTC)
         except (ValueError, TypeError):
-            log.info(
-                "Could not parse build date %s. Won't consider this job as alternative for approval.",
-                job_build,
-            )
+            log.info("Could not parse build date '%s', cannot use for approval override.", job_build)
             return None
 
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Cannot ignore aggregate failure %s for update %s. Reason: Older jobs are too old to be considered",
+                "Ignoring failed aggregate %s for update %s skipped: Older jobs are too old",
                 failed_job_id,
                 inc,
             )
@@ -205,7 +187,8 @@ class Approver:
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Cannot ignore aggregate failure %s for update %s. Reason: Older passing jobs do not have update under test",  # noqa: E501 line-too-long
+                "Ignoring failed aggregate %s for update %s skipped: "
+                "Older passing jobs do not have the update under test",
                 failed_job_id,
                 inc,
             )
@@ -213,7 +196,8 @@ class Approver:
 
         if not self.validate_job_qam(job["id"]):
             log.info(
-                "Cannot ignore failed aggregate %s using %s for update %s because is not present in qem-dashboard. It's likely about an older release request",  # noqa: E501 line-too-long
+                "Ignoring failed aggregate %s using %s for update %s skipped: "
+                "Job not present in qem-dashboard, likely belongs to an older request",
                 failed_job_id,
                 job["id"],
                 inc,
@@ -229,7 +213,7 @@ class Approver:
         jobs = self.client.get_older_jobs(failed_job_id, 20)
         data = jobs.get("data", [])
         if len(data) == 0:
-            log.info("Cannot find older jobs for %s", failed_job_id)
+            log.info("Cannot find older jobs for failed job %s", failed_job_id)
             return False
 
         current_job, older_jobs = data[0], data[1:]
@@ -237,10 +221,7 @@ class Approver:
         try:
             current_build_date = datetime.strptime(current_build, "%Y%m%d").astimezone(UTC)
         except (ValueError, TypeError):
-            log.info(
-                "Could not parse build date %s. Won't try to look at older jobs for approval.",
-                current_build,
-            )
+            log.info("Could not parse build date '%s', cannot check for older jobs.", current_build)
             return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
@@ -251,11 +232,7 @@ class Approver:
             was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
             if was_ok is not None:
                 return was_ok
-        log.info(
-            "Cannot ignore aggregate failure %s for update %s because: Older usable jobs did not succeed. Run out of jobs to evaluate.",  # noqa: E501 line-too-long
-            failed_job_id,
-            inc,
-        )
+        log.info("Cannot ignore aggregate failure %s for update %s: No suitable older jobs found.", failed_job_id, inc)
         return False
 
     def is_job_passing(self, job_result: dict) -> bool:
@@ -276,7 +253,7 @@ class Approver:
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
         if job_result.get(f"acceptable_for_{inc}"):
-            log.info("Ignoring failed job %s for incident %s due to openQA comment", url, inc)
+            log.info("Ignoring failed job %s for incident %s (manually marked as acceptable)", url, inc)
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
             log.info(
@@ -304,7 +281,7 @@ class Approver:
             try:
                 res = self.get_jobs(job_aggr, api, inc)
             except NoResultsError as e:
-                log.info(e)
+                log.info("Approval check for incident %s failed: %s", inc, e)
                 continue
             if not res:
                 return False
@@ -313,7 +290,7 @@ class Approver:
 
     def approve(self, inc: IncReq) -> bool:
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
-        log.info("Accepting review for %s", _mi2str(inc))
+        log.info("Approving %s", _mi2str(inc))
         return self.git_approve(inc, msg) if inc.type == "git" else self.osc_approve(inc, msg)
 
     @staticmethod
@@ -329,7 +306,7 @@ class Approver:
         except HTTPError as e:
             return _handle_http_error(e, inc)
         except Exception:
-            log.exception("")
+            log.exception("OBS API error: Failed to approve request %s", inc.req)
             return False
 
         return True
@@ -345,6 +322,6 @@ class Approver:
                 inc.scm_info,
             )
         except Exception:
-            log.exception("")
+            log.exception("Gitea API error: Failed to approve PR %s", inc.inc)
             return False
         return True

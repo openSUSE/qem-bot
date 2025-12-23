@@ -10,6 +10,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
+import requests
 import zstandard
 from lxml import etree
 
@@ -55,17 +56,25 @@ class RepoDiff:
             return zstandard.decompress(repo_data_raw)
         return repo_data_raw
 
-    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any]:
-        log.debug("Requesting %s", url)
+    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
+        log.debug("Fetching repository data from %s", url)
         name = "responses/" + name.replace("/", "_")
-        if self.args is not None and self.args.fake_data:
-            if as_json:
-                return json.loads(Path(name).read_text(encoding="utf8"))
-            return Path(name).read_bytes()
-        resp = retried_requests.get(url)
-        if self.args is not None and self.args.dump_data and not self.args.fake_data:
-            Path(name).write_bytes(resp.content)
-        return resp.json() if as_json else resp.content
+        try:
+            if self.args is not None and self.args.fake_data:
+                if as_json:
+                    return json.loads(Path(name).read_text(encoding="utf8"))
+                return Path(name).read_bytes()
+            resp = retried_requests.get(url)
+            if self.args is not None and self.args.dump_data and not self.args.fake_data:
+                Path(name).write_bytes(resp.content)
+            return resp.json() if as_json else resp.content
+        except (FileNotFoundError, PermissionError):
+            log.exception("Failed to read %s", name)
+        except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
+            log.exception("Failed to parse %s", name)
+        except Exception:
+            log.exception("Failed to fetch or dump data from %s", url)
+        return None
 
     def _load_repodata(self, project: str) -> etree.Element | None:
         url = self._make_repodata_url(project)
@@ -74,21 +83,26 @@ class RepoDiff:
             f"repodata-listing-{project}.json",
             as_json=True,
         )
+        if not repo_data_listing:
+            log.error("Could not load repo data for project %s", project)
+            return None
+
         rows = repo_data_listing.get("data", [])
         repo_data_file = self._find_primary_repodata(rows)
         if repo_data_file is None:
-            log.warning("Unable to find repo data file under %s", url)
+            log.warning("Repository metadata not found: Primary repodata missing in %s", url)
             return None
         repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
-        log.debug("Parsing %s", repo_data_file)
+        log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 
     def _load_packages(self, project: str) -> defaultdict[str, set[Package]]:
         repo_data = self._load_repodata(project)
         packages_by_arch = defaultdict(set)
-        if repo_data is None:
+        if repo_data is None or not hasattr(repo_data, "iterfind"):
+            log.error("Could not load repo data for project %s", project)
             return packages_by_arch
-        log.debug("Loading packages for %s", project)
+        log.debug("Loading package list for project %s", project)
         for package in repo_data.iterfind(package_tag):
             if package.get("type") != "rpm":
                 continue
@@ -112,27 +126,31 @@ class RepoDiff:
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
             packages_a = packages_by_arch_a[arch]
-            log.debug("Found %i packages for %s in repo %s", len(packages_a), arch, repo_a)
-            log.debug("Found %i packages for %s in repo %s", len(packages_b), arch, repo_b)
+            log.debug("Found %d packages for architecture %s in repository %s", len(packages_a), arch, repo_a)
+            log.debug("Found %d packages for architecture %s in repository %s", len(packages_b), arch, repo_b)
             diff = packages_b - packages_a
             count += len(diff)
             diff_by_arch[arch] = diff
         return (diff_by_arch, count)
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
-        packages_by_arch_a = self._load_packages(repo_a)
-        packages_by_arch_b = self._load_packages(repo_b)
-        return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
+        try:
+            packages_by_arch_a = self._load_packages(repo_a)
+            packages_by_arch_b = self._load_packages(repo_b)
+            return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
+        except Exception:
+            log.exception("Repo diff computation failed for projects %s and %s", repo_a, repo_b)
+            return defaultdict(set), 0
 
     def __call__(self) -> int:
         args = self.args
         try:
             diff, count = self.compute_diff(args.repo_a, args.repo_b)
         except FileNotFoundError as e:
-            log.critical("Fake data file not found. Consider generating that with `--dump-data`: %s", e)
+            log.critical("Failed to load fake data: %s (use --dump-data to generate it)", e)
             raise SystemExit from None
         log.debug(
-            "Repo %s contains %i packages that are not in repo %s",
+            "Repository %s has %d new packages compared to %s",
             args.repo_b,
             count,
             args.repo_a,

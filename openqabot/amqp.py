@@ -47,7 +47,7 @@ class AMQP(SyncRes):
         self.channel.basic_consume(queue_name, self.on_message, auto_ack=True)
 
     def __call__(self) -> int:
-        log.info("AMQP listening started")
+        log.info("Starting AMQP listener")
         with contextlib.suppress(KeyboardInterrupt):
             self.channel.start_consuming()
         self.stop()
@@ -55,7 +55,7 @@ class AMQP(SyncRes):
 
     def stop(self) -> None:
         if self.connection:
-            log.info("Closing AMQP connection")
+            log.info("Stopping AMQP listener: Closing connection")
             self.connection.close()
 
     def on_message(
@@ -70,13 +70,13 @@ class AMQP(SyncRes):
             return None
         if match := build_inc_regex.match(message["BUILD"]):
             inc_nr = match.group(1)
-            log.debug("Received AMQP message: %s", pformat(message))
-            log.info("Job for incident %s done", inc_nr)
+            log.debug("Processing AMQP message: %s", pformat(message))
+            log.info("Incident %s: openQA job finished", inc_nr)
             return self.handle_incident(inc_nr, message)
         if match := build_agg_regex.match(message["BUILD"]):
             build_nr = match.group(0)
-            log.debug("Received AMQP message: %s", pformat(message))
-            log.info("Aggregate build %s done", build_nr)
+            log.debug("Processing AMQP message: %s", pformat(message))
+            log.info("Aggregate %s: openQA build finished", build_nr)
         return None
 
     def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:

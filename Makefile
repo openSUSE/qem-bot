@@ -1,4 +1,5 @@
 SOURCE_FILES ?= $(shell git ls-files "**.py")
+USE_TY_TYPECHECK ?= 0
 
 .PHONY: all
 all:
@@ -35,11 +36,24 @@ check-code-health:
 	@echo "Checking code health…"
 	@vulture ${SOURCE_FILES} --min-confidence 80
 
-.PHONY: typecheck
-typecheck:
+.PHONY: typecheck-pyright
+typecheck-pyright:
 	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated --warnings
 
+.PHONY: typecheck-ty
+typecheck-ty:
+	ty check
 .PHONY: only-test-with-coverage
+
+.PHONY: typecheck
+ifeq ($(USE_TY_TYPECHECK),0)
+# Using pyright for typechecking as part of top-level target due to easier
+# dependencies. ty is recommended if available to you
+typecheck: typecheck-pyright
+else
+typecheck: typecheck-ty
+endif
+
 only-test-with-coverage:
 	python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
 

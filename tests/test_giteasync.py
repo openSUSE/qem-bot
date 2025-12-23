@@ -157,7 +157,7 @@ def run_gitea_sync(
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
 def test_gitea_sync_on_dry_run_does_not_sync(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_gitea_sync(mocker, caplog, dry=True)
-    assert "Dry run, nothing synced" in caplog.text
+    assert "Dry run: Would update QEM Dashboard data for 1 incidents" in caplog.text
 
 
 @responses.activate
@@ -167,9 +167,9 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     messages = [x[-1] for x in caplog.record_tuples]
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
-    assert "Loaded 7 active PRs/incidents from products/SLFO" in messages
-    assert "Getting info about PR 131 from Gitea" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Loaded 7 active PRs from products/SLFO" in messages
+    assert "Fetching info for PR 131 from Gitea" in messages
+    assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 incidents" in messages
     assert len(responses.calls) == 25
     assert len(responses.calls[-1].response.json()) == 1
     incident = responses.calls[-1].response.json()[0]
@@ -241,7 +241,7 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCapt
 def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_gitea_sync(mocker, caplog, no_build_results=True, allow_failures=False)
     messages = [x[-1] for x in caplog.record_tuples]
-    m = "Skipping PR 124, no packages have been built/published (there are 0 failed/unpublished packages)"
+    m = "Skipping PR 124: No packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in messages
 
 
@@ -264,7 +264,7 @@ def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.L
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
     assert incident["failed_or_unpublished_packages"] == ["bar"]
-    assert "Unable to read build results of project" in caplog.text
+    assert "Build results for project bar unreadable, skipping:" in caplog.text
     assert "Traceback" not in caplog.text
 
 

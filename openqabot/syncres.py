@@ -59,18 +59,18 @@ class SyncRes:
             return False
 
         if data["clone_id"]:
-            log.debug("Job '%s' already has a clone, ignoring", data["clone_id"])
+            log.debug("Skipping job %s: Already has a clone %s", data["id"], data["clone_id"])
             return False
 
         if self._is_in_devel_group(data):
-            log.debug("Ignoring job '%s' in development group '%s'", data["id"], data["group"])
+            log.debug("Skipping job %s: Belongs to development group '%s'", data["id"], data["group"])
             return False
 
         return True
 
     def post_result(self, result: dict[str, Any]) -> None:
         log.debug(
-            "Posting results of %s job %s with status %s",
+            "Syncing %s job %s: Status %s",
             self.operation,
             result["job_id"],
             result["status"],
@@ -80,4 +80,4 @@ class SyncRes:
         if not self.dry and self.client:
             post_job(self.token, result)
         else:
-            log.info("Dry run -- data in dashboard untouched")
+            log.info("Dry run: Skipping dashboard update")

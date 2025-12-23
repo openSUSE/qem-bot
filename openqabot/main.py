@@ -18,7 +18,7 @@ def main() -> None:
     cfg = parser.parse_args(sys.argv[1:])
 
     if not cfg.configs.is_dir() and not hasattr(cfg, "no_config"):
-        log.error("Path %s is not a valid directory with config files", cfg.configs)
+        log.error("Configuration error: %s is not a valid directory", cfg.configs)
         sys.exit(1)
 
     if cfg.debug:

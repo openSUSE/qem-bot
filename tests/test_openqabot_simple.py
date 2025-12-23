@@ -99,7 +99,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
 
 
@@ -124,7 +124,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 6
-    assert "Would trigger 1 products in openQA"
+    assert "Dry run: Would trigger 1 products in openQA" in messages
 
 
 @responses.activate
@@ -148,9 +148,9 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard" in messages
+    assert "Skipping dashboard update: No valid openQA configuration found for data: {'fake': 'result'}" in messages
 
 
 @responses.activate
@@ -174,6 +174,6 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert "POST failed, not updating dashboard" in messages
+    assert "Skipping dashboard update: Job post failed" in messages

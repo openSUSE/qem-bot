@@ -114,7 +114,7 @@ def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": ":33222:emacs"}))
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Job for incident 33222 done" in messages
+    assert "Incident 33222: openQA job finished" in messages
     assert "Incidents to approve:" in messages
     assert "* SUSE:Maintenance:33222:42" in messages
 
@@ -125,7 +125,7 @@ def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Aggregate build 12345678-9 done" in messages  # currently noop
+    assert "Aggregate 12345678-9: openQA build finished" in messages  # currently noop
 
 
 def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:

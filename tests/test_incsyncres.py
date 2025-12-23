@@ -77,14 +77,14 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Job '1234' already has a clone, ignoring",
-        "End of bot run",
+        "Skipping job 1234: Already has a clone 1234",
+        "Incident results sync completed",
     ]
 
 
@@ -138,13 +138,13 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "End of bot run",
+        "Incident results sync completed",
     ]
 
 
@@ -199,14 +199,14 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Ignoring job '1234' in development group 'Devel FakeGroup'",
-        "End of bot run",
+        "Skipping job 1234: Belongs to development group 'Devel FakeGroup'",
+        "Incident results sync completed",
     ]
 
 
@@ -265,14 +265,14 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Ignoring job '1234' in development group 'FakeGroup'",
-        "End of bot run",
+        "Skipping job 1234: Belongs to development group 'FakeGroup'",
+        "Incident results sync completed",
     ]
 
 
@@ -331,13 +331,13 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
         "No API key for instance.qa: only GET requests will be allowed",
-        "Getting settings for 100",
+        "Fetching settings for incident 100",
         (
-            "Getting openQA tests results for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Posting results of incident job 1234 with status passed",
+        "Syncing incident job 1234: Status passed",
         (
             "Full post data: {'arch': 'arch',\n"
             " 'build': '123',\n"
@@ -352,6 +352,6 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
             " 'update_settings': None,\n"
             " 'version': '13.3'}"
         ),
-        "Dry run -- data in dashboard untouched",
-        "End of bot run",
+        "Dry run: Skipping dashboard update",
+        "Incident results sync completed",
     ]

@@ -7,6 +7,7 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
+import requests
 from openqa_client.exceptions import RequestError
 
 import responses
@@ -70,6 +71,9 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
     error = RequestError("POST", "no.where", "500", "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
+    messages = [x[-1] for x in caplog.record_tuples]
+    assert any("openQA API error" in m for m in messages)
+    assert any("Job POST failed for settings" in m for m in messages)
 
 
 @responses.activate
@@ -94,8 +98,8 @@ def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     messages = [x[-1] for x in caplog.record_tuples]
     assert len(messages) == 2
     assert len(responses.calls) == 1
-    assert "Job 42 not found in openQA, marking as obsolete on dashboard" in messages
-    assert "job not found" in messages  # the 404 fixture is supposed to match
+    assert "Job 42 not found on openQA, marking as obsolete on dashboard" in messages
+    assert any("job not found" in m for m in messages)  # the 404 fixture is supposed to match
 
 
 def test_get_methods_handle_errors_gracefully() -> None:
@@ -105,3 +109,13 @@ def test_get_methods_handle_errors_gracefully() -> None:
         assert client.get_job_comments(42) == []
         assert not client.get_single_job(42)
         assert client.get_older_jobs(42, 0) == {"data": []}
+
+
+def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    with patch(
+        "openqabot.openqa.OpenQA_Client.openqa_request",
+        side_effect=requests.exceptions.RequestException("Request failed"),
+    ):
+        assert client.get_job_comments(42) == []
+    assert "openQA API error when fetching comments for job 42" in caplog.text
