@@ -122,3 +122,43 @@ def test_aggregate_call_pc_pint_with_incidents(mocker: MockerFixture, incident_m
     incidents = [incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")]
     ret = acc(incidents=incidents, token=None, ci_url=None)
     assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
+
+
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_no_job_settings(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Test with no job settings found."""
+    caplog.set_level(10)  # DEBUG
+    my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
+    acc = Aggregate("product", None, None, settings={}, config=my_config)
+    mocker.patch("openqabot.types.aggregate.get_json", return_value=[])
+    res = acc(incidents=[], token=None, ci_url=None)
+    assert res == []
+    assert "No aggregate jobs found for <Aggregate product: product> on arch ciao" in caplog.text
+
+
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_pc_tools_fail(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Test with pc tools image fetch failure."""
+    caplog.set_level(10)  # DEBUG
+    my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
+    my_settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "query"}
+    acc = Aggregate("product", None, None, settings=my_settings, config=my_config)
+    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "abc", "build": "build"}])
+    mocker.patch("openqabot.types.aggregate.apply_pc_tools_image", return_value=None)
+    res = acc(incidents=[], token=None, ci_url=None)
+    assert res == []
+    assert "No tools image found for <Aggregate product: product>" in caplog.text
+
+
+@pytest.mark.usefixtures("request_mock")
+def test_aggregate_call_pc_pint_fail(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Test with pc pint image fetch failure."""
+    caplog.set_level(10)  # DEBUG
+    my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
+    my_settings = {"PUBLIC_CLOUD_PINT_QUERY": "query"}
+    acc = Aggregate("product", None, None, settings=my_settings, config=my_config)
+    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "abc", "build": "build"}])
+    mocker.patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=None)
+    res = acc(incidents=[], token=None, ci_url=None)
+    assert res == []
+    assert "No PINT image found for <Aggregate product: product>" in caplog.text
