@@ -89,7 +89,7 @@ class IncrementConfig:
     @staticmethod
     def from_args(args: Namespace) -> list["IncrementConfig"]:
         if args.increment_config:
-            return IncrementConfig.from_config_path(args.increment_config)
+            return list(IncrementConfig.from_config_path(args.increment_config))
         # Create a dictionary from arguments for IncrementConfig
         config_args = {
             field_name: getattr(args, field_name)
