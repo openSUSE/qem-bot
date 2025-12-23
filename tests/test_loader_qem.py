@@ -277,6 +277,17 @@ def test_get_aggregate_results_error(mocker: MockerFixture) -> None:
         get_aggregate_results(1, {})
 
 
+def test_get_aggregate_settings_data_none(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(20)  # INFO
+    mocker.patch("openqabot.loader.qem.get_json", return_value=[])
+    from openqabot.types import Data
+
+    data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
+    res = get_aggregate_settings_data({}, data)
+    assert res == []
+    assert "No aggregate settings found for product product on arch arch" in caplog.text
+
+
 def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
     mock_response = MagicMock()
@@ -287,7 +298,7 @@ def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptu
     assert res == 0
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "INFO"
-    assert "Dashboard incidents updated successfully" in caplog.records[0].message
+    assert "QEM Dashboard incidents updated successfully" in caplog.records[0].message
 
 
 def test_update_incidents_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -297,39 +308,31 @@ def test_update_incidents_request_exception(mocker: MockerFixture, caplog: pytes
     assert res == 1
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "ERROR"
-    assert "Dashboard API request failed" in caplog.records[0].message
-
-
-def test_update_incidents_unsuccessful(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.ERROR)
-    mock_response = MagicMock()
-    mock_response.status_code = 403
-    mock_response.text = '{"error":"Permission denied"}'
-    mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
-
-    res = update_incidents({}, {})
-    assert res == 2
-    assert len(caplog.records) == 2
-    assert caplog.records[0].levelname == "ERROR"
-    assert "Dashboard incident sync failed: Status 403" in caplog.records[0].message
-    assert caplog.records[1].levelname == "ERROR"
-    assert '{"error":"Permission denied"}' in caplog.records[1].message
+    assert "QEM Dashboard API request failed" in caplog.records[0].message
 
 
 def test_update_incidents_unsuccessful_with_error_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
-    mock_response.status_code = 403
-    mock_response.text = '{"error":"Permission denied"}'
+    mock_response.status_code = 500
+    mock_response.text = "error message"
     mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
     res = update_incidents({}, {})
     assert res == 2
-    assert len(caplog.records) == 2
-    assert caplog.records[0].levelname == "ERROR"
-    assert "Dashboard incident sync failed: Status 403" in caplog.records[0].message
-    assert caplog.records[1].levelname == "ERROR"
-    assert '{"error":"Permission denied"}' in caplog.records[1].message
+    assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
+    assert "QEM Dashboard error response: error message" in caplog.text
+
+
+def test_update_incidents_unsuccessful_no_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(40)  # ERROR
+    mock_patch = mocker.patch("openqabot.loader.qem.patch")
+    mock_patch.return_value.status_code = 500
+    mock_patch.return_value.text = ""
+    res = update_incidents({}, {})
+    assert res == 2
+    assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
+    assert "QEM Dashboard error response" not in caplog.text
 
 
 def test_post_job_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -357,7 +360,7 @@ def test_post_job_request_exception(mocker: MockerFixture, caplog: pytest.LogCap
     caplog.set_level(logging.ERROR)
     mocker.patch("openqabot.loader.qem.put", side_effect=requests.exceptions.RequestException)
     post_job({}, {})
-    assert "Dashboard API request failed" in caplog.text
+    assert "QEM Dashboard API request failed" in caplog.text
 
 
 def test_update_job_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -385,4 +388,4 @@ def test_update_job_request_exception(mocker: MockerFixture, caplog: pytest.LogC
     caplog.set_level(logging.ERROR)
     mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
     update_job({}, 1, {})
-    assert "Dashboard API request failed" in caplog.text
+    assert "QEM Dashboard API request failed" in caplog.text
