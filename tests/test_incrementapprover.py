@@ -753,7 +753,7 @@ def test_determine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, 
         build_regex=BUILD_REGEX,
     )
     mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
-        "data": [{"name": "SLES-16.0-x86_64-Build1.1-Source.report.spdx.json"}]
+        "data": [{"name": "SLES-16.0-Online-x86_64-Build1.1.spdx.json"}]
     }
     res = approver._determine_build_info(config)  # noqa: SLF001
     assert res == set()
