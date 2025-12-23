@@ -346,6 +346,7 @@ class IncrementApprover:
         self, request: osc.core.Request | None, config: IncrementConfig, repo_sub_path: str
     ) -> defaultdict[str, set[Package]]:
         package_diff = defaultdict(set)
+        diff_key = None
         if config.diff_project_suffix == "source-report":
             # compute diff by checking the source report on obs
             diff_key = "request:" + str(request.id)
