@@ -5,37 +5,15 @@ comment:
   behavior: default
   require_changes: true
 coverage:
-  range: 70..100
+  range: 80..100
+  round: down
+  precision: 2
   status:
     changes: false
     project:
       default:
-        target: 90.0
-        threshold: 0
-      fully_covered:
         target: 100.0
-        paths:
-          - openqabot/__init__.py
-          - openqabot/amqp.py
-          - openqabot/approver.py
-          - openqabot/args.py
-          - openqabot/config.py
-          - openqabot/dashboard.py
-          - openqabot/errors.py
-          - openqabot/giteasync.py
-          - openqabot/incsyncres.py
-          - openqabot/loader/__init__.py
-          - openqabot/loader/config.py
-          - openqabot/loader/smelt.py
-          - openqabot/main.py
-          - openqabot/openqabot.py
-          - openqabot/syncres.py
-          - openqabot/types/__init__.py
-          - openqabot/types/baseconf.py
-          - openqabot/utc.py
-          - openqabot/utils.py
-          - tests/
+        threshold: 0
     patch:
       default:
-        target: 100.0
         branches: null
