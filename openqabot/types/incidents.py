@@ -286,8 +286,8 @@ class Incidents(BaseConf):
             delta_prio -= 50
         else:
             if flavor.endswith("Minimal"):
-                delta_prio -= 5
-            if not inc.staging:
+                delta_prio += 5
+            else:
                 delta_prio += 10
             if inc.emu:
                 delta_prio = -20
