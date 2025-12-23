@@ -7,6 +7,7 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 import pytest
+import requests
 from openqa_client.exceptions import RequestError
 
 import responses
@@ -108,3 +109,13 @@ def test_get_methods_handle_errors_gracefully() -> None:
         assert client.get_job_comments(42) == []
         assert not client.get_single_job(42)
         assert client.get_older_jobs(42, 0) == {"data": []}
+
+
+def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
+    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    with patch(
+        "openqabot.openqa.OpenQA_Client.openqa_request",
+        side_effect=requests.exceptions.RequestException("Request failed"),
+    ):
+        assert client.get_job_comments(42) == []
+    assert "openQA API error when fetching comments for job 42" in caplog.text
