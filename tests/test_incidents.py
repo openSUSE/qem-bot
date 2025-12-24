@@ -628,6 +628,7 @@ def test_handle_incident_livepatch_kgraft(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["openqa"]["KGRAFT"] == "1"
 
 
@@ -748,6 +749,7 @@ def test_handle_incident_singlearch_no_aggregate(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["qem"]["withAggregate"] is False
 
 
@@ -781,17 +783,20 @@ def test_handle_incident_should_aggregate_logic(mocker: MockerFixture) -> None:
 
     # Test case 1: aggregate check true matches
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["qem"]["withAggregate"] is False
 
     # Test case 2: aggregate check false matches
     incidents_obj.flavors["AAA"]["aggregate_check_true"] = []
     incidents_obj.flavors["AAA"]["aggregate_check_false"] = ["OS_TEST_ISSUES"]
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["qem"]["withAggregate"] is False
 
     # Test case 3: nothing matches
     incidents_obj.flavors["AAA"]["aggregate_check_false"] = ["SOMETHING_ELSE"]
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     # _should_aggregate returns (neg and pos) which is (True and False) -> False
     # If _should_aggregate returns False, and not aggregate_job, withAggregate = False
     assert result["qem"]["withAggregate"] is False
@@ -819,6 +824,7 @@ def test_handle_incident_priority_emu(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     # BASE_PRIO(50) - 20 (emu) = 30
     assert result["openqa"]["_PRIORITY"] == 30
 
@@ -948,12 +954,14 @@ def test_handle_incident_priority_none(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     # BASE_PRIO(50) + 10 (not staging) = 60
     assert result["openqa"]["_PRIORITY"] == 60
 
     # If we use override_priority = 50
     incidents_obj.flavors["Regular"]["override_priority"] = 50
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert "_PRIORITY" not in result["openqa"]
 
 
@@ -981,6 +989,7 @@ def test_handle_incident_pc_tools_image_success(mocker: MockerFixture) -> None:
     )
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "some_image"
 
 
@@ -1012,6 +1021,7 @@ def test_handle_incident_priority_override(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     assert result["openqa"]["_PRIORITY"] == 100
 
 
@@ -1043,5 +1053,6 @@ def test_handle_incident_priority_minimal(mocker: MockerFixture) -> None:
     mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
 
     result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
     # BASE_PRIO(50) + 10 (not staging) - 5 (Minimal) = 55
     assert result["openqa"]["_PRIORITY"] == 55

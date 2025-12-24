@@ -55,11 +55,13 @@ def test_comment_find() -> None:
     }
     # find bot
     c, info = api.comment_find(comments, "bot")
+    assert c is not None
     assert c["id"] == "1"
     assert info == {"key": "val"}
 
     # find with info match
     c, info = api.comment_find(comments, "bot", {"key": "val"})
+    assert c is not None
     assert c["id"] == "1"
 
     # mismatch info
@@ -201,6 +203,7 @@ def test_comment_find_empty_info() -> None:
         "1": {"comment": "<!-- bot -->", "id": "1"},
     }
     c, info = api.comment_find(comments, "bot")
+    assert c is not None
     assert c["id"] == "1"
     assert info == {}
 
