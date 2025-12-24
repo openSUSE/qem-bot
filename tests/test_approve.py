@@ -279,7 +279,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
 
-def with_fake_qem(mode: str) -> Generator[None, None, None]:
+def with_fake_qem(mode: str) -> Any:
     """Local meta-decorator that sets the behavior marker and triggers the fixture injection.
 
     Use examples:
@@ -296,7 +296,7 @@ def with_fake_qem(mode: str) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def f_osconf(mocker: MockerFixture) -> Generator[None, None, None]:
+def f_osconf(mocker: MockerFixture) -> Any:
     return mocker.patch("osc.conf.get_config")
 
 
