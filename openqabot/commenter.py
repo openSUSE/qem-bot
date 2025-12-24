@@ -73,8 +73,9 @@ class Commenter:
 
         bot_name = "openqa"
         info = {"state": state}
-        for key in inc.revisions:
-            info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
+        if inc.revisions:
+            for key in inc.revisions:
+                info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
 
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())

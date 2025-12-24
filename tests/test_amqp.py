@@ -60,6 +60,20 @@ def test_call(mocker: MockerFixture) -> None:
     amqp_with_url.connection.close.assert_called_once()
 
 
+def test_call_no_channel(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    args_no_url = Namespace(
+        dry=True,
+        token="ToKeN",
+        openqa_instance=urlparse("http://instance.qa"),
+        url=None,
+        gitea_token=None,
+    )
+    amqp_no_url = AMQP(args_no_url)
+    assert amqp_no_url() == 1
+    assert "AMQP listener not started: No channel available" in caplog.text
+
+
 @responses.activate
 def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
     # define response for get_incident_settings_data

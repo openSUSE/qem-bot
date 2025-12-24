@@ -17,18 +17,18 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 class Incident:
     def __init__(self, incident: dict[str, Any]) -> None:
-        self.rr = incident["rr_number"]
-        self.project = incident["project"]
-        self.id = incident["number"]
-        self.rrid = f"{self.project}:{self.rr}" if self.rr else None
-        self.staging = not incident["inReview"]
-        self.ongoing = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
-        self.embargoed = incident["embargoed"]
-        self.priority = incident.get("priority")
-        self.type = incident.get("type", "smelt")
-        self.arch_filter = None
+        self.rr: int | None = incident["rr_number"]
+        self.project: str = incident["project"]
+        self.id: int = incident["number"]
+        self.rrid: str | None = f"{self.project}:{self.rr}" if self.rr else None
+        self.staging: bool = not incident["inReview"]
+        self.ongoing: bool = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
+        self.embargoed: bool = incident["embargoed"]
+        self.priority: int | None = incident.get("priority")
+        self.type: str = incident.get("type", "smelt")
+        self.arch_filter: list[str] | None = None
 
-        self.channels = [
+        self.channels: list[Repos] = [
             Repos(p, v, a)
             for p, v, a in (
                 val
@@ -64,12 +64,12 @@ class Incident:
         if not self.channels:
             raise EmptyChannelsError(self.project)
 
-        self.packages = sorted(incident["packages"], key=len)
+        self.packages: list[str] = sorted(incident["packages"], key=len)
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
-        self.emu = incident["emu"]
-        self.revisions = None  # lazy-initialized via revisions_with_fallback()
+        self.emu: bool = incident["emu"]
+        self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod

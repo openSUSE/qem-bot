@@ -155,7 +155,7 @@ class IncrementApprover:
                 packages["noarch"].add(Package(binary.get("package"), "", "", "", "noarch"))
 
     def _compute_packages_of_request_from_source_report(
-        self, request: osc.core.Request | None
+        self, request: osc.core.Request
     ) -> tuple[defaultdict[str, set[Package]], int]:
         repo_a = defaultdict(set)
         repo_b = defaultdict(set)
@@ -353,6 +353,9 @@ class IncrementApprover:
         diff_key = None
         if config.diff_project_suffix == "source-report":
             # compute diff by checking the source report on obs
+            if not request:
+                log.error("Source report diff requested but no request found")
+                return package_diff
             diff_key = "request:" + str(request.id)
             package_diff = self.package_diff.get(diff_key)
             if package_diff is None:

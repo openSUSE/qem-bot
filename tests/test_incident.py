@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Generator
 from copy import deepcopy
-from typing import Any, NoReturn
+from typing import Any, NoReturn, cast
 
 import pytest
 from pytest_mock import MockerFixture
@@ -183,8 +183,8 @@ def test_inc_arch_filter() -> None:
 
 
 def test_inc_rev_multiple_repos(mocker: MockerFixture) -> None:
-    data = deepcopy(test_data)
-    data["channels"].append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
+    data: Any = deepcopy(test_data)
+    cast("Any", data["channels"]).append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
     inc = Incident(data)
     mock_get_max = mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
     inc.compute_revisions_for_product_repo(None, None)

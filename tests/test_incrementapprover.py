@@ -592,6 +592,7 @@ def test_find_request_on_obs_caching(mocker: MockerFixture, caplog: pytest.LogCa
     # First call for a project
     res1 = approver._find_request_on_obs("OBS:PROJECT:TEST")  # noqa: SLF001
     assert mock_get_requests.call_count == 1
+    assert res1
     assert res1.reqid == 42
 
     # Second call for the same project - should hit the cache
@@ -780,6 +781,16 @@ def test_package_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
     approver.package_diff[diff_key] = {"cached": "diff"}
     res = approver._package_diff(None, config, "/product")  # noqa: SLF001
     assert res == {"cached": "diff"}
+
+
+def test_package_diff_source_report_no_request(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
+    config = IncrementConfig(
+        distri="sle", version="any", flavor="any", project_base="BASE", diff_project_suffix="source-report"
+    )
+    res = approver._package_diff(None, config, "/product")  # noqa: SLF001
+    assert res == {}
+    assert "Source report diff requested but no request found" in caplog.text
 
 
 def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFixture) -> None:

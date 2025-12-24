@@ -210,7 +210,7 @@ def test_sync_with_product_version_from_repo_listing(
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
         assert channel in channels
-    requests_to_download_repo = [r for r in responses.calls if r.request.url.startswith(OBS_DOWNLOAD_URL)]
+    requests_to_download_repo = [r for r in responses.calls if cast("Any", r.request).url.startswith(OBS_DOWNLOAD_URL)]
     assert len(requests_to_download_repo) == 1
 
 

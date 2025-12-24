@@ -83,7 +83,7 @@ class RepoDiff:
             f"repodata-listing-{project}.json",
             as_json=True,
         )
-        if not repo_data_listing:
+        if not repo_data_listing or not isinstance(repo_data_listing, dict):
             log.error("Could not load repo data for project %s", project)
             return None
 
@@ -144,6 +144,9 @@ class RepoDiff:
 
     def __call__(self) -> int:
         args = self.args
+        if args is None:
+            log.error("RepoDiff called without arguments")
+            return 1
         try:
             diff, count = self.compute_diff(args.repo_a, args.repo_b)
         except FileNotFoundError as e:

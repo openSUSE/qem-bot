@@ -19,6 +19,12 @@ class Namespace(NamedTuple):
     repo_b: str = ""
 
 
+def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
+    diff = RepoDiff(None)  # type: ignore[arg-type]
+    assert diff() == 1
+    assert "RepoDiff called without arguments" in caplog.text
+
+
 def test_repodiff(capsys: pytest.CaptureFixture[str]) -> None:
     RepoDiff(
         Namespace(

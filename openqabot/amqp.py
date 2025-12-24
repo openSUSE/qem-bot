@@ -33,8 +33,8 @@ class AMQP(SyncRes):
         self.args = args
         self.dry: bool = args.dry
         self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
-        self.connection = None
-        self.channel = None
+        self.connection: Any = None
+        self.channel: Any = None
         if not args.url:
             return
         # Based on https://rabbit.suse.de/files/amqp_get_suse.py
@@ -48,6 +48,9 @@ class AMQP(SyncRes):
 
     def __call__(self) -> int:
         log.info("Starting AMQP listener")
+        if not self.channel:
+            log.error("AMQP listener not started: No channel available")
+            return 1
         with contextlib.suppress(KeyboardInterrupt):
             self.channel.start_consuming()
         self.stop()
