@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from datetime import datetime
 from io import BytesIO
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -173,7 +174,7 @@ def test_delete_children(mocker: MockerFixture) -> None:
     mocker.patch.object(api, "delete")
     comments = {"1": {"id": "1", "parent": None, "who": "u"}, "2": {"id": "2", "parent": "1", "who": "u"}}
     res = api.delete_children(comments)
-    api.delete.assert_called_with("2")
+    cast("Any", api.delete).assert_called_with("2")
     assert "2" not in res
     assert "1" in res
 
@@ -183,7 +184,7 @@ def test_delete_from(mocker: MockerFixture) -> None:
     mocker.patch.object(api, "get_comments", side_effect=[{"1": {"id": "1", "parent": None, "who": "u"}}, {}])
     mocker.patch.object(api, "delete_children", return_value={})
     api.delete_from(request_id="1")
-    api.get_comments.assert_called()
+    cast("Any", api.get_comments).assert_called()
 
 
 def test_delete_from_where_user(mocker: MockerFixture) -> None:
@@ -191,7 +192,7 @@ def test_delete_from_where_user(mocker: MockerFixture) -> None:
     mocker.patch.object(api, "get_comments", return_value={"1": {"id": "1", "who": "user"}})
     mocker.patch.object(api, "delete")
     api.delete_from_where_user("user", request_id="1")
-    api.delete.assert_called_once_with("1")
+    cast("Any", api.delete).assert_called_once_with("1")
 
 
 def test_comment_find_empty_info() -> None:
@@ -244,7 +245,7 @@ def test_delete_children_nobody(mocker: MockerFixture) -> None:
     }
     res = api.delete_children(comments)
     assert "1" not in res
-    api.delete.assert_not_called()
+    cast("Any", api.delete).assert_not_called()
 
 
 def test_delete_from_where_user_mismatch(mocker: MockerFixture) -> None:
@@ -252,4 +253,4 @@ def test_delete_from_where_user_mismatch(mocker: MockerFixture) -> None:
     mocker.patch.object(api, "get_comments", return_value={"1": {"id": "1", "who": "other"}})
     mocker.patch.object(api, "delete")
     api.delete_from_where_user("user", request_id="1")
-    api.delete.assert_not_called()
+    cast("Any", api.delete).assert_not_called()

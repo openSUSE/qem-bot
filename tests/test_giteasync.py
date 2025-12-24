@@ -6,7 +6,7 @@ import logging
 import re
 import urllib.error
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 from urllib.parse import urljoin
 
 import pytest
@@ -171,8 +171,8 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     assert "Fetching info for PR 131 from Gitea" in messages
     assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 incidents" in messages
     assert len(responses.calls) == 25
-    assert len(responses.calls[-1].response.json()) == 1
-    incident = responses.calls[-1].response.json()[0]
+    assert len(cast("Any", responses.calls[-1].response).json()) == 1
+    incident = cast("Any", responses.calls[-1].response).json()[0]
     assert incident["number"] == 124
     assert incident["packages"] == ["tree"]
     channels = incident["channels"]
@@ -205,7 +205,7 @@ def test_sync_with_product_version_from_repo_listing(
     run_gitea_sync(mocker, caplog)
 
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
-    incident = responses.calls[-1].response.json()[0]
+    incident = cast("Any", responses.calls[-1].response).json()[0]
     channels = incident["channels"]
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
@@ -223,7 +223,7 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCapt
 
     # expect the codestream repo to be used
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
-    incident = responses.calls[-1].response.json()[0]
+    incident = cast("Any", responses.calls[-1].response).json()[0]
     channels = incident["channels"]
     failed_or_unpublished = incident["failed_or_unpublished_packages"]
     for arch in ["ppc64le", "aarch64", "x86_64"]:

@@ -209,7 +209,6 @@ reportPossiblyUnboundVariable = false
 reportOptionalIterable = false
 
 [tool.ty.rules]
-unresolved-attribute = "ignore"
 possibly-missing-attribute = "ignore"
 invalid-argument-type = "ignore"
 non-subscriptable = "ignore"

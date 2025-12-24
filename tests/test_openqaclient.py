@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 import logging
 import re
-from typing import NamedTuple
+from typing import Any, NamedTuple, cast
 from unittest.mock import patch
 from urllib.parse import urlparse
 
@@ -87,7 +87,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
     assert len(responses.calls) == 1
     assert responses.calls[0].request.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
-    assert responses.calls[0].response.json() == {"bar": "foo"}
+    assert cast("Any", responses.calls[0].response).json() == {"bar": "foo"}
 
 
 @responses.activate
