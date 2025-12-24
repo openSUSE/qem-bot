@@ -348,7 +348,7 @@ class Incidents(BaseConf):
         ci_url: str | None,
         *,
         ignore_onetime: bool,
-    ) -> list[dict[str, Any] | None]:
+    ) -> list[dict[str, Any]]:
         cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
         results = [
             self._process_inc_context(

@@ -12,17 +12,17 @@ from openqabot.types.baseconf import BaseConf, Incident
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        _incidents: list[Incident],
-        _token: dict[str, str],
-        _ci_url: str | None,
+        incidents: list[Incident],  # noqa: ARG002
+        token: dict[str, str],  # noqa: ARG002
+        ci_url: str | None,  # noqa: ARG002
         *,
-        _ignore_onetime: bool,
+        ignore_onetime: bool,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(_config: Any) -> None:
-        pass
+    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG004
+        return {}
 
 
 prod_name = "prod"
@@ -37,7 +37,7 @@ def baseconf_gen() -> FakeBaseConf:
 def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
-    assert baseconf_gen([], {}, None, _ignore_onetime=False), "can be called"
+    assert baseconf_gen([], {}, None, ignore_onetime=False), "can be called"
     assert not baseconf_gen.normalize_repos([]), "static method can be called"
 
 

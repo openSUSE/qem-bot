@@ -92,7 +92,7 @@ class MyIncident_0:
     def compute_revisions_for_product_repo(self, product_repo: str | None, product_version: str | None) -> None:
         pass
 
-    def revisions_with_fallback(self, arch: str, version: str) -> None:
+    def revisions_with_fallback(self, arch: str, version: str) -> int | None:
         pass
 
 
@@ -149,8 +149,8 @@ class MyIncident_2(MyIncident_1):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, _arch: str, _version: str) -> bool:
-        return True
+    def revisions_with_fallback(self, arch: str, version: str) -> int | None:  # noqa: ARG002
+        return 12345
 
 
 @pytest.mark.usefixtures("request_mock")
