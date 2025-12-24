@@ -10,7 +10,7 @@ from typing import Any, NamedTuple, cast
 from urllib.parse import urljoin
 
 import pytest
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 import responses

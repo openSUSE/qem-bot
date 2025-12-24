@@ -6,7 +6,7 @@ from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError

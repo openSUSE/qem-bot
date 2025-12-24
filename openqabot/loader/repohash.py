@@ -6,7 +6,7 @@ from hashlib import md5
 from logging import getLogger
 
 import requests
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from requests.exceptions import RetryError
 
 from openqabot.config import OBS_DOWNLOAD_URL, OBS_PRODUCTS

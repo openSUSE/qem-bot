@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import NamedTuple
 
 import pytest
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.repodiff import RepoDiff

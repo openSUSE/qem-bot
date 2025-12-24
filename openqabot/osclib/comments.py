@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from osc.core import http_DELETE, http_GET, http_POST, makeurl
 
 from openqabot.utc import UTC

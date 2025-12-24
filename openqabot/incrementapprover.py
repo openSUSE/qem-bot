@@ -11,11 +11,11 @@ from functools import cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import Any, NamedTuple, TypeAlias
+from typing import Any, NamedTuple
 
 import osc.conf
 import osc.core
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 
 from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from openqabot.openqa import openQAInterface
@@ -32,8 +32,9 @@ final_states = {"done", "cancelled"}
 default_flavor = "Online-Increments"
 
 
-OpenQAResults: TypeAlias = list[dict[str, dict[str, dict[str, Any]]]]
-ScheduleParams: TypeAlias = list[dict[str, str]]
+OpenQAResult = dict[str, dict[str, dict[str, Any]]]
+OpenQAResults = list[OpenQAResult]
+ScheduleParams = list[dict[str, str]]
 
 
 class BuildInfo(NamedTuple):
@@ -207,7 +208,7 @@ class IncrementApprover:
 
     def _evaluate_openqa_job_results(
         self,
-        results: OpenQAResults,
+        results: OpenQAResult,
         ok_jobs: set[int],
         not_ok_jobs: dict[str, set[str]],
     ) -> None:

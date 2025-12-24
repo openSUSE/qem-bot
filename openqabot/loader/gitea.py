@@ -18,7 +18,7 @@ import osc.util.xml
 import requests
 import urllib3
 import urllib3.exceptions
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 from osc.core import MultibuildFlavorResolver
 
 from openqabot.config import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL

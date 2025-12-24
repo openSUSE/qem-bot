@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 import zstandard
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 
 from .config import OBS_DOWNLOAD_URL
 from .utils import retry10 as retried_requests
