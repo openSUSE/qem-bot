@@ -25,8 +25,8 @@ log = getLogger("bot.types.aggregate")
 
 
 class _PostData(NamedTuple):
-    test_incidents: defaultdict[list]
-    test_repos: defaultdict[list]
+    test_incidents: defaultdict[str, list[Incident]]
+    test_repos: defaultdict[str, list[str]]
     repohash: str
     build: str
 
@@ -79,7 +79,7 @@ class Aggregate(BaseConf):
 
     def _get_test_incidents_and_repos(
         self, valid_incidents: list[Incident], issues_arch: str
-    ) -> tuple[defaultdict[list], defaultdict[list]]:
+    ) -> tuple[defaultdict[str, list[Incident]], defaultdict[str, list[str]]]:
         test_incidents = defaultdict(list)
         test_repos = defaultdict(list)
 
