@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from abc import ABC, abstractmethod, abstractstaticmethod
+from abc import ABC, abstractmethod
 from typing import Any
 
 from .incident import Incident
@@ -33,7 +33,8 @@ class BaseConf(ABC):
     ) -> list[dict[str, Any]]:
         pass  # pragma: no cover
 
-    @abstractstaticmethod
+    @staticmethod
+    @abstractmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
         pass  # pragma: no cover
 
