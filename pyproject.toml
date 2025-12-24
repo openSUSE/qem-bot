@@ -211,4 +211,3 @@ reportOptionalIterable = false
 [tool.ty.rules]
 invalid-argument-type = "ignore"
 non-subscriptable = "ignore"
-unsupported-operator = "ignore"

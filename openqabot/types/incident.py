@@ -97,8 +97,11 @@ class Incident:
             arch_ver = ArchVer(arch, ver)
             # An unversioned SLE12 module will have ArchVer version "12"
             # but settings["VERSION"] can be any of "12","12-SP1" ... "12-SP5".
-            if arch_ver not in self.revisions and ver.startswith("12"):
+            if self.revisions is not None and arch_ver not in self.revisions and ver.startswith("12"):
                 arch_ver = ArchVer(arch, "12")
+            if self.revisions is None:
+                log.debug("Incident %s: No revisions available", self.id)
+                return None
             return self.revisions[arch_ver]
         except KeyError:
             log.debug("Incident %s: Architecture %s not found for version %s", self.id, arch, ver)

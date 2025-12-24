@@ -4,7 +4,7 @@ import json
 import logging
 import urllib.error
 from io import BytesIO
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -105,6 +105,7 @@ def test_determine_relevant_archs_from_multibuild_info_success(mocker: MockerFix
     mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data", return_value=["prod_x86_64"])
     mocker.patch("openqabot.loader.gitea.ARCHS", ["x86_64"])
     res = gitea.determine_relevant_archs_from_multibuild_info("project", dry=True)
+    assert res is not None
     assert "x86_64" in res
 
 
@@ -235,7 +236,7 @@ def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogC
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
 
     assert "Build results for project proj unreadable, skipping" in caplog.text
-    assert "proj" in incident["failed_or_unpublished_packages"]
+    assert "proj" in cast("list", incident["failed_or_unpublished_packages"])
 
 
 def test_is_build_result_relevant_arch_filter(mocker: MockerFixture) -> None:
@@ -287,7 +288,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     incident = {"number": 123}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
     assert "PR 123: Some packages failed: pkg1" in caplog.text
-    assert "pkg1" in incident["failed_or_unpublished_packages"]
+    assert "pkg1" in cast("list", incident["failed_or_unpublished_packages"])
 
 
 def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:

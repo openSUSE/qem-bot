@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 from unittest.mock import ANY, patch
 
 import pytest
@@ -75,7 +76,7 @@ def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> N
         rp.get_max_revision(repos, arch, PROJECT)
 
     assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
-    assert "Maintenance:/12345" in caplog.records[0].args[0]
+    assert "Maintenance:/12345" in cast("str", cast("Any", caplog.records[0].args)[0])
 
 
 @responses.activate

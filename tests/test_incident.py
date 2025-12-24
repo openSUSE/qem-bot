@@ -178,6 +178,7 @@ def test_inc_arch_filter() -> None:
     inc.arch_filter = ["aarch64"]
     # x86_64 should be skipped in _rev
     inc.compute_revisions_for_product_repo(None, None)
+    assert inc.revisions is not None
     assert ArchVer("aarch64", "15-SP4") in inc.revisions
     assert ArchVer("x86_64", "15.4") not in inc.revisions
 
@@ -227,6 +228,7 @@ def test_inc_rev_non_matching_version(mocker: MockerFixture) -> None:
     inc = Incident(data)
     mocker.patch("openqabot.types.incident.get_max_revision", return_value=123)
     inc.compute_revisions_for_product_repo(None, None)
+    assert inc.revisions is not None
     assert ArchVer("x86_64", "unknown") in inc.revisions
 
 
@@ -242,3 +244,11 @@ def test_inc_rev_empty_channels() -> None:
     inc._rev = Incident._rev  # noqa: SLF001
     with pytest.raises(NoRepoFoundError):
         inc.compute_revisions_for_product_repo(None, None)
+
+
+def test_revisions_with_fallback_no_revisions(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    inc = Incident(test_data)
+    mocker.patch.object(inc, "compute_revisions_for_product_repo")
+    caplog.set_level(logging.DEBUG)
+    assert inc.revisions_with_fallback("x86_64", "15-SP4") is None
+    assert "Incident 24618: No revisions available" in caplog.text
