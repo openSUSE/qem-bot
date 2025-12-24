@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from collections.abc import Sequence
 from itertools import chain
 from logging import getLogger
@@ -20,9 +22,9 @@ log = getLogger("bot.loader.qem")
 class IncReq(NamedTuple):
     inc: int
     req: int
-    type: str = None
-    url: str = None
-    scm_info: str = None
+    type: str | None = None
+    url: str | None = None
+    scm_info: str | None = None
 
 
 class JobAggr(NamedTuple):

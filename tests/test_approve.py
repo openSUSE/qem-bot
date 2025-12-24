@@ -858,3 +858,11 @@ def test_was_ok_before_no_suitable_older_jobs(
     mocker.patch("openqabot.approver.Approver._was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
     assert any(log_message in m for m in caplog.messages)
+
+
+def test_git_approve_no_url(caplog: pytest.LogCaptureFixture) -> None:
+    approver_instance = Approver(args)
+    inc = IncReq(inc=1, req=100, type="git", url=None)
+    caplog.set_level(logging.ERROR)
+    assert not approver_instance.git_approve(inc, "msg")
+    assert "Gitea API error: PR 1 has no URL" in caplog.text

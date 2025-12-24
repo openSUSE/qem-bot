@@ -193,7 +193,7 @@ def test_filter_incidents_embargoed(incident_mock: Callable[..., Any], caplog: p
     caplog.set_level(logging.DEBUG)
     my_config = {"FLAVOR": "None", "archs": [], "test_issues": {}}
     acc = Aggregate("product", None, None, settings={}, config=my_config)
-    acc.filter_embargoed = lambda _x: True
+    acc.filter_embargoed = lambda _x: True  # type: ignore[invalid-assignment]
     incidents = [incident_mock(product="P", version="V", arch="A", embargoed=True)]
     res = acc._filter_incidents(incidents)  # noqa: SLF001
     assert res == []

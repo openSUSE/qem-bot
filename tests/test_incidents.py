@@ -22,9 +22,9 @@ def test_incidents_constructor() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
 
 
@@ -36,9 +36,9 @@ def test_incidents_printable() -> None:
         product="hello",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     assert str(inc) == "<Incidents product: hello>"
 
@@ -51,9 +51,9 @@ def test_incidents_call() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -66,9 +66,9 @@ def test_incidents_call_with_flavors() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -105,7 +105,7 @@ def test_incidents_call_with_incidents() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[MyIncident_0()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -126,7 +126,7 @@ def test_incidents_call_with_issues() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[MyIncident_1()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -417,7 +417,7 @@ def test_gitea_incidents() -> None:
     inc.type = "git"
 
     # compute openQA/dashboard settings for incident and check results
-    incs = Incidents("SLFO", None, None, settings, test_config, None)
+    incs = Incidents("SLFO", None, None, settings, test_config, set())
     incs.singlearch = set()
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = incs(incidents=[inc], token={}, ci_url="", ignore_onetime=False)
@@ -464,7 +464,7 @@ def test_handle_incident_git_not_ongoing() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
 
     ctx = IncContext(inc=inc, arch="", flavor="AAA", data={})
@@ -541,7 +541,7 @@ def test_handle_incident_embargoed_skip() -> None:
         extrasettings=set(),
     )
     # Patch filter_embargoed to return True
-    incidents_obj.filter_embargoed = lambda _: True
+    incidents_obj.filter_embargoed = lambda _: True  # type: ignore[invalid-assignment]
     ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={})
     cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
     assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
@@ -569,7 +569,7 @@ def test_handle_incident_packages_skip() -> None:
     inc = MyIncident_3()
     inc.id = 1
     # Mock contains_package to return False
-    inc.contains_package = lambda _: False
+    inc.contains_package = lambda _: False  # type: ignore[invalid-assignment]
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     incidents_obj = Incidents(
         product="SLES",
@@ -589,7 +589,7 @@ def test_handle_incident_excluded_packages_skip() -> None:
     inc = MyIncident_3()
     inc.id = 1
     # Mock contains_package to return True for excluded check
-    inc.contains_package = lambda _: True
+    inc.contains_package = lambda _: True  # type: ignore[invalid-assignment]
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     incidents_obj = Incidents(
         product="SLES",

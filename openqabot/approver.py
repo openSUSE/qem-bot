@@ -312,6 +312,9 @@ class Approver:
         return True
 
     def git_approve(self, inc: IncReq, msg: str) -> bool:
+        if not inc.url:
+            log.error("Gitea API error: PR %s has no URL", inc.inc)
+            return False
         try:
             path_parts = urlparse(inc.url).path.split("/")
             review_pr(

@@ -113,7 +113,7 @@ class Incident:
         product_version: str | None,
     ) -> dict[ArchVer, int]:
         rev: dict[ArchVer, int] = {}
-        tmpdict: dict[ArchVer, list[tuple[str, str]]] = {}
+        tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = {}
 
         for repo in channels:
             if arch_filter is not None and repo.arch not in arch_filter:

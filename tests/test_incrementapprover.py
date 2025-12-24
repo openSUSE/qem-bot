@@ -541,7 +541,7 @@ def test_specified_obs_request_found_renders_request(mocker: MockerFixture, capl
         req.reqid = 43
         req.state = type("state", (), {"to_xml": lambda: True})
         req.reviews = [ReviewState("review", OBS_GROUP)]
-        req.to_str = lambda: "<request />"
+        req.to_str = lambda: "<request />"  # type: ignore[invalid-assignment]
         return req
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
@@ -570,7 +570,7 @@ def test_find_request_on_obs_with_request_id(mocker: MockerFixture, caplog: pyte
         req.reqid = 43
         req.state = type("state", (), {"to_xml": lambda: True})
         req.reviews = [ReviewState("review", OBS_GROUP)]
-        req.to_str = lambda: "<request />"
+        req.to_str = lambda: "<request />"  # type: ignore[invalid-assignment]
         return req
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
