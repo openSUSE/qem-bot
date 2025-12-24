@@ -177,7 +177,7 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: dict[str, Any], users: tuple[str] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
+def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
