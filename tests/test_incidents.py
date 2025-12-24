@@ -422,7 +422,7 @@ def test_gitea_incidents() -> None:
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = incs(incidents=[inc], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == len(archs)
-    for arch, result in zip(archs, res, strict=False):
+    for arch, result in zip(archs, res):
         qem = result["qem"]
         computed_settings = [result["openqa"], qem["settings"]]
         assert qem["arch"] == arch

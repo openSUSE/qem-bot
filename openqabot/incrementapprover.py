@@ -11,7 +11,7 @@ from functools import cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 import osc.conf
 import osc.core
@@ -303,7 +303,7 @@ class IncrementApprover:
             if package_version_regex is not None and not self._get_regex_match(package_version_regex, package.version):
                 continue
             extra_build = [build_info.build, additional_build["build_suffix"]]
-            extra_params = {}
+            extra_params: dict[str, str] = {}
             try:
                 kind = package_name_match.group("kind")
                 if kind != "default":
@@ -317,7 +317,7 @@ class IncrementApprover:
             except IndexError:
                 pass
             extra_params["BUILD"] = "-".join(extra_build)
-            extra_params.update(additional_build["settings"])
+            extra_params.update(cast("dict[str, str]", additional_build["settings"]))
             return extra_params
         return None
 
