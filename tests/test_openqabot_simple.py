@@ -3,7 +3,6 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from collections.abc import Generator
 from typing import Any, NamedTuple, NoReturn
 from urllib.parse import ParseResult, urlparse
 
@@ -28,7 +27,7 @@ class Namespace(NamedTuple):
 
 
 @pytest.fixture
-def mock_openqa_passed(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_openqa_passed(mocker: MockerFixture) -> Any:
     class FakeClient:
         def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
@@ -44,7 +43,7 @@ def mock_openqa_passed(mocker: MockerFixture) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_openqa_exception(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_openqa_exception(mocker: MockerFixture) -> Any:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -56,7 +55,7 @@ def mock_openqa_exception(mocker: MockerFixture) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_runtime(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_runtime(mocker: MockerFixture) -> None:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass

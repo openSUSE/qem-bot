@@ -212,4 +212,3 @@ reportOptionalIterable = false
 invalid-argument-type = "ignore"
 non-subscriptable = "ignore"
 unsupported-operator = "ignore"
-invalid-return-type = "ignore"

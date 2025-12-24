@@ -5,7 +5,6 @@
 import io
 import logging
 import re
-from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, NamedTuple, NoReturn
@@ -234,7 +233,7 @@ def fake_responses_for_creating_pr_review() -> None:
 
 
 @pytest.fixture
-def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator[None, None, None]:
+def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
     # Inc 1 needs aggregates
     # Inc 2 needs aggregates
@@ -258,7 +257,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator
             4: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(4000, 4010)],
             5: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(5000, 5010)],
         }
-        return results.get(inc)
+        return results.get(inc, [])
 
     def f_aggr_settings(inc: int, _token: str) -> list[JobAggr]:
         if "aggr" in request_param:
@@ -271,7 +270,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> Generator
             2: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(20000, 20010)],
             3: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(30000, 30010)],
         }
-        return results.get(inc)
+        return results.get(inc, [])
 
     mocker.patch("openqabot.approver.get_single_incident", side_effect=lambda _, i: [f_inc_approver()[i - 1]])
     mocker.patch("openqabot.approver.get_incidents_approver", side_effect=f_inc_approver)

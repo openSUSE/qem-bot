@@ -390,7 +390,7 @@ def test_making_repo_url() -> None:
 
 
 class MyIncident_5(MyIncident_2):
-    def revisions_with_fallback(self, arch: str, version: str) -> int:
+    def revisions_with_fallback(self, arch: str, version: str) -> int | None:
         return self.revisions[ArchVer(arch, version)]
 
 

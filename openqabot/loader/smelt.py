@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from concurrent import futures
 from logging import getLogger
-from typing import Any
+from typing import Any, cast
 
 import urllib3
 import urllib3.exceptions
@@ -163,7 +163,7 @@ def get_incident(incident: int) -> dict[str, Any] | None:
     inc_result = get_json(query)
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
-        inc_result = walk(inc_result["data"]["incidents"]["edges"][0]["node"])
+        inc_result = cast("dict[str, Any]", walk(inc_result["data"]["incidents"]["edges"][0]["node"]))
     except ValidationError:
         log.exception("SMELT API error: Invalid data for incident %s", incident)
         return None

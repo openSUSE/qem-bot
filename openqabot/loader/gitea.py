@@ -232,7 +232,7 @@ def add_channel_for_build_result(
     product_name: str,
     res: Any,
     projects: set[str],
-) -> tuple[str, bool]:
+) -> str:
     channel = f"{project}:{arch}"
     if arch == "local":
         return channel
@@ -295,7 +295,7 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str]:
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
     if product_name == "":

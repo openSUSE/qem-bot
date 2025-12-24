@@ -265,7 +265,7 @@ class Incidents(BaseConf):
                 return False
             if neg and neg.isdisjoint(openqa_keys):
                 return False
-            return neg and pos
+            return bool(neg and pos)
 
         if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
             full_post["qem"]["withAggregate"] = False

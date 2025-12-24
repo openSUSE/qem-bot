@@ -81,7 +81,7 @@ def fake_no_jobs() -> None:
     responses.add(GET, openqa_url, json={})
 
 
-def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> list[responses.Response]:
+def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> list[responses.BaseResponse]:
     list_of_params = []
     base_params = {"distri": "sle", "version": "16.0", "build": "139.1"}
     json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
@@ -108,12 +108,12 @@ def make_passing_and_failing_job() -> dict:
 
 
 @pytest.fixture
-def fake_no_jobs_with_param_matching() -> None:
+def fake_no_jobs_with_param_matching() -> list[responses.BaseResponse]:
     return fake_openqa_responses_with_param_matching({})
 
 
 @pytest.fixture
-def fake_only_jobs_of_additional_builds_with_param_matching() -> None:
+def fake_only_jobs_of_additional_builds_with_param_matching() -> list[responses.BaseResponse]:
     return fake_openqa_responses_with_param_matching(make_passing_and_failing_job())
 
 
