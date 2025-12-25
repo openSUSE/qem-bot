@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from collections.abc import Sequence
 from hashlib import md5
 from logging import getLogger
 
@@ -19,7 +20,7 @@ log = getLogger("bot.loader.repohash")
 
 
 def get_max_revision(
-    repos: list[tuple[str, str]],
+    repos: Sequence[tuple[str, ...]],
     arch: str,
     project: str,
     product_name: str | None = None,
