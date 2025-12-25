@@ -109,7 +109,7 @@ class IncrementApprover:
             relevant_request = next(filtered_requests, None)
         else:
             log.debug("Checking specified request %i", args.request_id)
-            relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
+            relevant_request = osc.core.Request.from_api(OBS_URL, args.request_id)
         if relevant_request is None:
             states_str = "/".join(relevant_states)
             log.info("Skipping approval: %s: No relevant requests in states %s", build_project, states_str)
@@ -296,7 +296,7 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         for additional_build in config.additional_builds:
-            package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
+            package_name_regex = additional_build.get("package_name_regex") or additional_build.get("regex", "")
             if (package_name_match := self._get_regex_match(package_name_regex, package.name)) is None:
                 continue
             package_version_regex = additional_build.get("package_version_regex")
@@ -331,8 +331,7 @@ class IncrementApprover:
         def handle_package(p: Package) -> dict[str, str] | None:
             return self._extra_builds_for_package(p, config, build_info)
 
-        extra_builds = map(handle_package, package_diff)
-        return [*filter(lambda b: b is not None, extra_builds)]
+        return [b for p in package_diff if (b := handle_package(p)) is not None]
 
     @staticmethod
     def _populate_params_from_env(params: dict[str, str], env_var: str) -> None:

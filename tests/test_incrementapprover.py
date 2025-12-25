@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from argparse import Namespace
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,32 +27,6 @@ from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.repodiff import Package
 from openqabot.utils import merge_dicts
 from responses import GET
-
-
-# Fake Namespace for IncrementApprover initialization
-class Namespace(NamedTuple):
-    dry: bool
-    token: str
-    openqa_instance: str
-    accepted: bool
-    request_id: int
-    project_base: str
-    build_project_suffix: str
-    diff_project_suffix: str
-    distri: str
-    version: str
-    flavor: str
-    schedule: bool
-    reschedule: bool
-    build_listing_sub_path: str
-    build_regex: str
-    product_regex: str
-    fake_data: bool
-    increment_config: str
-    packages: list
-    archs: set
-    settings: dict
-    additional_builds: list
 
 
 # define fake data
@@ -464,20 +439,14 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
-    args = {
-        "mocker": mocker,
-        "caplog": caplog,
-        "schedule": True,
-        "diff_project_suffix": "PUBLISH/product",
-        "config": next(configs),
-    }
-    (errors, jobs) = run_approver(**args)
+    (errors, jobs) = run_approver(
+        mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=next(configs)
+    )
     assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
 
     config = next(configs)
     config.packages.append("foobar")  # make the filter for packages not match
-    args["config"] = config
-    (errors, jobs) = run_approver(**args)
+    (errors, jobs) = run_approver(mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=config)
     assert jobs == []
     assert "filtered out via 'packages' or 'archs'" in caplog.text
 
@@ -523,7 +492,7 @@ def test_specified_obs_request_not_found_skips_approval(
 ) -> None:
     def fake_request_from_api(apiurl: str, reqid: int) -> None:
         assert apiurl == OBS_URL
-        assert reqid == "43"
+        assert reqid == 43
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     run_approver(mocker, caplog, request_id=43)
@@ -534,9 +503,9 @@ def test_specified_obs_request_not_found_skips_approval(
 @responses.activate
 @pytest.mark.usefixtures("fake_product_repo")
 def test_specified_obs_request_found_renders_request(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
+    def fake_request_from_api(apiurl: str, reqid: int) -> osc.core.Request:
         assert apiurl == OBS_URL
-        assert reqid == "43"
+        assert reqid == 43
         req = osc.core.Request()
         req.reqid = 43
         req.state = type("state", (), {"to_xml": lambda: True})
@@ -563,9 +532,9 @@ def test_get_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture) -> No
 @pytest.mark.usefixtures("fake_product_repo")
 def test_find_request_on_obs_with_request_id(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
 
-    def fake_request_from_api(apiurl: str, reqid: str) -> osc.core.Request:
+    def fake_request_from_api(apiurl: str, reqid: int) -> osc.core.Request:
         assert apiurl == OBS_URL
-        assert reqid == "43"
+        assert reqid == 43
         req = osc.core.Request()
         req.reqid = 43
         req.state = type("state", (), {"to_xml": lambda: True})
@@ -681,7 +650,7 @@ def test_extra_builds_no_match(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_schedule_jobs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
-    approver.args = approver.args._replace(dry=True)
+    approver.args.dry = True
     from openqabot.incrementapprover import BuildInfo
 
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
@@ -707,7 +676,7 @@ def test_schedule_jobs_fail(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
 @pytest.mark.usefixtures("fake_product_repo")
 def test_find_request_on_obs_not_accepted(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
-    approver.args = approver.args._replace(accepted=False)
+    approver.args.accepted = False
     # verify that accepted state is NOT added to relevant_states
     mock_get_list = mocker.patch("openqabot.incrementapprover.IncrementApprover._get_obs_request_list", return_value=[])
     approver._find_request_on_obs("project")  # noqa: SLF001
