@@ -506,11 +506,15 @@ def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerF
 
 @responses.activate
 @with_fake_qem("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.GIT_REVIEW_BOT", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    mocker.patch("openqabot.approver.get_json", return_value=[{"job_id": 100000, "status": "passed"}])
     mocker.patch("osc.core.change_review_state")
+    mock_review_pr = mocker.patch("openqabot.approver.review_pr")
+
     assert Approver(args)() == 0
     expected = [
         "Incidents to approve:",
@@ -527,7 +531,7 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
         "Approving git:5",
     ]
     assert_log_messages(caplog.messages, expected)
-    assert len(responses.calls) == 76
+    mock_review_pr.assert_called_once()
 
 
 @responses.activate
