@@ -75,7 +75,7 @@ class AMQP(SyncRes):
             inc_nr = match.group(1)
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Incident %s: openQA job finished", inc_nr)
-            return self.handle_incident(inc_nr, message)
+            return self.handle_incident(int(inc_nr), message)
         if match := build_agg_regex.match(message["BUILD"]):
             build_nr = match.group(0)
             log.debug("Processing AMQP message: %s", pformat(message))

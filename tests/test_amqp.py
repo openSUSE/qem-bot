@@ -3,7 +3,8 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 import json
 import logging
-from typing import NamedTuple
+from argparse import Namespace
+from typing import Any, NamedTuple, cast
 from urllib.parse import urlparse
 
 import pytest
@@ -12,15 +13,7 @@ from pytest_mock import MockerFixture
 import responses
 from openqabot.amqp import AMQP
 from openqabot.config import QEM_DASHBOARD
-
-
-class Namespace(NamedTuple):
-    dry: bool
-    token: str
-    openqa_instance: str
-    url: str
-    gitea_token: str
-
+from openqabot.types import Data
 
 args = Namespace(
     dry=True,
@@ -125,7 +118,9 @@ def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
     )
 
     caplog.set_level(logging.DEBUG)
-    amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": ":33222:emacs"}))
+    amqp.on_message(
+        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": ":33222:emacs"}).encode()
+    )
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Incident 33222: openQA job finished" in messages
@@ -136,7 +131,9 @@ def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
 @responses.activate
 def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "12345678-9"}))
+    amqp.on_message(
+        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "12345678-9"}).encode()
+    )
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Aggregate 12345678-9: openQA build finished" in messages  # currently noop
@@ -146,23 +143,27 @@ def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     fake_job_fail = FakeMethod("suse.openqa.job.fail")
     amqp.on_message(
-        "",
-        fake_job_fail,
-        "",
-        json.dumps({"BUILD": "12345678-9"}),
+        cast("Any", ""),
+        cast("Any", fake_job_fail),
+        cast("Any", ""),
+        json.dumps({"BUILD": "12345678-9"}).encode(),
     )
     assert not caplog.text
 
 
 def test_on_message_no_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message("", fake_job_done, "", json.dumps({"NOBUILD": "12345678-9"}))
+    amqp.on_message(
+        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"NOBUILD": "12345678-9"}).encode()
+    )
     assert not caplog.text
 
 
 def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message("", fake_job_done, "", json.dumps({"BUILD": "badbuild"}))
+    amqp.on_message(
+        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "badbuild"}).encode()
+    )
     assert not caplog.text
 
 
@@ -197,7 +198,7 @@ def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture) -> None:
     post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
     get_jobs_mock = mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
 
-    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    amqp._fetch_openqa_results(cast("Data", {}), message)  # noqa: SLF001
     post_result_mock.assert_called_once_with(r)
     normalize_data_mock.assert_called_once_with({}, job)
     get_jobs_mock.assert_called_once_with({})
@@ -211,7 +212,7 @@ def test_fetch_openqa_results_unfiltered(mocker: MockerFixture) -> None:
     post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
     mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
 
-    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    amqp._fetch_openqa_results(cast("Data", {}), message)  # noqa: SLF001
     post_result_mock.assert_not_called()
 
 
@@ -224,7 +225,7 @@ def test_fetch_openqa_results_key_error(mocker: MockerFixture) -> None:
     post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
     mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
 
-    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    amqp._fetch_openqa_results(cast("Data", {}), message)  # noqa: SLF001
     post_result_mock.assert_not_called()
 
 
@@ -238,5 +239,5 @@ def test_fetch_openqa_results_no_id(mocker: MockerFixture) -> None:
     post_result_mock = mocker.patch("openqabot.amqp.AMQP.post_result")
     mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[job])
 
-    amqp._fetch_openqa_results({}, message)  # noqa: SLF001
+    amqp._fetch_openqa_results(cast("Data", {}), message)  # noqa: SLF001
     post_result_mock.assert_not_called()
