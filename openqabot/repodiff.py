@@ -92,7 +92,10 @@ class RepoDiff:
         if repo_data_file is None:
             log.warning("Repository metadata not found: Primary repodata missing in %s", url)
             return None
-        repo_data = RepoDiff._decompress(repo_data_file, self._request_and_dump(url + repo_data_file, repo_data_file))
+        repo_data_raw = self._request_and_dump(url + repo_data_file, repo_data_file)
+        if not isinstance(repo_data_raw, bytes):
+            return None
+        repo_data = RepoDiff._decompress(repo_data_file, repo_data_raw)
         log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 

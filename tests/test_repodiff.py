@@ -1,22 +1,14 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import json
+from argparse import Namespace
 from collections import defaultdict
-from typing import NamedTuple
 
 import pytest
 from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.repodiff import RepoDiff
-
-
-class Namespace(NamedTuple):
-    dry: bool
-    fake_data: bool
-    dump_data: bool = False
-    repo_a: str = ""
-    repo_b: str = ""
 
 
 def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
@@ -190,6 +182,17 @@ def test_find_primary_repodata_none(mocker: MockerFixture, caplog: pytest.LogCap
     res = diff._load_repodata("project")  # noqa: SLF001
     assert res is None
     assert "Repository metadata not found" in caplog.text
+
+
+def test_load_repodata_request_failed(mocker: MockerFixture) -> None:
+    from openqabot.repodiff import RepoDiff
+
+    args = mocker.Mock()
+    diff = RepoDiff(args)
+    # repo_data_listing found, but subsequent request fails
+    mocker.patch.object(diff, "_request_and_dump", side_effect=[{"data": [{"name": "foo-primary.xml"}]}, None])
+    res = diff._load_repodata("project")  # noqa: SLF001
+    assert res is None
 
 
 def test_load_packages_not_rpm(mocker: MockerFixture) -> None:
