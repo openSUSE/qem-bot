@@ -30,14 +30,14 @@ def test_get_open_prs_returns_empty_on_dry_run(mocker: MockerFixture) -> None:
 
 def test_get_open_prs_returns_specified_pr(mocker: MockerFixture) -> None:
     mocked_get_json = mocker.patch("openqabot.loader.gitea.get_json", return_value=42)
-    assert gitea.get_open_prs("my_token", "my_repo", dry=False, number=1) == [42]
-    mocked_get_json.assert_called_once_with("repos/my_repo/pulls/1", "my_token")
+    assert gitea.get_open_prs({"Authorization": "token my_token"}, "my_repo", dry=False, number=1) == [42]
+    mocked_get_json.assert_called_once_with("repos/my_repo/pulls/1", {"Authorization": "token my_token"})
 
 
 def test_get_open_prs_metadata_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.RequestException("error"))
-    res = gitea.get_open_prs("owner", "repo", dry=False, number=124)
+    res = gitea.get_open_prs({}, "repo", dry=False, number=124)
     assert res == []
     assert "PR #124 ignored: Could not read PR metadata" in caplog.text
 
@@ -45,14 +45,14 @@ def test_get_open_prs_metadata_error(mocker: MockerFixture, caplog: pytest.LogCa
 def test_get_open_prs_iter_pages(mocker: MockerFixture) -> None:
     # return 2 pages then empty
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=[[1], [2], []])
-    res = gitea.get_open_prs("owner", "repo", dry=False, number=None)
+    res = gitea.get_open_prs({}, "repo", dry=False, number=None)
     assert res == [1, 2]
 
 
 def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.JSONDecodeError("msg", "doc", 0))
-    res = gitea.get_open_prs("owner", "repo", dry=False, number=None)
+    res = gitea.get_open_prs({}, "repo", dry=False, number=None)
     assert res == []
     assert "Gitea API error: Invalid JSON received for open PRs" in caplog.text
 
@@ -60,7 +60,7 @@ def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptur
 def test_get_open_prs_request_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.RequestException("error"))
-    res = gitea.get_open_prs("owner", "repo", dry=False, number=None)
+    res = gitea.get_open_prs({}, "repo", dry=False, number=None)
     assert res == []
     assert "Gitea API error: Could not fetch open PRs" in caplog.text
 
@@ -229,8 +229,8 @@ def test_determine_relevant_archs_empty_product(mocker: MockerFixture) -> None:
 def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
-    err = urllib.error.HTTPError("url", 404, "msg", {}, None)
-    mocker.patch("openqabot.loader.gitea.osc.core.http_GET", side_effect=err)
+    err = urllib.error.HTTPError("url", 404, "msg", cast("Any", {}), None)
+    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=err)
 
     incident = {"number": 123}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
@@ -282,7 +282,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
         </result>
     </buildresults>
     """
-    mocker.patch("openqabot.loader.gitea.osc.core.http_GET", return_value=BytesIO(xml_data.encode()))
+    mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
     mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
     incident = {"number": 123}

@@ -19,6 +19,7 @@ import requests
 import urllib3
 import urllib3.exceptions
 from lxml import etree  # type: ignore[unresolved-import]
+from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot.config import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
@@ -89,7 +90,7 @@ def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, st
 def compute_repo_url(
     base: str,
     product_name: str,
-    repo: tuple[str, str, str],
+    repo: tuple[str, ...],
     arch: str,
     path: str = "repodata/repomd.xml",
 ) -> str:
@@ -98,7 +99,14 @@ def compute_repo_url(
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
-    return f"{start}/{path}" if product_name == "" else f"{start}/repo/{product_name}-{repo[2]}-{arch}/{path}"
+    if product_name == "":
+        return f"{start}/{path}"
+
+    msg = f"Product version must be provided for {product_name}"
+    assert len(repo) > 2, msg
+    assert repo[2], msg
+    product_version = repo[2]
+    return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
 
 
 def compute_repo_url_for_job_setting(
@@ -325,7 +333,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: set[str]) -> bool:
+def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
@@ -348,7 +356,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                 build_info = read_xml("build-results-124-" + obs_project)
             else:
                 try:
-                    build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
+                    build_info = osc.util.xml.xml_parse(http_GET(build_info_url))
                 except urllib.error.HTTPError:
                     unavailable_projects.add(obs_project)
                     log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
@@ -465,13 +473,13 @@ def make_incident_from_pr(
             log.info("PR %s skipped: No reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(incident, comments, dry=dry)
-        if len(incident["channels"]) == 0:
+        if not incident["channels"]:
             log.info("PR %s skipped: No channels found", number)
             return None
         if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
             return None
         add_packages_from_files(incident, token, files, dry=dry)
-        if len(incident["packages"]) == 0:
+        if not incident["packages"]:
             log.info("PR %s skipped: No packages found", number)
             return None
 

@@ -5,8 +5,9 @@
 import logging
 import re
 import urllib.error
+from argparse import Namespace
 from pathlib import Path
-from typing import Any, NamedTuple, cast
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import pytest
@@ -29,18 +30,6 @@ from openqabot.loader.gitea import (
 )
 from openqabot.types import Repos
 from responses import GET, matchers
-
-
-class Namespace(NamedTuple):
-    dry: bool
-    fake_data: bool
-    token: str
-    gitea_token: str
-    retry: bool
-    gitea_repo: str
-    allow_build_failures: bool
-    consider_unrequested_prs: bool
-    pr_number: int
 
 
 @pytest.fixture
@@ -71,8 +60,8 @@ def fake_gitea_api_post_review_comment() -> None:
 
 @pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: Any) -> tuple[int, list, Any]:
-        return (200, [], request.body)
+    def reply_callback(request: Any) -> tuple[int, dict[str, str], Any]:
+        return (200, {}, request.body)
 
     responses.add_callback(
         responses.PATCH,
@@ -106,8 +95,8 @@ def fake_osc_xml_parse(data: Any) -> Any:
 
 
 def fake_urllib_http_error(data: Any) -> Any:
-    with Path("responses/empty-build-results.xml").open(encoding="utf-8") as fp:
-        raise urllib.error.HTTPError(data, 404, "Not found", {}, fp)
+    with Path("responses/empty-build-results.xml").open("rb") as fp:
+        raise urllib.error.HTTPError(data, 404, "Not found", cast("Any", {}), fp)
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:
@@ -130,7 +119,7 @@ def run_gitea_sync(
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
 
-    http_get_patch_target = "osc.core.http_GET"
+    http_get_patch_target = "openqabot.loader.gitea.http_GET"
     xml_parse_patch_target = "osc.util.xml.xml_parse"
     get_config_patch_target = "osc.conf.get_config"
     get_multibuild_data_patch_target = "openqabot.loader.gitea.get_multibuild_data"
@@ -259,7 +248,7 @@ def test_extracting_product_name_and_version() -> None:
 
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("osc.core.http_GET", side_effect=fake_urllib_http_error)
+    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
     incident = {}
     add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
     assert incident["successful_packages"] == []
@@ -284,6 +273,19 @@ def test_computing_repo_url() -> None:
     url = compute_repo_url_for_job_setting("base", repos, ["Foo", "Foo-Bar"], "16.0")
     expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
+
+    # Test with empty product_version should now raise AssertionError
+    repos_no_ver = Repos("product", "1.2", "x86_64", "")
+    with pytest.raises(AssertionError, match="Product version must be provided for Foo"):
+        compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
+
+
+def test_computing_repo_url_empty_product() -> None:
+    from openqabot.loader.gitea import compute_repo_url
+
+    repo = ("product", "1.2")
+    url = compute_repo_url("base", "", repo, "x86_64")
+    assert url == "base/product:/1.2/product/repodata/repomd.xml"
 
 
 def test_adding_packages_from_files() -> None:
