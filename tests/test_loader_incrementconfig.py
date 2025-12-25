@@ -1,8 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
+from argparse import Namespace
 from pathlib import Path
-from typing import NamedTuple
 from unittest.mock import ANY
 
 import pytest
@@ -55,13 +55,9 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_config_parsing_from_args() -> None:
-    class MinimalNs(NamedTuple):
-        increment_config: str
-        distri: str
-        version: str
-        flavor: str
-
-    config = IncrementConfig.from_args(MinimalNs(None, "sle", "16.0", "Online-Increments"))
+    config = IncrementConfig.from_args(
+        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
+    )
     assert len(config) == 1
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"
@@ -72,14 +68,10 @@ def test_config_parsing_from_args() -> None:
 
 
 def test_config_parsing_from_args_with_path() -> None:
-    class MinimalNs(NamedTuple):
-        increment_config: Path
-        distri: str
-        version: str
-        flavor: str
-
     path = Path("tests/fixtures/config-increment-approver")
-    config = IncrementConfig.from_args(MinimalNs(path, "sle", "16.0", "Online-Increments"))
+    config = IncrementConfig.from_args(
+        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
+    )
     assert len(config) == 2
     assert config[0].distri == "foo"
     assert config[1].distri == "bar"
