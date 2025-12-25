@@ -1,12 +1,19 @@
 SOURCE_FILES ?= $(shell git ls-files "**.py")
 USE_TY_TYPECHECK ?= 0
+ISOLATE ?= 1
+
+ifeq ($(ISOLATE),1)
+UNSHARE := unshare -r -n
+else
+UNSHARE :=
+endif
 
 .PHONY: all
 all:
 
 .PHONY: only-test
 only-test:
-	python3 -m pytest
+	$(UNSHARE) python3 -m pytest
 
 .PHONY: ruff
 ruff:
@@ -55,7 +62,7 @@ typecheck: typecheck-ty
 endif
 
 only-test-with-coverage:
-	python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
+	$(UNSHARE) python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
 
@@ -70,4 +77,4 @@ test-with-coverage: only-test-with-coverage checkstyle
 
 .PHONY: test-all-commands-unstable
 test-all-commands-unstable:
-	for i in incidents-run updates-run smelt-sync gitea-sync inc-approve inc-comment inc-sync-results aggr-sync-results increment-approve repo-diff amqp full-run; do echo "### $$i" && timeout 30 python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i ; done
+	for i in incidents-run updates-run smelt-sync gitea-sync inc-approve inc-comment inc-sync-results aggr-sync-results increment-approve repo-diff amqp full-run; do echo "### $$i" && timeout 30 $(UNSHARE) python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i ; done
