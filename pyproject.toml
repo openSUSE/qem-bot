@@ -190,21 +190,5 @@ notice-rgx = "Copyright"
 
 [tool.pyright]
 include = ["openqabot", "tests", "*.py"]
-reportArgumentType = false
-reportAttributeAccessIssue = false
-reportOptionalMemberAccess = false
-reportOptionalSubscript = false
-reportReturnType = false
-reportIncompatibleMethodOverride = false
-reportIncompatibleVariableOverride = false
-reportUndefinedVariable = false
-reportOperatorIssue = false
-reportGeneralTypeIssues = false
-reportUnusedExcept = false
-reportInvalidTypeArguments = false
-reportCallIssue = false
-reportPrivateImportUsage = false
-reportAssignmentType = false
 
 [tool.ty.rules]
-invalid-argument-type = "ignore"
