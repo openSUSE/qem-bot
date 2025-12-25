@@ -206,7 +206,6 @@ reportCallIssue = false
 reportPrivateImportUsage = false
 reportAssignmentType = false
 reportPossiblyUnboundVariable = false
-reportOptionalIterable = false
 
 [tool.ty.rules]
 invalid-argument-type = "ignore"
