@@ -34,6 +34,9 @@ from .utc import UTC
 
 log = getLogger("bot.approver")
 
+ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:incident_{inc}:(.+?)(?:$|\s)"
+MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{inc}/(.*)"
+
 
 def _mi2str(inc: IncReq) -> str:
     return f"{OBS_MAINT_PRJ}:{inc.inc}:{inc.req}" if inc.type is None else f"{inc.type}:{inc.inc}"
@@ -132,7 +135,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(rf"@review:acceptable_for:incident_{inc}:(.+?)(?:$|\s)", re.DOTALL)
+        regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(inc=inc), re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
             return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
@@ -227,7 +230,7 @@ class Approver:
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(days=OLDEST_APPROVAL_JOB_DAYS)
 
-        regex = re.compile(rf"(.*)Maintenance:/{inc}/(.*)")
+        regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(inc=inc))
         for job in older_jobs:
             was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
             if was_ok is not None:
