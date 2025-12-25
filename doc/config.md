@@ -1,7 +1,7 @@
 # Configuration format of qem-bot
 
 Configuration, also known as metadata of qem-bot, is held in yaml files with one file per "product". Additionally, there is one special config file called `singlearch.yml` which contains a list of packages that exist only on a single architecture.
-Configuration usually spans over multiple files. The default location accepted from qem-bot is `/etc/openqabot/`. All configuration files must have `.yml` or `.yaml` extension.
+Configuration usually spans over multiple files. The default location accepted by qem-bot is `/etc/openqabot/`. All configuration files must have `.yml` or `.yaml` extension.
 
 ```bash
 /etc/openqabot ❯❯❯ tree
@@ -19,10 +19,9 @@ Example of `singlearch.yml`:
 - packageone
 - packagetwo
 - onlyppcle
-```
 
-If an incident has a package from this list, a job is automatically marked as without **aggregate**. That means the Incident can be approved without existing aggregate jobs.
-Other yaml files contain the definition of **product** and data either or both **aggregate** and **incidents**
+If an incident has a package from this list, a job is automatically marked as not requiring **aggregate**. That means the Incident can be approved without existing aggregate jobs.
+Other YAML files contain the definition of **product** and data for either or both **aggregate** and **incidents**
 
 
 ## Structure of a product definition
@@ -40,14 +39,14 @@ settings:
   ELSE: 'ELSE123'
 ```
 
-* `product` - mandatory and must be unique, no other config file can have the same product. 
+* `product` - mandatory and must be unique, no other config file can have the same product.
 * `product_repo` - optional to use a specific product repo (e.g. `SLES-SAP` or `SLES-HA`) instead of the default derived from the PR (usually `SLES`)
 * `product_version` - optional to override the product version (to use e.g. `16.0` instead of `15.99`)
-* `settings` - mandatory mapping containing `key` : `value` which are used directly in job schedule. From this the pairs `DISTRI` and `VERSION` are mandatory.
+* `settings` - mandatory mapping containing `key` : `value` which are used directly in job scheduling. Among these, the pairs `DISTRI` and `VERSION` are mandatory.
 
 ## Aggregate part of the configuration
 
-Used to schedule multiple Incidents in a product as one BUILD named **YYYYMMDD-{counter from 1}**. Jobs scheduled on this part of the config will have multiple vars `*_TEST_REPO` used to add Incident repositories. 
+Used to schedule multiple incidents in a product as one BUILD named **YYYYMMDD-{counter from 1}**. Jobs scheduled on this part of the config will have multiple vars `*_TEST_REPO` used to add Incident repositories.
 
 Example:
 
@@ -69,15 +68,15 @@ Example:
 
 * `aggregate` - self-explanatory, mapping containing all needed settings for the aggregate schedule of a given *product*
 * `FLAVOR` - flavor used by the schedule, can be only once per product, mandatory
-* `archs` - list scheduled architectures, mandatory
+* `archs` - list of scheduled architectures, mandatory
 * `test_issues` - mandatory, contains a mapping of `*_TEST_ISSUES`, which are used to decide which Incidents to be scheduled in aggregate jobs. Values are `PRODUCT-IDENTIFICATION:VERSION`. `PRODUCT-IDENTIFICATION` as defined in OBS/IBS. `VERSION` same as `PRODUCT-IDENTIFICATION`, could use different versions for different `*_TEST_ISSUES`.
   * `OS_TEST_ISSUES` variable is implicit, always used by *os-autoinst-distri-opensuse*, contains identification of the base product.
   * All others contain modules, addons, and extensions used in this aggregate. First part of the key name must be the same (uppercase, os-autoinst-distri-opensuse will convert it to lowercase) as an addon, extension or module identification in `SCC_ADDONS` variable defined in the job template inside the openQA instance.
-* `onetime` - optional key, boolean. By default, qem-bot sets it to `False`. When set to `True`, it limits bot scheduling this aggregate to only once per day.
+* `onetime` - optional key, boolean. By default, qem-bot sets it to `False`. When set to `True`, it limits the bot from scheduling this aggregate to only once per day.
 
 ## Incidents part of the configuration
 
-Used to schedule jobs per one Incident. Scheduled jobs will have BUILD **:INCIDENT_NR:shortest_package_name**. All needed links to scheduled incident repositories are in the `INCIDENT_REPO` variable.
+Used to schedule jobs per incident. Scheduled jobs will have the BUILD **:INCIDENT_NR:shortest_package_name**. All needed links to the scheduled incident repositories are in the `INCIDENT_REPO` variable.
 
 Example:
 
@@ -114,28 +113,28 @@ incidents:
       excluded_packages:
         - pkgthree
         - pkgfour
-    Other-Incident-FLavor:
+    Other-Incident-Flavor:
       ...
 ```
 
 * `incidents` mapping contains all settings for an incident schedule of a product.
-* `FLAVOR` mapping containing FLAVORs and all settings needed to schedule them. FLAVOR itself maps 1:1 to an openQA's FLAVOR
+* `FLAVOR` mapping containing FLAVORs and all settings needed to schedule them. FLAVOR itself maps 1:1 to an openQA FLAVOR
 * `archs` - list of scheduled architectures, mandatory
 * `issues` - mandatory, same rules as `test_issues` of aggregate
 * `required_issues` - optional, contains a list of `issues` keys which must be part of the Incident to be scheduled. Without this key, any incident containing any target in `issues` will be scheduled in this FLAVOR.
 * `aggregate_job` - optional, boolean value, by default is `true`. When set to `false` it indicates this FLAVOR doesn't need an aggregate job for approval.
-* `aggregate_check_true` and `aggregate_check_false` - optional, list of keywords, used only with `aggregate_job: false`. Conditions for finely tune the need of the Aggregate jobs for approval. Keywords are keys of variables used by job.
+* `aggregate_check_true` and `aggregate_check_false` - optional, list of keywords, used only with `aggregate_job: false`. Conditions to finely tune the need for Aggregate jobs for approval. Keywords are keys of variables used by job.
 * `override_priority` - optional, integer. Overrides the default priority of the job. (default = 50, with modifiers for `*Minimal`, EMU and staging Incidents)
 * `packages` - optional, list of package names (or first part of pkg name). The incident must contain a package from this list to be scheduled into openQA.
-* `excluded_packages` - optional, list of package names, opposite to `packages`. If the Incident contains a package in this list, it isn't scheduled.
-* `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values win over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
+* `excluded_packages` - optional, list of package names, opposite of `packages`. If the Incident contains a package in this list, it isn't scheduled.
+* `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values take precedence over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
 
 All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`.
 
 ## Structure of product definitions for product increments
 The `increment-approve` command uses a different configuration format than
 described above. The `increment-approve` can be run with its configuration
-specified in form of CLI arguments, see `qem-bot increment-approve -h` for
+specified in the form of CLI arguments, see `qem-bot increment-approve -h` for
 details. Alternatively, a config file (or directory) can be specified via
 `qem-bot increment-approve --increment-config /path/to/config.yaml`. This config
 file can contain one or more increment definitions, e.g.:
@@ -176,7 +175,7 @@ specify multiple increment definitions, each with their own project on OBS to
 monitor for new increment requests. The fields `archs` and `packages` allow
 filtering similar to what is possible for incidents.
 
-`qem-bot` will go through all listed product increment. This is the sequence for
+`qem-bot` will go through all listed product increments. This is the sequence for
 the example configuration above:
 
 1. The OBS project `openSUSE:Factory:ToTest` is checked for open increment
@@ -193,7 +192,7 @@ the example configuration above:
    and `openSUSE:Factory:ToTest/product` is computed. If this is not wanted
    `diff_project_suffix` can be set to `none` to skip this step.
     * The regexes specified under `additional_builds` are matched against
-      packages which have changed in the product increment. For each match an
+      packages which have changed in the product increment. For each match, an
       additional scheduled product with the specified `build_suffix` and
       `settings`. For instance, here an additional scheduled product with
       settings like `BUILD=1234-kernel-livepatch` and `FLAVOR=Base-RT-Updates`

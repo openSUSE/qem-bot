@@ -21,7 +21,7 @@ jobs:
       - name: Setup enviroment
         run: uv sync
       - name: Run tests + cov report
-        run: uv run make test-with-coverage
+        run: uv run make ISOLATE=0 test-with-coverage
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v5
         with:

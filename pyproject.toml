@@ -44,13 +44,14 @@ dev = [
     "ruff",
     "pytest-mock",
     "vulture",
+    "ty",
 ]
 
 [tool.coverage.run]
 branch = true
 
 [tool.coverage.report]
-fail_under = 93
+fail_under = 100
 show_missing = true
 skip_covered = true
 
@@ -189,20 +190,6 @@ notice-rgx = "Copyright"
 
 [tool.pyright]
 include = ["openqabot", "tests", "*.py"]
-reportArgumentType = false
-reportAttributeAccessIssue = false
-reportOptionalMemberAccess = false
-reportOptionalSubscript = false
-reportReturnType = false
-reportIncompatibleMethodOverride = false
-reportIncompatibleVariableOverride = false
-reportUndefinedVariable = false
-reportOperatorIssue = false
-reportGeneralTypeIssues = false
-reportUnusedExcept = false
-reportInvalidTypeArguments = false
-reportCallIssue = false
-reportPrivateImportUsage = false
-reportAssignmentType = false
-reportPossiblyUnboundVariable = false
-reportOptionalIterable = false
+
+[tool.ty.terminal]
+error-on-warning = true

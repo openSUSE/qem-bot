@@ -11,11 +11,11 @@ from functools import cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import Any, NamedTuple, TypeAlias
+from typing import Any, NamedTuple, cast
 
 import osc.conf
 import osc.core
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
 
 from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from openqabot.openqa import openQAInterface
@@ -32,8 +32,9 @@ final_states = {"done", "cancelled"}
 default_flavor = "Online-Increments"
 
 
-OpenQAResults: TypeAlias = list[dict[str, dict[str, dict[str, Any]]]]
-ScheduleParams: TypeAlias = list[dict[str, str]]
+OpenQAResult = dict[str, dict[str, dict[str, Any]]]
+OpenQAResults = list[OpenQAResult]
+ScheduleParams = list[dict[str, str]]
 
 
 class BuildInfo(NamedTuple):
@@ -108,17 +109,18 @@ class IncrementApprover:
             relevant_request = next(filtered_requests, None)
         else:
             log.debug("Checking specified request %i", args.request_id)
-            relevant_request = osc.core.Request.from_api(OBS_URL, str(args.request_id))
+            relevant_request = osc.core.Request.from_api(OBS_URL, args.request_id)
         if relevant_request is None:
-            log.info("Skipping approval, no relevant requests in states %s", "/".join(relevant_states))
+            states_str = "/".join(relevant_states)
+            log.info("Skipping approval: %s: No relevant requests in states %s", build_project, states_str)
         else:
-            log.debug("Found request %s", relevant_request.id)
+            log.info("Found product increment request on %s: %s", build_project, relevant_request.id)
             if hasattr(relevant_request.state, "to_xml"):
                 log.debug(relevant_request.to_str())
         return relevant_request
 
     def _add_packages_for_action_project(
-        self, action: osc.core.Action, project: str, repo: str, arch: str, packages: defaultdict[str, set[Package]]
+        self, action: Any, project: str, repo: str, arch: str, packages: defaultdict[str, set[Package]]
     ) -> None:
         log.debug(
             "Finding source reports for package %s in project %s for repo/arch %s/%s",
@@ -154,7 +156,7 @@ class IncrementApprover:
                 packages["noarch"].add(Package(binary.get("package"), "", "", "", "noarch"))
 
     def _compute_packages_of_request_from_source_report(
-        self, request: osc.core.Request | None
+        self, request: osc.core.Request
     ) -> tuple[defaultdict[str, set[Package]], int]:
         repo_a = defaultdict(set)
         repo_b = defaultdict(set)
@@ -191,13 +193,13 @@ class IncrementApprover:
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             log.info(
-                "Skipping approval, there are no relevant jobs on openQA for %s",
+                "Skipping approval: There are no relevant jobs on openQA for %s",
                 (" or ".join([build_info.string_with_params(param) for param in params]) if len(params) > 0 else {}),
             )
             return None
         if len(pending_states):
             log.info(
-                "Skipping approval, some jobs on openQA for %s are in pending states (%s)",
+                "Skipping approval: Some jobs on openQA for %s are in pending states (%s)",
                 build_info,
                 ", ".join(sorted(pending_states)),
             )
@@ -206,7 +208,7 @@ class IncrementApprover:
 
     def _evaluate_openqa_job_results(
         self,
-        results: OpenQAResults,
+        results: OpenQAResult,
         ok_jobs: set[int],
         not_ok_jobs: dict[str, set[str]],
     ) -> None:
@@ -228,21 +230,24 @@ class IncrementApprover:
         ]
         return (ok_jobs, reasons_to_disapprove)
 
+    def _approve_on_obs(self, reqid: str, msg: str) -> None:
+        if self.args.dry:
+            return
+        osc.core.change_review_state(apiurl=OBS_URL, reqid=reqid, newstate="accepted", by_group=OBS_GROUP, message=msg)
+
     def _handle_approval(self, approval_status: ApprovalStatus) -> int:
         reasons_to_disapprove = approval_status.reasons_to_disapprove
+        reqid = approval_status.request.reqid
+        id_msg = f"OBS request ID '{reqid}'"
         if len(reasons_to_disapprove) == 0:
-            message = f"All {len(approval_status.ok_jobs)} jobs on openQA have {'/'.join(sorted(ok_results))}"
-            if not self.args.dry:
-                osc.core.change_review_state(
-                    apiurl=OBS_URL,
-                    reqid=str(approval_status.request.reqid),
-                    newstate="accepted",
-                    by_group=OBS_GROUP,
-                    message=message,
-                )
+            results_str = "/".join(sorted(ok_results))
+            message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
+            self._approve_on_obs(str(reqid), message)
+            log.info("Approving %s: %s", id_msg, message)
         else:
-            message = "Not approving for the following reasons:\n" + "\n".join(reasons_to_disapprove)
-        log.info(message)
+            reasons_str = "\n\t".join(reasons_to_disapprove)
+            end_str = f"End of reasons for not approving {id_msg}"
+            log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
 
     def _determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
@@ -291,14 +296,14 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         for additional_build in config.additional_builds:
-            package_name_regex = additional_build.get("package_name_regex", additional_build.get("regex"))
+            package_name_regex = additional_build.get("package_name_regex") or additional_build.get("regex", "")
             if (package_name_match := self._get_regex_match(package_name_regex, package.name)) is None:
                 continue
             package_version_regex = additional_build.get("package_version_regex")
             if package_version_regex is not None and not self._get_regex_match(package_version_regex, package.version):
                 continue
             extra_build = [build_info.build, additional_build["build_suffix"]]
-            extra_params = {}
+            extra_params: dict[str, str] = {}
             try:
                 kind = package_name_match.group("kind")
                 if kind != "default":
@@ -312,7 +317,7 @@ class IncrementApprover:
             except IndexError:
                 pass
             extra_params["BUILD"] = "-".join(extra_build)
-            extra_params.update(additional_build["settings"])
+            extra_params.update(cast("dict[str, str]", additional_build["settings"]))
             return extra_params
         return None
 
@@ -326,8 +331,7 @@ class IncrementApprover:
         def handle_package(p: Package) -> dict[str, str] | None:
             return self._extra_builds_for_package(p, config, build_info)
 
-        extra_builds = map(handle_package, package_diff)
-        return [*filter(lambda b: b is not None, extra_builds)]
+        return [b for p in package_diff if (b := handle_package(p)) is not None]
 
     @staticmethod
     def _populate_params_from_env(params: dict[str, str], env_var: str) -> None:
@@ -346,14 +350,18 @@ class IncrementApprover:
         self, request: osc.core.Request | None, config: IncrementConfig, repo_sub_path: str
     ) -> defaultdict[str, set[Package]]:
         package_diff = defaultdict(set)
+        diff_key = None
         if config.diff_project_suffix == "source-report":
             # compute diff by checking the source report on obs
+            if not request:
+                log.error("Source report diff requested but no request found")
+                return package_diff
             diff_key = "request:" + str(request.id)
             package_diff = self.package_diff.get(diff_key)
             if package_diff is None:
-                log.debug("Computing source report diff for request %s", request.id)
+                log.info("Computing source report diff for OBS request ID %s", request.id)
                 package_diff = self._compute_packages_of_request_from_source_report(request)[0]
-                log.debug("Packages updated by request %s: %s", request.id, pformat(package_diff))
+                log.debug("Packages updated by OBS request ID %s: %s", request.id, pformat(package_diff))
         elif config.diff_project_suffix != "none":
             # compute diff by comparing repositories if "diff_project_suffix" is configured
             build_project = config.build_project() + repo_sub_path
@@ -399,9 +407,9 @@ class IncrementApprover:
     def _schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         error_count = 0
         for p in params:
-            log.info("Scheduling jobs for %s", build_info.string_with_params(p))
+            suffix = f": {p}" if self.args.dry else ""
+            log.info("Scheduling jobs for %s%s", build_info.string_with_params(p), suffix)
             if self.args.dry:
-                log.info(p)
                 continue
             try:
                 self.client.post_job(p)
@@ -424,10 +432,12 @@ class IncrementApprover:
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
             params = self._make_scheduling_parameters(request, config, build_info)
+            log.debug("Prepared scheduling parameters: %s", params)
             if len(params) < 1:
                 log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
                 continue
             info_str = "or".join([build_info.string_with_params(p) for p in params])
+            log.debug("Requesting openQA job results for OBS request ID '%s' for %s", request_id, info_str)
             res = self._request_openqa_job_results(params, info_str)
             if self.args.reschedule:
                 approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)

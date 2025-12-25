@@ -1,8 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 import logging
+from argparse import Namespace
 from pathlib import Path
-from typing import NamedTuple
 from unittest.mock import ANY
 
 import pytest
@@ -19,8 +19,7 @@ def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) ->
     configs = list(IncrementConfig.from_config_file(invalid_yaml_file))
 
     assert configs == []
-    mock_logger.info.assert_any_call("Reading config file '%s'", invalid_yaml_file)
-    mock_logger.info.assert_any_call("Unable to load config file '%s': %s", invalid_yaml_file, ANY)
+    mock_logger.info.assert_any_call("Increment configuration skipped: Could not load '%s': %s", invalid_yaml_file, ANY)
 
 
 def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
@@ -51,18 +50,14 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
     configs = IncrementConfig.from_config_path(path)
     assert [*configs] == []
-    assert "Ignoring file 'tests/fixtures/config/01_single.yml' as it contains no valid increment config" in caplog.text
-    assert "Reading config file 'tests/fixtures/config/03_no_tes" in caplog.text
+    assert "File 'tests/fixtures/config/01_single.yml' skipped: Not a valid increment configuration" in caplog.text
+    assert "Loading increment configuration from 'tests/fixtures/config/03_no_tes" in caplog.text
 
 
 def test_config_parsing_from_args() -> None:
-    class MinimalNs(NamedTuple):
-        increment_config: str
-        distri: str
-        version: str
-        flavor: str
-
-    config = IncrementConfig.from_args(MinimalNs(None, "sle", "16.0", "Online-Increments"))
+    config = IncrementConfig.from_args(
+        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
+    )
     assert len(config) == 1
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"
@@ -70,3 +65,13 @@ def test_config_parsing_from_args() -> None:
     assert config[0].packages == []
     assert config[0].archs == set()
     assert config[0].settings == {}
+
+
+def test_config_parsing_from_args_with_path() -> None:
+    path = Path("tests/fixtures/config-increment-approver")
+    config = IncrementConfig.from_args(
+        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
+    )
+    assert len(config) == 2
+    assert config[0].distri == "foo"
+    assert config[1].distri == "bar"
