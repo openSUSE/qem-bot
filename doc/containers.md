@@ -1,4 +1,4 @@
-# Containerized deployment using Podman and quadlets
+# Containerized deployment using Podman and Quadlets
 
 0. Complete steps from [qem-dashboard](https://github.com/openSUSE/qem-dashboard/tree/main/docs/Containers.md)
 1. `cd /var/lib/data/qem`

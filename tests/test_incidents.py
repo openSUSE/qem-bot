@@ -8,6 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
+from openqabot.errors import NoRepoFoundError
 from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
 from openqabot.types.incidents import IncConfig, IncContext, Incidents
@@ -21,9 +22,9 @@ def test_incidents_constructor() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
 
 
@@ -35,9 +36,9 @@ def test_incidents_printable() -> None:
         product="hello",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     assert str(inc) == "<Incidents product: hello>"
 
@@ -50,9 +51,9 @@ def test_incidents_call() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -65,32 +66,39 @@ def test_incidents_call_with_flavors() -> None:
         product="",
         product_repo=None,
         product_version=None,
-        settings=None,
+        settings={},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[], token={}, ci_url="", ignore_onetime=False)
     assert res == []
 
 
-class MyIncident_0:
+class MyIncident_0(Incident):
     """The simpler possible implementation of Incident class."""
 
     def __init__(self) -> None:
-        self.id = None
+        self.id = 0
         self.staging = False
         self.livepatch = False
-        self.packages = [None]
+        self.packages = ["pkg"]
         self.rrid = None
-        self.revisions = {("", ""): None}
-        self.project = None
+        self.revisions = {}
+        self.project = ""
         self.ongoing = True
         self.type = "smelt"
+        self.embargoed = False
+        self.channels = []
+        self.rr = None
+        self.priority = None
+        self.arch_filter = None
 
-    def compute_revisions_for_product_repo(self, product_repo: str | None, product_version: str | None) -> None:
+    def compute_revisions_for_product_repo(
+        self, product_repo: list[str] | str | None, product_version: str | None
+    ) -> None:
         pass
 
-    def revisions_with_fallback(self, arch: str, version: str) -> None:
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
         pass
 
 
@@ -103,7 +111,7 @@ def test_incidents_call_with_incidents() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[MyIncident_0()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -124,7 +132,7 @@ def test_incidents_call_with_issues() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
     res = inc(incidents=[MyIncident_1()], token={}, ci_url="", ignore_onetime=False)
     assert res == []
@@ -147,8 +155,8 @@ class MyIncident_2(MyIncident_1):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, _arch: str, _version: str) -> bool:
-        return True
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:  # noqa: ARG002
+        return 12345
 
 
 @pytest.mark.usefixtures("request_mock")
@@ -174,7 +182,7 @@ class MyIncident_3(MyIncident_2):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, _requires: list[str]) -> bool:
+    def contains_package(self, requires: list[str]) -> bool:  # noqa: ARG002
         return True
 
 
@@ -388,8 +396,16 @@ def test_making_repo_url() -> None:
 
 
 class MyIncident_5(MyIncident_2):
-    def revisions_with_fallback(self, arch: str, version: str) -> int:
-        return self.revisions[ArchVer(arch, version)]
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
+        if self.revisions is None:
+            return None
+        return self.revisions[ArchVer(arch, ver)]
+
+
+def test_myincident_5_no_revisions() -> None:
+    inc = MyIncident_5()
+    inc.revisions = None
+    assert inc.revisions_with_fallback("x86_64", "15.0") is None
 
 
 @responses.activate
@@ -415,12 +431,12 @@ def test_gitea_incidents() -> None:
     inc.type = "git"
 
     # compute openQA/dashboard settings for incident and check results
-    incs = Incidents("SLFO", None, None, settings, test_config, None)
+    incs = Incidents("SLFO", None, None, settings, test_config, set())
     incs.singlearch = set()
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = incs(incidents=[inc], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == len(archs)
-    for arch, result in zip(archs, res, strict=False):
+    for arch, result in zip(archs, res):
         qem = result["qem"]
         computed_settings = [result["openqa"], qem["settings"]]
         assert qem["arch"] == arch
@@ -431,7 +447,7 @@ def test_gitea_incidents() -> None:
         for s in computed_settings:
             assert s["ARCH"] == arch
             assert s["BASE_TEST_ISSUES"] == str(inc.id)
-            assert s["BUILD"] == f":{inc.id}:None"
+            assert s["BUILD"] == f":{inc.id}:pkg"
             assert s["DISTRI"] == settings["DISTRI"]
             assert s["FLAVOR"] == flavor
             assert s["INCIDENT_ID"] == inc.id
@@ -462,7 +478,7 @@ def test_handle_incident_git_not_ongoing() -> None:
         product_version=None,
         settings={"VERSION": "", "DISTRI": None},
         config=test_config,
-        extrasettings=None,
+        extrasettings=set(),
     )
 
     ctx = IncContext(inc=inc, arch="", flavor="AAA", data={})
@@ -508,3 +524,549 @@ def test_handle_incident_with_ci_url(mocker: MockerFixture) -> None:
 
     assert result is not None
     assert result["openqa"]["__CI_JOB_URL"] == "http://my-ci.com/123"
+
+
+def test_is_scheduled_job_error(mocker: MockerFixture) -> None:
+    inc = MyIncident_0()
+    inc.id = 1
+    mocker.patch("openqabot.types.incidents.retried_requests.get").return_value.json.return_value = {"error": "foo"}
+    assert not Incidents._is_scheduled_job({}, inc, "arch", "ver", "flavor")  # noqa: SLF001
+
+
+def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
+    inc = MyIncident_0()
+    inc.id = 1
+    mocker.patch("openqabot.types.incidents.retried_requests.get").return_value.json.return_value = [{"id": 1}]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=None)
+    assert not Incidents._is_scheduled_job({}, inc, "arch", "ver", "flavor")  # noqa: SLF001
+
+
+def test_handle_incident_embargoed_skip() -> None:
+    inc = MyIncident_0()
+    inc.embargoed = True
+    inc.id = 1
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    # Patch filter_embargoed to return True
+    incidents_obj.filter_embargoed = lambda _: True  # type: ignore[invalid-assignment]
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_staging_skip() -> None:
+    inc = MyIncident_0()
+    inc.staging = True
+    inc.id = 1
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_packages_skip() -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    # Mock contains_package to return False
+    inc.contains_package = lambda _: False  # type: ignore[invalid-assignment]
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    data = {"packages": ["somepkg"]}
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=data)
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_excluded_packages_skip() -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    # Mock contains_package to return True for excluded check
+    inc.contains_package = lambda _: True  # type: ignore[invalid-assignment]
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    data = {"excluded_packages": ["badpkg"]}
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=data)
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_livepatch_kgraft(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.livepatch = True
+    inc.packages = ["kernel-livepatch-foo"]
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    # Mock _is_scheduled_job to return False
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["openqa"]["KGRAFT"] == "1"
+
+
+def test_handle_incident_no_issue_skip(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = []
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_required_issues_skip(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "AAA": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+                "required_issues": ["LTSS_TEST_ISSUES"],
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_already_scheduled(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=True)
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_kernel_no_product_repo_skip(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.livepatch = False
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {"SomeKernel-Flavor": {"archs": ["x86_64"], "issues": {"NOT_PRODUCT_REPO": "SLES:15-SP3"}}}
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(
+        inc=inc, arch="x86_64", flavor="SomeKernel-Flavor", data=incidents_obj.flavors["SomeKernel-Flavor"]
+    )
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_singlearch_no_aggregate(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.packages = ["singlepkg"]
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings={"singlepkg"},
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["qem"]["withAggregate"] is False
+
+
+def test_handle_incident_should_aggregate_logic(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "AAA": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+                "aggregate_job": False,
+                "aggregate_check_true": ["OS_TEST_ISSUES"],
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    # Test case 1: aggregate check true matches
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["qem"]["withAggregate"] is False
+
+    # Test case 2: aggregate check false matches
+    incidents_obj.flavors["AAA"]["aggregate_check_true"] = []
+    incidents_obj.flavors["AAA"]["aggregate_check_false"] = ["OS_TEST_ISSUES"]
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["qem"]["withAggregate"] is False
+
+    # Test case 3: nothing matches
+    incidents_obj.flavors["AAA"]["aggregate_check_false"] = ["SOMETHING_ELSE"]
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    # _should_aggregate returns (neg and pos) which is (True and False) -> False
+    # If _should_aggregate returns False, and not aggregate_job, withAggregate = False
+    assert result["qem"]["withAggregate"] is False
+
+
+def test_handle_incident_priority_emu(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.emu = True
+    inc.staging = False
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    # BASE_PRIO(50) - 20 (emu) = 30
+    assert result["openqa"]["_PRIORITY"] == 30
+
+
+def test_handle_incident_params_expand_forbidden(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "AAA": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+                "params_expand": {"DISTRI": "forbidden"},
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_pc_tools_image_fail(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.incidents.apply_pc_tools_image", return_value={})
+
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_pc_pint_image_fail(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_PINT_QUERY": "test"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.incidents.apply_publiccloud_pint_image", return_value={"PUBLIC_CLOUD_IMAGE_ID": None})
+
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_process_inc_context_norepfound(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.project = "project"
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={"archs": ["x86_64"]})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_handle_incident", side_effect=NoRepoFoundError)
+
+    assert incidents_obj._process_inc_context(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_priority_none(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.staging = False
+    inc.emu = False
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "Regular": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="Regular", data=incidents_obj.flavors["Regular"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    # BASE_PRIO(50) + 10 (not staging) = 60
+    assert result["openqa"]["_PRIORITY"] == 60
+
+    # If we use override_priority = 50
+    incidents_obj.flavors["Regular"]["override_priority"] = 50
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert "_PRIORITY" not in result["openqa"]
+
+
+def test_handle_incident_pc_tools_image_success(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+    mocker.patch(
+        "openqabot.types.incidents.apply_pc_tools_image",
+        return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "some_image"},
+    )
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "some_image"
+
+
+def test_handle_incident_priority_override(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "AAA": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+                "override_priority": 100,
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    assert result["openqa"]["_PRIORITY"] == 100
+
+
+def test_handle_incident_priority_minimal(mocker: MockerFixture) -> None:
+    inc = MyIncident_3()
+    inc.id = 1
+    inc.staging = False
+    inc.channels = [Repos("SLES", "15-SP3", "x86_64")]
+    mocker.patch.object(inc, "revisions_with_fallback", return_value=123)
+
+    test_config = {
+        "FLAVOR": {
+            "Minimal": {
+                "archs": ["x86_64"],
+                "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="Minimal", data=incidents_obj.flavors["Minimal"])
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+    mocker.patch.object(incidents_obj, "_is_scheduled_job", return_value=False)
+
+    result = incidents_obj._handle_incident(ctx, cfg)  # noqa: SLF001
+    assert result is not None
+    # BASE_PRIO(50) + 10 (not staging) - 5 (Minimal) = 55
+    assert result["openqa"]["_PRIORITY"] == 55

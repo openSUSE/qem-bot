@@ -36,6 +36,7 @@ dev = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "pytest-xdist",
     "pyupgrade",
     "coverage",
     "radon",
@@ -44,17 +45,21 @@ dev = [
     "ruff",
     "pytest-mock",
     "vulture",
+    "ty",
 ]
 
 [tool.coverage.run]
 branch = true
 
 [tool.coverage.report]
-fail_under = 93
+fail_under = 100
 show_missing = true
 skip_covered = true
 
 [tool.pytest.ini_options]
+addopts = "-p no:anyio"
+testpaths = ["tests"]
+python_files = "test_*.py"
 markers = ["qem_behavior(mode): configure the fake_qem fixture behavior"]
 
 [tool.setuptools]
@@ -189,20 +194,6 @@ notice-rgx = "Copyright"
 
 [tool.pyright]
 include = ["openqabot", "tests", "*.py"]
-reportArgumentType = false
-reportAttributeAccessIssue = false
-reportOptionalMemberAccess = false
-reportOptionalSubscript = false
-reportReturnType = false
-reportIncompatibleMethodOverride = false
-reportIncompatibleVariableOverride = false
-reportUndefinedVariable = false
-reportOperatorIssue = false
-reportGeneralTypeIssues = false
-reportUnusedExcept = false
-reportInvalidTypeArguments = false
-reportCallIssue = false
-reportPrivateImportUsage = false
-reportAssignmentType = false
-reportPossiblyUnboundVariable = false
-reportOptionalIterable = false
+
+[tool.ty.terminal]
+error-on-warning = true

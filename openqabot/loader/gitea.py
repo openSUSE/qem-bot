@@ -18,7 +18,8 @@ import osc.util.xml
 import requests
 import urllib3
 import urllib3.exceptions
-from lxml import etree
+from lxml import etree  # type: ignore[unresolved-import]
+from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot.config import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_PRODUCTS, OBS_REPO_TYPE, OBS_URL
@@ -27,9 +28,17 @@ from openqabot.utils import retry10 as retried_requests
 if TYPE_CHECKING:
     from openqabot.types import Repos
 
+ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
+
 log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
+SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
+VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
+OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/(.*)")
+URL_FINDALL_REGEX = re.compile(r"https://[^ \n]*")
 
 
 def make_token_header(token: str) -> dict[str, str]:
@@ -44,7 +53,7 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GIT
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
-        log.error("Unable to POST %s: %s", url, res.text)
+        log.error("Gitea API error: POST to %s failed: %s", url, res.text)
 
 
 def read_utf8(name: str) -> str:
@@ -75,19 +84,19 @@ def comments_url(repo_name: str, number: int) -> str:
 
 
 def get_product_name(obs_project: str) -> str:
-    product_match = re.search(r".*:PullRequest:\d+:(.*)", obs_project)
+    product_match = PROJECT_PRODUCT_REGEX.search(obs_project)
     return product_match.group(1) if product_match else ""
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, str]:
-    m = re.search(r".*/products/(.*)#([\d\.]{2,6})$", scmsync_url)
+    m = SCMSYNC_REGEX.search(scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
 
 def compute_repo_url(
     base: str,
     product_name: str,
-    repo: tuple[str, str, str],
+    repo: tuple[str, ...],
     arch: str,
     path: str = "repodata/repomd.xml",
 ) -> str:
@@ -96,7 +105,14 @@ def compute_repo_url(
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
-    return f"{start}/{path}" if product_name == "" else f"{start}/repo/{product_name}-{repo[2]}-{arch}/{path}"
+    if product_name == "":
+        return f"{start}/{path}"
+
+    msg = f"Product version must be provided for {product_name}"
+    assert len(repo) > 2, msg
+    assert repo[2], msg
+    product_version = repo[2]
+    return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
 
 
 def compute_repo_url_for_job_setting(
@@ -107,26 +123,21 @@ def compute_repo_url_for_job_setting(
 ) -> str:
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
-    return ",".join(
-        (
-            compute_repo_url(
-                base,
-                p,
-                (repo.product, repo.version, product_version),
-                repo.arch,
-                "",
-            )
-            for p in (product_names if isinstance(product_names, list) else [product_names])
-        ),
-    )
+    product_list = product_names if isinstance(product_names, list) else [product_names]
+    repo_tuple = (repo.product, repo.version, product_version)
+    return ",".join(compute_repo_url(base, p, repo_tuple, repo.arch, "") for p in product_list)
 
 
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
-    log.debug("Loading open PRs from '%s'%s", repo, ", dry-run" if dry else "")
+    log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
     if number is not None:
-        pr = get_json(f"repos/{repo}/pulls/{number}", token)
+        try:
+            pr = get_json(f"repos/{repo}/pulls/{number}", token)
+        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError):
+            log.exception("PR #%s ignored: Could not read PR metadata", number)
+            return []
         log.debug("PR %i: %s", number, pr)
         return [pr]
 
@@ -140,7 +151,14 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
             yield prs_on_page
             page += 1
 
-    return [pr for page in iter_pr_pages() for pr in page]
+    try:
+        return [pr for page in iter_pr_pages() for pr in page]
+    except requests.exceptions.JSONDecodeError:
+        log.exception("Gitea API error: Invalid JSON received for open PRs")
+        return []
+    except requests.exceptions.RequestException:
+        log.exception("Gitea API error: Could not fetch open PRs")
+        return []
 
 
 def review_pr(
@@ -173,7 +191,7 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(review: dict[str, Any], users: tuple[str] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
+def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -195,22 +213,31 @@ def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
     return len(qam_states)
 
 
+def _extract_version(name: str, prefix: str) -> str:
+    remainder = name.removeprefix(prefix)
+    return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
+
+
 @lru_cache(maxsize=512)
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     project_path = project.replace(":", ":/")
     url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
     try:
-        data = retried_requests.get(url).json()["data"]
-        versions = (
-            next(filter(lambda x: re.search(r"[.\d]+", x), entry["name"][len(start) :].split("-")), "")
-            for entry in data
-            if entry["name"].startswith(start)
-        )
-        return next((v for v in versions if len(v) > 0), "")
-    except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
-        log.warning("Unable to read product version from '%s': %s", url, e)
-    return ""
+        r = retried_requests.get(url)
+        r.raise_for_status()
+        data = r.json()["data"]
+    except requests.exceptions.HTTPError as e:
+        log.warning("Repo ignored: Could not query repository '%s' (%s->%s): %s", repository, product_name, project, e)
+        return ""
+    except requests.exceptions.RequestException as e:
+        log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
+        return ""
+    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
+        log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
+        return ""
+    versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
+    return next((v for v in versions if len(v) > 0), "")
 
 
 def add_channel_for_build_result(
@@ -219,7 +246,7 @@ def add_channel_for_build_result(
     product_name: str,
     res: Any,
     projects: set[str],
-) -> tuple[str, bool]:
+) -> str:
     channel = f"{project}:{arch}"
     if arch == "local":
         return channel
@@ -242,7 +269,7 @@ def add_channel_for_build_result(
     if len(product_version) > 0:
         channel = f"{channel}#{product_version}"
     elif len(product_name) > 0:
-        log.warning("Unable to determine product version for build result %s:%s, not adding channel", project, arch)
+        log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
 
     projects.add(channel)
@@ -262,7 +289,7 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in (e.text for e in res.findall("scminfo") if e.text):
         if (existing := incident.get(scm_key)) and found != existing:
-            msg = "Found inconsistent scminfo for PR %s and project %s: found '%s' vs '%s'"
+            msg = "PR %s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
             log.warning(msg, incident["number"], project, found, existing)
             continue
         incident[scm_key] = found
@@ -282,7 +309,7 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str]:
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
     if product_name == "":
@@ -295,7 +322,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
         try:
             multibuild_data = get_multibuild_data(obs_project)
         except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-            log.warning("Unable to determine relevant archs for %s: %s", obs_project, e)
+            log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
             return None
 
     # determine from the flavors we got what architectures are actually expected to be present
@@ -306,15 +333,13 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     # relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {
-        flavor[prefix_len:]
-        for flavor in flavors
-        if flavor.startswith(product_prefix) and flavor[prefix_len:] in {"x86_64", "aarch64", "ppc64le", "s390x"}
+        flavor[prefix_len:] for flavor in flavors if flavor.startswith(product_prefix) and flavor[prefix_len:] in ARCHS
     }
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: set[str]) -> bool:
+def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
@@ -328,8 +353,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
     failed_packages = set()
     projects = set()
     for url in obs_urls:
-        project_match = re.search(r".*/project/show/(.*)", url)
-        if project_match:
+        if project_match := OBS_PROJECT_SHOW_REGEX.search(url):
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
             relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
@@ -338,34 +362,19 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
                 build_info = read_xml("build-results-124-" + obs_project)
             else:
                 try:
-                    build_info = osc.util.xml.xml_parse(osc.core.http_GET(build_info_url))
+                    build_info = osc.util.xml.xml_parse(http_GET(build_info_url))
                 except urllib.error.HTTPError:
                     unavailable_projects.add(obs_project)
-                    log.info("Unable to read build results of project %s, skipping", build_info_url)
+                    log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
                     continue
             for res in build_info.getroot().findall("result"):
                 if not is_build_result_relevant(res, relevant_archs):
                     continue
-                add_build_result(
-                    incident,
-                    res,
-                    projects,
-                    successful_packages,
-                    unpublished_repos,
-                    failed_packages,
-                )
+                add_build_result(incident, res, projects, successful_packages, unpublished_repos, failed_packages)
     if len(unpublished_repos) > 0:
-        log.info(
-            "Some repos for PR %i have not been published yet: %s",
-            incident["number"],
-            ", ".join(unpublished_repos),
-        )
+        log.info("PR %i: Some repos not published yet: %s", incident["number"], ", ".join(unpublished_repos))
     if len(failed_packages) > 0:
-        log.info(
-            "Some packages for PR %i have failed: %s",
-            incident["number"],
-            ", ".join(failed_packages),
-        )
+        log.info("PR %i: Some packages failed: %s", incident["number"], ", ".join(failed_packages))
     incident["channels"] = [*projects]
     incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos, *unavailable_projects]
     incident["successful_packages"] = [*successful_packages]
@@ -384,7 +393,7 @@ def add_comments_and_referenced_build_results(
         None,
     )
     if bot_comment:
-        add_build_results(incident, re.findall(r"https://[^ \n]*", bot_comment["body"]), dry=dry)
+        add_build_results(incident, URL_FINDALL_REGEX.findall(bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
@@ -412,10 +421,10 @@ def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], fil
 def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
     failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
-        log.info("Skipping PR %i, not all packages succeeded and published", number)
+        log.info("Skipping PR %i: Not all packages succeeded or published", number)
         return False
     if len(incident["successful_packages"]) < 1:
-        info = "Skipping PR %i, no packages have been built/published (there are %i failed/unpublished packages)"
+        info = "Skipping PR %i: No packages have been built/published (there are %i failed/unpublished packages)"
         log.info(info, number, failed_or_unpublished_packages)
         return False
     return True
@@ -429,7 +438,7 @@ def make_incident_from_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.debug("Getting info about PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Fetching info for PR %s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]
@@ -467,21 +476,21 @@ def make_incident_from_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(incident, reviews) < 1 and only_requested_prs:
-            log.info("Skipping PR %s, no reviews by %s", number, OBS_GROUP)
+            log.info("PR %s skipped: No reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(incident, comments, dry=dry)
-        if len(incident["channels"]) == 0:
-            log.info("Skipping PR %s, no channels found/considered", number)
+        if not incident["channels"]:
+            log.info("PR %s skipped: No channels found", number)
             return None
         if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
             return None
         add_packages_from_files(incident, token, files, dry=dry)
-        if len(incident["packages"]) == 0:
-            log.info("Skipping PR %s, no packages found/considered", number)
+        if not incident["packages"]:
+            log.info("PR %s skipped: No packages found", number)
             return None
 
     except Exception:
-        log.exception("Unable to process PR %s", pr.get("number", "?"))
+        log.exception("Gitea API error: Unable to process PR %s", pr.get("number", "?"))
         return None
     return incident
 

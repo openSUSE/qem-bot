@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
 from pathlib import Path
+from typing import Any
 
 from ruamel.yaml import YAML
 
@@ -30,7 +31,7 @@ class IncrementConfig:
     packages: list[str] = field(default_factory=list)
     archs: set[str] = field(default_factory=set)
     settings: dict[str, str] = field(default_factory=dict)
-    additional_builds: list[dict[str, str]] = field(default_factory=list)
+    additional_builds: list[dict[str, Any]] = field(default_factory=list)
 
     def _concat_project(self, project: str) -> str:
         return project if self.project_base == "" else f"{self.project_base}:{project}"
@@ -50,7 +51,7 @@ class IncrementConfig:
         return f"{self.distri} ({settings_str})"
 
     @staticmethod
-    def from_config_entry(entry: dict[str, str]) -> "IncrementConfig":
+    def from_config_entry(entry: dict[str, Any]) -> "IncrementConfig":
         return IncrementConfig(
             distri=entry["distri"],
             version=entry.get("version", "any"),
@@ -70,16 +71,16 @@ class IncrementConfig:
     @staticmethod
     def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
         try:
-            log.info("Reading config file '%s'", file_path)
+            log.debug("Loading increment configuration from '%s'", file_path)
             return map(
                 IncrementConfig.from_config_entry,
                 YAML(typ="safe").load(file_path).get("product_increments", []),
             )
         except AttributeError:
-            log.debug("Ignoring file '%s' as it contains no valid increment config", file_path)
+            log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
             return iter(())
         except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
-            log.info("Unable to load config file '%s': %s", file_path, e)
+            log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
             return iter(())
 
     @staticmethod
@@ -89,7 +90,7 @@ class IncrementConfig:
     @staticmethod
     def from_args(args: Namespace) -> list["IncrementConfig"]:
         if args.increment_config:
-            return IncrementConfig.from_config_path(args.increment_config)
+            return list(IncrementConfig.from_config_path(args.increment_config))
         # Create a dictionary from arguments for IncrementConfig
         config_args = {
             field_name: getattr(args, field_name)
