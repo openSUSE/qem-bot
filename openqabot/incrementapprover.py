@@ -7,7 +7,7 @@ import re
 import tempfile
 from argparse import Namespace
 from collections import defaultdict
-from functools import cache
+from functools import cache, lru_cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
@@ -76,6 +76,7 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
+    @lru_cache(maxsize=128)
     def _get_regex_match(self, pattern: str, string: str) -> re.Match | None:
         match = None
         try:
