@@ -11,9 +11,12 @@ endif
 .PHONY: all
 all:
 
+# Detect if pytest-xdist is installed for parallel testing
+PYTEST_XDIST := $(shell python3 -m pytest --version 2>&1 | grep -q xdist && echo "-n auto" || echo "")
+
 .PHONY: only-test
 only-test:
-	$(UNSHARE) python3 -m pytest
+	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST)
 
 .PHONY: ruff
 ruff:
@@ -62,7 +65,7 @@ typecheck: typecheck-ty
 endif
 
 only-test-with-coverage:
-	$(UNSHARE) python3 -m pytest -v --cov --cov-report=xml --cov-report=term-missing
+	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
 
 # aggregate targets
 
