@@ -36,6 +36,7 @@ dev = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "pytest-xdist",
     "pyupgrade",
     "coverage",
     "radon",
