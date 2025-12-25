@@ -48,7 +48,7 @@ class SyncRes:
         except KeyError:
             return None
 
-    def _is_in_devel_group(self, data: Data) -> bool:
+    def _is_in_devel_group(self, data: dict[str, Any]) -> bool:
         return not ALLOW_DEVELOPMENT_GROUPS and (
             "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
         )
