@@ -85,7 +85,7 @@ def number_of_retries(fallback: int = 3) -> int:
     return int(os.environ.get("QEM_BOT_RETRIES", 0 if "PYTEST_VERSION" in os.environ else fallback))
 
 
-def make_retry_session(retries: int | None, backoff_factor: float) -> Session:
+def make_retry_session(retries: int, backoff_factor: float) -> Session:
     adapter = HTTPAdapter(
         max_retries=Retry(
             number_of_retries(retries),
