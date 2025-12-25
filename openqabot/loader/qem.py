@@ -185,7 +185,7 @@ def get_aggregate_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any
     return list(chain.from_iterable(all_data))
 
 
-def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any) -> int:
+def update_incidents(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:

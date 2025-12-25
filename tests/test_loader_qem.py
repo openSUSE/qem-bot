@@ -294,7 +294,7 @@ def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptu
     mock_response.status_code = 200
     mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
-    res = update_incidents({}, {})
+    res = update_incidents({}, [{}])
     assert res == 0
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "INFO"
@@ -304,7 +304,7 @@ def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptu
 def test_update_incidents_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
-    res = update_incidents({}, {})
+    res = update_incidents({}, [{}])
     assert res == 1
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "ERROR"
@@ -318,7 +318,7 @@ def test_update_incidents_unsuccessful_with_error_text(mocker: MockerFixture, ca
     mock_response.text = "error message"
     mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
-    res = update_incidents({}, {})
+    res = update_incidents({}, [{}])
     assert res == 2
     assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
     assert "QEM Dashboard error response: error message" in caplog.text
@@ -329,7 +329,7 @@ def test_update_incidents_unsuccessful_no_text(mocker: MockerFixture, caplog: py
     mock_patch = mocker.patch("openqabot.loader.qem.patch")
     mock_patch.return_value.status_code = 500
     mock_patch.return_value.text = ""
-    res = update_incidents({}, {})
+    res = update_incidents({}, [{}])
     assert res == 2
     assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
     assert "QEM Dashboard error response" not in caplog.text
