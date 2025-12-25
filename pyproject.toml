@@ -191,4 +191,5 @@ notice-rgx = "Copyright"
 [tool.pyright]
 include = ["openqabot", "tests", "*.py"]
 
-[tool.ty.rules]
+[tool.ty.terminal]
+error-on-warning = true
