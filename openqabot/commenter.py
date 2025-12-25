@@ -72,7 +72,7 @@ class Commenter:
             return
 
         bot_name = "openqa"
-        info = {"state": state}
+        info: dict[str, Any] = {"state": state}
         if inc.revisions:
             for key in inc.revisions:
                 info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
