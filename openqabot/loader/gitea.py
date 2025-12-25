@@ -34,6 +34,12 @@ log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
+SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
+VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
+OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/(.*)")
+URL_FINDALL_REGEX = re.compile(r"https://[^ \n]*")
+
 
 def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
@@ -78,12 +84,12 @@ def comments_url(repo_name: str, number: int) -> str:
 
 
 def get_product_name(obs_project: str) -> str:
-    product_match = re.search(r".*:PullRequest:\d+:(.*)", obs_project)
+    product_match = PROJECT_PRODUCT_REGEX.search(obs_project)
     return product_match.group(1) if product_match else ""
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, str]:
-    m = re.search(r".*/products/(.*)#([\d\.]{2,6})$", scmsync_url)
+    m = SCMSYNC_REGEX.search(scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
 
@@ -209,7 +215,7 @@ def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
 
 def _extract_version(name: str, prefix: str) -> str:
     remainder = name.removeprefix(prefix)
-    return next((part for part in remainder.split("-") if re.search(r"[.\d]+", part)), "")
+    return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
 
 
 @lru_cache(maxsize=512)
@@ -347,7 +353,7 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
     failed_packages = set()
     projects = set()
     for url in obs_urls:
-        if project_match := re.search(r".*/project/show/(.*)", url):
+        if project_match := OBS_PROJECT_SHOW_REGEX.search(url):
             obs_project = project_match.group(1)
             log.debug("Checking OBS project %s", obs_project)
             relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
@@ -387,7 +393,7 @@ def add_comments_and_referenced_build_results(
         None,
     )
     if bot_comment:
-        add_build_results(incident, re.findall(r"https://[^ \n]*", bot_comment["body"]), dry=dry)
+        add_build_results(incident, URL_FINDALL_REGEX.findall(bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
