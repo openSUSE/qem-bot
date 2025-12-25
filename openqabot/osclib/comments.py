@@ -127,12 +127,12 @@ class CommentAPI:
     @staticmethod
     def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
         """Add bot marker to comment that can be used to find comment."""
+        info_str = ""
         if info:
-            infos = []
-            for key, value in info.items():
-                infos.append("=".join((str(key), str(value))))
+            infos = ["=".join((str(key), str(value))) for key, value in info.items()]
+            info_str = " " + " ".join(infos)
 
-        marker = "<!-- {}{} -->".format(bot, " " + " ".join(infos) if info else "")
+        marker = f"<!-- {bot}{info_str} -->"
         return marker + "\n\n" + comment
 
     def add_comment(
