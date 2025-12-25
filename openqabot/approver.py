@@ -322,7 +322,7 @@ class Approver:
                 "/".join(path_parts[-4:-2]),
                 inc.inc,
                 msg,
-                inc.scm_info,
+                inc.scm_info or "",
             )
         except Exception:
             log.exception("Gitea API error: Failed to approve PR %s", inc.inc)

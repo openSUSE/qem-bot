@@ -5,9 +5,10 @@
 import io
 import logging
 import re
+from argparse import Namespace
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, NamedTuple, NoReturn
+from typing import Any, NoReturn
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -43,15 +44,6 @@ def f_inc_approver(*_args: Any) -> list[IncReq]:
 class CommentFormatTestCase:
     comment_text: str
     description: str
-
-
-class Namespace(NamedTuple):
-    dry: bool
-    token: str
-    all_incidents: bool
-    openqa_instance: str
-    incident: str
-    gitea_token: str
 
 
 openqa_instance_url = urlparse("http://instance.qa")
