@@ -4,8 +4,9 @@
 
 import logging
 import re
+from argparse import Namespace
 from collections.abc import Generator
-from typing import Any, NamedTuple, cast
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -14,13 +15,6 @@ import responses
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
 from responses import matchers
-
-
-# Fake Namespace for SyncRes initialization
-class _namespace(NamedTuple):
-    dry: bool
-    token: str
-    retry: bool
 
 
 @pytest.fixture
@@ -80,8 +74,8 @@ def fake_qem() -> Generator[None, None, None]:
 
 @pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: Any) -> tuple[int, list[Any], bytes]:
-        return (200, [], request.body)
+    def reply_callback(request: Any) -> tuple[int, dict[str, str], bytes]:
+        return (200, {}, request.body)
 
     responses.add_callback(
         responses.PATCH,
@@ -101,7 +95,7 @@ def fake_dashboard_replyback() -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fetching details for incident 100 from SMELT" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
@@ -122,7 +116,7 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
     incident = cast("Any", responses.calls[1].response).json()[0]
@@ -142,7 +136,7 @@ def test_sync_approved(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fetching details for incident 100 from SMELT" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
@@ -165,7 +159,7 @@ def test_sync_approved(
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api")
 def test_sync_dry_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.smeltsync")
-    assert SMELTSync(_namespace(dry=True, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=True, token="123", retry=False))() == 0
     assert "Dry run: Skipping dashboard update" in caplog.text
 
 

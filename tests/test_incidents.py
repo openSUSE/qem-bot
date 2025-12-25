@@ -74,25 +74,31 @@ def test_incidents_call_with_flavors() -> None:
     assert res == []
 
 
-class MyIncident_0:
+class MyIncident_0(Incident):
     """The simpler possible implementation of Incident class."""
 
     def __init__(self) -> None:
-        self.id = None
+        self.id = 0
         self.staging = False
         self.livepatch = False
-        self.packages = [None]
+        self.packages = ["pkg"]
         self.rrid = None
-        self.revisions = {("", ""): None}
-        self.project = None
+        self.revisions = {}
+        self.project = ""
         self.ongoing = True
         self.type = "smelt"
         self.embargoed = False
+        self.channels = []
+        self.rr = None
+        self.priority = None
+        self.arch_filter = None
 
-    def compute_revisions_for_product_repo(self, product_repo: str | None, product_version: str | None) -> None:
+    def compute_revisions_for_product_repo(
+        self, product_repo: list[str] | str | None, product_version: str | None
+    ) -> None:
         pass
 
-    def revisions_with_fallback(self, arch: str, version: str) -> int | None:
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
         pass
 
 
@@ -149,7 +155,7 @@ class MyIncident_2(MyIncident_1):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def revisions_with_fallback(self, arch: str, version: str) -> int | None:  # noqa: ARG002
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:  # noqa: ARG002
         return 12345
 
 
@@ -176,7 +182,7 @@ class MyIncident_3(MyIncident_2):
         self.channels = [Repos("", "", "")]
         self.emu = False
 
-    def contains_package(self, _requires: list[str]) -> bool:
+    def contains_package(self, requires: list[str]) -> bool:  # noqa: ARG002
         return True
 
 
@@ -390,8 +396,16 @@ def test_making_repo_url() -> None:
 
 
 class MyIncident_5(MyIncident_2):
-    def revisions_with_fallback(self, arch: str, version: str) -> int | None:
-        return self.revisions[ArchVer(arch, version)]
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
+        if self.revisions is None:
+            return None
+        return self.revisions[ArchVer(arch, ver)]
+
+
+def test_myincident_5_no_revisions() -> None:
+    inc = MyIncident_5()
+    inc.revisions = None
+    assert inc.revisions_with_fallback("x86_64", "15.0") is None
 
 
 @responses.activate
@@ -433,7 +447,7 @@ def test_gitea_incidents() -> None:
         for s in computed_settings:
             assert s["ARCH"] == arch
             assert s["BASE_TEST_ISSUES"] == str(inc.id)
-            assert s["BUILD"] == f":{inc.id}:None"
+            assert s["BUILD"] == f":{inc.id}:pkg"
             assert s["DISTRI"] == settings["DISTRI"]
             assert s["FLAVOR"] == flavor
             assert s["INCIDENT_ID"] == inc.id

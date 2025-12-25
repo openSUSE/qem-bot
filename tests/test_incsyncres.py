@@ -3,8 +3,8 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
+from argparse import Namespace
 from collections.abc import Generator
-from typing import NamedTuple
 from urllib.parse import urlparse
 
 import pytest
@@ -13,12 +13,6 @@ from pytest_mock import MockerFixture
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.incsyncres import IncResultsSync
-
-
-class Namespace(NamedTuple):
-    dry: bool
-    token: str
-    openqa_instance: str
 
 
 @pytest.fixture

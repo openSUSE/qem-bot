@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: MIT
 import logging
 import re
-from typing import Any, NamedTuple, cast
+from argparse import Namespace
+from typing import Any, cast
 from unittest.mock import patch
 from urllib.parse import urlparse
 
@@ -15,11 +16,6 @@ from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import openQAInterface as oQAI
 from responses import matchers
-
-
-class Args(NamedTuple):
-    openqa_instance: str
-    token: str
 
 
 @pytest.fixture
@@ -54,21 +50,21 @@ def test_bool() -> None:
     false_address = urlparse("http://fake.openqa.site")
     true_address = urlparse("https://openqa.suse.de")
 
-    assert oQAI(Args(true_address, ""))
-    assert not oQAI(Args(false_address, ""))
+    assert oQAI(Namespace(openqa_instance=true_address, token=""))
+    assert not oQAI(Namespace(openqa_instance=false_address, token=""))
 
 
 @responses.activate
 def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.retries = 0
     with pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
 
     messages = [x[-1] for x in caplog.record_tuples]
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
-    error = RequestError("POST", "no.where", "500", "no text")
+    error = RequestError("POST", "no.where", 500, "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
     messages = [x[-1] for x in caplog.record_tuples]
@@ -80,7 +76,7 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
 @pytest.mark.usefixtures("fake_osd_rsp")
 def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.post_job({"foo": "bar"})
 
     messages = [x[-1] for x in caplog.record_tuples]
@@ -94,7 +90,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
 def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
-    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.handle_job_not_found(42)
     messages = [x[-1] for x in caplog.record_tuples]
     assert len(messages) == 2
@@ -104,8 +100,8 @@ def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_get_methods_handle_errors_gracefully() -> None:
-    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
-    error = RequestError("GET", "no.where", "500", "no text")
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    error = RequestError("GET", "no.where", 500, "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
         assert client.get_job_comments(42) == []
         assert not client.get_single_job(42)
@@ -113,7 +109,7 @@ def test_get_methods_handle_errors_gracefully() -> None:
 
 
 def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
-    client = oQAI(Args(urlparse("https://openqa.suse.de"), ""))
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     with patch(
         "openqabot.openqa.OpenQA_Client.openqa_request",
         side_effect=requests.exceptions.RequestException("Request failed"),

@@ -21,7 +21,7 @@ def test_aggregate_constructor() -> None:
     config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
-    Aggregate("", None, None, None, config)
+    Aggregate("", None, None, {}, config)
 
 
 def test_aggregate_printable() -> None:
@@ -30,7 +30,7 @@ def test_aggregate_printable() -> None:
     config["FLAVOR"] = "None"
     config["archs"] = None
     config["test_issues"] = {}
-    acc = Aggregate("hello", None, None, None, config)
+    acc = Aggregate("hello", None, None, {}, config)
     assert str(acc) == "<Aggregate product: hello>"
 
 
@@ -40,8 +40,8 @@ def test_aggregate_call() -> None:
     config["FLAVOR"] = "None"
     config["archs"] = []
     config["test_issues"] = {}
-    acc = Aggregate("", None, None, None, config)
-    res = acc([], None, None)
+    acc = Aggregate("", None, None, {}, config)
+    res = acc([], {}, None)
     assert res == []
 
 
@@ -60,7 +60,7 @@ def test_aggregate_call_with_archs() -> None:
     my_config["archs"] = ["ciao"]
     my_config["test_issues"] = {}
     acc = Aggregate("", None, None, settings={}, config=my_config)
-    res = acc(incidents=[], token=None, ci_url=None)
+    res = acc(incidents=[], token={}, ci_url=None)
     assert res == []
 
 
@@ -95,7 +95,7 @@ def test_aggregate_call_with_test_issues(incident_mock: Callable[..., Any], mock
     inc = incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
     incidents = [inc]
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    res = acc(incidents=incidents, token=None, ci_url=None)
+    res = acc(incidents=incidents, token={}, ci_url=None)
     assert len(res) == 1
 
 
@@ -113,7 +113,7 @@ def test_aggregate_call_pc_pint(mocker: MockerFixture) -> None:
     acc = Aggregate("", None, None, settings=my_settings, config=my_config)
     mocker.patch("openqabot.types.aggregate.apply_publiccloud_pint_image", return_value=PINT_IMAGE_MOCK)
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    acc(incidents=[], token=None, ci_url=None)
+    acc(incidents=[], token={}, ci_url=None)
 
 
 @pytest.mark.usefixtures("request_mock")
@@ -129,7 +129,7 @@ def test_aggregate_call_pc_pint_with_incidents(mocker: MockerFixture, incident_m
     inc = incident_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
     incidents = [inc]
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    ret = acc(incidents=incidents, token=None, ci_url=None)
+    ret = acc(incidents=incidents, token={}, ci_url=None)
     assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
 
 
@@ -140,7 +140,7 @@ def test_aggregate_call_no_job_settings(mocker: MockerFixture, caplog: pytest.Lo
     my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
     acc = Aggregate("product", None, None, settings={}, config=my_config)
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[])
-    res = acc(incidents=[], token=None, ci_url=None)
+    res = acc(incidents=[], token={}, ci_url=None)
     assert res == []
     assert "No aggregate jobs found for <Aggregate product: product> on arch ciao" in caplog.text
 
@@ -159,7 +159,7 @@ def test_aggregate_call_pc_tools_fail(mocker: MockerFixture, caplog: pytest.LogC
     inc.channels = [Repos("P", "V", "ciao")]
     inc.livepatch = inc.staging = inc.embargoed = False
     inc.id = "I"
-    res = acc(incidents=[inc], token=None, ci_url=None)
+    res = acc(incidents=[inc], token={}, ci_url=None)
     assert res == []
     assert "No tools image found for <Aggregate product: product>" in caplog.text
 
@@ -178,7 +178,7 @@ def test_aggregate_call_pc_pint_fail(mocker: MockerFixture, caplog: pytest.LogCa
     inc.channels = [Repos("P", "V", "ciao")]
     inc.livepatch = inc.staging = inc.embargoed = False
     inc.id = "I"
-    res = acc(incidents=[inc], token=None, ci_url=None)
+    res = acc(incidents=[inc], token={}, ci_url=None)
     assert res == []
     assert "No PINT image found for <Aggregate product: product>" in caplog.text
 
@@ -233,7 +233,7 @@ def test_aggregate_call_ci_url(mocker: MockerFixture) -> None:
     inc.id = "I"
     inc.livepatch = inc.staging = inc.embargoed = False
     inc.channels = [Repos("P", "V", "A")]
-    res = acc([inc], None, ci_url="http://ci")
+    res = acc([inc], {}, ci_url="http://ci")
     assert len(res) == 1
     assert res[0]["openqa"]["__CI_JOB_URL"] == "http://ci"
 
@@ -243,7 +243,7 @@ def test_process_arch_json_error(mocker: MockerFixture, caplog: pytest.LogCaptur
     my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
     acc = Aggregate("product", None, None, settings={}, config=my_config)
     mocker.patch("openqabot.types.aggregate.get_json", side_effect=requests.JSONDecodeError("msg", "doc", 0))
-    res = acc(incidents=[], token=None, ci_url=None)
+    res = acc(incidents=[], token={}, ci_url=None)
     assert res == []
     assert "Invalid JSON received for aggregate jobs" in caplog.text
 
@@ -253,7 +253,7 @@ def test_process_arch_request_error(mocker: MockerFixture, caplog: pytest.LogCap
     my_config = {"FLAVOR": "None", "archs": ["ciao"], "test_issues": {}}
     acc = Aggregate("product", None, None, settings={}, config=my_config)
     mocker.patch("openqabot.types.aggregate.get_json", side_effect=requests.RequestException("error"))
-    res = acc(incidents=[], token=None, ci_url=None)
+    res = acc(incidents=[], token={}, ci_url=None)
     assert res == []
     assert "Could not fetch previous aggregate jobs" in caplog.text
 
@@ -281,7 +281,7 @@ def test_aggregate_call_deprioritize_limit(mocker: MockerFixture) -> None:
     inc.id = "I"
     inc.livepatch = inc.staging = inc.embargoed = False
     inc.channels = [Repos("P", "V", "A")]
-    res = acc([inc], None, ci_url=None)
+    res = acc([inc], {}, ci_url=None)
     assert res[0]["openqa"]["_DEPRIORITIZE_LIMIT"] == 10
 
 
@@ -297,7 +297,7 @@ def test_aggregate_call_pc_tools_success(mocker: MockerFixture) -> None:
     inc.id = "I"
     inc.livepatch = inc.staging = inc.embargoed = False
     inc.channels = [Repos("P", "V", "A")]
-    res = acc([inc], None, ci_url=None)
+    res = acc([inc], {}, ci_url=None)
     assert len(res) == 1
     assert res[0]["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "Base"
 
