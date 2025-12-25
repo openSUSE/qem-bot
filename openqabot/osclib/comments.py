@@ -7,7 +7,8 @@ from datetime import datetime
 from typing import Any
 
 from lxml import etree  # type: ignore[unresolved-import]
-from osc.core import http_DELETE, http_GET, http_POST, makeurl
+from osc.connection import http_DELETE, http_GET, http_POST
+from osc.core import makeurl
 
 from openqabot.utc import UTC
 
@@ -59,7 +60,7 @@ class CommentAPI:
         """
         url = None
         if request_id:
-            url = makeurl(self.apiurl, ["comments", "request", request_id], query)
+            url = makeurl(self.apiurl, ["comments", "request", str(request_id)], query)
         elif project_name and package_name:
             url = makeurl(self.apiurl, ["comments", "package", project_name, package_name], query)
         elif project_name:
@@ -200,7 +201,7 @@ class CommentAPI:
 
         :param comment_id: Id of the comment object.
         """
-        url = makeurl(self.apiurl, ["comment", comment_id])
+        url = makeurl(self.apiurl, ["comment", str(comment_id)])
         http_DELETE(url)
 
     def delete_children(self, comments: dict[str, Any]) -> dict[str, Any]:

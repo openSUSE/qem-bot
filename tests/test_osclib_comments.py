@@ -123,7 +123,7 @@ def test_truncate_long() -> None:
 
 def test_comment_find_no_match() -> None:
     api = CommentAPI("https://api.url")
-    comments = {1: {"comment": "not a bot comment", "id": 1}}
+    comments = {"1": {"comment": "not a bot comment", "id": "1"}}
     c, info = api.comment_find(comments, "bot")
     assert c is None
     assert info is None
@@ -131,7 +131,7 @@ def test_comment_find_no_match() -> None:
 
 def test_comment_find_wrong_bot() -> None:
     api = CommentAPI("https://api.url")
-    comments = {1: {"comment": "<!-- otherbot -->", "id": 1}}
+    comments = {"1": {"comment": "<!-- otherbot -->", "id": "1"}}
     c, info = api.comment_find(comments, "bot")
     assert c is None
     assert info is None
