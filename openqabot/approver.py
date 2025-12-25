@@ -232,8 +232,7 @@ class Approver:
 
         regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(inc=inc))
         for job in older_jobs:
-            was_ok = self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)
-            if was_ok is not None:
+            if (was_ok := self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)) is not None:
                 return was_ok
         log.info("Cannot ignore aggregate failure %s for update %s: No suitable older jobs found.", failed_job_id, inc)
         return False
