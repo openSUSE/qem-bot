@@ -269,6 +269,14 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_incident_settings", side_effect=f_inc_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
+    # Clear caches to ensure isolation between tests
+    from openqabot.openqa import openQAInterface
+
+    openQAInterface.get_job_comments.cache_clear()
+    openQAInterface.get_single_job.cache_clear()
+    openQAInterface.get_older_jobs.cache_clear()
+    openQAInterface.is_devel_group.cache_clear()
+
 
 def with_fake_qem(mode: str) -> Any:
     """Local meta-decorator that sets the behavior marker and triggers the fixture injection.
