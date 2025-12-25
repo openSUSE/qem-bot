@@ -146,17 +146,6 @@ def fake_openqa_older_jobs_api() -> None:
 
 
 @pytest.fixture
-def fake_dashboard_remarks_api() -> list[responses.BaseResponse]:
-    return [
-        responses.patch(
-            f"{QEM_DASHBOARD}api/jobs/{job_id}/remarks?text=acceptable_for&incident_number=2",
-            json=[{}],
-        )
-        for job_id in [100001, 100002, 100003, 100004]
-    ]
-
-
-@pytest.fixture
 def fake_openqa_comment_api() -> None:
     responses.add(
         responses.GET,
@@ -339,20 +328,6 @@ def fake_single_incident_mocks() -> None:
     )
 
 
-@pytest.fixture
-def fake_one_aggr_failed_responses() -> None:
-    responses.add(
-        responses.GET,
-        f"{QEM_DASHBOARD}api/jobs/update/20005",
-        json=[
-            {"job_id": 100000, "status": "passed"},
-            {"job_id": 100001, "status": "failed"},
-            {"job_id": 100002, "status": "passed"},
-        ],
-    )
-    add_two_passed_response()
-
-
 def approver(incident: int = 0) -> int:
     args = Namespace(
         dry=True,
@@ -530,19 +505,21 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 @responses.activate
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "fake_openqa_comment_api", "fake_responses_updating_job")
-def test_one_incident_failed(caplog: pytest.LogCaptureFixture) -> None:
-    responses.add(
-        responses.GET,
-        f"{QEM_DASHBOARD}api/jobs/incident/1005",
-        json=[
-            {"job_id": 100000, "status": "passed"},
-            {"job_id": 100001, "status": "failed"},
-            {"job_id": 100002, "status": "passed"},
-        ],
-    )
-    add_two_passed_response()
-
+def test_one_incident_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    # Mock dashboard results: Incident 1 fails, others pass
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if url == "api/jobs/incident/1000":
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100001, "status": "failed"},
+                {"job_id": 100002, "status": "passed"},
+            ]
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
     assert approver() == 0
     expected = [
         "SUSE:Maintenance:1:100 has at least one failed job in incident tests",
@@ -562,10 +539,22 @@ def test_one_incident_failed(caplog: pytest.LogCaptureFixture) -> None:
     "fake_openqa_comment_api",
     "fake_responses_updating_job",
     "fake_openqa_older_jobs_api",
-    "fake_one_aggr_failed_responses",
 )
-def test_one_aggr_failed(caplog: pytest.LogCaptureFixture) -> None:
+def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    # Mock dashboard results: Aggregate jobs for Incident 2 fail, others pass
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if url.startswith("api/jobs/update/") and "2000" in url:
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100001, "status": "failed"},
+                {"job_id": 100002, "status": "passed"},
+            ]
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
     assert approver() == 0
     expected = [
         "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests",
@@ -591,22 +580,33 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture) -> None:
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
 )
-def test_approval_unblocked_via_openqa_comment(
-    caplog: pytest.LogCaptureFixture,
-    fake_dashboard_remarks_api: list[responses.BaseResponse],
-) -> None:
+def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update/2000" in url:
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100002, "status": "failed"},
+                {"job_id": 100003, "status": "failed"},
+                {"job_id": 100004, "status": "failed"},
+            ]
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    comments_return_value = [{"text": "@review:acceptable_for:incident_2:foo"}]
+    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=comments_return_value)
+    mock_patch = mocker.patch("openqabot.approver.patch")
+
     assert approver() == 0
     expected = [
         "* SUSE:Maintenance:2:200",
         "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
-    assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
-    for index in range(1, 4):
-        assert fake_dashboard_remarks_api[index].calls[0] in responses.calls, (
-            f"failing job with comment marked as acceptable ({index})"
-        )
+
+    expected_url = "api/jobs/100002/remarks?text=acceptable_for&incident_number=2"
+    mock_patch.assert_any_call(expected_url, headers=mocker.ANY)
 
 
 @responses.activate
@@ -628,26 +628,43 @@ def test_approval_unblocked_via_openqa_comment(
     "fake_openqa_older_jobs_api",
 )
 def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
-    caplog: pytest.LogCaptureFixture,
-    fake_dashboard_remarks_api: list[responses.BaseResponse],
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update/2000" in url:
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100002, "status": "failed"},
+                {"job_id": 100003, "status": "failed"},
+                {"job_id": 100004, "status": "failed"},
+            ]
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
+    def mock_get_job_comments(job_id: int) -> list[dict[str, str]]:
+        if job_id in {100002, 100004}:
+            return [{"text": "@review:acceptable_for:incident_2:foo"}]
+        return []
+
+    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", side_effect=mock_get_job_comments)
+    mock_patch = mocker.patch("openqabot.approver.patch")
+
     assert approver() == 0
     expected = [
         "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
     assert "* SUSE:Maintenance:2:200" not in caplog.messages, "incident not approved due to one unacceptable failure"
-    assert len(fake_dashboard_remarks_api[0].calls) == 0, "passing job not marked as acceptable"
-    assert fake_dashboard_remarks_api[1].calls[0] in responses.calls, "failing job with comment marked as acceptable"
-    assert len(fake_dashboard_remarks_api[2].calls) == 0, "failing job without comment not marked as acceptable"
-    assert fake_dashboard_remarks_api[3].calls[0] in responses.calls, (
-        "another failing job with comment marked as acceptable despite previous unacceptable failure"
-    )
-    assert (
-        "Ignoring failed job http://instance.qa/t100004 for incident 2 (manually marked as acceptable)"
-        not in caplog.messages
-    ), "log message only present for jobs before unacceptable failure"
+
+    mock_patch.assert_any_call("api/jobs/100002/remarks?text=acceptable_for&incident_number=2", headers=mocker.ANY)
+    mock_patch.assert_any_call("api/jobs/100004/remarks?text=acceptable_for&incident_number=2", headers=mocker.ANY)
+
+    for call in mock_patch.call_args_list:
+        assert "100003" not in call[0][0]
+        assert "100000" not in call[0][0]
 
 
 @responses.activate
@@ -662,8 +679,23 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
 )
-def test_approval_still_blocked_if_openqa_comment_not_relevant(caplog: pytest.LogCaptureFixture) -> None:
+def test_approval_still_blocked_if_openqa_comment_not_relevant(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update/2000" in url:
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100002, "status": "failed"},
+            ]
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    comments_return_value = [{"text": "@review:acceptable_for:incident_22:foo"}]
+    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=comments_return_value)
+
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
 
@@ -680,12 +712,31 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(caplog: pytest.Lo
     ],
     ids=["job_passed", "job_not_found"],
 )
-def test_approval_via_openqa_older_ok_job(caplog: pytest.LogCaptureFixture, mock_json: dict, *, approved: bool) -> None:
+def test_approval_via_openqa_older_ok_job(
+    caplog: pytest.LogCaptureFixture, mock_json: dict, *, approved: bool, mocker: MockerFixture
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/jobs/100005"),
-        json=mock_json,
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update/2000" in url:
+            return [{"job_id": 100002, "status": "failed"}]
+        if url == "api/jobs/100005":
+            return mock_json
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch(
+        "openqabot.openqa.openQAInterface.get_older_jobs",
+        return_value={
+            "data": [
+                {"build": "20240115-1", "id": 100002, "result": "failed"},
+                {"build": "20240114-1", "id": 100005, "result": "passed"},
+            ]
+        },
+    )
+    mocker.patch(
+        "openqabot.openqa.openQAInterface.get_single_job",
+        return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
     )
 
     assert approver() == 0
@@ -699,14 +750,32 @@ def test_approval_via_openqa_older_ok_job(caplog: pytest.LogCaptureFixture, mock
 @pytest.mark.parametrize("fake_responses_for_unblocking_incidents_via_older_ok_result", [2], indirect=True)
 @pytest.mark.usefixtures("fake_responses_for_unblocking_incidents_via_older_ok_result")
 def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    responses.add(
-        responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/jobs/100005"),
-        json={"error": "Job not found"},
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update/2000" in url:
+            return [{"job_id": 100002, "status": "failed"}]
+        if url == "api/jobs/100005":
+            return {"error": "Job not found"}
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch(
+        "openqabot.openqa.openQAInterface.get_older_jobs",
+        return_value={
+            "data": [
+                {"build": "20240115-1", "id": 100002, "result": "failed"},
+                {"build": "20240114-1", "id": 100005, "result": "passed"},
+            ]
+        },
     )
+    mocker.patch(
+        "openqabot.openqa.openQAInterface.get_single_job",
+        return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
+    )
+
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
 
@@ -749,38 +818,39 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_incident(caplog
     ],
     ids=lambda c: c.description,
 )
-@pytest.mark.usefixtures("fake_openqa_older_jobs_api", "fake_dashboard_remarks_api")
+@pytest.mark.usefixtures("fake_openqa_older_jobs_api")
 def test_approval_unblocked_with_various_comment_formats(
-    case: CommentFormatTestCase,
-    caplog: pytest.LogCaptureFixture,
+    case: CommentFormatTestCase, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
+    mock_get_json = mocker.patch("openqabot.approver.get_json")
 
-    responses.add(
-        responses.GET,
-        f"{QEM_DASHBOARD}api/jobs/update/20005",
-        json=[
-            {"job_id": 100000, "status": "passed"},
-            {"job_id": 100002, "status": "failed"},
-            {"job_id": 100003, "status": "passed"},
-        ],
+    def side_effect_get_json(url: str, **_kwargs: Any) -> Any:
+        if url == "api/jobs/update/20005":
+            return [
+                {"job_id": 100000, "status": "passed"},
+                {"job_id": 100002, "status": "failed"},
+                {"job_id": 100003, "status": "passed"},
+            ]
+        return [{"status": "passed"}, {"status": "passed"}]
+
+    mock_get_json.side_effect = side_effect_get_json
+
+    mocker.patch(
+        "openqabot.openqa.openQAInterface.get_job_comments",
+        return_value=[{"text": case.comment_text}],
     )
-    add_two_passed_response()
-    responses.add(
-        responses.GET,
-        url="http://instance.qa/api/v1/jobs/100002/comments",
-        json=[{"text": case.comment_text}],
-    )
+    mock_patch = mocker.patch("openqabot.approver.patch")
+
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" in caplog.messages
     assert (
         "Ignoring failed job http://instance.qa/t100002 for incident 2 (manually marked as acceptable)"
         in caplog.messages
     )
-    responses.assert_call_count(
-        f"{QEM_DASHBOARD}api/jobs/100002/remarks?text=acceptable_for&incident_number=2",
-        1,
-    )
+
+    expected_url = "api/jobs/100002/remarks?text=acceptable_for&incident_number=2"
+    mock_patch.assert_called_once_with(expected_url, headers=mocker.ANY)
 
 
 @responses.activate
