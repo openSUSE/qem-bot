@@ -203,16 +203,12 @@ class Incidents(BaseConf):
             f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
             if channel.product == "SLFO":
                 for inc_channel in inc.channels:
-                    if (
-                        inc_channel.product == "SUSE:SLFO"
-                        and (
-                            channel.product_version == inc_channel.product_version
-                            if len(channel.product_version) > 0
-                            else inc_channel.version.startswith(channel.version)
-                        )
-                        and channel.product_version in {"", inc_channel.product_version}
-                        and inc_channel.arch == arch
-                    ):
+                    version_matches = (
+                        channel.product_version == inc_channel.product_version
+                        if channel.product_version
+                        else inc_channel.version.startswith(channel.version)
+                    )
+                    if inc_channel.arch == arch and version_matches:
                         issue_dict[issue] = inc
                         channels_set.add(inc_channel)
             elif f_channel in inc.channels:
