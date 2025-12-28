@@ -10,6 +10,7 @@ updates information about incidents and related openQA tests.
 
 ## Usage:
 
+<!-- usage_start -->
     >>> qem-bot.py --help
     usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
                    -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
@@ -55,6 +56,7 @@ updates information about incidents and related openQA tests.
                             Yaml config with list of singlearch packages for
                             incidents run
       -r, --retry RETRY     Number of retries
+<!-- usage_end -->
 
 ## Expected workflow
 
@@ -85,7 +87,9 @@ Action `inc-comment` can be used to add comments to release requests inside IBS 
 An example of such comment:
 
 ```
-<!-- openqa state=failed revision_15-SP3_x86_64=1636983205 revision_15-SP3_ppc64le=1636982976 revision_15-SP3_s390x=1636982978 revision_15-SP3_aarch64=1636982975 revision_15.3_x86_64=0 -->
+<!-- openqa state=failed revision_15-SP3_x86_64=1636983205
+revision_15-SP3_ppc64le=1636982976 revision_15-SP3_s390x=1636982978
+revision_15-SP3_aarch64=1636982975 revision_15.3_x86_64=0 -->
 
 
  __Group [Maintenance: Containers 15-SP3 Updates@Server-DVD-Updates](https://openqa.suse.de/tests/overview?version=15-SP3&groupid=369&flavor=Server-DVD-Updates&distri=sle&build=20211115-1)__
@@ -237,7 +241,8 @@ The first bot command you want to invoke is one of the `…-sync` commands, e.g.
 the following one to sync Gitea PRs into the dashboard:
 
 ```
-python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
+python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data \
+    -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
 ```
 
 The `--fake-data` switch means that it will not actually query Gitea and just
