@@ -141,21 +141,24 @@ class Incidents(BaseConf):
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
             return None
-        full_post: dict[str, Any] = {}
-        full_post["api"] = "api/incident_settings"
-        full_post["qem"] = {}
-        full_post["openqa"] = {}
-        full_post["openqa"].update(self.settings)
-        full_post["qem"]["incident"] = inc.id
-        full_post["openqa"]["ARCH"] = arch
-        full_post["qem"]["arch"] = arch
-        full_post["openqa"]["FLAVOR"] = flavor
-        full_post["qem"]["flavor"] = flavor
-        full_post["openqa"]["VERSION"] = self.settings["VERSION"]
-        full_post["qem"]["version"] = self.settings["VERSION"]
-        full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-        full_post["openqa"].update(OBSOLETE_PARAMS)
-        full_post["openqa"]["INCIDENT_ID"] = inc.id
+        full_post: dict[str, Any] = {
+            "api": "api/incident_settings",
+            "qem": {
+                "incident": inc.id,
+                "arch": arch,
+                "flavor": flavor,
+                "version": self.settings["VERSION"],
+            },
+            "openqa": {
+                **self.settings,
+                "ARCH": arch,
+                "FLAVOR": flavor,
+                "VERSION": self.settings["VERSION"],
+                "DISTRI": self.settings["DISTRI"],
+                "INCIDENT_ID": inc.id,
+                **OBSOLETE_PARAMS,
+            },
+        }
 
         if cfg.ci_url:
             full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
