@@ -122,8 +122,7 @@ class Incident:
             if arch_filter is not None and repo.arch not in arch_filter:
                 continue
             version = repo.version
-            v = re.match(version_pattern, repo.version)
-            if v:
+            if v := re.match(version_pattern, repo.version):
                 version = v.group(0)
 
             repo_info = (repo.product, repo.version, repo.product_version)
@@ -161,15 +160,9 @@ class Incident:
 
     @staticmethod
     def _is_livepatch(packages: list[str]) -> bool:
-        kgraft = False
-
-        for package in packages:
-            if package.startswith(("kernel-default", "kernel-source", "kernel-azure")):
-                return False
-            if package.startswith(("kgraft-patch-", "kernel-livepatch")):
-                kgraft = True
-
-        return kgraft
+        if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
+            return False
+        return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
         for package in self.packages:
