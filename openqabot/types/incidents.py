@@ -174,18 +174,11 @@ class Incidents(BaseConf):
                 "REPOHASH": revs,
                 "BUILD": f":{inc.id}:{inc.packages[0]}",
                 **OBSOLETE_PARAMS,
+                **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
+                **({"KGRAFT": "1"} if inc.livepatch else {}),
+                **({"RRID": inc.rrid} if inc.rrid else {}),
             },
         }
-
-        if cfg.ci_url:
-            full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
-
-        if inc.livepatch:
-            full_post["openqa"]["KGRAFT"] = "1"
-
-        if inc.rrid:
-            full_post["openqa"]["RRID"] = inc.rrid
-
         channels_set = set()
         issue_dict = {}
 
