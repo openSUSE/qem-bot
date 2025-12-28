@@ -65,14 +65,15 @@ class openQAInterface:
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         log.info("Fetching openQA jobs for %s", pformat(data))
-        param = {}
-        param["scope"] = "relevant"
-        param["latest"] = "1"
-        param["flavor"] = data.flavor
-        param["distri"] = data.distri
-        param["build"] = data.build
-        param["version"] = data.version
-        param["arch"] = data.arch
+        param = {
+            "scope": "relevant",
+            "latest": "1",
+            "flavor": data.flavor,
+            "distri": data.distri,
+            "build": data.build,
+            "version": data.version,
+            "arch": data.arch,
+        }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
     @lru_cache(maxsize=512)
