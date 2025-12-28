@@ -64,7 +64,7 @@ def get_max_revision(
             raise NoRepoFoundError from e
 
         if cs is None:
-            log.error("RepoHash calculation failed: No revision tag found in %s", url)
+            log.info("Incident skipped: RepoHash calculation failed, no revision tag found in %s", url)
             raise NoRepoFoundError
         max_rev = max(max_rev, int(str(cs.text)))
 

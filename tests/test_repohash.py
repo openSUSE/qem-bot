@@ -69,7 +69,7 @@ def test_get_max_revision_3() -> None:
 
 @responses.activate
 def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     add_sles_sled_response(requests.ConnectionError("Failed"))
 
     with pytest.raises(NoRepoFoundError):
@@ -81,7 +81,7 @@ def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> N
 
 @responses.activate
 def test_get_max_revision_httperror(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     add_sles_sled_response(requests.HTTPError("Failed"))
 
     with pytest.raises(NoRepoFoundError):
@@ -92,7 +92,7 @@ def test_get_max_revision_httperror(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 def test_get_max_revision_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid>")
 
     with pytest.raises(NoRepoFoundError):
@@ -103,13 +103,13 @@ def test_get_max_revision_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 def test_get_max_revision_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
     add_sles_sled_response("<invalid></invalid>")
 
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "RepoHash calculation failed: No revision tag found in %s" in caplog.records[0].msg
+    assert "Incident skipped: RepoHash calculation failed, no revision tag found in %s" in caplog.records[0].msg
 
 
 @responses.activate
