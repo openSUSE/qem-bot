@@ -89,3 +89,7 @@ test-all-commands-unstable:
 .PHONY: setup-hooks
 setup-hooks:
 	pre-commit install --install-hooks -t commit-msg -t pre-commit
+
+.PHONY: update-readme
+update-readme:
+	python3 scripts/update_readme.py

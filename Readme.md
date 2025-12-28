@@ -11,19 +11,19 @@ updates information about incidents and related openQA tests.
 ## Usage:
 
     >>> qem-bot.py --help
-    Usage: qem-bot [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN [-i OPENQA_INSTANCE]
-                  [-s SINGLEARCH] [-r RETRY]
-                  {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
-                  ...
+    usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
+                   -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
+                   [-r RETRY]
+                   {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
 
-    QEM-Dashboard, SMELT and openQA connector
+    QEM-Dashboard, SMELT, Gitea and openQA connector
 
     positional arguments:
-      {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
+      {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
         full-run            Full schedule for Maintenance Incidents in openQA
-        incidents-run       Incidents-only schedule for Maintenance Incidents in
+        incidents-run       Incidents only schedule for Maintenance Incidents in
                             openQA
-        updates-run         Updates-only schedule for Maintenance Incidents in
+        updates-run         updates only schedule for Maintenance Incidents in
                             openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
@@ -31,24 +31,30 @@ updates information about incidents and related openQA tests.
         inc-comment         Comment incidents in BuildService
         inc-sync-results    Sync results of openQA incidents jobs to Dashboard
         aggr-sync-results   Sync results of openQA aggregates jobs to Dashboard
-        increment-approve   Approve the most recent product increment for an OBS project if tests passed
+        increment-approve   Approve the most recent product increment for an OBS
+                            project if tests passed
+        repo-diff           Computes the diff between two repositories
+        amqp                AMQP listener daemon
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
-      -c CONFIGS, --configs CONFIGS
-                            Directory or single file with openqabot configuration metadata
+      -c, --configs CONFIGS
+                            Directory or single file with openqabot configuration
+                            metadata
       --dry                 Dry run, do not post any data
+      --fake-data           Use fake data, do not query data from real services
+      --dump-data           Dump requested data for later use via --fake-data
       -d, --debug           Enable debug output
-      -t TOKEN, --token TOKEN
-                            Token for qem dashboard api
-      -i OPENQA_INSTANCE, --openqa-instance OPENQA_INSTANCE
-                            The openQA instance to use. Instances other than OSD do not
-                            update dashboard database
-      -s SINGLEARCH, --singlearch SINGLEARCH
-                            YAML config with list of singlearch packages for
+      -t, --token TOKEN     Token for qem dashboard api
+      -g, --gitea-token GITEA_TOKEN
+                            Token for Gitea api
+      -i, --openqa-instance OPENQA_INSTANCE
+                            The openQA instance to use Other instances than OSD do
+                            not update dashboard database
+      -s, --singlearch SINGLEARCH
+                            Yaml config with list of singlearch packages for
                             incidents run
-      -r RETRY, --retry RETRY
-                            Number of retries
+      -r, --retry RETRY     Number of retries
 
 ## Expected workflow
 
