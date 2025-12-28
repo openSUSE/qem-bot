@@ -131,7 +131,7 @@ class Incidents(BaseConf):
         flavor = ctx.flavor
         data = ctx.data
         if inc.type == "git" and not inc.ongoing:
-            log.info(
+            log.debug(
                 "PR %s skipped (arch %s, flavor %s): PR is closed, approved, or review no longer requested",
                 inc.id,
                 arch,
