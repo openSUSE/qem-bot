@@ -346,38 +346,66 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
+def _get_project_results(obs_project: str, *, dry: bool, unavailable_projects: set[str]) -> list[Any]:
+    build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
+    if dry:
+        return read_xml("build-results-124-" + obs_project).getroot().findall("result")
+    try:
+        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
+    except urllib.error.HTTPError:
+        unavailable_projects.add(obs_project)
+        log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
+        return []
+
+
+def _process_obs_url(
+    url: str,
+    incident: dict[str, Any],
+    *,
+    dry: bool,
+    results: dict[str, set[str]],
+) -> None:
+    if not (project_match := OBS_PROJECT_SHOW_REGEX.search(url)):
+        return
+    obs_project = project_match.group(1)
+    log.debug("Checking OBS project %s", obs_project)
+    relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
+
+    for res in _get_project_results(obs_project, dry=dry, unavailable_projects=results["unavailable"]):
+        if is_build_result_relevant(res, relevant_archs):
+            add_build_result(
+                incident,
+                res,
+                results["projects"],
+                results["successful"],
+                results["unpublished"],
+                results["failed"],
+            )
+
+
 def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
-    successful_packages = set()
-    unavailable_projects = set()
-    unpublished_repos = set()
-    failed_packages = set()
-    projects = set()
+    results = {
+        "successful": set(),
+        "unavailable": set(),
+        "unpublished": set(),
+        "failed": set(),
+        "projects": set(),
+    }
+
     for url in obs_urls:
-        if project_match := OBS_PROJECT_SHOW_REGEX.search(url):
-            obs_project = project_match.group(1)
-            log.debug("Checking OBS project %s", obs_project)
-            relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
-            build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
-            if dry:
-                build_info = read_xml("build-results-124-" + obs_project)
-            else:
-                try:
-                    build_info = osc.util.xml.xml_parse(http_GET(build_info_url))
-                except urllib.error.HTTPError:
-                    unavailable_projects.add(obs_project)
-                    log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
-                    continue
-            for res in build_info.getroot().findall("result"):
-                if not is_build_result_relevant(res, relevant_archs):
-                    continue
-                add_build_result(incident, res, projects, successful_packages, unpublished_repos, failed_packages)
-    if len(unpublished_repos) > 0:
-        log.info("PR %i: Some repos not published yet: %s", incident["number"], ", ".join(unpublished_repos))
-    if len(failed_packages) > 0:
-        log.info("PR %i: Some packages failed: %s", incident["number"], ", ".join(failed_packages))
-    incident["channels"] = [*projects]
-    incident["failed_or_unpublished_packages"] = [*failed_packages, *unpublished_repos, *unavailable_projects]
-    incident["successful_packages"] = [*successful_packages]
+        _process_obs_url(url, incident, dry=dry, results=results)
+
+    if results["unpublished"]:
+        log.info("PR %i: Some repos not published yet: %s", incident["number"], ", ".join(results["unpublished"]))
+    if results["failed"]:
+        log.info("PR %i: Some packages failed: %s", incident["number"], ", ".join(results["failed"]))
+
+    incident.update({
+        "channels": sorted(results["projects"]),
+        "failed_or_unpublished_packages": sorted(results["failed"] | results["unpublished"] | results["unavailable"]),
+        "successful_packages": sorted(results["successful"]),
+    })
+
     if "scminfo" not in incident and len(OBS_PRODUCTS) == 1:
         incident["scminfo"] = incident.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
 
