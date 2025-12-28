@@ -84,12 +84,13 @@ test: only-test checkstyle ## Run all tests and style checks
 test-with-coverage: only-test-with-coverage checkstyle ## Run tests with coverage and style checks
 
 BOT_COMMANDS ?= $(shell python3 ./qem-bot.py --help | grep '{.*}' | head -n 1 | sed -n 's/.*{\(.*\)}.*/\1/p' | tr ',' ' ')
+TIMEOUT ?= 30
 
 .PHONY: test-all-commands-unstable
 test-all-commands-unstable: ## Test all bot commands with fake data
 	for i in $(BOT_COMMANDS); do \
 		echo "### $$i" && \
-		timeout --foreground 30 $(UNSHARE) python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i || \
+		timeout --foreground $(TIMEOUT) $(UNSHARE) python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i || \
 		{ ret=$$?; [ $$ret -eq 124 ] || [ $$ret -eq 0 ] || exit $$ret; }; \
 	done
 
