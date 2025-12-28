@@ -186,13 +186,16 @@ install dependencies:
     source .venv/bin/activate
     uv sync
 
+There are several Makefile targets available for development. Run `make help`
+to see a full list of available targets.
+
 There are currently only limited automatic tests available. Run `make test`
 or `pytest` to execute Python-based unit tests. Run e.g.
 `pytest tests/test_amqp.py` to execute a single test.
 
 Run `make test-with-coverage` to check for 100% statement and branch coverage.
 
-Run `make checkstyle` to check coding style and `make lint` for linting.
+Run `make checkstyle` to run all style and static analysis checks.
 
 Run `check-maintainability` to check maintainability. This requires the tool
 `radon`. You can also check individual files displaying the exact percentage via
