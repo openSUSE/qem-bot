@@ -203,7 +203,7 @@ details. There is also
 for the grades.
 
 Another simple way for at least syntax correctness checks is to just call
-`python3 ./qem-bot.py --help` to show the help text if the source can be correctly
+`python3 ./qem-bot.py --help` to show help if the source can be correctly
 parsed. The next recommended way for testing is to call `qem-bot.py` with the
 `--dry` command line parameter in different modes. This might need additional
 data, e.g. "metadata" from https://gitlab.suse.de/qa-maintenance/metadata/ .
@@ -241,8 +241,8 @@ The first bot command you want to invoke is one of the `…-sync` commands, e.g.
 the following one to sync Gitea PRs into the dashboard:
 
 ```
-python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data \
-    -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
+python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot \
+    gitea-sync --allow-build-failures --consider-unrequested-prs
 ```
 
 The `--fake-data` switch means that it will not actually query Gitea and just
@@ -272,7 +272,8 @@ MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/sl
 ```
 
 To fake test results you can use an SQL command like
-`update jobs set state = 'done', result = 'softfailed' where state = 'scheduled';`
+`update jobs set state = 'done', result = 'softfailed' \
+where state = 'scheduled';`
 on your local openQA database.
 
 If you want to re-try these steps from scratch you need to clean up incident
