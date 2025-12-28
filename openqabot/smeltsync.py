@@ -43,27 +43,23 @@ class SMELTSync:
 
     @staticmethod
     def _is_inreview(rr_number: dict[str, Any]) -> bool:
-        if rr_number["reviewSet"]:
-            return rr_number["status"]["name"] == "review"
-        return False
+        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
 
     @staticmethod
     def _is_revoked(rr_number: dict[str, Any]) -> bool:
-        if rr_number["reviewSet"]:
-            return rr_number["status"]["name"] == "revoked"
-        return False
+        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
 
     @staticmethod
     def _is_accepted(rr_number: dict[str, Any]) -> bool:
-        return rr_number["status"]["name"] == "accepted" or rr_number["status"]["name"] == "new"
+        return rr_number["status"]["name"] in {"accepted", "new"}
 
     @staticmethod
     def _has_qam_review(rr_number: dict[str, Any]) -> bool:
-        if not rr_number["reviewSet"]:
-            return False
-        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
-        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-        return bool(review) and review[0]["status"]["name"] in {"review", "new"}
+        return any(
+            r.get("assignedByGroup", {}).get("name") == "qam-openqa"
+            and r.get("status", {}).get("name") in {"review", "new"}
+            for r in rr_number.get("reviewSet", [])
+        )
 
     @classmethod
     def _create_record(cls, inc: dict[str, Any]) -> dict[str, Any]:
