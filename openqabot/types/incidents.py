@@ -123,6 +123,21 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
+    def _get_matching_channels(self, inc: Incident, channel: ProdVer, arch: str) -> list[Repos]:
+        if channel.product == "SLFO":
+            return [
+                ic
+                for ic in inc.channels
+                if ic.arch == arch
+                and (
+                    channel.product_version == ic.product_version
+                    if channel.product_version
+                    else ic.version.startswith(channel.version)
+                )
+            ]
+        f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
+        return [f_channel] if f_channel in inc.channels else []
+
     def _handle_incident(  # noqa: PLR0911,C901
         self, ctx: IncContext, cfg: IncConfig
     ) -> dict[str, Any] | None:
@@ -179,37 +194,19 @@ class Incidents(BaseConf):
                 **({"RRID": inc.rrid} if inc.rrid else {}),
             },
         }
-        channels_set = set()
-        issue_dict = {}
 
         log.debug("Incident %s: Active channels: %s", inc.id, inc.channels)
-        for issue, channel in data["issues"].items():
-            log.debug(
-                "Checking metadata channel: product=%s, version=%s, arch=%s",
-                channel.product,
-                f"{channel.version}#{channel.product_version}",
-                arch,
-            )
-            f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
-            if channel.product == "SLFO":
-                for inc_channel in inc.channels:
-                    version_matches = (
-                        channel.product_version == inc_channel.product_version
-                        if channel.product_version
-                        else inc_channel.version.startswith(channel.version)
-                    )
-                    if inc_channel.arch == arch and version_matches:
-                        issue_dict[issue] = inc
-                        channels_set.add(inc_channel)
-            elif f_channel in inc.channels:
-                issue_dict[issue] = inc
-                channels_set.add(f_channel)
+        matches = {
+            issue: matched
+            for issue, channel in data["issues"].items()
+            if (matched := self._get_matching_channels(inc, channel, arch))
+        }
 
-        if not issue_dict:
+        if not matches:
             log.debug("Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch)
             return None
 
-        if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
+        if "required_issues" in data and set(matches.keys()).isdisjoint(data["required_issues"]):
             return None
 
         version = self.settings["VERSION"]
@@ -221,7 +218,7 @@ class Incidents(BaseConf):
             "Kernel" in flavor
             and not inc.livepatch
             and not flavor.endswith("Azure")
-            and set(issue_dict.keys()).isdisjoint({
+            and set(matches.keys()).isdisjoint({
                 "OS_TEST_ISSUES",  # standard product dir
                 "LTSS_TEST_ISSUES",  # LTSS product dir
                 "BASE_TEST_ISSUES",  # GA product dir SLE15+
@@ -232,9 +229,10 @@ class Incidents(BaseConf):
             log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
             return None
 
-        for key, value in issue_dict.items():
-            full_post["openqa"][key] = str(value.id)
+        for issue in matches:
+            full_post["openqa"][issue] = str(inc.id)
 
+        channels_set = {c for matched in matches.values() for c in matched}
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
             sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
