@@ -16,6 +16,40 @@ from openqabot.utils import get_yml_list
 log = getLogger("bot.loader.config")
 
 
+def _load_one_metadata(
+    path: Path,
+    data: dict,
+    *,
+    aggregate: bool,
+    incidents: bool,
+    extrasettings: set[str],
+) -> list[Aggregate | Incidents]:
+    ret: list[Aggregate | Incidents] = []
+    settings = data.get("settings")
+    if not settings:
+        log.info("Configuration skipped: Missing settings in '%s'", path)
+        return ret
+
+    product = data.get("product")
+    if not product:
+        log.debug("Configuration skipped: Missing 'product' in '%s'", path)
+        return ret
+
+    product_repo = data.get("product_repo")
+    product_version = data.get("product_version")
+
+    for key in data:
+        if key == "incidents" and not incidents:
+            ret.append(Incidents(product, product_repo, product_version, settings, data["incidents"], extrasettings))
+        elif key == "aggregate" and not aggregate:
+            try:
+                ret.append(Aggregate(product, product_repo, product_version, settings, data["aggregate"]))
+            except NoTestIssuesError:
+                log.info("Aggregate configuration skipped: Missing 'test_issues' for product %s", product)
+
+    return ret
+
+
 def load_metadata(
     path: Path,
     *,
@@ -24,15 +58,9 @@ def load_metadata(
     extrasettings: set[str],
 ) -> list[Aggregate | Incidents]:
     ret: list[Aggregate | Incidents] = []
-
     loader = YAML(typ="safe")
 
-    log.debug(
-        "Loading metadata from %s: Incidents=%s, Aggregates=%s",
-        path,
-        not incidents,
-        not aggregate,
-    )
+    log.debug("Loading metadata from %s: Incidents=%s, Aggregates=%s", path, not incidents, not aggregate)
     for p in get_yml_list(path):
         try:
             data = loader.load(p)
@@ -40,53 +68,42 @@ def load_metadata(
             log.exception("YAML load failed: File %s", p)
             continue
 
-        try:
-            settings = data.get("settings")
-        except AttributeError:
-            log.info("Configuration skipped: Missing settings in '%s'", p)
+        if not isinstance(data, dict):
             continue
 
-        if "product" not in data:
-            log.debug("Configuration skipped: Missing 'product' in '%s'", p)
-            continue
-        for key in data:
-            if key == "incidents" and not incidents:
-                ret.append(
-                    Incidents(
-                        data["product"],
-                        data.get("product_repo"),
-                        data.get("product_version"),
-                        settings,
-                        data[key],
-                        extrasettings,
-                    ),
-                )
-            elif key == "aggregate" and not aggregate:
-                try:
-                    ret.append(
-                        Aggregate(
-                            data["product"],
-                            data.get("product_repo"),
-                            data.get("product_version"),
-                            settings,
-                            data[key],
-                        ),
-                    )
-                except NoTestIssuesError:
-                    log.info("Aggregate configuration skipped: Missing 'test_issues' for product %s", data["product"])
-            else:
-                continue
+        ret.extend(_load_one_metadata(p, data, aggregate=aggregate, incidents=incidents, extrasettings=extrasettings))
+
     log.debug("Metadata loaded: %d items", len(ret))
     return ret
 
 
+def _parse_product(path: Path, data: dict) -> list[Data]:
+    try:
+        aggregate = data["aggregate"]
+        flavor = aggregate["FLAVOR"]
+        archs = aggregate["archs"]
+        settings = data["settings"]
+        distri = settings["DISTRI"]
+        version = settings["VERSION"]
+        product = data["product"]
+    except KeyError as e:
+        log.info("Configuration skipped: File %s missing required setting %s", path, e)
+        return []
+
+    return [Data(0, 0, flavor, arch, distri, version, "", product) for arch in archs]
+
+
 def read_products(path: Path) -> list[Data]:
     loader = YAML(typ="safe")
-    ret = []
+    ret: list[Data] = []
 
     log.debug("Loading product definitions from %s", path)
     for p in get_yml_list(path):
-        data = loader.load(p)
+        try:
+            data = loader.load(p)
+        except YAMLError:
+            log.exception("YAML load failed: File %s", p)
+            continue
 
         if not data:
             log.info("Configuration skipped: File %s is empty", p)
@@ -95,16 +112,7 @@ def read_products(path: Path) -> list[Data]:
             log.info("Configuration skipped: File %s has invalid format", p)
             continue
 
-        try:
-            flavor = data["aggregate"]["FLAVOR"]
-            distri = data["settings"]["DISTRI"]
-            version = data["settings"]["VERSION"]
-            product = data["product"]
-        except KeyError as e:
-            log.info("Configuration skipped: File %s missing required setting %s", p, e)
-            continue
-
-        ret.extend(Data(0, 0, flavor, arch, distri, version, "", product) for arch in data["aggregate"]["archs"])
+        ret.extend(_parse_product(p, data))
 
     return ret
 
