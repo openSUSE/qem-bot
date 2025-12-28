@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 
 import pytest
@@ -100,8 +101,13 @@ class MyIncident_0(Incident):
     ) -> bool:
         return True
 
-    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
-        pass
+    def revisions_with_fallback(self, arch: str, ver: str) -> int | None:  # noqa: ARG002
+        return None
+
+
+def test_myincident_0_revisions_with_fallback() -> None:
+    inc = MyIncident_0()
+    assert inc.revisions_with_fallback("x86_64", "15.0") is None
 
 
 def test_incidents_call_with_incidents() -> None:
@@ -1087,13 +1093,6 @@ class MyIncident_NoRev(Incident):
         self.revisions = None
         self.channels = []
 
-    def compute_revisions_for_product_repo(
-        self,
-        product_repo: list[str] | str | None,  # noqa: ARG002
-        product_version: str | None,  # noqa: ARG002
-    ) -> bool:
-        return False
-
 
 def test_handle_incident_no_revisions_return_none() -> None:
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
@@ -1111,3 +1110,126 @@ def test_handle_incident_no_revisions_return_none() -> None:
     cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
 
     assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_handle_incident_revisions_fallback_none() -> None:
+    test_config = {
+        "FLAVOR": {
+            "AAA": {
+                "archs": ["x86_64"],
+                "issues": {"SOME_ISSUE": "product:version"},
+                "packages": ["pkg"],
+            }
+        }
+    }
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+
+    inc = MyIncident_NoRev()
+    # Mock compute_revisions_for_product_repo to return True
+    import unittest.mock
+
+    with unittest.mock.patch.object(inc, "compute_revisions_for_product_repo", return_value=True):
+        ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=incidents_obj.flavors["AAA"])
+        cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+        # This should trigger line 261 in openqabot/types/incidents.py
+        assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
+
+
+def test_should_skip_embargoed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.INFO)
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+    # Enable embargo filtering for flavor AAA
+    mocker.patch.object(incidents_obj, "filter_embargoed", return_value=True)
+
+    inc = MyIncident_NoRev()
+    inc.embargoed = True
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+
+    # This should trigger line 147-148 in openqabot/types/incidents.py
+    assert incidents_obj._should_skip(ctx, cfg, {}) is True  # noqa: SLF001
+    assert "Incident 1 skipped: Embargoed and embargo-filtering enabled" in caplog.text
+
+
+def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING)
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config={"FLAVOR": {}},
+        extrasettings=set(),
+    )
+    inc = MyIncident_NoRev()
+    inc.livepatch = False
+    # Use flavor with "Kernel"
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="Kernel-Default", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+
+    # Case 1: matches has something, but not in allowed set (disjoint is True)
+    matches = {"OTHER_ISSUE": [Repos("p", "v", "a")]}
+    assert incidents_obj._should_skip(ctx, cfg, matches) is True  # noqa: SLF001
+    assert "Kernel incident missing product repository" in caplog.text
+
+    # Case 2: matches has something in allowed set (disjoint is False)
+    matches = {"OS_TEST_ISSUES": [Repos("p", "v", "a")]}
+    assert incidents_obj._should_skip(ctx, cfg, matches) is False  # noqa: SLF001
+
+
+def test_is_aggregate_needed_logic(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO)
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config={"FLAVOR": {}},
+        extrasettings=set(),
+    )
+
+    inc = MyIncident_NoRev()
+
+    # Case 1: pos matches (aggregate_check_true)
+    data = {
+        "aggregate_job": False,
+        "aggregate_check_true": ["MATCH"],
+    }
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=data)
+    assert incidents_obj._is_aggregate_needed(ctx, {"MATCH", "OTHER"}) is False  # noqa: SLF001
+    assert "Incident 1: Aggregate job not required" in caplog.text
+
+    # Case 2: neg matches (aggregate_check_false)
+    caplog.clear()
+    data = {
+        "aggregate_job": False,
+        "aggregate_check_false": ["MISSING"],
+    }
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=data)
+    # neg.isdisjoint({"OTHER"}) is True, so neg matches
+    assert incidents_obj._is_aggregate_needed(ctx, {"OTHER"}) is False  # noqa: SLF001
+    assert "Incident 1: Aggregate job not required" in caplog.text
+
+    # Case 3: both neg and pos exist, but no match
+    data = {
+        "aggregate_job": False,
+        "aggregate_check_true": ["POS"],
+        "aggregate_check_false": ["NEG"],
+    }
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data=data)
+    assert incidents_obj._is_aggregate_needed(ctx, {"NEG"}) is True  # noqa: SLF001

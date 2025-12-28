@@ -138,180 +138,151 @@ class Incidents(BaseConf):
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
         return [f_channel] if f_channel in inc.channels else []
 
-    def _handle_incident(  # noqa: PLR0911,C901
-        self, ctx: IncContext, cfg: IncConfig
-    ) -> dict[str, Any] | None:
-        inc = ctx.inc
-        arch = ctx.arch
-        flavor = ctx.flavor
-        data = ctx.data
+    def _should_skip(self, ctx: IncContext, cfg: IncConfig, matches: dict[str, list[Repos]]) -> bool:
+        inc, arch, flavor, data = ctx.inc, ctx.arch, ctx.flavor, ctx.data
         if inc.type == "git" and not inc.ongoing:
-            log.debug(
-                "PR %s skipped (arch %s, flavor %s): PR is closed, approved, or review no longer requested",
-                inc.id,
-                arch,
-                flavor,
-            )
-            return None
-        if self.filter_embargoed(flavor) and inc.embargoed:
-            log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
-            return None
-        if inc.staging:
-            return None
-        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
-            return None
+            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", inc.id, arch, flavor)
+            return True
+        if (self.filter_embargoed(flavor) and inc.embargoed) or inc.staging:
+            if inc.embargoed:
+                log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
+            return True
+
+        # Check packages and channels
+        pkg_mismatch = (data.get("packages") is not None and not inc.contains_package(data["packages"])) or (
+            data.get("excluded_packages") is not None and inc.contains_package(data["excluded_packages"])
+        )
         if (
-            "excluded_packages" in data
-            and data["excluded_packages"] is not None
-            and inc.contains_package(data["excluded_packages"])
+            pkg_mismatch
+            or not matches
+            or ("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
         ):
+            if not matches:
+                log.debug(
+                    "Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch
+                )
+            return True
+
+        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, self.settings["VERSION"], flavor):
+            log.info("Incident %s already scheduled for %s on %s", inc.id, flavor, arch)
+            return True
+
+        if "Kernel" in flavor and not inc.livepatch and not flavor.endswith("Azure"):
+            allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
+            if set(matches).isdisjoint(allowed):
+                log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
+                return True
+
+        return False
+
+    def _get_base_settings(self, ctx: IncContext, revs: int, cfg: IncConfig) -> dict[str, Any]:
+        inc, arch, flavor = ctx.inc, ctx.arch, ctx.flavor
+        return {
+            **self.settings,
+            "ARCH": arch,
+            "FLAVOR": flavor,
+            "VERSION": self.settings["VERSION"],
+            "DISTRI": self.settings["DISTRI"],
+            "INCIDENT_ID": inc.id,
+            "REPOHASH": revs,
+            "BUILD": f":{inc.id}:{inc.packages[0]}",
+            **OBSOLETE_PARAMS,
+            **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
+            **({"KGRAFT": "1"} if inc.livepatch else {}),
+            **({"RRID": inc.rrid} if inc.rrid else {}),
+        }
+
+    def _get_priority(self, ctx: IncContext) -> int | None:
+        inc, flavor, data = ctx.inc, ctx.flavor, ctx.data
+        if delta_prio := data.get("override_priority", 0):
+            delta_prio -= 50
+        else:
+            delta_prio = 5 if flavor.endswith("Minimal") else 10
+            if inc.emu:
+                delta_prio = -20
+        return BASE_PRIO + delta_prio if delta_prio else None
+
+    def _apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:
+        if "params_expand" not in data:
+            return True
+        params = data["params_expand"]
+        if any(k in params for k in ["DISTRI", "VERSION"]):
+            log.error("Flavor %s ignored: 'params_expand' contains forbidden keys 'DISTRI' or 'VERSION'", flavor)
+            return False
+        settings.update(params)
+        return True
+
+    def _add_metadata_urls(self, settings: dict[str, Any], inc: Incident) -> None:
+        url = (
+            f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
+            if inc.project == "SLFO"
+            else f"{SMELT_URL}/incident/{inc.id}"
+        )
+        settings["__SOURCE_CHANGE_URL"] = url
+        settings["__DASHBOARD_INCIDENT_URL"] = f"{QEM_DASHBOARD}incident/{inc.id}"
+
+    def _apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:
+        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
+            settings = apply_pc_tools_image(settings)
+            if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE"):
+                return None
+        if "PUBLIC_CLOUD_PINT_QUERY" in settings:
+            settings = apply_publiccloud_pint_image(settings)
+            if not settings.get("PUBLIC_CLOUD_IMAGE_ID"):
+                return None
+        return settings
+
+    def _is_aggregate_needed(self, ctx: IncContext, openqa_keys: set[str]) -> bool:
+        inc, data = ctx.inc, ctx.data
+        if not self.singlearch.isdisjoint(set(inc.packages)):
+            return False
+        if data.get("aggregate_job", True):
+            return True
+        pos, neg = set(data.get("aggregate_check_true", [])), set(data.get("aggregate_check_false", []))
+        if (pos and not pos.isdisjoint(openqa_keys)) or (neg and neg.isdisjoint(openqa_keys)):
+            log.info("Incident %s: Aggregate job not required", inc.id)
+            return False
+        return bool(neg and pos)
+
+    def _handle_incident(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
+        inc, arch, flavor, data = ctx.inc, ctx.arch, ctx.flavor, ctx.data
+        matches = {
+            issue: matched
+            for issue, channel in data.get("issues", {}).items()
+            if (matched := self._get_matching_channels(inc, channel, arch))
+        }
+        if self._should_skip(ctx, cfg, matches):
             return None
-        # old bot used variable "REPO_ID"
         if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
             return None
         if not (revs := inc.revisions_with_fallback(arch, self.settings["VERSION"])):
             return None
-        full_post: dict[str, Any] = {
+        settings = self._get_base_settings(ctx, revs, cfg)
+        for issue in matches:
+            settings[issue] = str(inc.id)
+
+        version = self.product_version or self.settings["VERSION"]
+        repos = {c for matched in matches.values() for c in matched if c.product_version == version}
+        settings["INCIDENT_REPO"] = ",".join(sorted(self._make_repo_url(inc, chan) for chan in repos))
+        if prio := self._get_priority(ctx):
+            settings["_PRIORITY"] = prio
+        if not self._apply_params_expand(settings, data, flavor):
+            return None
+        self._add_metadata_urls(settings, inc)
+        if not (settings := self._apply_pc_images(settings)):
+            return None
+        return {
             "api": "api/incident_settings",
             "qem": {
                 "incident": inc.id,
                 "arch": arch,
                 "flavor": flavor,
                 "version": self.settings["VERSION"],
+                "withAggregate": self._is_aggregate_needed(ctx, set(settings.keys())),
+                "settings": settings,
             },
-            "openqa": {
-                **self.settings,
-                "ARCH": arch,
-                "FLAVOR": flavor,
-                "VERSION": self.settings["VERSION"],
-                "DISTRI": self.settings["DISTRI"],
-                "INCIDENT_ID": inc.id,
-                "REPOHASH": revs,
-                "BUILD": f":{inc.id}:{inc.packages[0]}",
-                **OBSOLETE_PARAMS,
-                **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
-                **({"KGRAFT": "1"} if inc.livepatch else {}),
-                **({"RRID": inc.rrid} if inc.rrid else {}),
-            },
+            "openqa": settings,
         }
-
-        log.debug("Incident %s: Active channels: %s", inc.id, inc.channels)
-        matches = {
-            issue: matched
-            for issue, channel in data["issues"].items()
-            if (matched := self._get_matching_channels(inc, channel, arch))
-        }
-
-        if not matches:
-            log.debug("Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch)
-            return None
-
-        if "required_issues" in data and set(matches.keys()).isdisjoint(data["required_issues"]):
-            return None
-
-        version = self.settings["VERSION"]
-        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, version, flavor):
-            log.info("Incident %s already scheduled for %s on %s (version: %s)", inc.id, flavor, arch, version)
-            return None
-
-        if (
-            "Kernel" in flavor
-            and not inc.livepatch
-            and not flavor.endswith("Azure")
-            and set(matches.keys()).isdisjoint({
-                "OS_TEST_ISSUES",  # standard product dir
-                "LTSS_TEST_ISSUES",  # LTSS product dir
-                "BASE_TEST_ISSUES",  # GA product dir SLE15+
-                "RT_TEST_ISSUES",  # realtime kernel
-                "COCO_TEST_ISSUES",  # Confidential Computing kernel
-            })
-        ):
-            log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
-            return None
-
-        for issue in matches:
-            full_post["openqa"][issue] = str(inc.id)
-
-        version = self.product_version or self.settings["VERSION"]
-        channels_set = {c for matched in matches.values() for c in matched if c.product_version == version}
-        full_post["openqa"]["INCIDENT_REPO"] = ",".join(
-            sorted(self._make_repo_url(inc, chan) for chan in channels_set),
-        )  # sorted for testability
-        full_post["qem"]["withAggregate"] = True
-        aggregate_job = data.get("aggregate_job", True)
-
-        # some arch specific packages doesn't have aggregate tests
-        if not self.singlearch.isdisjoint(set(inc.packages)):
-            full_post["qem"]["withAggregate"] = False
-
-        def _should_aggregate(data: dict[str, Any], openqa_keys: set[str]) -> bool:
-            pos = set(data.get("aggregate_check_true", []))
-            neg = set(data.get("aggregate_check_false", []))
-
-            if pos and not pos.isdisjoint(openqa_keys):
-                return False
-            if neg and neg.isdisjoint(openqa_keys):
-                return False
-            return bool(neg and pos)
-
-        if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
-            full_post["qem"]["withAggregate"] = False
-            log.info("Incident %s: Aggregate job not required", inc.id)
-
-        if delta_prio := data.get("override_priority", 0):
-            delta_prio -= 50
-        else:
-            if flavor.endswith("Minimal"):
-                delta_prio += 5
-            else:
-                delta_prio += 10
-            if inc.emu:
-                delta_prio = -20
-
-        # override default prio only for specific jobs
-        if delta_prio:
-            full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
-
-        # add custom vars to job settings
-        if "params_expand" in data and any(
-            forbidden_key in data["params_expand"] for forbidden_key in ["DISTRI", "VERSION"]
-        ):
-            log.error(
-                "Flavor %s ignored: 'params_expand' contains forbidden keys 'DISTRI' or 'VERSION'",
-                flavor,
-            )
-            return None
-
-        if "params_expand" in data:
-            full_post["openqa"].update(data["params_expand"])
-
-        url = (
-            f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
-            if inc.project == "SLFO"
-            else f"{SMELT_URL}/incident/{inc.id}"
-        )
-        dashboard_url = f"{QEM_DASHBOARD}incident/{inc.id}"
-        full_post["openqa"]["__SOURCE_CHANGE_URL"] = url
-        full_post["openqa"]["__DASHBOARD_INCIDENT_URL"] = dashboard_url
-
-        settings = full_post["openqa"].copy()
-
-        # if set, we use this query to detect latest public cloud tools image which used for running
-        # all public cloud related tests in openQA
-        if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
-            settings = apply_pc_tools_image(settings)
-            if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
-                return None
-
-        # parse Public-Cloud pint query if present
-        if "PUBLIC_CLOUD_PINT_QUERY" in settings:
-            settings = apply_publiccloud_pint_image(settings)
-            if not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
-                return None
-
-        full_post["openqa"] = settings
-        full_post["qem"]["settings"] = settings
-        return full_post
 
     def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
         try:
