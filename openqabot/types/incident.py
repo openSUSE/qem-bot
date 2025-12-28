@@ -165,8 +165,4 @@ class Incident:
         return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
-        for package in self.packages:
-            for req in requires:
-                if package.startswith(req) and package != "kernel-livepatch-tools":
-                    return True
-        return False
+        return any(p != "kernel-livepatch-tools" and p.startswith(tuple(requires)) for p in self.packages)
