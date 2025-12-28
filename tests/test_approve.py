@@ -967,3 +967,8 @@ def test_git_approve_no_url(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     assert not approver_instance.git_approve(inc, "msg")
     assert "Gitea API error: PR 1 has no URL" in caplog.text
+
+
+def test_get_incident_result_empty_jobs() -> None:
+    approver_instance = Approver(args)
+    assert approver_instance.get_incident_result([], "api/", 1) is False
