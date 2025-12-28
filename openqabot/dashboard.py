@@ -8,9 +8,22 @@ import requests
 from .config import QEM_DASHBOARD
 from .utils import retry5 as retried_requests
 
+_GET_CACHE: dict[str, Any] = {}
+
+
+def clear_cache() -> None:
+    _GET_CACHE.clear()
+
 
 def get_json(route: str, **kwargs: Any) -> Any:
-    return retried_requests.get(QEM_DASHBOARD + route, **kwargs).json()
+    # Use simple key based on route and stringified kwargs
+    cache_key = route + str(sorted(kwargs.items()))
+    if cache_key in _GET_CACHE:
+        return _GET_CACHE[cache_key]
+
+    data = retried_requests.get(QEM_DASHBOARD + route, **kwargs).json()
+    _GET_CACHE[cache_key] = data
+    return data
 
 
 def patch(route: str, **kwargs: Any) -> requests.Response:
