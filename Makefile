@@ -85,3 +85,7 @@ test-all-commands-unstable:
 		timeout --foreground 30 $(UNSHARE) python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i || \
 		{ ret=$$?; [ $$ret -eq 124 ] || [ $$ret -eq 0 ] || exit $$ret; }; \
 	done
+
+.PHONY: setup-hooks
+setup-hooks:
+	pre-commit install --install-hooks -t commit-msg -t pre-commit
