@@ -78,9 +78,11 @@ test: only-test checkstyle
 .PHONY: test-with-coverage
 test-with-coverage: only-test-with-coverage checkstyle
 
+BOT_COMMANDS ?= $(shell python3 ./qem-bot.py --help | grep '{.*}' | head -n 1 | sed -n 's/.*{\(.*\)}.*/\1/p' | tr ',' ' ')
+
 .PHONY: test-all-commands-unstable
 test-all-commands-unstable:
-	for i in incidents-run updates-run smelt-sync gitea-sync inc-approve inc-comment inc-sync-results aggr-sync-results increment-approve repo-diff amqp full-run; do \
+	for i in $(BOT_COMMANDS); do \
 		echo "### $$i" && \
 		timeout --foreground 30 $(UNSHARE) python3 ./qem-bot.py -t 1234 -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --dry --fake-data $$i || \
 		{ ret=$$?; [ $$ret -eq 124 ] || [ $$ret -eq 0 ] || exit $$ret; }; \
