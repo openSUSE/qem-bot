@@ -58,16 +58,13 @@ class CommentAPI:
         :param package_name: Package name where to refer the comment.
         :returns: Formated URL for the request.
         """
-        url = None
         if request_id:
-            url = makeurl(self.apiurl, ["comments", "request", str(request_id)], query)
-        elif project_name and package_name:
-            url = makeurl(self.apiurl, ["comments", "package", project_name, package_name], query)
-        elif project_name:
-            url = makeurl(self.apiurl, ["comments", "project", project_name], query)
-        else:
-            raise OscCommentsValueError
-        return url
+            return makeurl(self.apiurl, ["comments", "request", str(request_id)], query)
+        if project_name and package_name:
+            return makeurl(self.apiurl, ["comments", "package", project_name, package_name], query)
+        if project_name:
+            return makeurl(self.apiurl, ["comments", "project", project_name], query)
+        raise OscCommentsValueError
 
     def get_comments(
         self,
@@ -106,8 +103,7 @@ class CommentAPI:
 
                 # Python base regex does not support repeated subgroup capture
                 # so parse the optional info using string split.
-                stripped = m.group("info").strip()
-                if stripped:
+                if stripped := m.group("info").strip():
                     for pair in stripped.split(" "):
                         key, value = pair.split("=")
                         info[key] = value
@@ -157,9 +153,7 @@ class CommentAPI:
 
         comment = self.truncate(comment.strip())
 
-        query = {}
-        if parent_id:
-            query["parent_id"] = parent_id
+        query = {"parent_id": parent_id} if parent_id else {}
         url = self._prepare_url(request_id, project_name, package_name, query)
         return http_POST(url, data=comment)
 
@@ -236,8 +230,7 @@ class CommentAPI:
         :param package_name: Package name where to remove comments.
         :return: Number of comments removed.
         """
-        comments = self.get_comments(request_id, project_name, package_name)
-        while comments:
+        while comments := self.get_comments(request_id, project_name, package_name):
             comments = self.delete_children(comments)
         return True
 
