@@ -141,6 +141,21 @@ class Incidents(BaseConf):
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
             return None
+        if inc.staging:
+            return None
+        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
+            return None
+        if (
+            "excluded_packages" in data
+            and data["excluded_packages"] is not None
+            and inc.contains_package(data["excluded_packages"])
+        ):
+            return None
+        # old bot used variable "REPO_ID"
+        if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
+            return None
+        if not (revs := inc.revisions_with_fallback(arch, self.settings["VERSION"])):
+            return None
         full_post: dict[str, Any] = {
             "api": "api/incident_settings",
             "qem": {
@@ -156,41 +171,21 @@ class Incidents(BaseConf):
                 "VERSION": self.settings["VERSION"],
                 "DISTRI": self.settings["DISTRI"],
                 "INCIDENT_ID": inc.id,
+                "REPOHASH": revs,
+                "BUILD": f":{inc.id}:{inc.packages[0]}",
                 **OBSOLETE_PARAMS,
             },
         }
 
         if cfg.ci_url:
             full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
-        if inc.staging:
-            return None
-
-        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
-            return None
-
-        if (
-            "excluded_packages" in data
-            and data["excluded_packages"] is not None
-            and inc.contains_package(data["excluded_packages"])
-        ):
-            return None
 
         if inc.livepatch:
             full_post["openqa"]["KGRAFT"] = "1"
 
-        full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
-
         if inc.rrid:
             full_post["openqa"]["RRID"] = inc.rrid
 
-        # old bot used variable "REPO_ID"
-        if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
-            return None
-
-        revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
-        if not revs:
-            return None
-        full_post["openqa"]["REPOHASH"] = revs
         channels_set = set()
         issue_dict = {}
 
@@ -272,9 +267,7 @@ class Incidents(BaseConf):
             full_post["qem"]["withAggregate"] = False
             log.info("Incident %s: Aggregate job not required", inc.id)
 
-        delta_prio = data.get("override_priority", 0)
-
-        if delta_prio:
+        if delta_prio := data.get("override_priority", 0):
             delta_prio -= 50
         else:
             if flavor.endswith("Minimal"):
