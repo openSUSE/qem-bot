@@ -150,24 +150,6 @@ def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
     assert "Incident skipped: RepoHash metadata not found at" in caplog.text
 
 
-@responses.activate
-def test_get_max_revision_slfo_product_not_in_obs_products(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO, logger="bot.loader.repohash")
-    repos = [("SLFO-Module", "1.1.99")]
-    arch = "x86_64"
-    project = "SLFO"
-
-    with (
-        patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SomeProduct"),
-        patch("openqabot.loader.repohash.OBS_PRODUCTS", new_callable=set),
-        patch("openqabot.loader.repohash.gitea.compute_repo_url"),
-    ):
-        ret = rp.get_max_revision(repos, arch, project)
-
-    assert ret == 0
-    assert "Repository 1.1.99 skipped: Product SomeProduct is not in considered products" in caplog.text
-
-
 def test_merge_repohash() -> None:
     assert rp.merge_repohash(["a", "b", "c"]) == "c7e84e227cb118dbe1fa7d49b3e55fc3"
 
@@ -181,7 +163,6 @@ def test_get_max_revision_slfo() -> None:
 
     with (
         patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES"),
-        patch("openqabot.loader.repohash.OBS_PRODUCTS", {"SLES"}),
         patch(
             "openqabot.loader.repohash.gitea.compute_repo_url",
             return_value="http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml",

@@ -184,7 +184,9 @@ class Incidents(BaseConf):
             full_post["openqa"]["RRID"] = inc.rrid
 
         # old bot used variable "REPO_ID"
-        inc.compute_revisions_for_product_repo(self.product_repo, self.product_version)
+        if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
+            return None
+
         revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
         if not revs:
             return None
@@ -328,7 +330,6 @@ class Incidents(BaseConf):
         return full_post
 
     def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
-        ctx.inc.arch_filter = ctx.data["archs"]
         try:
             return self._handle_incident(ctx, cfg)
         except NoRepoFoundError as e:
@@ -349,18 +350,12 @@ class Incidents(BaseConf):
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
         cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
-        results = [
-            self._process_inc_context(
-                IncContext(
-                    inc=inc,
-                    arch=arch,
-                    flavor=flavor,
-                    data=data,
-                ),
-                cfg,
-            )
+        active = [i for i in incidents if i.compute_revisions_for_product_repo(self.product_repo, self.product_version)]
+
+        return [
+            r
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
-            for inc in incidents
+            for inc in active
+            if (r := self._process_inc_context(IncContext(inc, arch, flavor, data), cfg))
         ]
-        return [r for r in results if r]

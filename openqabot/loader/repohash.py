@@ -10,7 +10,7 @@ import requests
 from lxml import etree  # type: ignore[unresolved-import]
 from requests.exceptions import RetryError
 
-from openqabot.config import OBS_DOWNLOAD_URL, OBS_PRODUCTS
+from openqabot.config import OBS_DOWNLOAD_URL
 from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry5 as retried_requests
 
@@ -34,13 +34,6 @@ def get_max_revision(
         if project == "SLFO":
             if product_name is None:
                 product_name = gitea.get_product_name(repo[1])
-                if product_name not in OBS_PRODUCTS:
-                    log.info(
-                        "Repository %s skipped: Product %s is not in considered products",
-                        repo[1],
-                        product_name,
-                    )
-                    continue
             if product_version is not None:
                 repo = (repo[0], repo[1], product_version)
             url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
