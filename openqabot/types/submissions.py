@@ -22,29 +22,29 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf
-from .incident import Incident
+from .submission import Submission
 from .types import ProdVer, Repos
 
 
-class IncContext(NamedTuple):
-    inc: Incident
+class SubContext(NamedTuple):
+    sub: Submission
     arch: str
     flavor: str
     data: dict[str, Any]
 
 
-class IncConfig(NamedTuple):
+class SubConfig(NamedTuple):
     token: dict[str, str]
     ci_url: str | None
     ignore_onetime: bool
 
 
-log = getLogger("bot.types.incidents")
+log = getLogger("bot.types.submissions")
 
 BASE_PRIO = 50
 
 
-class Incidents(BaseConf):
+class Submissions(BaseConf):
     def __init__(  # noqa: PLR0917 too-many-positional-arguments
         self,
         product: str,
@@ -59,7 +59,7 @@ class Incidents(BaseConf):
         self.singlearch = extrasettings
 
     def __repr__(self) -> str:
-        return f"<Incidents product: {self.product}>"
+        return f"<Submissions product: {self.product}>"
 
     @staticmethod
     def product_version_from_issue_channel(issue: str) -> ProdVer:
@@ -73,7 +73,7 @@ class Incidents(BaseConf):
             flavor: {
                 key: (
                     {
-                        template: Incidents.product_version_from_issue_channel(channel)
+                        template: Submissions.product_version_from_issue_channel(channel)
                         for template, channel in value.items()
                     }
                     if key == "issues"
@@ -91,13 +91,13 @@ class Incidents(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(token: dict[str, str], inc: Incident, arch: str, ver: str, flavor: str) -> bool:
+    def _is_scheduled_job(token: dict[str, str], sub: Submission, arch: str, ver: str, flavor: str) -> bool:
         jobs = {}
         try:
-            url = f"{QEM_DASHBOARD}api/incident_settings/{inc.id}"
+            url = f"{QEM_DASHBOARD}api/incident_settings/{sub.id}"
             jobs = retried_requests.get(url, headers=token).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Dashboard API error: Could not retrieve scheduled jobs for incident %s", inc.id)
+            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub.id)
 
         if not jobs:
             return False
@@ -105,7 +105,7 @@ class Incidents(BaseConf):
         if isinstance(jobs, dict) and "error" in jobs:
             return False
 
-        revs = inc.revisions_with_fallback(arch, ver)
+        revs = sub.revisions_with_fallback(arch, ver)
         if not revs:
             return False
         return any(
@@ -116,18 +116,18 @@ class Incidents(BaseConf):
             for job in jobs
         )
 
-    def _make_repo_url(self, inc: Incident, chan: Repos) -> str:
+    def _make_repo_url(self, sub: Submission, chan: Repos) -> str:
         return (
             gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan, self.product_repo, self.product_version)
             if chan.product == "SUSE:SLFO"
-            else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
+            else f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
-    def _get_matching_channels(self, inc: Incident, channel: ProdVer, arch: str) -> list[Repos]:
+    def _get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:
         if channel.product == "SLFO":
             return [
                 ic
-                for ic in inc.channels
+                for ic in sub.channels
                 if ic.arch == arch
                 and (
                     channel.product_version == ic.product_version
@@ -136,21 +136,21 @@ class Incidents(BaseConf):
                 )
             ]
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
-        return [f_channel] if f_channel in inc.channels else []
+        return [f_channel] if f_channel in sub.channels else []
 
-    def _should_skip(self, ctx: IncContext, cfg: IncConfig, matches: dict[str, list[Repos]]) -> bool:
-        inc, arch, flavor, data = ctx.inc, ctx.arch, ctx.flavor, ctx.data
-        if inc.type == "git" and not inc.ongoing:
-            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", inc.id, arch, flavor)
+    def _should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
+        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
+        if sub.type == "git" and not sub.ongoing:
+            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", sub.id, arch, flavor)
             return True
-        if (self.filter_embargoed(flavor) and inc.embargoed) or inc.staging:
-            if inc.embargoed:
-                log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
+        if (self.filter_embargoed(flavor) and sub.embargoed) or sub.staging:
+            if sub.embargoed:
+                log.info("Submission %s skipped: Embargoed and embargo-filtering enabled", sub.id)
             return True
 
         # Check packages and channels
-        pkg_mismatch = (data.get("packages") is not None and not inc.contains_package(data["packages"])) or (
-            data.get("excluded_packages") is not None and inc.contains_package(data["excluded_packages"])
+        pkg_mismatch = (data.get("packages") is not None and not sub.contains_package(data["packages"])) or (
+            data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"])
         )
         if (
             pkg_mismatch
@@ -159,46 +159,46 @@ class Incidents(BaseConf):
         ):
             if not matches:
                 log.debug(
-                    "Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch
+                    "Submission %s skipped for %s on %s: No matching channels found in metadata", sub.id, flavor, arch
                 )
             return True
 
-        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, self.settings["VERSION"], flavor):
-            log.info("Incident %s already scheduled for %s on %s", inc.id, flavor, arch)
+        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, sub, arch, self.settings["VERSION"], flavor):
+            log.info("Submission %s already scheduled for %s on %s", sub.id, flavor, arch)
             return True
 
-        if "Kernel" in flavor and not inc.livepatch and not flavor.endswith("Azure"):
+        if "Kernel" in flavor and not sub.livepatch and not flavor.endswith("Azure"):
             allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
             if set(matches).isdisjoint(allowed):
-                log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
+                log.warning("Submission %s skipped: Kernel submission missing product repository", sub.id)
                 return True
 
         return False
 
-    def _get_base_settings(self, ctx: IncContext, revs: int, cfg: IncConfig) -> dict[str, Any]:
-        inc, arch, flavor = ctx.inc, ctx.arch, ctx.flavor
+    def _get_base_settings(self, ctx: SubContext, revs: int, cfg: SubConfig) -> dict[str, Any]:
+        sub, arch, flavor = ctx.sub, ctx.arch, ctx.flavor
         return {
             **self.settings,
             "ARCH": arch,
             "FLAVOR": flavor,
             "VERSION": self.settings["VERSION"],
             "DISTRI": self.settings["DISTRI"],
-            "INCIDENT_ID": inc.id,
+            "INCIDENT_ID": sub.id,
             "REPOHASH": revs,
-            "BUILD": f":{inc.id}:{inc.packages[0]}",
+            "BUILD": f":{sub.id}:{sub.packages[0]}",
             **OBSOLETE_PARAMS,
             **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
-            **({"KGRAFT": "1"} if inc.livepatch else {}),
-            **({"RRID": inc.rrid} if inc.rrid else {}),
+            **({"KGRAFT": "1"} if sub.livepatch else {}),
+            **({"RRID": sub.rrid} if sub.rrid else {}),
         }
 
-    def _get_priority(self, ctx: IncContext) -> int | None:
-        inc, flavor, data = ctx.inc, ctx.flavor, ctx.data
+    def _get_priority(self, ctx: SubContext) -> int | None:
+        sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
         if delta_prio := data.get("override_priority", 0):
             delta_prio -= 50
         else:
             delta_prio = 5 if flavor.endswith("Minimal") else 10
-            if inc.emu:
+            if sub.emu:
                 delta_prio = -20
         return BASE_PRIO + delta_prio if delta_prio else None
 
@@ -212,14 +212,14 @@ class Incidents(BaseConf):
         settings.update(params)
         return True
 
-    def _add_metadata_urls(self, settings: dict[str, Any], inc: Incident) -> None:
+    def _add_metadata_urls(self, settings: dict[str, Any], sub: Submission) -> None:
         url = (
-            f"{GITEA}/products/{inc.project}/pulls/{inc.id}"
-            if inc.project == "SLFO"
-            else f"{SMELT_URL}/incident/{inc.id}"
+            f"{GITEA}/products/{sub.project}/pulls/{sub.id}"
+            if sub.project == "SLFO"
+            else f"{SMELT_URL}/incident/{sub.id}"
         )
         settings["__SOURCE_CHANGE_URL"] = url
-        settings["__DASHBOARD_INCIDENT_URL"] = f"{QEM_DASHBOARD}incident/{inc.id}"
+        settings["__DASHBOARD_INCIDENT_URL"] = f"{QEM_DASHBOARD}incident/{sub.id}"
 
     def _apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
@@ -232,49 +232,49 @@ class Incidents(BaseConf):
                 return None
         return settings
 
-    def _is_aggregate_needed(self, ctx: IncContext, openqa_keys: set[str]) -> bool:
-        inc, data = ctx.inc, ctx.data
-        if not self.singlearch.isdisjoint(set(inc.packages)):
+    def _is_aggregate_needed(self, ctx: SubContext, openqa_keys: set[str]) -> bool:
+        sub, data = ctx.sub, ctx.data
+        if not self.singlearch.isdisjoint(set(sub.packages)):
             return False
         if data.get("aggregate_job", True):
             return True
         pos, neg = set(data.get("aggregate_check_true", [])), set(data.get("aggregate_check_false", []))
         if (pos and not pos.isdisjoint(openqa_keys)) or (neg and neg.isdisjoint(openqa_keys)):
-            log.info("Incident %s: Aggregate job not required", inc.id)
+            log.info("Submission %s: Aggregate job not required", sub.id)
             return False
         return bool(neg and pos)
 
-    def _handle_incident(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
-        inc, arch, flavor, data = ctx.inc, ctx.arch, ctx.flavor, ctx.data
+    def _handle_submission(self, ctx: SubContext, cfg: SubConfig) -> dict[str, Any] | None:
+        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
         matches = {
             issue: matched
             for issue, channel in data.get("issues", {}).items()
-            if (matched := self._get_matching_channels(inc, channel, arch))
+            if (matched := self._get_matching_channels(sub, channel, arch))
         }
         if self._should_skip(ctx, cfg, matches):
             return None
-        if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
+        if not sub.compute_revisions_for_product_repo(self.product_repo, self.product_version):
             return None
-        if not (revs := inc.revisions_with_fallback(arch, self.settings["VERSION"])):
+        if not (revs := sub.revisions_with_fallback(arch, self.settings["VERSION"])):
             return None
         settings = self._get_base_settings(ctx, revs, cfg)
         for issue in matches:
-            settings[issue] = str(inc.id)
+            settings[issue] = str(sub.id)
 
         version = self.product_version or self.settings["VERSION"]
         repos = {c for matched in matches.values() for c in matched if c.product_version == version}
-        settings["INCIDENT_REPO"] = ",".join(sorted(self._make_repo_url(inc, chan) for chan in repos))
+        settings["INCIDENT_REPO"] = ",".join(sorted(self._make_repo_url(sub, chan) for chan in repos))
         if prio := self._get_priority(ctx):
             settings["_PRIORITY"] = prio
         if not self._apply_params_expand(settings, data, flavor):
             return None
-        self._add_metadata_urls(settings, inc)
+        self._add_metadata_urls(settings, sub)
         if not (settings := self._apply_pc_images(settings)):
             return None
         return {
             "api": "api/incident_settings",
             "qem": {
-                "incident": inc.id,
+                "incident": sub.id,
                 "arch": arch,
                 "flavor": flavor,
                 "version": self.settings["VERSION"],
@@ -284,33 +284,35 @@ class Incidents(BaseConf):
             "openqa": settings,
         }
 
-    def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
+    def _process_sub_context(self, ctx: SubContext, cfg: SubConfig) -> dict[str, Any] | None:
         try:
-            return self._handle_incident(ctx, cfg)
+            return self._handle_submission(ctx, cfg)
         except NoRepoFoundError as e:
             log.info(
-                "Incident %s skipped: RepoHash calculation failed for project %s: %s",
-                ctx.inc.id,
-                ctx.inc.project,
+                "Submission %s skipped: RepoHash calculation failed for project %s: %s",
+                ctx.sub.id,
+                ctx.sub.project,
                 e,
             )
             return None
 
     def __call__(
         self,
-        incidents: list[Incident],
+        submissions: list[Submission],
         token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
-        cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
-        active = [i for i in incidents if i.compute_revisions_for_product_repo(self.product_repo, self.product_version)]
+        cfg = SubConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
+        active = [
+            s for s in submissions if s.compute_revisions_for_product_repo(self.product_repo, self.product_version)
+        ]
 
         return [
             r
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
-            for inc in active
-            if (r := self._process_inc_context(IncContext(inc, arch, flavor, data), cfg))
+            for sub in active
+            if (r := self._process_sub_context(SubContext(sub, arch, flavor, data), cfg))
         ]

@@ -65,10 +65,10 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
 
 @pytest.fixture
 def fake_qem() -> Generator[None, None, None]:
-    def f_active_inc(*_args: Any) -> list[str]:
+    def f_active_sub(*_args: Any) -> list[str]:
         return ["100"]
 
-    with patch("openqabot.smeltsync.get_active_incidents", side_effect=f_active_inc):
+    with patch("openqabot.smeltsync.get_active_submission_ids", side_effect=f_active_sub):
         yield
 
 
@@ -97,17 +97,17 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Fetching details for SMELT incident 100" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
-    assert "Updating 1 incidents on QEM Dashboard" in messages
+    assert "Updating 1 submissions on QEM Dashboard" in messages
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
-    incident = cast("Any", responses.calls[1].response).json()[0]
-    assert incident["inReviewQAM"]
-    assert incident["isActive"]
-    assert not incident["approved"]
-    assert incident["embargoed"]
-    assert incident["priority"] == 600
+    submission = cast("Any", responses.calls[1].response).json()[0]
+    assert submission["inReviewQAM"]
+    assert submission["isActive"]
+    assert not submission["approved"]
+    assert submission["embargoed"]
+    assert submission["priority"] == 600
 
 
 @responses.activate
@@ -119,9 +119,9 @@ def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> No
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
-    incident = cast("Any", responses.calls[1].response).json()[0]
-    assert not incident["embargoed"]
-    assert incident["priority"] is None
+    submission = cast("Any", responses.calls[1].response).json()[0]
+    assert not submission["embargoed"]
+    assert submission["priority"] is None
 
 
 @responses.activate
@@ -138,9 +138,9 @@ def test_sync_approved(
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Fetching details for SMELT incident 100" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
-    assert "Updating 1 incidents on QEM Dashboard" in messages
+    assert "Updating 1 submissions on QEM Dashboard" in messages
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
     assert not cast("Any", responses.calls[1].response).json()[0]["inReviewQAM"]
@@ -190,7 +190,7 @@ def test_is_revoked() -> None:
 
 
 def test_create_record_no_request_set() -> None:
-    inc = {
+    sub = {
         "project": "SUSE:Maintenance:123",
         "emu": False,
         "packages": [],
@@ -199,7 +199,7 @@ def test_create_record_no_request_set() -> None:
         "priority": 0,
         "requestSet": [],
     }
-    record = SMELTSync._create_record(inc)  # noqa: SLF001
+    record = SMELTSync._create_record(sub)  # noqa: SLF001
     assert not record["inReview"]
     assert not record["approved"]
     assert not record["inReviewQAM"]

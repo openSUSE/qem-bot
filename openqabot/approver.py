@@ -23,38 +23,38 @@ from openqabot.openqa import openQAInterface
 
 from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
-    IncReq,
     JobAggr,
+    SubReq,
     get_aggregate_settings,
-    get_incident_settings,
-    get_incidents_approver,
-    get_single_incident,
+    get_single_submission,
+    get_submission_settings,
+    get_submissions_approver,
 )
 from .utc import UTC
 
 log = getLogger("bot.approver")
 
-ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:incident_{inc}:(.+?)(?:$|\s)"
-MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{inc}/(.*)"
+ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}:(.+?)(?:$|\s)"
+MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 
-def _mi2str(inc: IncReq) -> str:
-    return f"{OBS_MAINT_PRJ}:{inc.inc}:{inc.req}" if inc.type is None else f"{inc.type}:{inc.inc}"
+def _ms2str(sub: SubReq) -> str:
+    return f"{OBS_MAINT_PRJ}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
-def _handle_http_error(e: HTTPError, inc: IncReq) -> bool:
+def _handle_http_error(e: HTTPError, sub: SubReq) -> bool:
     if e.code == 403:
-        log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, inc.req)
+        log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, sub.req)
         return True
     if e.code == 404:
         log.info(
             "OBS API error for request %s (removed or server issue): %s - %s",
-            inc.req,
+            sub.req,
             e.reason,
             e.read().decode(),
         )
         return False
-    log.error("OBS API error for request %s: %s - %s", inc.req, e.code, e.reason)
+    log.error("OBS API error for request %s: %s - %s", sub.req, e.code, e.reason)
     return False
 
 
@@ -65,77 +65,79 @@ def sanitize_comment_text(text: str) -> str:
 
 
 class Approver:
-    def __init__(self, args: Namespace, single_incident: int | None = None) -> None:
+    def __init__(self, args: Namespace, single_submission: int | None = None) -> None:
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
-        if single_incident is None:
-            self.single_incident = args.incident
-            self.all_incidents = args.all_incidents
+        if single_submission is None:
+            self.single_submission = args.incident
+            self.all_submissions = args.all_submissions
         else:
-            self.single_incident = single_incident
-            self.all_incidents = False
+            self.single_submission = single_submission
+            self.all_submissions = False
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
-        log.info("Starting approving incidents in IBS or Gitea…")
-        increqs = (
-            get_single_incident(self.token, self.single_incident)
-            if self.single_incident
-            else get_incidents_approver(self.token)
+        log.info("Starting approving submissions in IBS or Gitea…")
+        subreqs = (
+            get_single_submission(self.token, self.single_submission)
+            if self.single_submission
+            else get_submissions_approver(self.token)
         )
 
         overall_result = True
-        incidents_to_approve = [inc for inc in increqs if self._approvable(inc)]
+        submissions_to_approve = [sub for sub in subreqs if self._approvable(sub)]
 
-        log.info("Incidents to approve:")
-        for inc in incidents_to_approve:
-            log.info("* %s", _mi2str(inc))
+        log.info("Submissions to approve:")
+        for sub in submissions_to_approve:
+            log.info("* %s", _ms2str(sub))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
-            for inc in incidents_to_approve:
-                overall_result &= self.approve(inc)
+            for sub in submissions_to_approve:
+                overall_result &= self.approve(sub)
 
-        log.info("Incident approval process finished")
+        log.info("Submission approval process finished")
 
         return 0 if overall_result else 1
 
-    def _approvable(self, inc: IncReq) -> bool:
+    def _approvable(self, sub: SubReq) -> bool:
         try:
-            i_jobs = get_incident_settings(inc.inc, self.token, all_incidents=self.all_incidents)
+            s_jobs = get_submission_settings(sub.sub, self.token, all_submissions=self.all_submissions)
         except NoResultsError as e:
-            log.info("Approval check for %s skipped: %s", _mi2str(inc), e)
+            log.info("Approval check for %s skipped: %s", _ms2str(sub), e)
             return False
         try:
-            u_jobs = get_aggregate_settings(inc.inc, self.token)
+            a_jobs = get_aggregate_settings(sub.sub, self.token)
         except NoResultsError as e:
-            if any(i.with_aggregate for i in i_jobs):
-                log.info("No aggregate test results found for %s", _mi2str(inc))
+            if any(s.with_aggregate for s in s_jobs):
+                log.info("No aggregate test results found for %s", _ms2str(sub))
                 return False
             log.info(e)
-            u_jobs = []
+            a_jobs = []
 
-        if not self.get_incident_result(i_jobs, "api/jobs/incident/", inc.inc):
-            log.info("%s has at least one failed job in incident tests", _mi2str(inc))
+        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub):
+            log.info("%s has at least one failed job in submission tests", _ms2str(sub))
             return False
 
-        if any(i.with_aggregate for i in i_jobs) and not self.get_incident_result(u_jobs, "api/jobs/update/", inc.inc):
-            log.info("%s has at least one failed job in aggregate tests", _mi2str(inc))
+        if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
+            a_jobs, "api/jobs/update/", sub.sub
+        ):
+            log.info("%s has at least one failed job in aggregate tests", _ms2str(sub))
             return False
 
-        # everything is green --> add incident to approve list
+        # everything is green --> add submission to approve list
         return True
 
-    def mark_job_as_acceptable_for_incident(self, job_id: int, inc: int) -> None:
+    def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
         try:
-            patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={inc}", headers=self.token)
+            patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
         except RequestError as e:
-            log.info("Unable to mark job %i as acceptable for incident %i: %s", job_id, inc, e)
+            log.info("Unable to mark job %i as acceptable for submission %i: %s", job_id, sub, e)
 
     @lru_cache(maxsize=512)
-    def is_job_marked_acceptable_for_incident(self, job_id: int, inc: int) -> bool:
-        regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(inc=inc), re.DOTALL)
+    def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
+        regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
             return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
@@ -161,7 +163,7 @@ class Approver:
     def _was_older_job_ok(
         self,
         failed_job_id: int,
-        inc: int,
+        sub: int,
         job: dict,
         oldest_build_usable: datetime,
         regex: Pattern[str],
@@ -176,42 +178,42 @@ class Approver:
         # Check the job is not too old
         if job_build_date < oldest_build_usable:
             log.info(
-                "Ignoring failed aggregate %s for update %s skipped: Older jobs are too old",
+                "Ignoring failed aggregate %s for aggregate %s skipped: Older jobs are too old",
                 failed_job_id,
-                inc,
+                sub,
             )
             return False
 
         if job["result"] != "passed" and job["result"] != "softfailed":
             return None
 
-        # Check the job contains the update under test
+        # Check the job contains the submission under test
         job_settings = self.client.get_single_job(job["id"])
         if not regex.match(str(job_settings)):
             # Likely older jobs don't have it either. Giving up
             log.info(
-                "Ignoring failed aggregate %s for update %s skipped: "
-                "Older passing jobs do not have the update under test",
+                "Ignoring failed aggregate %s for aggregate %s skipped: "
+                "Older passing jobs do not have the submission under test",
                 failed_job_id,
-                inc,
+                sub,
             )
             return False
 
         if not self.validate_job_qam(job["id"]):
             log.info(
-                "Ignoring failed aggregate %s using %s for update %s skipped: "
+                "Ignoring failed aggregate %s using %s for aggregate %s skipped: "
                 "Job not present in qem-dashboard, likely belongs to an older request",
                 failed_job_id,
                 job["id"],
-                inc,
+                sub,
             )
             return False
 
-        log.info("Ignoring failed aggregate %s and using instead %s for update %s", failed_job_id, job["id"], inc)
+        log.info("Ignoring failed aggregate %s and using instead %s for aggregate %s", failed_job_id, job["id"], sub)
         return True
 
     @lru_cache(maxsize=512)
-    def was_ok_before(self, failed_job_id: int, inc: int) -> bool:
+    def was_ok_before(self, failed_job_id: int, sub: int) -> bool:
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
         jobs = self.client.get_older_jobs(failed_job_id, 20)
         data = jobs.get("data", [])
@@ -230,105 +232,107 @@ class Approver:
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
         oldest_build_usable = current_build_date - timedelta(days=OLDEST_APPROVAL_JOB_DAYS)
 
-        regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(inc=inc))
+        regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(sub=sub))
         for job in older_jobs:
-            if (was_ok := self._was_older_job_ok(failed_job_id, inc, job, oldest_build_usable, regex)) is not None:
+            if (was_ok := self._was_older_job_ok(failed_job_id, sub, job, oldest_build_usable, regex)) is not None:
                 return was_ok
-        log.info("Cannot ignore aggregate failure %s for update %s: No suitable older jobs found.", failed_job_id, inc)
+        log.info(
+            "Cannot ignore aggregate failure %s for aggregate %s: No suitable older jobs found.", failed_job_id, sub
+        )
         return False
 
     def is_job_passing(self, job_result: dict) -> bool:
         return job_result["status"] == "passed"
 
-    def mark_jobs_as_acceptable_for_incident(self, job_results: list[dict], inc: int) -> None:
+    def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
         for job_result in job_results:
             if self.is_job_passing(job_result):
                 continue
             job_id = job_result["job_id"]
-            if self.is_job_marked_acceptable_for_incident(job_id, inc):
-                job_result[f"acceptable_for_{inc}"] = True
-                self.mark_job_as_acceptable_for_incident(job_id, inc)
+            if self.is_job_marked_acceptable_for_submission(job_id, sub):
+                job_result[f"acceptable_for_{sub}"] = True
+                self.mark_job_as_acceptable_for_submission(job_id, sub)
 
-    def is_job_acceptable(self, inc: int, api: str, job_result: dict) -> bool:
+    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> bool:
         if self.is_job_passing(job_result):
             return True
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
-        if job_result.get(f"acceptable_for_{inc}"):
-            log.info("Ignoring failed job %s for incident %s (manually marked as acceptable)", url, inc)
+        if job_result.get(f"acceptable_for_{sub}"):
+            log.info("Ignoring failed job %s for submission %s (manually marked as acceptable)", url, sub)
             return True
-        if api == "api/jobs/update/" and self.was_ok_before(job_id, inc):
+        if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
             log.info(
-                "Ignoring failed aggregate job %s for incident %s due to older eligible openQA job being ok",
+                "Ignoring failed aggregate job %s for submission %s due to older eligible openQA job being ok",
                 url,
-                inc,
+                sub,
             )
             return True
-        log.info("Found failed, not-ignored job %s for incident %s", url, inc)
+        log.info("Found failed, not-ignored job %s for submission %s", url, sub)
         return False
 
     @lru_cache(maxsize=128)
-    def get_jobs(self, job_aggr: JobAggr, api: str, inc: int) -> bool:
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int) -> bool:
         job_results = get_json(api + str(job_aggr.id), headers=self.token)
         if not job_results:
-            msg = f"Job setting {job_aggr.id} not found for incident {inc}"
+            msg = f"Job setting {job_aggr.id} not found for submission {sub}"
             raise NoResultsError(msg)
-        self.mark_jobs_as_acceptable_for_incident(job_results, inc)
-        return all(self.is_job_acceptable(inc, api, r) for r in job_results)
+        self.mark_jobs_as_acceptable_for_submission(job_results, sub)
+        return all(self.is_job_acceptable(sub, api, r) for r in job_results)
 
-    def get_incident_result(self, jobs: list[JobAggr], api: str, inc: int) -> bool:
+    def get_submission_result(self, jobs: list[JobAggr], api: str, sub: int) -> bool:
         if not jobs:
             return False
 
         res = False
         for job_aggr in jobs:
             try:
-                if not self.get_jobs(job_aggr, api, inc):
+                if not self.get_jobs(job_aggr, api, sub):
                     return False
                 res = True
             except NoResultsError as e:  # noqa: PERF203
-                log.info("Approval check for incident %s failed: %s", inc, e)
+                log.info("Approval check for submission %s failed: %s", sub, e)
                 continue
 
         return res
 
-    def approve(self, inc: IncReq) -> bool:
+    def approve(self, sub: SubReq) -> bool:
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
-        log.info("Approving %s", _mi2str(inc))
-        return self.git_approve(inc, msg) if inc.type == "git" else self.osc_approve(inc, msg)
+        log.info("Approving %s", _ms2str(sub))
+        return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod
-    def osc_approve(inc: IncReq, msg: str) -> bool:
+    def osc_approve(sub: SubReq, msg: str) -> bool:
         try:
             osc.core.change_review_state(
                 apiurl=OBS_URL,
-                reqid=str(inc.req),
+                reqid=str(sub.req),
                 newstate="accepted",
                 by_group=OBS_GROUP,
                 message=msg,
             )
         except HTTPError as e:
-            return _handle_http_error(e, inc)
+            return _handle_http_error(e, sub)
         except Exception:
-            log.exception("OBS API error: Failed to approve request %s", inc.req)
+            log.exception("OBS API error: Failed to approve request %s", sub.req)
             return False
 
         return True
 
-    def git_approve(self, inc: IncReq, msg: str) -> bool:
-        if not inc.url:
-            log.error("Gitea API error: PR %s has no URL", inc.inc)
+    def git_approve(self, sub: SubReq, msg: str) -> bool:
+        if not sub.url:
+            log.error("Gitea API error: PR %s has no URL", sub.sub)
             return False
         try:
-            path_parts = urlparse(inc.url).path.split("/")
+            path_parts = urlparse(sub.url).path.split("/")
             review_pr(
                 self.gitea_token,
                 "/".join(path_parts[-4:-2]),
-                inc.inc,
+                sub.sub,
                 msg,
-                inc.scm_info or "",
+                sub.scm_info or "",
             )
         except Exception:
-            log.exception("Gitea API error: Failed to approve PR %s", inc.inc)
+            log.exception("Gitea API error: Failed to approve PR %s", sub.sub)
             return False
         return True

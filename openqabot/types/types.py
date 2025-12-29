@@ -17,7 +17,7 @@ class ProdVer(NamedTuple):
 
 
 class Data(NamedTuple):
-    incident: int
+    submission: int
     settings_id: int
     flavor: str
     arch: str

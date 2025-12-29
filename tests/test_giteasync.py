@@ -146,7 +146,7 @@ def run_gitea_sync(
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
 def test_gitea_sync_on_dry_run_does_not_sync(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_gitea_sync(mocker, caplog, dry=True)
-    assert "Dry run: Would update QEM Dashboard data for 1 incidents" in caplog.text
+    assert "Dry run: Would update QEM Dashboard data for 1 submissions" in caplog.text
 
 
 @responses.activate
@@ -158,30 +158,30 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in messages
     assert "Loaded 7 active PRs from products/SLFO" in messages
     assert "Fetching info for PR 131 from Gitea" in messages
-    assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 incidents" in messages
+    assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 submissions" in messages
     assert len(responses.calls) == 25
     assert len(cast("Any", responses.calls[-1].response).json()) == 1
-    incident = cast("Any", responses.calls[-1].response).json()[0]
-    assert incident["number"] == 124
-    assert incident["packages"] == ["tree"]
-    channels = incident["channels"]
-    failed_or_unpublished = incident["failed_or_unpublished_packages"]
+    submission = cast("Any", responses.calls[-1].response).json()[0]
+    assert submission["number"] == 124
+    assert submission["packages"] == ["tree"]
+    channels = submission["channels"]
+    failed_or_unpublished = submission["failed_or_unpublished_packages"]
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "15.99"])
         assert channel in channels
         assert channel in failed_or_unpublished
-    assert incident["project"] == "SLFO"
-    assert incident["url"] == "https://src.suse.de/products/SLFO/pulls/124"
-    assert incident["inReview"]
-    assert incident["inReviewQAM"]
-    assert incident["isActive"]
-    assert not incident["approved"]
-    assert not incident["embargoed"]
-    assert incident["priority"] == 0
+    assert submission["project"] == "SLFO"
+    assert submission["url"] == "https://src.suse.de/products/SLFO/pulls/124"
+    assert submission["inReview"]
+    assert submission["inReviewQAM"]
+    assert submission["isActive"]
+    assert not submission["approved"]
+    assert not submission["embargoed"]
+    assert submission["priority"] == 0
 
     # expect the scminfo from the product repo of the configured product
-    assert "18bfa2a23fb7985d5d0" in incident["scminfo"]
-    assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+    assert "18bfa2a23fb7985d5d0" in submission["scminfo"]
+    assert "18bfa2a23fb7985d5d0" in submission["scminfo_SLES"]
 
 
 @responses.activate
@@ -194,8 +194,8 @@ def test_sync_with_product_version_from_repo_listing(
     run_gitea_sync(mocker, caplog)
 
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
-    incident = cast("Any", responses.calls[-1].response).json()[0]
-    channels = incident["channels"]
+    submission = cast("Any", responses.calls[-1].response).json()[0]
+    channels = submission["channels"]
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
         assert channel in channels
@@ -212,17 +212,17 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCapt
 
     # expect the codestream repo to be used
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
-    incident = cast("Any", responses.calls[-1].response).json()[0]
-    channels = incident["channels"]
-    failed_or_unpublished = incident["failed_or_unpublished_packages"]
+    submission = cast("Any", responses.calls[-1].response).json()[0]
+    channels = submission["channels"]
+    failed_or_unpublished = submission["failed_or_unpublished_packages"]
     for arch in ["ppc64le", "aarch64", "x86_64"]:
         channel = f"{expected_repo}:{arch}"
         assert channel in channels
         assert channel in failed_or_unpublished
 
     # expect the scminfo from the codestream repo
-    assert "f229fea352e8f268960" in incident["scminfo"]
-    assert "18bfa2a23fb7985d5d0" in incident["scminfo_SLES"]
+    assert "f229fea352e8f268960" in submission["scminfo"]
+    assert "18bfa2a23fb7985d5d0" in submission["scminfo_SLES"]
 
 
 @responses.activate
@@ -249,10 +249,10 @@ def test_extracting_product_name_and_version() -> None:
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
-    incident = {}
-    add_build_results(incident, ["https://foo/project/show/bar"], dry=False)
-    assert incident["successful_packages"] == []
-    assert incident["failed_or_unpublished_packages"] == ["bar"]
+    submission = {}
+    add_build_results(submission, ["https://foo/project/show/bar"], dry=False)
+    assert submission["successful_packages"] == []
+    assert submission["failed_or_unpublished_packages"] == ["bar"]
     assert "Build results for project bar unreadable, skipping:" in caplog.text
     assert "Traceback" not in caplog.text
 
@@ -289,11 +289,11 @@ def test_computing_repo_url_empty_product() -> None:
 
 
 def test_adding_packages_from_files() -> None:
-    incident = {"packages": []}
+    submission = {"packages": []}
     files = [
         {"filename": "foo/_patchinfo", "raw_url": "foo"},
         {"filename": "bar/_patchinfo", "raw_url": "bar"},
         {"filename": "baz/_patchinfo", "raw_url": None},
     ]
-    add_packages_from_files(incident, {}, files, dry=True)
-    assert incident["packages"] == ["tree", "tree"], "package added twice (once for each patchinfo with raw_url)"
+    add_packages_from_files(submission, {}, files, dry=True)
+    assert submission["packages"] == ["tree", "tree"], "package added twice (once for each patchinfo with raw_url)"

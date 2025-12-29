@@ -6,13 +6,13 @@ from typing import Any
 
 import pytest
 
-from openqabot.types.baseconf import BaseConf, Incident
+from openqabot.types.baseconf import BaseConf, Submission
 
 
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        incidents: list[Incident],  # noqa: ARG002
+        submissions: list[Submission],  # noqa: ARG002
         token: dict[str, str],  # noqa: ARG002
         ci_url: str | None,  # noqa: ARG002
         *,

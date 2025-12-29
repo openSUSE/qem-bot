@@ -10,7 +10,7 @@ from ruamel.yaml import YAML, YAMLError
 
 from openqabot.errors import NoTestIssuesError
 from openqabot.types.aggregate import Aggregate
-from openqabot.types.incidents import Incidents
+from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
 from openqabot.utils import get_yml_list
 
@@ -40,9 +40,9 @@ def _load_one_metadata(
     data: dict,
     *,
     aggregate: bool,
-    incidents: bool,
+    submissions: bool,
     extrasettings: set[str],
-) -> Iterator[Aggregate | Incidents]:
+) -> Iterator[Aggregate | Submissions]:
     settings = data.get("settings")
     if not settings:
         log.info("Configuration skipped: Missing settings in '%s'", path)
@@ -57,8 +57,8 @@ def _load_one_metadata(
     product_version = data.get("product_version")
 
     for key in data:
-        if key == "incidents" and not incidents:
-            yield Incidents(product, product_repo, product_version, settings, data["incidents"], extrasettings)
+        if key == "incidents" and not submissions:
+            yield Submissions(product, product_repo, product_version, settings, data["incidents"], extrasettings)
         elif key == "aggregate" and not aggregate:
             try:
                 yield Aggregate(product, product_repo, product_version, settings, data["aggregate"])
@@ -70,17 +70,19 @@ def load_metadata(
     path: Path,
     *,
     aggregate: bool,
-    incidents: bool,
+    submissions: bool,
     extrasettings: set[str],
-) -> list[Aggregate | Incidents]:
+) -> list[Aggregate | Submissions]:
     loader = YAML(typ="safe")
-    log.debug("Loading metadata from %s: Incidents=%s, Aggregates=%s", path, not incidents, not aggregate)
+    log.debug("Loading metadata from %s: Submissions=%s, Aggregates=%s", path, not submissions, not aggregate)
 
     return [
         item
         for p in get_yml_list(path)
         if (data := _try_load(loader, p))
-        for item in _load_one_metadata(p, data, aggregate=aggregate, incidents=incidents, extrasettings=extrasettings)
+        for item in _load_one_metadata(
+            p, data, aggregate=aggregate, submissions=submissions, extrasettings=extrasettings
+        )
     ]
 
 

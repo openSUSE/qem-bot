@@ -13,10 +13,10 @@ def test_do_full_schedule(mocker: MockerFixture) -> None:
     assert not args.disable_aggregates
 
 
-def test_do_incident_schedule(mocker: MockerFixture) -> None:
+def test_do_submission_schedule(mocker: MockerFixture) -> None:
     bot = mocker.patch("openqabot.openqabot.OpenQABot")
     args = mocker.Mock()
-    openqabot.args.do_incident_schedule(args)
+    openqabot.args.do_submission_schedule(args)
     bot.assert_called_once_with(args)
     assert args.disable_aggregates
 
@@ -57,10 +57,10 @@ def test_do_comment(mocker: MockerFixture) -> None:
     commenter.assert_called_once_with(args)
 
 
-def test_do_sync_inc_results(mocker: MockerFixture) -> None:
-    syncer = mocker.patch("openqabot.incsyncres.IncResultsSync")
+def test_do_sync_sub_results(mocker: MockerFixture) -> None:
+    syncer = mocker.patch("openqabot.subsyncres.SubResultsSync")
     args = mocker.Mock()
-    openqabot.args.do_sync_inc_results(args)
+    openqabot.args.do_sync_sub_results(args)
     syncer.assert_called_once_with(args)
 
 

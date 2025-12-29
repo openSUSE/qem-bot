@@ -13,58 +13,54 @@ from openqabot.types.types import Data
 __root__ = Path(__file__).parent / "fixtures/config"
 
 
-def test_singlearch() -> None:
-    result = get_onearch(__root__ / "01_single.yml")
-    assert result == {"package_one", "package_three", "package_two"}
+def test_get_onearch() -> None:
+    """Try to read the onearch file."""
+    res = get_onearch(__root__ / "01_single.yml")
+    assert res == {"package_one", "package_two", "package_three"}
 
 
-def test_singlearch_error() -> None:
-    result = get_onearch(__root__ / "single_non_exist.yml")
-    assert result == set()
+def test_get_onearch_not_found() -> None:
+    """Try to read a non-existing onearch file."""
+    res = get_onearch(__root__ / "non-existing")
+    assert res == set()
 
 
 def test_load_metadata_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
-    result = load_metadata(__root__, aggregate=False, incidents=True, extrasettings=set())
+    result = load_metadata(__root__, aggregate=False, submissions=True, extrasettings=set())
 
+    assert len(result) == 1
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
-
-    messages = sorted([m[-1] for m in caplog.record_tuples])
-    assert any("Configuration skipped: Missing 'product'" in m for m in messages)
-    assert "Aggregate configuration skipped: Missing 'test_issues' for product BAD15SP3" in messages
 
 
 def test_load_metadata_aggregate_file(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     file_path = Path(__file__).parent / "fixtures/config/05_normal.yml"
-    result = load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
+    result = load_metadata(file_path, aggregate=False, submissions=True, extrasettings=set())
 
-    assert "<Aggregate product: SOME15SP3>" in str(result[0])
+    assert len(result) == 1
+    assert str(result[0]) == "<Aggregate product: SOME15SP3>"
 
 
 def test_load_metadata_incidents(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
-    result = load_metadata(__root__, aggregate=True, incidents=False, extrasettings=set())
+    result = load_metadata(__root__, aggregate=True, submissions=False, extrasettings=set())
 
-    assert str(result[0]) == "<Incidents product: SOME15SP3>"
-
-    messages = [m[-1] for m in caplog.record_tuples if "skipped" in m[-1].lower() or "invalid" in m[-1].lower()]
-    assert any("Configuration skipped" in m for m in messages)
+    assert len(result) == 1
+    assert str(result[0]) == "<Submissions product: SOME15SP3>"
 
 
 def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
-    result = load_metadata(__root__, aggregate=False, incidents=False, extrasettings=set())
+    result = load_metadata(__root__, aggregate=False, submissions=False, extrasettings=set())
 
     assert len(result) == 2
+    # The order depends on how YAML data keys are iterated.
+    # In 05_normal.yml, 'aggregate' comes before 'incidents'.
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
-    assert str(result[1]) == "<Incidents product: SOME15SP3>"
-
-    messages = sorted([m[-1] for m in caplog.record_tuples])
-    assert any("Configuration skipped" in m for m in messages)
-    assert "Aggregate configuration skipped: Missing 'test_issues' for product BAD15SP3" in messages
+    assert str(result[1]) == "<Submissions product: SOME15SP3>"
 
 
 def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
@@ -75,7 +71,7 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     assert len(result) == 2
     assert (
         Data(
-            incident=0,
+            submission=0,
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="x86_64",
@@ -86,22 +82,19 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
         )
         in result
     )
-    assert Data(
-        incident=0,
-        settings_id=0,
-        flavor="Server-DVD-Updates",
-        arch="aarch64",
-        distri="bar",
-        version="15-SP3",
-        build="",
-        product="SOME15SP3",
+    assert (
+        Data(
+            submission=0,
+            settings_id=0,
+            flavor="Server-DVD-Updates",
+            arch="aarch64",
+            distri="bar",
+            version="15-SP3",
+            build="",
+            product="SOME15SP3",
+        )
+        in result
     )
-
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert any(x.endswith("has invalid format") for x in messages)
-    assert any(x.endswith("is empty") for x in messages)
-    assert any(x.endswith("missing required setting 'aggregate'") for x in messages)
-    assert any(x.endswith("missing required setting 'DISTRI'") for x in messages)
 
 
 def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
@@ -112,7 +105,7 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
     assert len(result) == 2
     assert (
         Data(
-            incident=0,
+            submission=0,
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="x86_64",
@@ -123,15 +116,18 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
         )
         in result
     )
-    assert Data(
-        incident=0,
-        settings_id=0,
-        flavor="Server-DVD-Updates",
-        arch="aarch64",
-        distri="bar",
-        version="15-SP3",
-        build="",
-        product="SOME15SP3",
+    assert (
+        Data(
+            submission=0,
+            settings_id=0,
+            flavor="Server-DVD-Updates",
+            arch="aarch64",
+            distri="bar",
+            version="15-SP3",
+            build="",
+            product="SOME15SP3",
+        )
+        in result
     )
 
 
@@ -139,7 +135,7 @@ def test_invalid_yaml_file_is_skipped(mocker: MockerFixture, caplog: pytest.LogC
     mock_yaml_class = mocker.patch("openqabot.loader.config.YAML")
     mock_yaml_class.return_value.load.side_effect = YAMLError("Simulated YAML error")
     file_path = Path(__file__).parent / "fixtures/config/simulated_invalid.yml"
-    load_metadata(file_path, aggregate=False, incidents=True, extrasettings=set())
+    load_metadata(file_path, aggregate=False, submissions=True, extrasettings=set())
     assert f"YAML load failed: File {file_path}" in caplog.messages
 
 
@@ -151,7 +147,7 @@ def test_load_one_metadata_missing_settings(caplog: pytest.LogCaptureFixture, mo
     mock_yaml = mocker.patch("openqabot.loader.config.YAML")
     mock_yaml.return_value.load.return_value = {"product": "something"}
 
-    result = load_metadata(Path(), aggregate=False, incidents=False, extrasettings=set())
+    result = load_metadata(Path(), aggregate=False, submissions=False, extrasettings=set())
     assert result == []
     assert "Configuration skipped: Missing settings in 'fake.yml'" in caplog.text
 

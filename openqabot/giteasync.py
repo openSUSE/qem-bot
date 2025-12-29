@@ -5,8 +5,8 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any
 
-from .loader.gitea import get_incidents_from_open_prs, get_open_prs, make_token_header
-from .loader.qem import update_incidents
+from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_token_header
+from .loader.qem import update_submissions
 
 log = getLogger("bot.giteasync")
 
@@ -28,7 +28,7 @@ class GiteaSync:
             len(self.open_prs),
             args.gitea_repo,
         )
-        self.incidents = get_incidents_from_open_prs(
+        self.submissions = get_submissions_from_open_prs(
             self.open_prs,
             self.gitea_token,
             only_successful_builds=not args.allow_build_failures,
@@ -38,10 +38,10 @@ class GiteaSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        data = self.incidents
-        log.debug("Data for %d incidents: %s", len(data), pformat(data))
+        data = self.submissions
+        log.debug("Data for %d submissions: %s", len(data), pformat(data))
         if self.dry:
-            log.info("Dry run: Would update QEM Dashboard data for %d incidents", len(data))
+            log.info("Dry run: Would update QEM Dashboard data for %d submissions", len(data))
             return 0
-        log.info("Syncing Gitea PRs to QEM Dashboard: Considering %d incidents", len(data))
-        return update_incidents(self.dashboard_token, data, params={"type": "git"}, retry=self.retry)
+        log.info("Syncing Gitea PRs to QEM Dashboard: Considering %d submissions", len(data))
+        return update_submissions(self.dashboard_token, data, params={"type": "git"}, retry=self.retry)

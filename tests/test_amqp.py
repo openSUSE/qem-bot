@@ -68,8 +68,8 @@ def test_call_no_channel(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
-    # define response for get_incident_settings_data
+def test_handling_submission(caplog: pytest.LogCaptureFixture) -> None:
+    # define response for get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -85,7 +85,6 @@ def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
         url=f"{QEM_DASHBOARD}api/incident_settings/33222",
         json=data,
     )
-
     # define response for get_aggregate_settings
     data = [
         {
@@ -102,29 +101,26 @@ def test_handling_incident(caplog: pytest.LogCaptureFixture) -> None:
         url=f"{QEM_DASHBOARD}api/update_settings/33222",
         json=data,
     )
-
     # define response for get_jobs
     responses.add(
         method="GET",
         url=f"{QEM_DASHBOARD}api/jobs/incident/110",
-        json=[{"incident_settings": 1000, "job_id": 110, "status": "passed"}],
+        json=[{"submission_settings": 1000, "job_id": 110, "status": "passed"}],
     )
-
-    # define incident
+    # define submission
     responses.add(
         method="GET",
         url=f"{QEM_DASHBOARD}api/incidents/33222",
         json={"number": 33222, "rr_number": 42},
     )
-
     caplog.set_level(logging.DEBUG)
     amqp.on_message(
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": ":33222:emacs"}).encode()
     )
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Incident 33222: openQA job finished" in messages
-    assert "Incidents to approve:" in messages
+    assert "Submission 33222: openQA job finished" in messages
+    assert "Submissions to approve:" in messages
     assert "* SUSE:Maintenance:33222:42" in messages
 
 
@@ -168,23 +164,23 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handle_incident_value_error(
+def test_handle_submission_value_error(
     caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:  # Added mocker type hint
     caplog.set_level(logging.DEBUG)
-    mocker.patch("openqabot.amqp.get_incident_settings_data", side_effect=ValueError)
-    amqp.handle_incident(33222, {})
+    mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=ValueError)
+    amqp.handle_submission(33222, {})
     assert not caplog.text
 
 
-def test_handle_incident_updates_dashboard_entry(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.approver.get_single_incident")
-    mocker.patch("openqabot.amqp.get_incident_settings_data", return_value=[0])
-    mocker.patch("openqabot.amqp.compare_incident_data", return_value=True)
+def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.get_single_submission")
+    mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
+    mocker.patch("openqabot.amqp.compare_submission_data", return_value=True)
     mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0])
     fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP._fetch_openqa_results", return_value=True)
 
-    amqp.handle_incident(42, {})
+    amqp.handle_submission(42, {})
     fetch_openqa_results_mock.assert_called()
 
 

@@ -22,17 +22,17 @@ updates information about incidents and related openQA tests.
 
     positional arguments:
       {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
-        full-run            Full schedule for Maintenance Incidents in openQA
-        incidents-run       Incidents only schedule for Maintenance Incidents in
-                            openQA
-        updates-run         updates only schedule for Maintenance Incidents in
-                            openQA
+        full-run            Full schedule for Maintenance Submissions in openQA
+        incidents-run       Submissions only schedule for Maintenance Submissions
+                            in openQA
+        updates-run         Aggregates only schedule for Maintenance Submissions
+                            in openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
-        inc-approve         Approve incidents which passed tests
-        inc-comment         Comment incidents in BuildService
-        inc-sync-results    Sync results of openQA incidents jobs to Dashboard
-        aggr-sync-results   Sync results of openQA aggregates jobs to Dashboard
+        inc-approve         Approve submissions which passed tests
+        inc-comment         Comment submissions in BuildService
+        inc-sync-results    Sync results of openQA submission jobs to Dashboard
+        aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard
         increment-approve   Approve the most recent product increment for an OBS
                             project if tests passed
         repo-diff           Computes the diff between two repositories
@@ -55,7 +55,7 @@ updates information about incidents and related openQA tests.
                             not update dashboard database
       -s, --singlearch SINGLEARCH
                             Yaml config with list of singlearch packages for
-                            incidents run
+                            submissions run
       -r, --retry RETRY     Number of retries
 
 <!-- usage_end -->

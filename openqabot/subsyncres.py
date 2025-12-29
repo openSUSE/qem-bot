@@ -5,24 +5,24 @@ from concurrent import futures
 from itertools import chain
 from logging import getLogger
 
-from .loader.qem import get_active_incidents, get_incident_settings_data
+from .loader.qem import get_active_submissions, get_submission_settings_data
 from .syncres import SyncRes
 
-log = getLogger("bot.incsyncres")
+log = getLogger("bot.subsyncres")
 
 
-class IncResultsSync(SyncRes):
-    operation = "incident"
+class SubResultsSync(SyncRes):
+    operation = "submission"
 
     def __init__(self, args: Namespace) -> None:
         super().__init__(args)
-        self.active = get_active_incidents(self.token)
+        self.active = get_active_submissions(self.token)
 
     def __call__(self) -> int:
-        incidents = list(chain.from_iterable(get_incident_settings_data(self.token, inc) for inc in self.active))
+        submissions = list(chain.from_iterable(get_submission_settings_data(self.token, sub) for sub in self.active))
         full = {}
         with futures.ThreadPoolExecutor() as executor:
-            future_result = {executor.submit(self.client.get_jobs, f): f for f in incidents}
+            future_result = {executor.submit(self.client.get_jobs, f): f for f in submissions}
             for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()
         results = [
@@ -33,5 +33,5 @@ class IncResultsSync(SyncRes):
         ]
         for r in results:
             self.post_result(r)
-        log.info("Incident results sync completed")
+        log.info("Submission results sync completed")
         return 0

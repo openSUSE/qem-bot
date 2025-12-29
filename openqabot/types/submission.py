@@ -14,27 +14,27 @@ from openqabot.loader.repohash import get_max_revision
 
 from .types import ArchVer, Repos
 
-log = getLogger("bot.types.incident")
+log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 
-class Incident:
-    def __init__(self, incident: dict[str, Any]) -> None:
-        self.rr: int | None = incident["rr_number"]
-        self.project: str = incident["project"]
-        self.id: int = incident["number"]
+class Submission:
+    def __init__(self, submission: dict[str, Any]) -> None:
+        self.rr: int | None = submission["rr_number"]
+        self.project: str = submission["project"]
+        self.id: int = submission["number"]
         self.rrid: str | None = f"{self.project}:{self.rr}" if self.rr else None
-        self.staging: bool = not incident["inReview"]
-        self.ongoing: bool = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
-        self.embargoed: bool = incident["embargoed"]
-        self.priority: int | None = incident.get("priority")
-        self.type: str = incident.get("type", "smelt")
+        self.staging: bool = not submission["inReview"]
+        self.ongoing: bool = submission["isActive"] and submission["inReviewQAM"] and not submission["approved"]
+        self.embargoed: bool = submission["embargoed"]
+        self.priority: int | None = submission.get("priority")
+        self.type: str = submission.get("type", "smelt")
 
         self.channels: list[Repos] = [
             Repos(p, v, a)
             for p, v, a in (
                 val
-                for val in (r.split(":")[2:] for r in incident["channels"] if r.startswith("SUSE:Updates"))
+                for val in (r.split(":")[2:] for r in submission["channels"] if r.startswith("SUSE:Updates"))
                 if len(val) == 3
             )
             if p != "SLE-Module-Development-Tools-OBS"
@@ -45,13 +45,15 @@ class Incident:
             Repos(p, v, "x86_64")
             for p, v in (
                 val
-                for val in (r.split(":")[2:] for r in (i for i in incident["channels"] if i.startswith("SUSE:Updates")))
+                for val in (
+                    r.split(":")[2:] for r in (i for i in submission["channels"] if i.startswith("SUSE:Updates"))
+                )
                 if len(val) == 2
             )
         ]
-        # add channels for Gitea-based incidents
+        # add channels for Gitea-based submissions
         skipped_products = set()
-        for r in incident["channels"]:
+        for r in submission["channels"]:
             if not r.startswith("SUSE:SLFO"):
                 continue
             val = r.split(":")
@@ -65,7 +67,7 @@ class Incident:
                 skipped_products.add(product)
 
         for product in sorted(skipped_products):
-            log.info("Incident %s: Product %s is not in considered products", self.id, product)
+            log.info("Submission %s: Product %s is not in considered products", self.id, product)
 
         # remove Manager-Server on aarch64 from channels
         self.channels = [
@@ -77,24 +79,24 @@ class Incident:
         if not self.channels:
             raise EmptyChannelsError(self.project)
 
-        self.packages: list[str] = sorted(incident["packages"], key=len)
+        self.packages: list[str] = sorted(submission["packages"], key=len)
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
-        self.emu: bool = incident["emu"]
+        self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
         self._rev_cache_params: tuple[Any, Any] | None = None
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod
-    def create(cls, data: dict) -> Incident | None:
+    def create(cls, data: dict) -> Submission | None:
         try:
             return cls(data)
         except EmptyChannelsError:
-            log.info("Incident %s ignored: No channels found for project %s", data.get("number"), data.get("project"))
+            log.info("Submission %s ignored: No channels found for project %s", data.get("number"), data.get("project"))
             return None
         except EmptyPackagesError:
-            log.info("Incident %s ignored: No packages found for project %s", data.get("number"), data.get("project"))
+            log.info("Submission %s ignored: No packages found for project %s", data.get("number"), data.get("project"))
             return None
 
     def compute_revisions_for_product_repo(
@@ -125,11 +127,11 @@ class Incident:
             if self.revisions is not None and arch_ver not in self.revisions and ver.startswith("12"):
                 arch_ver = ArchVer(arch, "12")
             if self.revisions is None:
-                log.debug("Incident %s: No revisions available", self.id)
+                log.debug("Submission %s: No revisions available", self.id)
                 return None
             return self.revisions[arch_ver]
         except KeyError:
-            log.debug("Incident %s: Architecture %s not found for version %s", self.id, arch, ver)
+            log.debug("Submission %s: Architecture %s not found for version %s", self.id, arch, ver)
             return None
 
     @staticmethod
@@ -162,8 +164,8 @@ class Incident:
 
     def __repr__(self) -> str:
         if self.rrid:
-            return f"<Incident: {self.rrid}>"
-        return f"<Incident: {self.project}>"
+            return f"<Submission: {self.rrid}>"
+        return f"<Submission: {self.project}>"
 
     def __str__(self) -> str:
         return str(self.id)

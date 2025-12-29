@@ -13,10 +13,10 @@ import osc.core
 from openqabot.config import OBS_URL
 from openqabot.errors import NoResultsError
 
-from .loader.qem import get_aggregate_results, get_incident_results, get_incidents
+from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
 from .openqa import openQAInterface
 from .osclib.comments import CommentAPI
-from .types.incident import Incident
+from .types.submission import Submission
 
 log = getLogger("bot.commenter")
 
@@ -26,20 +26,20 @@ class Commenter:
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
-        self.incidents = get_incidents(self.token)
+        self.submissions = get_submissions(self.token)
         osc.conf.get_config(override_apiurl=OBS_URL)
         self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
-        log.info("Starting to comment incidents in IBS")
+        log.info("Starting to comment SMELT incidents in IBS")
 
-        for inc in self.incidents:
-            if inc.type != "smelt":
-                log.debug("Incident %s skipped: Not a SMELT incident (type: %s)", inc.id, inc.type)
+        for sub in self.submissions:
+            if sub.type != "smelt":
+                log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub.id, sub.type)
                 continue
             try:
-                i_jobs = get_incident_results(inc.id, self.token)
-                u_jobs = get_aggregate_results(inc.id, self.token)
+                s_jobs = get_submission_results(sub.id, self.token)
+                a_jobs = get_aggregate_results(sub.id, self.token)
             except ValueError as e:
                 log.debug(e)
                 continue
@@ -48,23 +48,23 @@ class Commenter:
                 continue
 
             state = "none"
-            all_jobs = i_jobs + u_jobs
+            all_jobs = s_jobs + a_jobs
             if any(j["status"] == "running" for j in all_jobs):
-                log.info("Postponing comment for %s: Some tests are still running", inc)
+                log.info("Postponing comment for %s: Some tests are still running", sub)
             elif any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
-                log.info("Creating 'failed' comment for %s: At least one job failed", inc)
+                log.info("Creating 'failed' comment for %s: At least one job failed", sub)
                 state = "failed"
             else:
                 state = "passed"
 
             msg = self.summarize_message(all_jobs)
-            self.osc_comment(inc, msg, state)
+            self.osc_comment(sub, msg, state)
 
         return 0
 
-    def osc_comment(self, inc: Incident, msg: str, state: str) -> None:
-        if inc.rr is None:
-            log.debug("Comment skipped for incident %s: No release request defined", inc.id)
+    def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
+        if sub.rr is None:
+            log.debug("Comment skipped for submission %s: No release request defined", sub.id)
             return
 
         if not msg:
@@ -73,14 +73,14 @@ class Commenter:
 
         bot_name = "openqa"
         info: dict[str, Any] = {"state": state}
-        if inc.revisions:
-            for key in inc.revisions:
-                info[f"revision_{key.version}_{key.arch}"] = inc.revisions[key]
+        if sub.revisions:
+            for key in sub.revisions:
+                info[f"revision_{key.version}_{key.arch}"] = sub.revisions[key]
 
         msg = self.commentapi.add_marker(msg, bot_name, info)
         msg = self.commentapi.truncate(msg.strip())
 
-        kw = {"request_id": str(inc.rr)}
+        kw = {"request_id": str(sub.rr)}
         comments = self.commentapi.get_comments(**kw)
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
@@ -104,7 +104,7 @@ class Commenter:
         if not self.dry:
             self.commentapi.add_comment(comment=msg, **kw)
         else:
-            log.info("Dry run: Would write comment to request %s", inc)
+            log.info("Dry run: Would write comment to request %s", sub)
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:  # noqa: C901

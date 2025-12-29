@@ -10,7 +10,7 @@ from openqabot.dashboard import put
 
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
-from .loader.qem import get_incidents
+from .loader.qem import get_submissions
 from .openqa import openQAInterface
 
 log = getLogger("bot.openqabot")
@@ -22,15 +22,15 @@ class OpenQABot:
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
-        self.incidents = get_incidents(self.token)
-        log.info("Loaded %s incidents from QEM Dashboard", len(self.incidents))
+        self.submissions = get_submissions(self.token)
+        log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
 
         extrasettings = get_onearch(args.singlearch)
 
         self.workers = load_metadata(
             args.configs,
             aggregate=args.disable_aggregates,
-            incidents=args.disable_incidents,
+            submissions=args.disable_submissions,
             extrasettings=extrasettings,
         )
 
@@ -52,7 +52,9 @@ class OpenQABot:
     def __call__(self) -> int:
         log.info("Entering bot main loop")
         post = [
-            p for w in self.workers for p in w(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+            p
+            for w in self.workers
+            for p in w(self.submissions, self.token, self.ci, ignore_onetime=self.ignore_onetime)
         ]
 
         if self.dry:
