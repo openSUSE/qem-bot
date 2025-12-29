@@ -39,10 +39,7 @@ class OpenQABot:
 
     def post_qem(self, data: dict[str, Any], api: str) -> None:
         if not self.openqa:
-            log.warning(
-                "Skipping dashboard update: No valid openQA configuration found for data: %s",
-                data,
-            )
+            log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
 
         res = put(api, headers=self.token, json=data)
