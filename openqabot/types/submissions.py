@@ -16,7 +16,6 @@ from openqabot.config import (
     QEM_DASHBOARD,
     SMELT_URL,
 )
-from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
@@ -91,13 +90,18 @@ class Submissions(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(token: dict[str, str], sub: Submission, arch: str, ver: str, flavor: str) -> bool:
+    def _is_scheduled_job(  # noqa: PLR0917
+        token: dict[str, str], sub: Submission, arch: str, ver: str, flavor: str, submission_type: str | None = None
+    ) -> bool:
         jobs = {}
         try:
             url = f"{QEM_DASHBOARD}api/incident_settings/{sub.id}"
-            jobs = retried_requests.get(url, headers=token).json()
+            params = {}
+            if submission_type:
+                params["type"] = submission_type
+            jobs = retried_requests.get(url, headers=token, params=params).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub.id)
+            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub)
 
         if not jobs:
             return False
@@ -141,11 +145,11 @@ class Submissions(BaseConf):
     def _should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
         sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
         if sub.type == "git" and not sub.ongoing:
-            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", sub.id, arch, flavor)
+            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", sub, arch, flavor)
             return True
         if (self.filter_embargoed(flavor) and sub.embargoed) or sub.staging:
             if sub.embargoed:
-                log.info("Submission %s skipped: Embargoed and embargo-filtering enabled", sub.id)
+                log.info("Submission %s skipped: Embargoed and embargo-filtering enabled", sub)
             return True
 
         # Check packages and channels
@@ -159,18 +163,20 @@ class Submissions(BaseConf):
         ):
             if not matches:
                 log.debug(
-                    "Submission %s skipped for %s on %s: No matching channels found in metadata", sub.id, flavor, arch
+                    "Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch
                 )
             return True
 
-        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, sub, arch, self.settings["VERSION"], flavor):
-            log.info("Submission %s already scheduled for %s on %s", sub.id, flavor, arch)
+        if not cfg.ignore_onetime and self._is_scheduled_job(
+            cfg.token, sub, arch, self.settings["VERSION"], flavor, submission_type=sub.type
+        ):
+            log.info("Submission %s already scheduled for %s on %s", sub, flavor, arch)
             return True
 
         if "Kernel" in flavor and not sub.livepatch and not flavor.endswith("Azure"):
             allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
             if set(matches).isdisjoint(allowed):
-                log.warning("Submission %s skipped: Kernel submission missing product repository", sub.id)
+                log.warning("Submission %s skipped: Kernel submission missing product repository", sub)
                 return True
 
         return False
@@ -185,7 +191,7 @@ class Submissions(BaseConf):
             "DISTRI": self.settings["DISTRI"],
             "INCIDENT_ID": sub.id,
             "REPOHASH": revs,
-            "BUILD": f":{sub.id}:{sub.packages[0]}",
+            "BUILD": f":{sub.type}:{sub.id}:{sub.packages[0]}",
             **OBSOLETE_PARAMS,
             **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
             **({"KGRAFT": "1"} if sub.livepatch else {}),
@@ -240,7 +246,7 @@ class Submissions(BaseConf):
             return True
         pos, neg = set(data.get("aggregate_check_true", [])), set(data.get("aggregate_check_false", []))
         if (pos and not pos.isdisjoint(openqa_keys)) or (neg and neg.isdisjoint(openqa_keys)):
-            log.info("Submission %s: Aggregate job not required", sub.id)
+            log.info("Submission %s: Aggregate job not required", sub)
             return False
         return bool(neg and pos)
 
@@ -275,6 +281,7 @@ class Submissions(BaseConf):
             "api": "api/incident_settings",
             "qem": {
                 "incident": sub.id,
+                "type": sub.type,
                 "arch": arch,
                 "flavor": flavor,
                 "version": self.settings["VERSION"],
@@ -285,16 +292,7 @@ class Submissions(BaseConf):
         }
 
     def _process_sub_context(self, ctx: SubContext, cfg: SubConfig) -> dict[str, Any] | None:
-        try:
-            return self._handle_submission(ctx, cfg)
-        except NoRepoFoundError as e:
-            log.info(
-                "Submission %s skipped: RepoHash calculation failed for project %s: %s",
-                ctx.sub.id,
-                ctx.sub.project,
-                e,
-            )
-            return None
+        return self._handle_submission(ctx, cfg)
 
     def __call__(
         self,
@@ -305,14 +303,11 @@ class Submissions(BaseConf):
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
         cfg = SubConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
-        active = [
-            s for s in submissions if s.compute_revisions_for_product_repo(self.product_repo, self.product_version)
-        ]
 
         return [
             r
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
-            for sub in active
+            for sub in submissions
             if (r := self._process_sub_context(SubContext(sub, arch, flavor, data), cfg))
         ]

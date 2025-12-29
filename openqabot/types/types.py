@@ -18,6 +18,7 @@ class ProdVer(NamedTuple):
 
 class Data(NamedTuple):
     submission: int
+    submission_type: str
     settings_id: int
     flavor: str
     arch: str

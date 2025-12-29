@@ -25,6 +25,9 @@ class OpenQABot:
         self.submissions = get_submissions(self.token)
         log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
 
+        for sub in self.submissions:
+            sub.log_skipped()
+
         extrasettings = get_onearch(args.singlearch)
 
         self.workers = load_metadata(
@@ -43,8 +46,8 @@ class OpenQABot:
             return
 
         res = put(api, headers=self.token, json=data)
-        res_id = res.json().get("id", "No id?")
-        log.info("Dashboard update successful: Status %s, Database ID %s", res.status_code, res_id)
+        res_id = res.json().get("id", "unknown")
+        log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 
     def post_openqa(self, data: dict[str, Any]) -> None:
         self.openqa.post_job(data)

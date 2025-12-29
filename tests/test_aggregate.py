@@ -2,15 +2,18 @@
 # SPDX-License-Identifier: MIT
 import datetime
 import logging
+from collections import defaultdict
 from collections.abc import Callable, Generator
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 import requests
 from pytest_mock import MockerFixture
 
 from openqabot.errors import SameBuildExistsError
-from openqabot.types.aggregate import Aggregate
+from openqabot.types.aggregate import Aggregate, _PostData  # noqa: PLC2701
+from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
 from openqabot.utc import UTC
 
@@ -73,6 +76,7 @@ def submission_mock() -> Callable[..., Any]:
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
+            self.type = "smelt"
 
         def __str__(self) -> str:
             return str(self.id)
@@ -315,3 +319,43 @@ def test_process_arch_same_build_exists(mocker: MockerFixture, caplog: pytest.Lo
     res = acc._process_arch("A", [], {}, None, ignore_onetime=False)  # noqa: SLF001
     assert res is None
     assert "A build with the same RepoHash already exists" in caplog.text
+
+
+def test_aggregate_duplicate_submissions() -> None:
+    # Minimal aggregate setup
+    agg = Aggregate(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "sles"},
+        config={"FLAVOR": "AAA", "archs": ["x86_64"], "test_issues": {"ISSUE": "product:version"}},
+    )
+
+    # Mock submissions with same ID
+    sub1 = MagicMock(spec=Submission)
+    sub1.id = 123
+    sub1.livepatch = False
+    sub1.staging = False
+    sub1.embargoed = False
+    sub1.type = "smelt"
+    sub2 = MagicMock(spec=Submission)
+    sub2.id = 123
+    sub2.livepatch = False
+    sub2.staging = False
+    sub2.embargoed = False
+    sub2.type = "smelt"
+
+    test_submissions = defaultdict(list)
+    test_submissions["ISSUE"] = [sub1, sub2]
+    test_repos = defaultdict(list)
+    test_repos["REPOS"] = ["repo"]
+
+    post_data = _PostData(test_submissions, test_repos, "hash", "build")
+
+    # Call _create_full_post directly
+    res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
+
+    # Verify unique incidents
+    assert res is not None
+    assert len(res["qem"]["incidents"]) == 1
+    assert res["qem"]["incidents"][0]["incident"] == 123
