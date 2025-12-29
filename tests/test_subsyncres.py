@@ -70,9 +70,9 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission 100",
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -103,9 +103,9 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission 100",
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -141,9 +141,9 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission 100",
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -177,9 +177,9 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission 100",
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -213,13 +213,13 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission 100",
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Syncing submission job 1234: Status passed",
+        "Syncing submission job 1234 for submission smelt:100: Status passed",
         "Dry run: Skipping dashboard update",
         "Submission results sync completed",
     ]

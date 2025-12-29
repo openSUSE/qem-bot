@@ -136,9 +136,9 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         try:
             pr = get_json(f"repos/{repo}/pulls/{number}", token)
         except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError):
-            log.exception("PR #%s ignored: Could not read PR metadata", number)
+            log.exception("PR git:%s ignored: Could not read PR metadata", number)
             return []
-        log.debug("PR %i: %s", number, pr)
+        log.debug("PR git:%i: %s", number, pr)
         return [pr]
 
     def iter_pr_pages() -> Any:
@@ -289,7 +289,7 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in (e.text for e in res.findall("scminfo") if e.text):
         if (existing := submission.get(scm_key)) and found != existing:
-            msg = "PR %s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
+            msg = "PR git:%s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
             log.warning(msg, submission["number"], project, found, existing)
             continue
         submission[scm_key] = found
@@ -396,9 +396,9 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         _process_obs_url(url, submission, dry=dry, results=results)
 
     if results["unpublished"]:
-        log.info("PR %i: Some repos not published yet: %s", submission["number"], ", ".join(results["unpublished"]))
+        log.info("PR git:%i: Some repos not published yet: %s", submission["number"], ", ".join(results["unpublished"]))
     if results["failed"]:
-        log.info("PR %i: Some packages failed: %s", submission["number"], ", ".join(results["failed"]))
+        log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results["failed"]))
 
     submission.update({
         "channels": sorted(results["projects"]),
@@ -449,10 +449,10 @@ def add_packages_from_files(submission: dict[str, Any], token: dict[str, str], f
 def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) -> bool:
     failed_or_unpublished_packages = len(submission["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
-        log.info("Skipping PR %i: Not all packages succeeded or published", number)
+        log.info("Skipping PR git:%i: Not all packages succeeded or published", number)
         return False
     if len(submission["successful_packages"]) < 1:
-        info = "Skipping PR %i: No packages have been built/published (there are %i failed/unpublished packages)"
+        info = "Skipping PR git:%i: No packages have been built/published (there are %i failed/unpublished packages)"
         log.info(info, number, failed_or_unpublished_packages)
         return False
     return True
@@ -466,7 +466,7 @@ def make_submission_from_gitea_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    log.debug("Fetching info for PR %s from Gitea", pr.get("number", "?"))
+    log.debug("Fetching info for PR git:%s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
         repo = pr["base"]["repo"]
@@ -504,21 +504,21 @@ def make_submission_from_gitea_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
-            log.info("PR %s skipped: No reviews by %s", number, OBS_GROUP)
+            log.info("PR git:%s skipped: No reviews by %s", number, OBS_GROUP)
             return None
         add_comments_and_referenced_build_results(submission, comments, dry=dry)
         if not submission["channels"]:
-            log.info("PR %s skipped: No channels found", number)
+            log.info("PR git:%s skipped: No channels found", number)
             return None
         if only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number):
             return None
         add_packages_from_files(submission, token, files, dry=dry)
         if not submission["packages"]:
-            log.info("PR %s skipped: No packages found", number)
+            log.info("PR git:%s skipped: No packages found", number)
             return None
 
     except Exception:
-        log.exception("Gitea API error: Unable to process PR %s", pr.get("number", "?"))
+        log.exception("Gitea API error: Unable to process PR git:%s", pr.get("number", "?"))
         return None
     return submission
 

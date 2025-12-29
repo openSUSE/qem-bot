@@ -159,16 +159,16 @@ def get_active_submission_ids() -> set[int]:
 def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
     query = INCIDENT % {"incident": incident}
 
-    log.info("Fetching details for SMELT incident %s", incident)
+    log.info("Fetching details for SMELT incident smelt:%s", incident)
     inc_result = get_json(query)
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = cast("dict[str, Any]", walk(inc_result["data"]["incidents"]["edges"][0]["node"]))
     except ValidationError:
-        log.exception("SMELT API error: Invalid data for SMELT incident %s", incident)
+        log.exception("SMELT API error: Invalid data for SMELT incident smelt:%s", incident)
         return None
     except Exception:
-        log.exception("SMELT API error: Unexpected error for SMELT incident %s", incident)
+        log.exception("SMELT API error: Unexpected error for SMELT incident smelt:%s", incident)
         return None
 
     return inc_result

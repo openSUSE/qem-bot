@@ -1,6 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+from __future__ import annotations
+
 import json
 import logging
 from argparse import Namespace
@@ -104,17 +106,21 @@ def test_handling_submission(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> No
     responses.add(
         method="GET",
         url=f"{QEM_DASHBOARD}api/incidents/33222",
-        json={"number": 33222, "rr_number": 42},
+        json={"number": 33222, "rr_number": 42, "type": "smelt"},
     )
     caplog.set_level(logging.DEBUG)
     amqp.on_message(
-        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": ":33222:emacs"}).encode()
+        cast("Any", ""),
+        cast("Any", fake_job_done),
+        cast("Any", ""),
+        json.dumps({"BUILD": ":smelt:33222:emacs"}).encode(),
     )
 
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Submission 33222: openQA job finished" in messages
+    assert "Submission smelt:33222: openQA job finished" in messages
+    assert "Starting approving submissions in IBS or Gitea…" in messages
     assert "Submissions to approve:" in messages
-    assert "* SUSE:Maintenance:33222:42" in messages
+    assert "* smelt:33222" in messages
 
 
 @responses.activate
@@ -160,7 +166,7 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> N
 def test_handle_submission_value_error(caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=ValueError)
-    amqp.handle_submission(33222, {})
+    amqp.handle_submission(33222, "smelt", {})
     assert not caplog.text
 
 
@@ -171,7 +177,7 @@ def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: 
     mocker.patch("openqabot.openqa.openQAInterface.get_jobs", return_value=[0])
     fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP._fetch_openqa_results", return_value=True)
 
-    amqp.handle_submission(42, {})
+    amqp.handle_submission(42, "smelt", {})
     fetch_openqa_results_mock.assert_called()
 
 

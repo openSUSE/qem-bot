@@ -99,7 +99,7 @@ def _parse_product(path: Path, data: dict) -> Iterator[Data]:
         log.info("Configuration skipped: File %s missing required setting %s", path, e)
         return
 
-    yield from (Data(0, 0, flavor, arch, distri, version, "", product) for arch in archs)
+    yield from (Data(0, "aggregate", 0, flavor, arch, distri, version, "", product) for arch in archs)
 
 
 def read_products(path: Path) -> list[Data]:

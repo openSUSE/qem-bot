@@ -30,6 +30,8 @@ class SyncRes:
         ret["job_id"] = job["id"]
         ret["incident_settings"] = data.settings_id if cls.operation == "submission" else None
         ret["update_settings"] = data.settings_id if cls.operation == "aggregate" else None
+        ret["submission_id"] = data.submission
+        ret["submission_type"] = data.submission_type
         ret["name"] = job["name"]
         ret["distri"] = data.distri
         ret["group_id"] = job["group_id"]
@@ -69,10 +71,19 @@ class SyncRes:
         return True
 
     def post_result(self, result: dict[str, Any]) -> None:
+        sub_id = ""
+        if result.get("incident_settings"):
+            sub_id = (
+                f" for submission {result.get('submission_type', 'smelt')}:{result.get('submission_id', 'unknown')}"
+            )
+        elif result.get("update_settings"):
+            sub_id = " for aggregate"
+
         log.info(
-            "Syncing %s job %s: Status %s",
+            "Syncing %s job %s%s: Status %s",
             self.operation,
             result["job_id"],
+            sub_id,
             result["status"],
         )
         log.debug("Full post data: %s", pformat(result))

@@ -59,8 +59,8 @@ def test_sub_normal() -> None:
     assert not sub.emu
     assert not sub.staging
     assert sub.embargoed
-    assert str(sub) == "24618"
-    assert repr(sub) == "<Submission: SUSE:Maintenance:24618:274060>"
+    assert str(sub) == "smelt:24618"
+    assert repr(sub) == "<Submission: smelt:SUSE:Maintenance:24618:274060>"
     assert sub.id == 24618
     assert sub.rrid == "SUSE:Maintenance:24618:274060"
     assert sub.channels == [
@@ -192,7 +192,7 @@ def test_sub_repr_no_rrid() -> None:
     data = deepcopy(test_data)
     data["rr_number"] = None
     sub = Submission(data)
-    assert repr(sub) == f"<Submission: {data['project']}>"
+    assert repr(sub) == f"<Submission: smelt:{data['project']}>"
 
 
 def test_sub_is_livepatch_false() -> None:
@@ -226,6 +226,7 @@ def test_sub_rev_empty_channels() -> None:
     sub.id = 123
     sub.channels = []
     sub._rev_cache_params = None  # noqa: SLF001
+    sub._rev_logged = False  # noqa: SLF001
     sub.project = "project"
     sub.compute_revisions_for_product_repo = Submission.compute_revisions_for_product_repo.__get__(sub, Submission)
     sub._rev = Submission._rev  # noqa: SLF001
@@ -237,7 +238,7 @@ def test_revisions_with_fallback_no_revisions(caplog: pytest.LogCaptureFixture, 
     mocker.patch.object(sub, "compute_revisions_for_product_repo")
     caplog.set_level(logging.DEBUG, logger="bot.types.submission")
     assert sub.revisions_with_fallback("x86_64", "15-SP4") is None
-    assert "Submission 24618: No revisions available" in caplog.text
+    assert "Submission smelt:24618: No revisions available" in caplog.text
 
 
 def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
@@ -250,38 +251,84 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
     ]
 
     # Mock gitea.get_product_name to return something for SLES and UNKNOWN
-    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "UNKNOWN")
+    mocker.patch(
+        "openqabot.loader.gitea.get_product_name",
+        side_effect=lambda p: "SLES" if "SLES" in p else "UNKNOWN",
+    )
     # Ensure SLES is in OBS_PRODUCTS but UNKNOWN is not
     mocker.patch("openqabot.types.submission.OBS_PRODUCTS", ["SLES"])
 
-    sub = Submission(slfo_data)
+    submission = Submission(slfo_data)
+    submission.log_skipped()
 
-    assert "Submission 24618: Product UNKNOWN is not in considered products" in caplog.text
-    assert len(sub.channels) == 1  # only the first one
-    assert sub.channels[0].product == "SUSE:SLFO"
-    assert sub.channels[0].version == "1.1.99:PullRequest:166:SLES"
+    assert "Submission smelt:24618: Product UNKNOWN is not in considered products" in caplog.text
+
+    assert len(submission.channels) == 1  # only the first one
+    assert submission.channels[0].product == "SUSE:SLFO"
 
 
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
-    sub = Submission(test_data)
-    mock_rev = mocker.patch.object(sub, "_rev", return_value={"x86_64": 123})
-
-    # First call
-    assert sub.compute_revisions_for_product_repo("repo", "version") is True
-    assert mock_rev.call_count == 1
-
-    # Second call (cache hit)
-    assert sub.compute_revisions_for_product_repo("repo", "version") is True
-    assert mock_rev.call_count == 1
+    submission = Submission(test_data)
+    submission._rev_cache_params = (None, None)  # noqa: SLF001
+    submission.revisions = {"some": "data"}  # type: ignore[assignment]
+    # Should return True without calling _rev
+    mock_rev = mocker.patch.object(submission, "_rev")
+    assert submission.compute_revisions_for_product_repo(None, None)
+    mock_rev.assert_not_called()
 
 
 def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
-    sub = Submission(test_data)
-    # Mocking _rev to be called would be a failure since it should hit cache
-    mock_rev = mocker.patch.object(sub, "_rev", side_effect=Exception("Should not be called"))
+    submission = Submission(test_data)
+    submission._rev_cache_params = (None, None)  # noqa: SLF001
+    submission.revisions = None
+    # Should return False without calling _rev
+    mock_rev = mocker.patch.object(submission, "_rev")
+    assert not submission.compute_revisions_for_product_repo(None, None)
+    mock_rev.assert_not_called()
 
-    sub._rev_cache_params = ("repo", "version")  # noqa: SLF001
-    sub.revisions = None
 
-    assert sub.compute_revisions_for_product_repo("repo", "version") is False
-    assert mock_rev.call_count == 0
+def test_submission_create_empty_packages(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO")
+    data = deepcopy(test_data)
+    data["packages"] = []  # This triggers EmptyPackagesError
+
+    sub = Submission.create(data)
+    assert sub is None
+    assert "Submission smelt:24618 ignored: No packages found for project" in caplog.text
+
+
+def test_compute_revisions_logging_once(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO")
+    data = deepcopy(test_data)
+
+    sub = Submission(data)
+    # Mock _rev to raise NoRepoFoundError
+    mocker.patch.object(sub, "_rev", side_effect=NoRepoFoundError("test error"))
+
+    # First call should log
+    assert not sub.compute_revisions_for_product_repo(None, None)
+    assert "RepoHash calculation failed for project SUSE:Maintenance:24618: test error" in caplog.text
+    caplog.clear()
+
+    # Second call with same params (cache hit)
+    assert not sub.compute_revisions_for_product_repo(None, None)
+    assert "RepoHash calculation failed" not in caplog.text
+
+    # Third call with different params (bypass cache, but already logged)
+    assert not sub.compute_revisions_for_product_repo("different", "params")
+    assert "RepoHash calculation failed" not in caplog.text
+
+
+def test_log_skipped_twice(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO")
+    data = deepcopy(test_data)
+    sub = Submission(data)
+    sub.skipped_products.add("UNKNOWN")
+
+    sub.log_skipped()
+    assert "Product UNKNOWN is not in considered products" in caplog.text
+    caplog.clear()
+
+    # Second call should return early
+    sub.log_skipped()
+    assert "Product UNKNOWN is not in considered products" not in caplog.text

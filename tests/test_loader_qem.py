@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 import logging
 from unittest.mock import MagicMock
 
@@ -84,12 +86,13 @@ def test_get_submissions_create_none(mocker: MockerFixture) -> None:
 
 
 def test_get_active_submissions(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 1}, {"number": 2}])
+    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 1}, {"number": 2}])
 
-    res = get_active_submissions({})
+    res = get_active_submissions({}, submission_type="git")
 
     assert len(res) == 2
     assert res == [1, 2]
+    mock_json.assert_called_once_with("api/incidents", headers={}, params={"type": "git"})
 
 
 def test_get_submissions_approver(mocker: MockerFixture) -> None:
@@ -117,14 +120,17 @@ def test_get_submissions_approver(mocker: MockerFixture) -> None:
 
 
 def test_get_single_submission(mocker: MockerFixture) -> None:
-    mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123})
+    mock_json = mocker.patch(
+        "openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123, "type": "smelt"}
+    )
 
-    res = get_single_submission({}, 1)
+    res = get_single_submission({}, 1, submission_type="smelt")
 
     assert len(res) == 1
     assert res[0].sub == 1
     assert res[0].req == 123
-    mock_json.assert_called_once_with("api/incidents/1", headers={})
+    assert res[0].type == "smelt"
+    mock_json.assert_called_once_with("api/incidents/1", headers={}, params={"type": "smelt"})
 
 
 def test_get_submission_settings_no_settings(mocker: MockerFixture) -> None:
@@ -187,7 +193,7 @@ def test_get_submission_settings_data(mocker: MockerFixture) -> None:
         }
     ]
 
-    res = get_submission_settings_data({}, 1)
+    res = get_submission_settings_data({}, 1, submission_type="smelt")
 
     assert len(res) == 1
     assert res[0].submission == 1
@@ -197,7 +203,7 @@ def test_get_submission_settings_data(mocker: MockerFixture) -> None:
     assert res[0].distri == "distri"
     assert res[0].version == "version"
     assert res[0].build == "build"
-    mock_json.assert_called_once_with("api/incident_settings/1", headers={})
+    mock_json.assert_called_once_with("api/incident_settings/1", headers={}, params={"type": "smelt"})
 
 
 def test_get_submission_settings_data_error(mocker: MockerFixture) -> None:
@@ -216,7 +222,7 @@ def test_get_submission_results(mocker: MockerFixture) -> None:
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, {}, all_submissions=False)
+    mock_settings.assert_called_once_with(1, {}, all_submissions=False, submission_type=None)
     mock_json.assert_called_once_with("api/jobs/incident/1", headers={})
 
 
@@ -249,7 +255,7 @@ def test_get_aggregate_settings_data(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"id": 1, "build": "build"}])
     from openqabot.types.types import Data
 
-    data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
+    data = Data(0, "aggregate", 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)
 
     assert len(res) == 1
@@ -265,7 +271,7 @@ def test_get_aggregate_results(mocker: MockerFixture) -> None:
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, {})
+    mock_settings.assert_called_once_with(1, {}, submission_type=None)
     mock_json.assert_called_once_with("api/jobs/update/1", headers={})
 
 
@@ -282,7 +288,7 @@ def test_get_aggregate_settings_data_none(mocker: MockerFixture, caplog: pytest.
     mocker.patch("openqabot.loader.qem.get_json", return_value=[])
     from openqabot.types.types import Data
 
-    data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
+    data = Data(0, "aggregate", 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)
     assert res == []
     assert "No aggregate settings found for product product on arch arch" in caplog.text
@@ -391,3 +397,39 @@ def test_update_job_request_exception(mocker: MockerFixture, caplog: pytest.LogC
     mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
     update_job({}, 1, {})
     assert "QEM Dashboard API request failed" in caplog.text
+
+
+def test_get_active_submissions_with_type(mocker: MockerFixture) -> None:
+    mock_get = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 123}])
+    res = get_active_submissions({"token": "foo"}, submission_type="smelt")
+    assert res == [123]
+    mock_get.assert_called_once_with("api/incidents", headers={"token": "foo"}, params={"type": "smelt"})
+
+
+def test_get_active_submissions_no_type(mocker: MockerFixture) -> None:
+    mock_get = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 123}])
+    res = get_active_submissions({"token": "foo"})
+    assert res == [123]
+    mock_get.assert_called_once_with("api/incidents", headers={"token": "foo"}, params={})
+
+
+def test_get_single_submission_with_type(mocker: MockerFixture) -> None:
+    mock_get = mocker.patch(
+        "openqabot.loader.qem.get_json",
+        return_value={"number": 123, "rr_number": 456, "type": "smelt"},
+    )
+    res = get_single_submission({"token": "foo"}, 123, submission_type="smelt")
+    assert len(res) == 1
+    assert res[0].sub == 123
+    mock_get.assert_called_once_with("api/incidents/123", headers={"token": "foo"}, params={"type": "smelt"})
+
+
+def test_get_single_submission_no_type(mocker: MockerFixture) -> None:
+    mock_get = mocker.patch(
+        "openqabot.loader.qem.get_json",
+        return_value={"number": 123, "rr_number": 456, "type": "smelt"},
+    )
+    res = get_single_submission({"token": "foo"}, 123)
+    assert len(res) == 1
+    assert res[0].sub == 123
+    mock_get.assert_called_once_with("api/incidents/123", headers={"token": "foo"}, params={})

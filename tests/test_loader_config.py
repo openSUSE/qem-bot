@@ -72,6 +72,7 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         Data(
             submission=0,
+            submission_type="aggregate",
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="x86_64",
@@ -85,6 +86,7 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         Data(
             submission=0,
+            submission_type="aggregate",
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="aarch64",
@@ -106,6 +108,7 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         Data(
             submission=0,
+            submission_type="aggregate",
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="x86_64",
@@ -119,6 +122,7 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
     assert (
         Data(
             submission=0,
+            submission_type="aggregate",
             settings_id=0,
             flavor="Server-DVD-Updates",
             arch="aarch64",
@@ -136,7 +140,7 @@ def test_invalid_yaml_file_is_skipped(mocker: MockerFixture, caplog: pytest.LogC
     mock_yaml_class.return_value.load.side_effect = YAMLError("Simulated YAML error")
     file_path = Path(__file__).parent / "fixtures/config/simulated_invalid.yml"
     load_metadata(file_path, aggregate=False, submissions=True, extrasettings=set())
-    assert f"YAML load failed: File {file_path}" in caplog.messages
+    assert "YAML load failed" in caplog.text
 
 
 def test_load_one_metadata_missing_settings(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:

@@ -65,22 +65,29 @@ def sanitize_comment_text(text: str) -> str:
 
 
 class Approver:
-    def __init__(self, args: Namespace, single_submission: int | None = None) -> None:
+    def __init__(
+        self,
+        args: Namespace,
+        single_submission: int | None = None,
+        submission_type: str | None = None,
+    ) -> None:
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_submission is None:
-            self.single_submission = args.incident
+            self.single_submission = getattr(args, "submission", None) or getattr(args, "incident", None)
             self.all_submissions = args.all_submissions
+            self.submission_type = None
         else:
             self.single_submission = single_submission
             self.all_submissions = False
+            self.submission_type = submission_type
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = openQAInterface(args)
 
     def __call__(self) -> int:
         log.info("Starting approving submissions in IBS or Gitea…")
         subreqs = (
-            get_single_submission(self.token, self.single_submission)
+            get_single_submission(self.token, self.single_submission, submission_type=self.submission_type)
             if self.single_submission
             else get_submissions_approver(self.token)
         )
@@ -103,12 +110,14 @@ class Approver:
 
     def _approvable(self, sub: SubReq) -> bool:
         try:
-            s_jobs = get_submission_settings(sub.sub, self.token, all_submissions=self.all_submissions)
+            s_jobs = get_submission_settings(
+                sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
+            )
         except NoResultsError as e:
             log.info("Approval check for %s skipped: %s", _ms2str(sub), e)
             return False
         try:
-            a_jobs = get_aggregate_settings(sub.sub, self.token)
+            a_jobs = get_aggregate_settings(sub.sub, self.token, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
                 log.info("No aggregate test results found for %s", _ms2str(sub))
@@ -116,12 +125,12 @@ class Approver:
             log.info(e)
             a_jobs = []
 
-        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub):
+        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
             log.info("%s has at least one failed job in submission tests", _ms2str(sub))
             return False
 
         if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
-            a_jobs, "api/jobs/update/", sub.sub
+            a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
             log.info("%s has at least one failed job in aggregate tests", _ms2str(sub))
             return False
@@ -133,7 +142,13 @@ class Approver:
         try:
             patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
         except RequestError as e:
-            log.info("Unable to mark job %i as acceptable for submission %i: %s", job_id, sub, e)
+            log.info(
+                "Unable to mark job %i as acceptable for submission %s:%i: %s",
+                job_id,
+                self.submission_type or "smelt",
+                sub,
+                e,
+            )
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
@@ -259,39 +274,50 @@ class Approver:
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
         if job_result.get(f"acceptable_for_{sub}"):
-            log.info("Ignoring failed job %s for submission %s (manually marked as acceptable)", url, sub)
-            return True
-        if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
             log.info(
-                "Ignoring failed aggregate job %s for submission %s due to older eligible openQA job being ok",
+                "Ignoring failed job %s for submission %s:%s (manually marked as acceptable)",
                 url,
+                self.submission_type or "smelt",
                 sub,
             )
             return True
-        log.info("Found failed, not-ignored job %s for submission %s", url, sub)
+        if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
+            log.info(
+                "Ignoring failed aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
+                url,
+                self.submission_type or "smelt",
+                sub,
+            )
+            return True
+        log.info("Found failed, not-ignored job %s for submission %s:%s", url, self.submission_type or "smelt", sub)
         return False
 
     @lru_cache(maxsize=128)
-    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int) -> bool:
-        job_results = get_json(api + str(job_aggr.id), headers=self.token)
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool:
+        params = {}
+        if submission_type:
+            params["type"] = submission_type
+        job_results = get_json(api + str(job_aggr.id), headers=self.token, params=params)
         if not job_results:
-            msg = f"Job setting {job_aggr.id} not found for submission {sub}"
+            msg = f"Job setting {job_aggr.id} not found for submission {submission_type or 'smelt'}:{sub}"
             raise NoResultsError(msg)
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
         return all(self.is_job_acceptable(sub, api, r) for r in job_results)
 
-    def get_submission_result(self, jobs: list[JobAggr], api: str, sub: int) -> bool:
+    def get_submission_result(
+        self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
+    ) -> bool:
         if not jobs:
             return False
 
         res = False
         for job_aggr in jobs:
             try:
-                if not self.get_jobs(job_aggr, api, sub):
+                if not self.get_jobs(job_aggr, api, sub, submission_type=submission_type):
                     return False
                 res = True
             except NoResultsError as e:  # noqa: PERF203
-                log.info("Approval check for submission %s failed: %s", sub, e)
+                log.info("Approval check for submission %s:%s failed: %s", submission_type or "smelt", sub, e)
                 continue
 
         return res

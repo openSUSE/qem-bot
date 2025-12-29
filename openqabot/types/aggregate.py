@@ -71,7 +71,7 @@ class Aggregate(BaseConf):
             if any((submission.livepatch, submission.staging)):
                 return False
             if self.filter_embargoed(self.flavor) and submission.embargoed:
-                log.debug("Submission %s skipped: Embargoed and embargo-filtering enabled", submission.id)
+                log.debug("Submission %s skipped: Embargoed and embargo-filtering enabled", submission)
                 return False
             return True
 
@@ -99,7 +99,7 @@ class Aggregate(BaseConf):
         base_url = f"{DOWNLOAD_MAINTENANCE}{sub}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
-    def _create_full_post(
+    def _create_full_post(  # noqa: C901
         self,
         arch: str,
         data: _PostData,
@@ -140,20 +140,28 @@ class Aggregate(BaseConf):
             full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
 
         for template, issues in data.test_submissions.items():
-            full_post["openqa"][template] = ",".join(str(x) for x in issues)
+            full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
             full_post["qem"]["incidents"] += issues
         for template, issues in data.test_repos.items():
             full_post["openqa"][template] = ",".join(issues)
 
-        full_post["qem"]["incidents"] = [str(sub) for sub in set(full_post["qem"]["incidents"])]
+        # Remove duplicates while preserving Submission objects
+        seen = set()
+        unique_incidents = []
+        for sub in full_post["qem"]["incidents"]:
+            if sub.id not in seen:
+                seen.add(sub.id)
+                unique_incidents.append(sub)
+        full_post["qem"]["incidents"] = unique_incidents
+
         if not full_post["qem"]["incidents"]:
             return None
 
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{QEM_DASHBOARD}incident/{sub}" for sub in full_post["qem"]["incidents"]
+            f"{QEM_DASHBOARD}incident/{sub.id}?type={sub.type}" for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-            f"{SMELT_URL}/incident/{sub}" for sub in full_post["qem"]["incidents"]
+            f"{SMELT_URL}/incident/{sub.id}" for sub in full_post["qem"]["incidents"] if sub.type == "smelt"
         )
 
         full_post["qem"]["settings"] = full_post["openqa"]
@@ -161,6 +169,9 @@ class Aggregate(BaseConf):
         full_post["qem"]["build"] = full_post["openqa"]["BUILD"]
         full_post["qem"]["arch"] = full_post["openqa"]["ARCH"]
         full_post["qem"]["product"] = self.product
+        full_post["qem"]["incidents"] = [
+            {"incident": sub.id, "type": sub.type} for sub in full_post["qem"]["incidents"]
+        ]
 
         return full_post
 
@@ -179,7 +190,7 @@ class Aggregate(BaseConf):
         test_submissions, test_repos = self._get_test_submissions_and_repos(valid_submissions, issues_arch)
 
         repohash = merge_repohash(
-            sorted({str(sub) for sub in chain.from_iterable(test_submissions.values())}),
+            sorted({str(sub.id) for sub in chain.from_iterable(test_submissions.values())}),
         )
 
         try:

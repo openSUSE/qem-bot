@@ -106,13 +106,14 @@ def test_commenter_call(mock_args: Namespace, caplog: pytest.LogCaptureFixture, 
     mock_submission = Mock(spec=Submission)
     mock_submission.id = 1
     mock_submission.type = "maintenance"
+    mocker.patch.object(mock_submission, "__str__", return_value="maintenance:1")
     mock_commenter_setup(mocker, submission=mock_submission)
 
     c = Commenter(mock_args)
     ret = c()
 
     assert ret == 0
-    assert "Submission 1 skipped: Not a SMELT incident (type: maintenance)" in caplog.text
+    assert "Submission maintenance:1 skipped: Not a SMELT incident (type: maintenance)" in caplog.text
 
 
 def test_commenter_call_value_error_submission_results(

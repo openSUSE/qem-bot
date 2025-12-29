@@ -19,14 +19,16 @@ from . import gitea
 log = getLogger("bot.loader.repohash")
 
 
-def get_max_revision(
+def get_max_revision(  # noqa: PLR0917
     repos: Sequence[tuple[str, ...]],
     arch: str,
     project: str,
     product_name: str | None = None,
     product_version: str | None = None,
+    submission_id: str | None = None,
 ) -> int:
     max_rev = 0
+    sub_msg = f"Submission {submission_id} skipped" if submission_id else f"Submission for project {project} skipped"
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
 
     for repo in repos:
@@ -55,11 +57,11 @@ def get_max_revision(
             requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("Submission skipped: RepoHash metadata not found at %s", url)
+            log.info("%s: RepoHash metadata not found at %s", sub_msg, url)
             raise NoRepoFoundError from e
 
         if cs is None:
-            log.info("Submission skipped: RepoHash calculation failed, no revision tag found in %s", url)
+            log.info("%s: RepoHash calculation failed, no revision tag found in %s", sub_msg, url)
             raise NoRepoFoundError
         max_rev = max(max_rev, int(str(cs.text)))
 
