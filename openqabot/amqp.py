@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 log = getLogger("bot.amqp")
-build_sub_regex = re.compile(r":(\d+):.*")
+build_sub_regex = re.compile(r":([^:]+):(\d+):.*")
 build_agg_regex = re.compile(r"\d{8}-\d+")
 
 
@@ -72,10 +72,11 @@ class AMQP(SyncRes):
         if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
         if match := build_sub_regex.match(message["BUILD"]):
-            sub_nr = match.group(1)
+            sub_type = match.group(1)
+            sub_nr = match.group(2)
             log.debug("Processing AMQP message: %s", pformat(message))
-            log.info("Submission %s: openQA job finished", sub_nr)
-            return self.handle_submission(int(sub_nr), message)
+            log.info("Submission %s:%s: openQA job finished", sub_type, sub_nr)
+            return self.handle_submission(int(sub_nr), sub_type, message)
         if match := build_agg_regex.match(message["BUILD"]):
             build_nr = match.group(0)
             log.debug("Processing AMQP message: %s", pformat(message))
@@ -88,10 +89,10 @@ class AMQP(SyncRes):
             if self.filter_jobs(job) and (r := self._normalize_data(sub, job)) and r["job_id"] == message["id"]:
                 self.post_result(r)
 
-    def handle_submission(self, sub_nr: int, message: dict[str, Any]) -> None:
+    def handle_submission(self, sub_nr: int, sub_type: str, message: dict[str, Any]) -> None:
         # Load Data about current submission from dashboard database
         try:
-            settings: Sequence[Data] = get_submission_settings_data(self.token, sub_nr)
+            settings: Sequence[Data] = get_submission_settings_data(self.token, sub_nr, submission_type=sub_type)
         except ValueError:
             return
 
@@ -102,5 +103,5 @@ class AMQP(SyncRes):
             self._fetch_openqa_results(sub, message)
 
         # Try to approve submission
-        approve = Approver(self.args, sub_nr)
+        approve = Approver(self.args, single_submission=sub_nr, submission_type=sub_type)
         approve()

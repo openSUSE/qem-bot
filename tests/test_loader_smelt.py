@@ -82,7 +82,7 @@ def test_get_submission_from_smelt_error(caplog: pytest.LogCaptureFixture) -> No
         res = get_submission_from_smelt(1)
 
     assert res is None
-    assert "SMELT API error: Invalid data for SMELT incident 1" in caplog.text
+    assert "SMELT API error: Invalid data for SMELT incident smelt:1" in caplog.text
 
 
 def test_get_active_submission_ids_paginated() -> None:
@@ -117,7 +117,7 @@ def test_get_submission_from_smelt_exception(mocker: MockerFixture, caplog: pyte
     with patch("openqabot.loader.smelt.walk", side_effect=Exception("Unexpected error")):
         res = get_submission_from_smelt(1)
     assert res is None
-    assert "SMELT API error: Unexpected error for SMELT incident 1" in caplog.text
+    assert "SMELT API error: Unexpected error for SMELT incident smelt:1" in caplog.text
 
 
 def test_active_inc_schema_validation() -> None:

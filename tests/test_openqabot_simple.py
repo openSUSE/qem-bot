@@ -56,8 +56,10 @@ def mock_runtime(mocker: MockerFixture) -> None:
     def f_load_metadata(*_args: Any, **_kwds: Any) -> list[FakeWorker]:
         return [FakeWorker()]
 
-    def f_get_submissions(*_args: Any, **_kwds: Any) -> list[int]:
-        return [123]
+    def f_get_submissions(*_args: Any, **_kwds: Any) -> list[Any]:
+        sub = mocker.MagicMock()
+        sub.log_skipped = mocker.Mock()
+        return [sub]
 
     def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()

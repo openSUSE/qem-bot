@@ -478,7 +478,8 @@ def _assert_gitea_settings(
     *,
     arch: str,
     flavor: str,
-    inc_id: int,
+    sub_id: int,
+    sub_type: str,
     product_ver: str,
     repo_hash: int,
     expected_repo: str,
@@ -487,17 +488,17 @@ def _assert_gitea_settings(
     qem = result["qem"]
     assert qem["arch"] == arch
     assert qem["flavor"] == flavor
-    assert qem["incident"] == inc_id
+    assert qem["incident"] == sub_id
     assert qem["version"] == product_ver
     assert qem["withAggregate"]
 
     expected_settings = {
         "ARCH": arch,
-        "BASE_TEST_ISSUES": str(inc_id),
-        "BUILD": f":{inc_id}:pkg",
+        "BASE_TEST_ISSUES": str(sub_id),
+        "BUILD": f":{sub_type}:{sub_id}:pkg",
         "DISTRI": distri,
         "FLAVOR": flavor,
-        "INCIDENT_ID": inc_id,
+        "INCIDENT_ID": sub_id,
         "INCIDENT_REPO": f"{expected_repo}-{arch}/",
         "REPOHASH": repo_hash,
         "VERSION": product_ver,
@@ -523,12 +524,11 @@ def test_gitea_submissions() -> None:
     test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues}}}
 
     # create a Git-based submission
-    sub = MockSubmission()
+    sub = MockSubmission(type="git")
     sub.id = 42
     repo_hash = 12345
     sub.channels = [Repos(product, version, arch, product_ver) for arch in archs]
     sub.revisions = {ArchVer(arch, product_ver): repo_hash for arch in archs}
-    sub.type = "git"
 
     # compute openQA/dashboard settings for submission and check results
     subs = Submissions("SLFO", None, None, settings, test_config, set())
@@ -541,7 +541,8 @@ def test_gitea_submissions() -> None:
             result,
             arch=arch,
             flavor=flavor,
-            inc_id=sub.id,
+            sub_id=sub.id,
+            sub_type=sub.type,
             product_ver=product_ver,
             repo_hash=repo_hash,
             expected_repo=expected_repo,
@@ -861,7 +862,6 @@ def test_handle_submission_singlearch_no_aggregate(mocker: MockerFixture) -> Non
 )
 def test_handle_submission_should_aggregate_logic(mocker: MockerFixture, aggregate_check: dict) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
-
     flavor_data: dict[str, Any] = {
         "archs": ["x86_64"],
         "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"},
@@ -882,7 +882,6 @@ def test_handle_submission_should_aggregate_logic(mocker: MockerFixture, aggrega
 
 def test_handle_submission_params_expand_forbidden(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
-
     test_config = {
         "FLAVOR": {
             "AAA": {
@@ -909,7 +908,6 @@ def test_handle_submission_params_expand_forbidden(mocker: MockerFixture) -> Non
 
 def test_handle_submission_pc_tools_image_fail(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
-
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
         product="SLES",
@@ -929,7 +927,6 @@ def test_handle_submission_pc_tools_image_fail(mocker: MockerFixture) -> None:
 
 def test_handle_submission_pc_pint_image_fail(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
-
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
         product="SLES",
@@ -963,8 +960,8 @@ def test_process_sub_context_norepfound(mocker: MockerFixture) -> None:
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={"archs": ["x86_64"]})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     mocker.patch.object(submissions_obj, "_handle_submission", side_effect=NoRepoFoundError)
-
-    assert submissions_obj._process_sub_context(ctx, cfg) is None  # noqa: SLF001
+    with pytest.raises(NoRepoFoundError):
+        submissions_obj._process_sub_context(ctx, cfg)  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
@@ -982,16 +979,13 @@ def test_handle_submission_priority_logic(
 ) -> None:
     flavor = flavor_kwargs.pop("flavor", "AAA")
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123, **inc_kwargs)
-
     flavor_data = {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}
     flavor_data.update(flavor_kwargs)
-
     test_config = {"FLAVOR": {flavor: flavor_data}}
     submissions_obj = _get_submissions_obj(test_config=test_config)
     ctx = SubContext(sub=sub, arch="x86_64", flavor=flavor, data=submissions_obj.flavors[flavor])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     mocker.patch.object(submissions_obj, "_is_scheduled_job", return_value=False)
-
     result = submissions_obj._handle_submission(ctx, cfg)  # noqa: SLF001
     assert result is not None
     if expected_prio is None:
@@ -1002,7 +996,6 @@ def test_handle_submission_priority_logic(
 
 def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
-
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
         product="SLES",
@@ -1019,7 +1012,6 @@ def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None
         "openqabot.types.submissions.apply_pc_tools_image",
         return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "some_image"},
     )
-
     result = submissions_obj._handle_submission(ctx, cfg)  # noqa: SLF001
     assert result is not None
     assert result["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "some_image"
@@ -1035,11 +1027,9 @@ def test_handle_submission_no_revisions_return_none() -> None:
         config=test_config,
         extrasettings=set(),
     )
-
     sub = MockSubmission(id=1, rrid="RRID", revisions=None, channels=[])
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-
     assert sub_obj._handle_submission(ctx, cfg) is None  # noqa: SLF001
 
 
@@ -1049,14 +1039,12 @@ def test_handle_submission_compute_revisions_fail() -> None:
     sub = MockSubmission(compute_revisions_value=False, channels=[Repos("p", "v", "x86_64")])
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-
     assert submissions_obj._handle_submission(ctx, cfg) is None  # noqa: SLF001
 
 
 def test_handle_submission_revisions_fallback_none() -> None:
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"I": "p:v"}}}}
     submissions_obj = _get_submissions_obj(test_config=test_config)
-
     sub = MockSubmission(
         id=1,
         rrid="RRID",
@@ -1080,16 +1068,12 @@ def test_should_skip_embargoed(caplog: pytest.LogCaptureFixture, mocker: MockerF
         config=test_config,
         extrasettings=set(),
     )
-    # Enable embargo filtering for flavor AAA
     mocker.patch.object(submissions_obj, "filter_embargoed", return_value=True)
-
     sub = MockSubmission(id=1, rrid="RRID", revisions=None, channels=[], embargoed=True)
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-
-    # This should trigger line 147-148 in openqabot/types/submissions.py
     assert submissions_obj._should_skip(ctx, cfg, {}) is True  # noqa: SLF001
-    assert "Submission 1 skipped: Embargoed and embargo-filtering enabled" in caplog.text
+    assert "Submission smelt:1 skipped: Embargoed and embargo-filtering enabled" in caplog.text
 
 
 def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> None:
@@ -1103,16 +1087,11 @@ def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> No
         extrasettings=set(),
     )
     sub = MockSubmission(id=1, rrid="RRID", revisions=None, channels=[], livepatch=False)
-    # Use flavor with "Kernel"
     ctx = SubContext(sub=sub, arch="x86_64", flavor="Kernel-Default", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-
-    # Case 1: matches has something, but not in allowed set (disjoint is True)
     matches = {"OTHER_ISSUE": [Repos("p", "v", "a")]}
     assert submissions_obj._should_skip(ctx, cfg, matches) is True  # noqa: SLF001
     assert "Kernel submission missing product repository" in caplog.text
-
-    # Case 2: matches has something in allowed set (disjoint is False)
     matches = {"OS_TEST_ISSUES": [Repos("p", "v", "a")]}
     assert submissions_obj._should_skip(ctx, cfg, matches) is False  # noqa: SLF001
 
@@ -1124,13 +1103,13 @@ def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> No
             {"aggregate_job": False, "aggregate_check_true": ["MATCH"]},
             {"MATCH", "OTHER"},
             False,
-            "Submission 1: Aggregate job not required",
+            "Submission smelt:1: Aggregate job not required",
         ),
         (
             {"aggregate_job": False, "aggregate_check_false": ["MISSING"]},
             {"OTHER"},
             False,
-            "Submission 1: Aggregate job not required",
+            "Submission smelt:1: Aggregate job not required",
         ),
         (
             {"aggregate_job": False, "aggregate_check_true": ["POS"], "aggregate_check_false": ["NEG"]},
