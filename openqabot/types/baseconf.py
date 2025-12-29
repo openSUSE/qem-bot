@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from .incident import Incident
+from .submission import Submission
 
 
 class BaseConf(ABC):
@@ -25,7 +25,7 @@ class BaseConf(ABC):
     @abstractmethod
     def __call__(
         self,
-        incidents: list[Incident],
+        submissions: list[Submission],
         token: dict[str, str],
         ci_url: str | None,
         *,

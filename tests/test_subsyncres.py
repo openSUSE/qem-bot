@@ -12,20 +12,20 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import QEM_DASHBOARD
-from openqabot.incsyncres import IncResultsSync
+from openqabot.subsyncres import SubResultsSync
 
 
 @pytest.fixture
-def get_a_i(mocker: MockerFixture) -> Generator[None, None, None]:
-    return mocker.patch("openqabot.incsyncres.get_active_incidents", return_value=[100])
+def get_a_s(mocker: MockerFixture) -> Generator[None, None, None]:
+    return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[100])
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_i")
+@pytest.mark.usefixtures("get_a_s")
 def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # get_incident_settings_data
+    # get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -64,30 +64,28 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
 
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "No API key for instance.qa: only GET requests will be allowed",
-        "Fetching settings for incident 100",
+        "Fetching settings for submission 100",
         (
-            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Skipping job 1234: Already has a clone 1234",
-        "Incident results sync completed",
+        "Submission results sync completed",
     ]
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_i")
+@pytest.mark.usefixtures("get_a_s")
 def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # get_incident_settings_data
+    # get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -125,29 +123,28 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
 
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "No API key for instance.qa: only GET requests will be allowed",
-        "Fetching settings for incident 100",
+        "Fetching settings for submission 100",
         (
-            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Incident results sync completed",
+        "Submission results sync completed",
     ]
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_i")
+@pytest.mark.usefixtures("get_a_s")
 def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # get_incident_settings_data
+    # get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -186,30 +183,28 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
 
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "No API key for instance.qa: only GET requests will be allowed",
-        "Fetching settings for incident 100",
+        "Fetching settings for submission 100",
         (
-            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Skipping job 1234: Belongs to development group 'Devel FakeGroup'",
-        "Incident results sync completed",
+        "Submission results sync completed",
     ]
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_i")
+@pytest.mark.usefixtures("get_a_s")
 def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # get_incident_settings_data
+    # get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -252,30 +247,28 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
 
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "No API key for instance.qa: only GET requests will be allowed",
-        "Fetching settings for incident 100",
+        "Fetching settings for submission 100",
         (
-            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Skipping job 1234: Belongs to development group 'FakeGroup'",
-        "Incident results sync completed",
+        "Submission results sync completed",
     ]
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_i")
+@pytest.mark.usefixtures("get_a_s")
 def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # get_incident_settings_data
+    # get_submission_settings_data
     data = [
         {
             "id": 110,
@@ -318,34 +311,19 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
 
     ret = syncer()
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "No API key for instance.qa: only GET requests will be allowed",
-        "Fetching settings for incident 100",
+        "Fetching settings for submission 100",
         (
-            "Fetching openQA jobs for Data(incident=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Syncing incident job 1234: Status passed",
-        (
-            "Full post data: {'arch': 'arch',\n"
-            " 'build': '123',\n"
-            " 'distri': 'linux',\n"
-            " 'flavor': 'FakeFlavor',\n"
-            " 'group_id': 10,\n"
-            " 'incident_settings': 110,\n"
-            " 'job_group': 'FakeGroup',\n"
-            " 'job_id': 1234,\n"
-            " 'name': 'FakeName',\n"
-            " 'status': 'passed',\n"
-            " 'update_settings': None,\n"
-            " 'version': '13.3'}"
-        ),
+        "Syncing submission job 1234: Status passed",
         "Dry run: Skipping dashboard update",
-        "Incident results sync completed",
+        "Submission results sync completed",
     ]

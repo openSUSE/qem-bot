@@ -10,24 +10,24 @@ from pytest_mock import MockerFixture
 from openqabot.loader.qem import (
     LoaderQemError,
     NoAggregateResultsError,
-    NoIncidentResultsError,
-    get_active_incidents,
+    NoSubmissionResultsError,
+    get_active_submissions,
     get_aggregate_results,
     get_aggregate_settings,
     get_aggregate_settings_data,
-    get_incident_results,
-    get_incident_settings,
-    get_incident_settings_data,
-    get_incidents,
-    get_incidents_approver,
-    get_single_incident,
+    get_single_submission,
+    get_submission_results,
+    get_submission_settings,
+    get_submission_settings_data,
+    get_submissions,
+    get_submissions_approver,
     post_job,
-    update_incidents,
     update_job,
+    update_submissions,
 )
 
 
-def test_get_incidents_simple(mocker: MockerFixture) -> None:
+def test_get_submissions_simple(mocker: MockerFixture) -> None:
     get_json_mock = mocker.patch("openqabot.loader.qem.get_json")
     get_json_mock.return_value = [
         {
@@ -46,20 +46,20 @@ def test_get_incidents_simple(mocker: MockerFixture) -> None:
         }
     ]
 
-    res = get_incidents({})
+    res = get_submissions({})
 
     assert len(res) == 1
     assert res[0].id == 1
     get_json_mock.assert_called_once_with("api/incidents", headers={}, verify=True)
 
 
-def test_get_incidents_error(mocker: MockerFixture) -> None:
+def test_get_submissions_error(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "some error"})
     with pytest.raises(LoaderQemError):
-        get_incidents({})
+        get_submissions({})
 
 
-def test_get_incidents_create_none(mocker: MockerFixture) -> None:
+def test_get_submissions_create_none(mocker: MockerFixture) -> None:
     get_json_mock = mocker.patch("openqabot.loader.qem.get_json")
     get_json_mock.return_value = [
         {
@@ -78,21 +78,21 @@ def test_get_incidents_create_none(mocker: MockerFixture) -> None:
         }
     ]
 
-    mocker.patch("openqabot.loader.qem.Incident.create", return_value=None)
-    res = get_incidents({})
+    mocker.patch("openqabot.loader.qem.Submission.create", return_value=None)
+    res = get_submissions({})
     assert len(res) == 0
 
 
-def test_get_active_incidents(mocker: MockerFixture) -> None:
+def test_get_active_submissions(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 1}, {"number": 2}])
 
-    res = get_active_incidents({})
+    res = get_active_submissions({})
 
     assert len(res) == 2
     assert res == [1, 2]
 
 
-def test_get_incidents_approver(mocker: MockerFixture) -> None:
+def test_get_submissions_approver(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {
@@ -106,49 +106,49 @@ def test_get_incidents_approver(mocker: MockerFixture) -> None:
         {"number": 2, "rr_number": 124, "inReviewQAM": False},
     ]
 
-    res = get_incidents_approver({})
+    res = get_submissions_approver({})
 
     assert len(res) == 1
-    assert res[0].inc == 1
+    assert res[0].sub == 1
     assert res[0].req == 123
     assert res[0].type == "gitea"
     assert res[0].url == "http://foo.bar"
     assert res[0].scm_info == "foo"
 
 
-def test_get_single_incident(mocker: MockerFixture) -> None:
+def test_get_single_submission(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123})
 
-    res = get_single_incident({}, 1)
+    res = get_single_submission({}, 1)
 
     assert len(res) == 1
-    assert res[0].inc == 1
+    assert res[0].sub == 1
     assert res[0].req == 123
     mock_json.assert_called_once_with("api/incidents/1", headers={})
 
 
-def test_get_incident_settings_no_settings(mocker: MockerFixture) -> None:
+def test_get_submission_settings_no_settings(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value=[])
 
-    with pytest.raises(NoIncidentResultsError):
-        get_incident_settings(1, {})
+    with pytest.raises(NoSubmissionResultsError):
+        get_submission_settings(1, {})
 
 
-def test_get_incident_settings_all_incidents(mocker: MockerFixture) -> None:
+def test_get_submission_settings_all_submissions(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {"RRID": 1}, "withAggregate": False},
         {"id": 2, "settings": {"RRID": 2}, "withAggregate": False},
     ]
 
-    res = get_incident_settings(1, {}, all_incidents=True)
+    res = get_submission_settings(1, {}, all_submissions=True)
 
     assert len(res) == 2
     assert res[0].id == 1
     assert res[1].id == 2
 
 
-def test_get_incident_settings_multiple_rrids(mocker: MockerFixture) -> None:
+def test_get_submission_settings_multiple_rrids(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {"RRID": 1}, "withAggregate": False},
@@ -156,26 +156,26 @@ def test_get_incident_settings_multiple_rrids(mocker: MockerFixture) -> None:
         {"id": 3, "settings": {}, "withAggregate": False},
     ]
 
-    res = get_incident_settings(1, {}, all_incidents=False)
+    res = get_submission_settings(1, {}, all_submissions=False)
 
     assert len(res) == 2
     assert res[0].id == 2
     assert res[1].id == 3
 
 
-def test_get_incident_settings_no_rrids(mocker: MockerFixture) -> None:
+def test_get_submission_settings_no_rrids(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {"id": 1, "settings": {}, "withAggregate": False},
         {"id": 2, "settings": {}, "withAggregate": False},
     ]
 
-    res = get_incident_settings(1, {}, all_incidents=False)
+    res = get_submission_settings(1, {}, all_submissions=False)
 
     assert len(res) == 2
 
 
-def test_get_incident_settings_data(mocker: MockerFixture) -> None:
+def test_get_submission_settings_data(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
     mock_json.return_value = [
         {
@@ -187,10 +187,10 @@ def test_get_incident_settings_data(mocker: MockerFixture) -> None:
         }
     ]
 
-    res = get_incident_settings_data({}, 1)
+    res = get_submission_settings_data({}, 1)
 
     assert len(res) == 1
-    assert res[0].incident == 1
+    assert res[0].submission == 1
     assert res[0].settings_id == 1
     assert res[0].flavor == "flavor"
     assert res[0].arch == "arch"
@@ -200,32 +200,32 @@ def test_get_incident_settings_data(mocker: MockerFixture) -> None:
     mock_json.assert_called_once_with("api/incident_settings/1", headers={})
 
 
-def test_get_incident_settings_data_error(mocker: MockerFixture) -> None:
+def test_get_submission_settings_data_error(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "foo"})
 
-    res = get_incident_settings_data({}, 1)
+    res = get_submission_settings_data({}, 1)
 
     assert len(res) == 0
 
 
-def test_get_incident_results(mocker: MockerFixture) -> None:
+def test_get_submission_results(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"foo": "bar"}])
-    mock_settings = mocker.patch("openqabot.loader.qem.get_incident_settings", return_value=[MagicMock(id=1)])
+    mock_settings = mocker.patch("openqabot.loader.qem.get_submission_settings", return_value=[MagicMock(id=1)])
 
-    res = get_incident_results(1, {})
+    res = get_submission_results(1, {})
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, {}, all_incidents=False)
+    mock_settings.assert_called_once_with(1, {}, all_submissions=False)
     mock_json.assert_called_once_with("api/jobs/incident/1", headers={})
 
 
-def test_get_incident_results_error(mocker: MockerFixture) -> None:
+def test_get_submission_results_error(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "foo"})
-    mocker.patch("openqabot.loader.qem.get_incident_settings", return_value=[MagicMock(id=1)])
+    mocker.patch("openqabot.loader.qem.get_submission_settings", return_value=[MagicMock(id=1)])
 
     with pytest.raises(ValueError, match="foo"):
-        get_incident_results(1, {})
+        get_submission_results(1, {})
 
 
 def test_get_aggregate_settings_no_settings(mocker: MockerFixture) -> None:
@@ -288,50 +288,52 @@ def test_get_aggregate_settings_data_none(mocker: MockerFixture, caplog: pytest.
     assert "No aggregate settings found for product product on arch arch" in caplog.text
 
 
-def test_update_incidents_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_submissions_success(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
     mock_response = MagicMock()
     mock_response.status_code = 200
     mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
-    res = update_incidents({}, [{}])
+    res = update_submissions({}, [{}])
     assert res == 0
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "INFO"
-    assert "QEM Dashboard incidents updated successfully" in caplog.records[0].message
+    assert "QEM Dashboard submissions updated successfully" in caplog.records[0].message
 
 
-def test_update_incidents_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_submissions_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mocker.patch("openqabot.loader.qem.patch", side_effect=requests.exceptions.RequestException)
-    res = update_incidents({}, [{}])
+    res = update_submissions({}, [{}])
     assert res == 1
     assert len(caplog.records) == 1
     assert caplog.records[0].levelname == "ERROR"
     assert "QEM Dashboard API request failed" in caplog.records[0].message
 
 
-def test_update_incidents_unsuccessful_with_error_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_submissions_unsuccessful_with_error_text(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level(logging.ERROR)
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.text = "error message"
     mocker.patch("openqabot.loader.qem.patch", return_value=mock_response)
 
-    res = update_incidents({}, [{}])
+    res = update_submissions({}, [{}])
     assert res == 2
-    assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
+    assert "QEM Dashboard submission sync failed: Status 500" in caplog.text
     assert "QEM Dashboard error response: error message" in caplog.text
 
 
-def test_update_incidents_unsuccessful_no_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_update_submissions_unsuccessful_no_text(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(40)  # ERROR
     mock_patch = mocker.patch("openqabot.loader.qem.patch")
     mock_patch.return_value.status_code = 500
     mock_patch.return_value.text = ""
-    res = update_incidents({}, [{}])
+    res = update_submissions({}, [{}])
     assert res == 2
-    assert "QEM Dashboard incident sync failed: Status 500" in caplog.text
+    assert "QEM Dashboard submission sync failed: Status 500" in caplog.text
     assert "QEM Dashboard error response" not in caplog.text
 
 

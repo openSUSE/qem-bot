@@ -38,7 +38,7 @@ def get_max_revision(
                 repo = (repo[0], repo[1], product_version)
             url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
             log.debug("Computing RepoHash for %s from %s", repo[1], url)
-        # openSUSE and SLE incidents have different handling of architecture
+        # openSUSE and SLE submissions have different handling of architecture
         elif repo[0].startswith("openSUSE"):
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}/repodata/repomd.xml"
         else:
@@ -47,7 +47,7 @@ def get_max_revision(
         try:
             req = retried_requests.get(url)
             if not req.ok:
-                log.info("Incident skipped: RepoHash metadata not found at %s", url)
+                log.info("Submission skipped: RepoHash metadata not found at %s", url)
                 continue
             root = etree.fromstring(req.content)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
@@ -57,11 +57,11 @@ def get_max_revision(
             requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("Incident skipped: RepoHash metadata not found at %s", url)
+            log.info("Submission skipped: RepoHash metadata not found at %s", url)
             raise NoRepoFoundError from e
 
         if cs is None:
-            log.info("Incident skipped: RepoHash calculation failed, no revision tag found in %s", url)
+            log.info("Submission skipped: RepoHash calculation failed, no revision tag found in %s", url)
             raise NoRepoFoundError
         max_rev = max(max_rev, int(str(cs.text)))
 

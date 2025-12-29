@@ -199,7 +199,7 @@ def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS
     return any(user in user_specifications for user in users)
 
 
-def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
+def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
     PENDING_STATES = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
     qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
@@ -207,9 +207,9 @@ def add_reviews(incident: dict[str, Any], reviews: list[Any]) -> int:
     counts = Counter(qam_states)
     qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
     qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
-    incident["approved"] = (counts["APPROVED"] > 0) and (qam_blocking == 0)
-    incident["inReviewQAM"] = qam_pending > 0
-    incident["inReview"] = has_other_pending or (qam_pending > 0)
+    submission["approved"] = (counts["APPROVED"] > 0) and (qam_blocking == 0)
+    submission["inReviewQAM"] = qam_pending > 0
+    submission["inReview"] = has_other_pending or (qam_pending > 0)
     return len(qam_states)
 
 
@@ -277,7 +277,7 @@ def add_channel_for_build_result(
 
 
 def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
-    incident: dict[str, Any],
+    submission: dict[str, Any],
     res: Any,
     projects: set[str],
     successful_packages: set[str],
@@ -288,11 +288,11 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
     product = get_product_name(project)
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in (e.text for e in res.findall("scminfo") if e.text):
-        if (existing := incident.get(scm_key)) and found != existing:
+        if (existing := submission.get(scm_key)) and found != existing:
             msg = "PR %s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
-            log.warning(msg, incident["number"], project, found, existing)
+            log.warning(msg, submission["number"], project, found, existing)
             continue
-        incident[scm_key] = found
+        submission[scm_key] = found
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, projects)
     if product not in OBS_PRODUCTS:
         return
@@ -360,7 +360,7 @@ def _get_project_results(obs_project: str, *, dry: bool, unavailable_projects: s
 
 def _process_obs_url(
     url: str,
-    incident: dict[str, Any],
+    submission: dict[str, Any],
     *,
     dry: bool,
     results: dict[str, set[str]],
@@ -374,7 +374,7 @@ def _process_obs_url(
     for res in _get_project_results(obs_project, dry=dry, unavailable_projects=results["unavailable"]):
         if is_build_result_relevant(res, relevant_archs):
             add_build_result(
-                incident,
+                submission,
                 res,
                 results["projects"],
                 results["successful"],
@@ -383,7 +383,7 @@ def _process_obs_url(
             )
 
 
-def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
     results = {
         "successful": set(),
         "unavailable": set(),
@@ -393,25 +393,25 @@ def add_build_results(incident: dict[str, Any], obs_urls: list[str], *, dry: boo
     }
 
     for url in obs_urls:
-        _process_obs_url(url, incident, dry=dry, results=results)
+        _process_obs_url(url, submission, dry=dry, results=results)
 
     if results["unpublished"]:
-        log.info("PR %i: Some repos not published yet: %s", incident["number"], ", ".join(results["unpublished"]))
+        log.info("PR %i: Some repos not published yet: %s", submission["number"], ", ".join(results["unpublished"]))
     if results["failed"]:
-        log.info("PR %i: Some packages failed: %s", incident["number"], ", ".join(results["failed"]))
+        log.info("PR %i: Some packages failed: %s", submission["number"], ", ".join(results["failed"]))
 
-    incident.update({
+    submission.update({
         "channels": sorted(results["projects"]),
         "failed_or_unpublished_packages": sorted(results["failed"] | results["unpublished"] | results["unavailable"]),
         "successful_packages": sorted(results["successful"]),
     })
 
-    if "scminfo" not in incident and len(OBS_PRODUCTS) == 1:
-        incident["scminfo"] = incident.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
+    if "scminfo" not in submission and len(OBS_PRODUCTS) == 1:
+        submission["scminfo"] = submission.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
 
 
 def add_comments_and_referenced_build_results(
-    incident: dict[str, Any],
+    submission: dict[str, Any],
     comments: list[Any],
     *,
     dry: bool,
@@ -421,11 +421,11 @@ def add_comments_and_referenced_build_results(
         None,
     )
     if bot_comment:
-        add_build_results(incident, URL_FINDALL_REGEX.findall(bot_comment["body"]), dry=dry)
+        add_build_results(submission, URL_FINDALL_REGEX.findall(bot_comment["body"]), dry=dry)
 
 
 def add_packages_from_patchinfo(
-    incident: dict[str, Any],
+    submission: dict[str, Any],
     token: dict[str, str],
     patch_info_url: str,
     *,
@@ -435,30 +435,30 @@ def add_packages_from_patchinfo(
         patch_info = read_xml("patch-info")
     else:
         patch_info = osc.util.xml.xml_fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).text)
-    incident["packages"].extend(res.text for res in patch_info.findall("package"))
+    submission["packages"].extend(res.text for res in patch_info.findall("package"))
 
 
-def add_packages_from_files(incident: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
+def add_packages_from_files(submission: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
         if file_name == "_patchinfo" and raw_url is not None:
-            add_packages_from_patchinfo(incident, token, raw_url, dry=dry)
+            add_packages_from_patchinfo(submission, token, raw_url, dry=dry)
 
 
-def is_build_acceptable_and_log_if_not(incident: dict[str, Any], number: int) -> bool:
-    failed_or_unpublished_packages = len(incident["failed_or_unpublished_packages"])
+def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) -> bool:
+    failed_or_unpublished_packages = len(submission["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
         log.info("Skipping PR %i: Not all packages succeeded or published", number)
         return False
-    if len(incident["successful_packages"]) < 1:
+    if len(submission["successful_packages"]) < 1:
         info = "Skipping PR %i: No packages have been built/published (there are %i failed/unpublished packages)"
         log.info(info, number, failed_or_unpublished_packages)
         return False
     return True
 
 
-def make_incident_from_pr(
+def make_submission_from_gitea_pr(
     pr: dict[str, Any],
     token: dict[str, str],
     *,
@@ -471,7 +471,7 @@ def make_incident_from_pr(
         number = pr["number"]
         repo = pr["base"]["repo"]
         repo_name = repo["full_name"]
-        incident = {
+        submission = {
             "number": number,
             "project": repo["name"],
             # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
@@ -503,27 +503,27 @@ def make_incident_from_pr(
             reviews = get_json(reviews_url(repo_name, number), token)
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
-        if add_reviews(incident, reviews) < 1 and only_requested_prs:
+        if add_reviews(submission, reviews) < 1 and only_requested_prs:
             log.info("PR %s skipped: No reviews by %s", number, OBS_GROUP)
             return None
-        add_comments_and_referenced_build_results(incident, comments, dry=dry)
-        if not incident["channels"]:
+        add_comments_and_referenced_build_results(submission, comments, dry=dry)
+        if not submission["channels"]:
             log.info("PR %s skipped: No channels found", number)
             return None
-        if only_successful_builds and not is_build_acceptable_and_log_if_not(incident, number):
+        if only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number):
             return None
-        add_packages_from_files(incident, token, files, dry=dry)
-        if not incident["packages"]:
+        add_packages_from_files(submission, token, files, dry=dry)
+        if not submission["packages"]:
             log.info("PR %s skipped: No packages found", number)
             return None
 
     except Exception:
         log.exception("Gitea API error: Unable to process PR %s", pr.get("number", "?"))
         return None
-    return incident
+    return submission
 
 
-def get_incidents_from_open_prs(
+def get_submissions_from_open_prs(
     open_prs: list[dict[str, Any]],
     token: dict[str, str],
     *,
@@ -531,15 +531,15 @@ def get_incidents_from_open_prs(
     only_requested_prs: bool,
     dry: bool,
 ) -> list[dict[str, Any]]:
-    incidents = []
+    submissions = []
 
     # configure osc to be able to request build info from OBS
     osc.conf.get_config(override_apiurl=OBS_URL)
 
     with futures.ThreadPoolExecutor() as executor:
-        future_inc = [
+        future_sub = [
             executor.submit(
-                make_incident_from_pr,
+                make_submission_from_gitea_pr,
                 pr,
                 token,
                 only_successful_builds=only_successful_builds,
@@ -548,5 +548,5 @@ def get_incidents_from_open_prs(
             )
             for pr in open_prs
         ]
-        incidents = (future.result() for future in futures.as_completed(future_inc))
-        return [inc for inc in incidents if inc]
+        submissions = (future.result() for future in futures.as_completed(future_sub))
+        return [sub for sub in submissions if sub]

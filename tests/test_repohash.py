@@ -75,7 +75,7 @@ def test_get_max_revision_connectionerror(caplog: pytest.LogCaptureFixture) -> N
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
+    assert "Submission skipped: RepoHash metadata not found at" in caplog.records[0].msg
     assert "Maintenance:/12345" in cast("str", cast("Any", caplog.records[0].args)[0])
 
 
@@ -87,7 +87,7 @@ def test_get_max_revision_httperror(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
+    assert "Submission skipped: RepoHash metadata not found at" in caplog.records[0].msg
 
 
 @responses.activate
@@ -98,7 +98,7 @@ def test_get_max_revision_xmlerror(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
+    assert "Submission skipped: RepoHash metadata not found at" in caplog.records[0].msg
 
 
 @responses.activate
@@ -109,7 +109,7 @@ def test_get_max_revision_empty_xml(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, PROJECT)
 
-    assert "Incident skipped: RepoHash calculation failed, no revision tag found in %s" in caplog.records[0].msg
+    assert "Submission skipped: RepoHash calculation failed, no revision tag found in %s" in caplog.records[0].msg
 
 
 @responses.activate
@@ -147,7 +147,7 @@ def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(responses.GET, url=url, status=404)
 
     assert rp.get_max_revision(repos, arch, project) == 0
-    assert "Incident skipped: RepoHash metadata not found at" in caplog.text
+    assert "Submission skipped: RepoHash metadata not found at" in caplog.text
 
 
 def test_merge_repohash() -> None:

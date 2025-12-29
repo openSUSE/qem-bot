@@ -109,7 +109,7 @@ def test_determine_relevant_archs_from_multibuild_info_success(mocker: MockerFix
     assert "x86_64" in res
 
 
-def test_make_incident_from_pr_dry(mocker: MockerFixture) -> None:
+def test_make_submission_from_gitea_pr_dry(mocker: MockerFixture) -> None:
     pr = {"number": 124, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
     mocker.patch("openqabot.loader.gitea.read_json", return_value=[])
 
@@ -123,17 +123,17 @@ def test_make_incident_from_pr_dry(mocker: MockerFixture) -> None:
 
     mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_packages)
 
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
     assert res is not None
 
 
-def test_make_incident_from_pr_skips(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
     mocker.patch("openqabot.loader.gitea.get_json", return_value=[])
 
     # Skip due to no channels
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
     assert "PR 123 skipped: No channels found" in caplog.text
 
@@ -145,13 +145,13 @@ def test_make_incident_from_pr_skips(mocker: MockerFixture, caplog: pytest.LogCa
         incident["channels"] = [1]
 
     mocker.patch("openqabot.loader.gitea.add_comments_and_referenced_build_results", side_effect=mock_add_comments)
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=True, only_requested_prs=False, dry=False)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=True, only_requested_prs=False, dry=False)
     assert res is None
 
     # Skip due to no packages
     caplog.clear()
     mocker.patch("openqabot.loader.gitea.is_build_acceptable_and_log_if_not", return_value=True)
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
     assert "PR 123 skipped: No packages found" in caplog.text
 
@@ -200,7 +200,7 @@ def test_add_packages_from_patchinfo_non_dry(mocker: MockerFixture) -> None:
     assert incident["packages"] == ["pkg1"]
 
 
-def test_make_incident_from_pr_dry_other_number_passes(mocker: MockerFixture) -> None:
+def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFixture) -> None:
     pr = {"number": 999, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
 
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=1)
@@ -215,7 +215,7 @@ def test_make_incident_from_pr_dry_other_number_passes(mocker: MockerFixture) ->
 
     mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_pkg)
 
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
 
     assert res is not None
     assert res["number"] == 999
@@ -261,12 +261,12 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
     assert "chan" in unpublished
 
 
-def test_make_incident_from_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
     mocker.patch("openqabot.loader.gitea.get_json", return_value=[])
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=0)
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=True, dry=False)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=True, dry=False)
     assert res is None
     assert "PR 123 skipped: No reviews by" in caplog.text
 
@@ -313,9 +313,9 @@ def test_add_build_results_dry_124(mocker: MockerFixture) -> None:
     mock_read_xml.assert_called_once_with("build-results-124-proj")
 
 
-def test_make_incident_from_pr_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_make_submission_from_gitea_pr_exception(caplog: pytest.LogCaptureFixture) -> None:
     pr = {"number": 123}  # Missing base/repo
-    res = gitea.make_incident_from_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
+    res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
     assert "Gitea API error: Unable to process PR 123" in caplog.text
 

@@ -28,7 +28,7 @@ class SyncRes:
     def normalize_data(cls, data: Data, job: dict[str, Any]) -> dict[str, Any]:
         ret = {}
         ret["job_id"] = job["id"]
-        ret["incident_settings"] = data.settings_id if cls.operation == "incident" else None
+        ret["incident_settings"] = data.settings_id if cls.operation == "submission" else None
         ret["update_settings"] = data.settings_id if cls.operation == "aggregate" else None
         ret["name"] = job["name"]
         ret["distri"] = data.distri
@@ -69,7 +69,7 @@ class SyncRes:
         return True
 
     def post_result(self, result: dict[str, Any]) -> None:
-        log.debug(
+        log.info(
             "Syncing %s job %s: Status %s",
             self.operation,
             result["job_id"],

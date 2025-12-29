@@ -13,17 +13,17 @@ import pika.channel
 import pika.spec
 
 from .approver import Approver
-from .loader.qem import get_incident_settings_data
+from .loader.qem import get_submission_settings_data
 from .syncres import SyncRes
 from .types.types import Data
-from .utils import compare_incident_data
+from .utils import compare_submission_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
 log = getLogger("bot.amqp")
-build_inc_regex = re.compile(r":(\d+):.*")
+build_sub_regex = re.compile(r":(\d+):.*")
 build_agg_regex = re.compile(r"\d{8}-\d+")
 
 
@@ -71,36 +71,36 @@ class AMQP(SyncRes):
         message = json.loads(body)
         if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
-        if match := build_inc_regex.match(message["BUILD"]):
-            inc_nr = match.group(1)
+        if match := build_sub_regex.match(message["BUILD"]):
+            sub_nr = match.group(1)
             log.debug("Processing AMQP message: %s", pformat(message))
-            log.info("Incident %s: openQA job finished", inc_nr)
-            return self.handle_incident(int(inc_nr), message)
+            log.info("Submission %s: openQA job finished", sub_nr)
+            return self.handle_submission(int(sub_nr), message)
         if match := build_agg_regex.match(message["BUILD"]):
             build_nr = match.group(0)
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Aggregate %s: openQA build finished", build_nr)
         return None
 
-    def _fetch_openqa_results(self, inc: Data, message: dict[str, Any]) -> None:
-        AMQP.operation = "incident"
-        for job in self.client.get_jobs(inc):
-            if self.filter_jobs(job) and (r := self._normalize_data(inc, job)) and r["job_id"] == message["id"]:
+    def _fetch_openqa_results(self, sub: Data, message: dict[str, Any]) -> None:
+        AMQP.operation = "submission"
+        for job in self.client.get_jobs(sub):
+            if self.filter_jobs(job) and (r := self._normalize_data(sub, job)) and r["job_id"] == message["id"]:
                 self.post_result(r)
 
-    def handle_incident(self, inc_nr: int, message: dict[str, Any]) -> None:
-        # Load Data about current incident from dashboard database
+    def handle_submission(self, sub_nr: int, message: dict[str, Any]) -> None:
+        # Load Data about current submission from dashboard database
         try:
-            settings: Sequence[Data] = get_incident_settings_data(self.token, inc_nr)
+            settings: Sequence[Data] = get_submission_settings_data(self.token, sub_nr)
         except ValueError:
             return
 
-        for inc in settings:
-            # Filter out not matching incident Data
-            if not compare_incident_data(inc, message):
+        for sub in settings:
+            # Filter out not matching submission Data
+            if not compare_submission_data(sub, message):
                 continue
-            self._fetch_openqa_results(inc, message)
+            self._fetch_openqa_results(sub, message)
 
-        # Try to approve incident
-        approve = Approver(self.args, inc_nr)
+        # Try to approve submission
+        approve = Approver(self.args, sub_nr)
         approve()

@@ -10,17 +10,17 @@ from .config import AMQP_URL, BUILD_REGEX, OBS_GROUP
 def do_full_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
-    args.disable_incidents = False
+    args.disable_submissions = False
     args.disable_aggregates = False
 
     bot = OpenQABot(args)
     return bot()
 
 
-def do_incident_schedule(args: Namespace) -> int:
+def do_submission_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
-    args.disable_incidents = False
+    args.disable_submissions = False
     args.disable_aggregates = True
 
     bot = OpenQABot(args)
@@ -31,7 +31,7 @@ def do_aggregate_schedule(args: Namespace) -> int:
     from .openqabot import OpenQABot
 
     args.disable_aggregates = False
-    args.disable_incidents = True
+    args.disable_submissions = True
 
     bot = OpenQABot(args)
     return bot()
@@ -65,10 +65,10 @@ def do_comment(args: Namespace) -> int:
     return comment()
 
 
-def do_sync_inc_results(args: Namespace) -> int:
-    from .incsyncres import IncResultsSync
+def do_sync_sub_results(args: Namespace) -> int:
+    from .subsyncres import SubResultsSync
 
-    syncer = IncResultsSync(args)
+    syncer = SubResultsSync(args)
     return syncer()
 
 
@@ -141,14 +141,14 @@ def get_parser() -> ArgumentParser:
         "--singlearch",
         type=Path,
         default=Path("/etc/openqabot/singlearch.yml"),
-        help="Yaml config with list of singlearch packages for incidents run",
+        help="Yaml config with list of singlearch packages for submissions run",
     )
 
     parser.add_argument("-r", "--retry", type=int, default=2, help="Number of retries")
 
     commands = parser.add_subparsers()
 
-    cmdfull = commands.add_parser("full-run", help="Full schedule for Maintenance Incidents in openQA")
+    cmdfull = commands.add_parser("full-run", help="Full schedule for Maintenance Submissions in openQA")
     cmdfull.add_argument(
         "-i",
         "--ignore-onetime",
@@ -157,19 +157,19 @@ def get_parser() -> ArgumentParser:
     )
     cmdfull.set_defaults(func=do_full_schedule)
 
-    cmdinc = commands.add_parser(
+    cmdsub = commands.add_parser(
         "incidents-run",
-        help="Incidents only schedule for Maintenance Incidents in openQA",
+        help="Submissions only schedule for Maintenance Submissions in openQA",
     )
-    cmdinc.add_argument(
+    cmdsub.add_argument(
         "-i",
         "--ignore-onetime",
         action="store_true",
         help="Ignore onetime and schedule those test runs",
     )
-    cmdinc.set_defaults(func=do_incident_schedule)
+    cmdsub.set_defaults(func=do_submission_schedule)
 
-    cmdupd = commands.add_parser("updates-run", help="updates only schedule for Maintenance Incidents in openQA")
+    cmdupd = commands.add_parser("updates-run", help="Aggregates only schedule for Maintenance Submissions in openQA")
     cmdupd.add_argument(
         "-i",
         "--ignore-onetime",
@@ -208,29 +208,29 @@ def get_parser() -> ArgumentParser:
     )
     cmdgiteasync.set_defaults(func=do_sync_gitea)
 
-    cmdappr = commands.add_parser("inc-approve", help="Approve incidents which passed tests")
+    cmdappr = commands.add_parser("inc-approve", help="Approve submissions which passed tests")
     cmdappr.add_argument(
-        "--all-incidents",
+        "--all-submissions",
         action="store_true",
-        help="use all incidents without care about rrid",
+        help="use all submissions without care about rrid",
     )
     cmdappr.add_argument(
         "-I",
         "--incident",
         required=False,
         type=str,
-        help="Incident ID (to approve only a single incident)",
+        help="Submission ID (to approve only a single submission)",
     )
 
     cmdappr.set_defaults(func=do_approve)
 
-    cmdcomment = commands.add_parser("inc-comment", help="Comment incidents in BuildService")
+    cmdcomment = commands.add_parser("inc-comment", help="Comment submissions in BuildService")
     cmdcomment.set_defaults(func=do_comment)
 
-    cmdincsync = commands.add_parser("inc-sync-results", help="Sync results of openQA incidents jobs to Dashboard")
-    cmdincsync.set_defaults(func=do_sync_inc_results)
+    cmdsubsync = commands.add_parser("inc-sync-results", help="Sync results of openQA submission jobs to Dashboard")
+    cmdsubsync.set_defaults(func=do_sync_sub_results)
 
-    cmdaggrsync = commands.add_parser("aggr-sync-results", help="Sync results of openQA aggregates jobs to Dashboard")
+    cmdaggrsync = commands.add_parser("aggr-sync-results", help="Sync results of openQA aggregate jobs to Dashboard")
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
 
     cmdincrementapprove = commands.add_parser(

@@ -30,22 +30,22 @@ def get_yml_list(path: Path) -> list[Path]:
     return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
 
 
-def walk(inc: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
-    if isinstance(inc, list):
-        for i, j in enumerate(inc):
-            inc[i] = walk(j)
-    if isinstance(inc, dict):
-        if len(inc) == 1:
-            if "edges" in inc:
-                return walk(inc["edges"])
-            if "node" in inc:
-                tmp = deepcopy(inc["node"])
-                del inc["node"]
-                inc.update(tmp)
-        for key in inc:
-            if isinstance(inc[key], (list, dict)):
-                inc[key] = walk(inc[key])
-    return inc
+def walk(data: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
+    if isinstance(data, list):
+        for i, j in enumerate(data):
+            data[i] = walk(j)
+    if isinstance(data, dict):
+        if len(data) == 1:
+            if "edges" in data:
+                return walk(data["edges"])
+            if "node" in data:
+                tmp = deepcopy(data["node"])
+                del data["node"]
+                data.update(tmp)
+        for key in data:
+            if isinstance(data[key], (list, dict)):
+                data[key] = walk(data[key])
+    return data
 
 
 def normalize_results(result: str) -> str:
@@ -67,9 +67,9 @@ def normalize_results(result: str) -> str:
     return mapping.get(result, "failed")
 
 
-def compare_incident_data(inc: Data, message: dict[str, Any]) -> bool:
+def compare_submission_data(sub: Data, message: dict[str, Any]) -> bool:
     return all(
-        key not in message or getattr(inc, key.lower()) == message[key]
+        key not in message or getattr(sub, key.lower()) == message[key]
         for key in ("BUILD", "FLAVOR", "ARCH", "DISTRI", "VERSION")
     )
 

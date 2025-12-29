@@ -13,14 +13,14 @@ import requests
 
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
-from openqabot.types.incident import Incident
+from openqabot.types.submission import Submission
 from openqabot.types.types import Data
 
 log = getLogger("bot.loader.qem")
 
 
-class IncReq(NamedTuple):
-    inc: int
+class SubReq(NamedTuple):
+    sub: int
     req: int
     type: str | None = None
     url: str | None = None
@@ -37,59 +37,59 @@ class LoaderQemError(Exception):
     pass
 
 
-class NoIncidentResultsError(NoResultsError):
-    def __init__(self, inc: int) -> None:
+class NoSubmissionResultsError(NoResultsError):
+    def __init__(self, sub: int) -> None:
         super().__init__(
             # ruff: noqa: E501 line-too-long
-            f"Inc {inc} does not have any job_settings. Consider adding package specific settings to the metadata repository."
+            f"Submission {sub} does not have any job_settings. Consider adding package specific settings to the metadata repository."
         )
 
 
 class NoAggregateResultsError(NoResultsError):
-    def __init__(self, inc: int) -> None:
-        super().__init__(f"Inc {inc} does not have any aggregates settings")
+    def __init__(self, sub: int) -> None:
+        super().__init__(f"Submission {sub} does not have any aggregate settings")
 
 
-def get_incidents(token: dict[str, str]) -> list[Incident]:
-    incidents = get_json("api/incidents", headers=token, verify=True)
+def get_submissions(token: dict[str, str]) -> list[Submission]:
+    submissions = get_json("api/incidents", headers=token, verify=True)
 
-    if "error" in incidents:
-        raise LoaderQemError(incidents)
+    if "error" in submissions:
+        raise LoaderQemError(submissions)
 
-    return [incident for i in incidents if (incident := Incident.create(i))]
+    return [submission for s in submissions if (submission := Submission.create(s))]
 
 
-def get_active_incidents(token: dict[str, str]) -> Sequence[int]:
+def get_active_submissions(token: dict[str, str]) -> Sequence[int]:
     data = get_json("api/incidents", headers=token)
     return list({i["number"] for i in data})
 
 
-def get_incidents_approver(token: dict[str, str]) -> list[IncReq]:
-    incidents = get_json("api/incidents", headers=token)
+def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
+    submissions = get_json("api/incidents", headers=token)
     return [
-        IncReq(
+        SubReq(
             i["number"],
             i["rr_number"],
             i.get("type", ""),
             i.get("url", ""),
             i.get("scm_info", ""),
         )
-        for i in incidents
+        for i in submissions
         if i["inReviewQAM"]
     ]
 
 
-def get_single_incident(token: dict[str, str], incident_id: int) -> list[IncReq]:
-    incident = get_json(f"api/incidents/{incident_id}", headers=token)
-    return [IncReq(incident["number"], incident["rr_number"])]
+def get_single_submission(token: dict[str, str], submission_id: int) -> list[SubReq]:
+    submission = get_json(f"api/incidents/{submission_id}", headers=token)
+    return [SubReq(submission["number"], submission["rr_number"])]
 
 
-def get_incident_settings(inc: int, token: dict[str, str], *, all_incidents: bool = False) -> list[JobAggr]:
-    settings = get_json(f"api/incident_settings/{inc}", headers=token)
+def get_submission_settings(sub: int, token: dict[str, str], *, all_submissions: bool = False) -> list[JobAggr]:
+    settings = get_json(f"api/incident_settings/{sub}", headers=token)
     if not settings:
-        raise NoIncidentResultsError(inc)
+        raise NoSubmissionResultsError(sub)
 
-    if not all_incidents:
+    if not all_submissions:
         rrids = [i["settings"].get("RRID", None) for i in settings]
         rrid = sorted([r for r in rrids if r])
         if rrid:
@@ -99,11 +99,11 @@ def get_incident_settings(inc: int, token: dict[str, str], *, all_incidents: boo
     return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
-def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[Data]:
-    log.info("Fetching settings for incident %s", number)
+def get_submission_settings_data(token: dict[str, str], number: int) -> Sequence[Data]:
+    log.info("Fetching settings for submission %s", number)
     data = get_json("api/incident_settings/" + f"{number}", headers=token)
     if "error" in data:
-        log.warning("Incident %s error: %s", number, data["error"])
+        log.warning("Submission %s error: %s", number, data["error"])
         return []
 
     return [
@@ -121,8 +121,8 @@ def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[D
     ]
 
 
-def get_incident_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any]]:
-    settings = get_incident_settings(inc, token, all_incidents=False)
+def get_submission_results(sub: int, token: dict[str, Any]) -> list[dict[str, Any]]:
+    settings = get_submission_settings(sub, token, all_submissions=False)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
@@ -134,10 +134,10 @@ def get_incident_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any]
     return list(chain.from_iterable(all_data))
 
 
-def get_aggregate_settings(inc: int, token: dict[str, str]) -> list[JobAggr]:
-    settings = get_json(f"api/update_settings/{inc}", headers=token)
+def get_aggregate_settings(sub: int, token: dict[str, str]) -> list[JobAggr]:
+    settings = get_json(f"api/update_settings/{sub}", headers=token)
     if not settings:
-        raise NoAggregateResultsError(inc)
+        raise NoAggregateResultsError(sub)
 
     # we need a reverse sort due to doing a string comparison
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
@@ -172,8 +172,8 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
     ]
 
 
-def get_aggregate_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any]]:
-    settings = get_aggregate_settings(inc, token)
+def get_aggregate_results(sub: int, token: dict[str, Any]) -> list[dict[str, Any]]:
+    settings = get_aggregate_settings(sub, token)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
@@ -185,7 +185,7 @@ def get_aggregate_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any
     return list(chain.from_iterable(all_data))
 
 
-def update_incidents(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
+def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
@@ -196,9 +196,9 @@ def update_incidents(token: dict[str, str], data: list[dict[str, Any]], **kwargs
             log.exception("QEM Dashboard API request failed")
             return 1
         if ret.status_code == 200:
-            log.info("QEM Dashboard incidents updated successfully")
+            log.info("QEM Dashboard submissions updated successfully")
         else:
-            log.error("QEM Dashboard incident sync failed: Status %s", ret.status_code)
+            log.error("QEM Dashboard submission sync failed: Status %s", ret.status_code)
             error_text = ret.text
             if len(error_text):
                 log.error("QEM Dashboard error response: %s", error_text)

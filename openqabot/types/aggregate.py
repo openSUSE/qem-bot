@@ -18,14 +18,14 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utc import UTC
 
 from .baseconf import BaseConf
-from .incident import Incident
+from .submission import Submission
 from .types import ProdVer, Repos
 
 log = getLogger("bot.types.aggregate")
 
 
 class _PostData(NamedTuple):
-    test_incidents: defaultdict[str, list[Incident]]
+    test_submissions: defaultdict[str, list[Submission]]
     test_repos: defaultdict[str, list[str]]
     repohash: str
     build: str
@@ -66,37 +66,37 @@ class Aggregate(BaseConf):
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
-    def _filter_incidents(self, incidents: list[Incident]) -> list[Incident]:
-        def is_valid(incident: Incident) -> bool:
-            if any((incident.livepatch, incident.staging)):
+    def _filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
+        def is_valid(submission: Submission) -> bool:
+            if any((submission.livepatch, submission.staging)):
                 return False
-            if self.filter_embargoed(self.flavor) and incident.embargoed:
-                log.debug("Incident %s skipped: Embargoed and embargo-filtering enabled", incident.id)
+            if self.filter_embargoed(self.flavor) and submission.embargoed:
+                log.debug("Submission %s skipped: Embargoed and embargo-filtering enabled", submission.id)
                 return False
             return True
 
-        return [i for i in incidents if is_valid(i)]
+        return [s for s in submissions if is_valid(s)]
 
-    def _get_test_incidents_and_repos(
-        self, valid_incidents: list[Incident], issues_arch: str
-    ) -> tuple[defaultdict[str, list[Incident]], defaultdict[str, list[str]]]:
-        test_incidents = defaultdict(list)
+    def _get_test_submissions_and_repos(
+        self, valid_submissions: list[Submission], issues_arch: str
+    ) -> tuple[defaultdict[str, list[Submission]], defaultdict[str, list[str]]]:
+        test_submissions = defaultdict(list)
         test_repos = defaultdict(list)
 
-        for inc in valid_incidents:
+        for sub in valid_submissions:
             for issue, template in self.test_issues.items():
-                if Repos(template.product, template.version, issues_arch) in inc.channels:
-                    test_incidents[issue].append(inc)
+                if Repos(template.product, template.version, issues_arch) in sub.channels:
+                    test_submissions[issue].append(sub)
 
-        for issue, incs in test_incidents.items():
+        for issue, subs in test_submissions.items():
             tmpl = issue.replace("ISSUES", "REPOS")
-            test_repos[tmpl].extend(self._get_repo_url(inc, issue, issues_arch) for inc in incs)
-        return test_incidents, test_repos
+            test_repos[tmpl].extend(self._get_repo_url(sub, issue, issues_arch) for sub in subs)
+        return test_submissions, test_repos
 
-    def _get_repo_url(self, inc: Incident, issue: str, issues_arch: str) -> str:
+    def _get_repo_url(self, sub: Submission, issue: str, issues_arch: str) -> str:
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
-        base_url = f"{DOWNLOAD_MAINTENANCE}{inc}/SUSE_Updates_{product}_{version}"
+        base_url = f"{DOWNLOAD_MAINTENANCE}{sub}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
     def _create_full_post(
@@ -139,21 +139,21 @@ class Aggregate(BaseConf):
         if DEPRIORITIZE_LIMIT is not None:
             full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
 
-        for template, issues in data.test_incidents.items():
+        for template, issues in data.test_submissions.items():
             full_post["openqa"][template] = ",".join(str(x) for x in issues)
             full_post["qem"]["incidents"] += issues
         for template, issues in data.test_repos.items():
             full_post["openqa"][template] = ",".join(issues)
 
-        full_post["qem"]["incidents"] = [str(inc) for inc in set(full_post["qem"]["incidents"])]
+        full_post["qem"]["incidents"] = [str(sub) for sub in set(full_post["qem"]["incidents"])]
         if not full_post["qem"]["incidents"]:
             return None
 
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{QEM_DASHBOARD}incident/{inc}" for inc in full_post["qem"]["incidents"]
+            f"{QEM_DASHBOARD}incident/{sub}" for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-            f"{SMELT_URL}/incident/{inc}" for inc in full_post["qem"]["incidents"]
+            f"{SMELT_URL}/incident/{sub}" for sub in full_post["qem"]["incidents"]
         )
 
         full_post["qem"]["settings"] = full_post["openqa"]
@@ -167,7 +167,7 @@ class Aggregate(BaseConf):
     def _process_arch(
         self,
         arch: str,
-        valid_incidents: list[Incident],
+        valid_submissions: list[Submission],
         token: dict[str, str],
         ci_url: str | None,
         *,
@@ -176,10 +176,10 @@ class Aggregate(BaseConf):
         # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
         issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
-        test_incidents, test_repos = self._get_test_incidents_and_repos(valid_incidents, issues_arch)
+        test_submissions, test_repos = self._get_test_submissions_and_repos(valid_submissions, issues_arch)
 
         repohash = merge_repohash(
-            sorted({str(inc) for inc in chain.from_iterable(test_incidents.values())}),
+            sorted({str(sub) for sub in chain.from_iterable(test_submissions.values())}),
         )
 
         try:
@@ -221,22 +221,22 @@ class Aggregate(BaseConf):
 
         return self._create_full_post(
             arch,
-            _PostData(test_incidents, test_repos, repohash, build),
+            _PostData(test_submissions, test_repos, repohash, build),
             ci_url,
         )
 
     def __call__(
         self,
-        incidents: list[Incident],
+        submissions: list[Submission],
         token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool = False,
     ) -> list[dict[str, Any]]:
-        valid_incidents = self._filter_incidents(incidents)
+        valid_submissions = self._filter_submissions(submissions)
 
         results = [
-            self._process_arch(arch, valid_incidents, token, ci_url, ignore_onetime=ignore_onetime)
+            self._process_arch(arch, valid_submissions, token, ci_url, ignore_onetime=ignore_onetime)
             for arch in self.archs
         ]
 
