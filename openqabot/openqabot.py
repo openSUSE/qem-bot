@@ -51,9 +51,9 @@ class OpenQABot:
 
     def __call__(self) -> int:
         log.info("Entering bot main loop")
-        post: list[dict[str, Any]] = []
-        for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+        post = [
+            p for w in self.workers for p in w(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+        ]
 
         if self.dry:
             log.info("Dry run: Would trigger %d products in openQA", len(post))
