@@ -3,10 +3,27 @@ name: ci
 # yamllint disable-line rule:truthy
 on: [push, pull_request]
 jobs:
+  lint-commits:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+      - uses: astral-sh/setup-uv@v7
+      - name: Install commitizen
+        run: uv tool install commitizen
+      - name: Check commit messages
+        run: cz check --rev-range origin/${{ github.base_ref }}..HEAD
+
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
       - uses: astral-sh/ruff-action@v3
         with:
           version: "latest"
@@ -21,7 +38,7 @@ jobs:
       - name: Setup enviroment
         run: uv sync
       - name: Run tests + cov report
-        run: uv run make test-with-coverage
+        run: uv run make ISOLATE=0 test-with-coverage
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v5
         with:

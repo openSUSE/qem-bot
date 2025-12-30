@@ -4,8 +4,9 @@
 
 import logging
 import re
+from argparse import Namespace
 from collections.abc import Generator
-from typing import Any, NamedTuple
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -14,13 +15,6 @@ import responses
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
 from responses import matchers
-
-
-# Fake Namespace for SyncRes initialization
-class _namespace(NamedTuple):
-    dry: bool
-    token: str
-    retry: bool
 
 
 @pytest.fixture
@@ -80,8 +74,8 @@ def fake_qem() -> Generator[None, None, None]:
 
 @pytest.fixture
 def fake_dashboard_replyback() -> None:
-    def reply_callback(request: pytest.FixtureRequest) -> tuple[int, list[Any], bytes]:
-        return (200, [], request.body)
+    def reply_callback(request: Any) -> tuple[int, dict[str, str], bytes]:
+        return (200, {}, request.body)
 
     responses.add_callback(
         responses.PATCH,
@@ -101,14 +95,14 @@ def fake_dashboard_replyback() -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
-    assert "Starting to sync incidents from smelt to dashboard" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in messages
+    assert "Updating 1 incidents on QEM Dashboard" in messages
     assert len(responses.calls) == 2
-    assert len(responses.calls[1].response.json()) == 1
-    incident = responses.calls[1].response.json()[0]
+    assert len(cast("Any", responses.calls[1].response).json()) == 1
+    incident = cast("Any", responses.calls[1].response).json()[0]
     assert incident["inReviewQAM"]
     assert incident["isActive"]
     assert not incident["approved"]
@@ -122,10 +116,10 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     assert len(responses.calls) == 2
-    assert len(responses.calls[1].response.json()) == 1
-    incident = responses.calls[1].response.json()[0]
+    assert len(cast("Any", responses.calls[1].response).json()) == 1
+    incident = cast("Any", responses.calls[1].response).json()[0]
     assert not incident["embargoed"]
     assert incident["priority"] is None
 
@@ -142,17 +136,17 @@ def test_sync_approved(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(_namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Getting info about incident 100 from SMELT" in messages
-    assert "Starting to sync incidents from smelt to dashboard" in messages
-    assert "Updating info about 1 incidents" in messages
+    assert "Fetching details for incident 100 from SMELT" in messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in messages
+    assert "Updating 1 incidents on QEM Dashboard" in messages
     assert len(responses.calls) == 2
-    assert len(responses.calls[1].response.json()) == 1
-    assert not responses.calls[1].response.json()[0]["inReviewQAM"]
-    assert not responses.calls[1].response.json()[0]["isActive"]
-    assert responses.calls[1].response.json()[0]["approved"]
-    assert responses.calls[1].response.json()[0]["embargoed"]
+    assert len(cast("Any", responses.calls[1].response).json()) == 1
+    assert not cast("Any", responses.calls[1].response).json()[0]["inReviewQAM"]
+    assert not cast("Any", responses.calls[1].response).json()[0]["isActive"]
+    assert cast("Any", responses.calls[1].response).json()[0]["approved"]
+    assert cast("Any", responses.calls[1].response).json()[0]["embargoed"]
 
 
 @responses.activate
@@ -165,8 +159,8 @@ def test_sync_approved(
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api")
 def test_sync_dry_run(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.smeltsync")
-    assert SMELTSync(_namespace(dry=True, token="123", retry=False))() == 0
-    assert "Dry run, nothing synced" in caplog.text
+    assert SMELTSync(Namespace(dry=True, token="123", retry=False))() == 0
+    assert "Dry run: Skipping dashboard update" in caplog.text
 
 
 def test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully() -> None:
@@ -215,3 +209,13 @@ def test_create_record_no_request_set() -> None:
 def test_is_revoked_true() -> None:
     rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
     assert SMELTSync._is_revoked(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_correct_status_passes() -> None:
+    rr_number = {"reviewSet": [{"assignedByGroup": {"name": "qam-openqa"}, "status": {"name": "review"}}]}
+    assert SMELTSync._has_qam_review(rr_number)  # noqa: SLF001
+
+
+def test_has_qam_review_empty_set_fails() -> None:
+    rr_number = {"reviewSet": []}
+    assert not SMELTSync._has_qam_review(rr_number)  # noqa: SLF001

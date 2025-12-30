@@ -10,51 +10,61 @@ updates information about incidents and related openQA tests.
 
 ## Usage:
 
-    >>> qem-bot.py --help
-    Usage: qem-bot [-h] [-c CONFIGS] [--dry] [-d] -t TOKEN [-i OPENQA_INSTANCE]
-                  [-s SINGLEARCH] [-r RETRY]
-                  {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
-                  ...
+<!-- usage_start -->
 
-    QEM-Dashboard, SMELT and openQA connector
+    >>> qem-bot.py --help
+    usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
+                   -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
+                   [-r RETRY]
+                   {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
+
+    QEM-Dashboard, SMELT, Gitea and openQA connector
 
     positional arguments:
-      {full-run,incidents-run,updates-run,smelt-sync,inc-approve,inc-sync-results,aggr-sync-results}
-        full-run            Full schedule for Maintenance Incidents in openqa
+      {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
+        full-run            Full schedule for Maintenance Incidents in openQA
         incidents-run       Incidents only schedule for Maintenance Incidents in
-                            openqa
+                            openQA
         updates-run         updates only schedule for Maintenance Incidents in
-                            openqa
+                            openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
         inc-approve         Approve incidents which passed tests
         inc-comment         Comment incidents in BuildService
         inc-sync-results    Sync results of openQA incidents jobs to Dashboard
         aggr-sync-results   Sync results of openQA aggregates jobs to Dashboard
-        increment-approve   Approve the most recent product increment for an OBS project if tests passed
+        increment-approve   Approve the most recent product increment for an OBS
+                            project if tests passed
+        repo-diff           Computes the diff between two repositories
+        amqp                AMQP listener daemon
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
-      -c CONFIGS, --configs CONFIGS
-                            Directory or single file with openqabot configuration metadata
+      -c, --configs CONFIGS
+                            Directory or single file with openqabot configuration
+                            metadata
       --dry                 Dry run, do not post any data
+      --fake-data           Use fake data, do not query data from real services
+      --dump-data           Dump requested data for later use via --fake-data
       -d, --debug           Enable debug output
-      -t TOKEN, --token TOKEN
-                            Token for qem dashboard api
-      -i OPENQA_INSTANCE, --openqa-instance OPENQA_INSTANCE
-                            OpenQA instance to use Other instances than OSD do not
-                            update dashboard database
-      -s SINGLEARCH, --singlearch SINGLEARCH
+      -t, --token TOKEN     Token for qem dashboard api
+      -g, --gitea-token GITEA_TOKEN
+                            Token for Gitea api
+      -i, --openqa-instance OPENQA_INSTANCE
+                            The openQA instance to use Other instances than OSD do
+                            not update dashboard database
+      -s, --singlearch SINGLEARCH
                             Yaml config with list of singlearch packages for
                             incidents run
-      -r RETRY, --retry RETRY
-                            Number of retries
+      -r, --retry RETRY     Number of retries
+
+<!-- usage_end -->
 
 ## Expected workflow
 
 * For every incident in SMELT an entry should show up in qem-dashboard
   (`smelt-sync`)
-* For every incident in qem-dashboard incident and aggregate tests are
+* For every incident in qem-dashboard, incident and aggregate tests are
   triggered (`incidents-run+updates-run`)
 * Results from incident + aggregate tests show up on the dashboard
   (`inc-sync-results+aggr-sync-results`)
@@ -69,8 +79,8 @@ SUSE-internal CI setup.
 
 ## Misc
 
-**Token** is required but if isn't used https://openqa.suse.de or is invoked with
-`--dry` argument any string is sufficient -> see [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
+**Token** is required, but if it isn't used https://openqa.suse.de or is invoked with
+`--dry` argument any string is sufficient. See [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
 
 ## Commenting in IBS
 
@@ -79,7 +89,9 @@ Action `inc-comment` can be used to add comments to release requests inside IBS 
 An example of such comment:
 
 ```
-<!-- openqa state=failed revision_15-SP3_x86_64=1636983205 revision_15-SP3_ppc64le=1636982976 revision_15-SP3_s390x=1636982978 revision_15-SP3_aarch64=1636982975 revision_15.3_x86_64=0 -->
+<!-- openqa state=failed revision_15-SP3_x86_64=1636983205
+revision_15-SP3_ppc64le=1636982976 revision_15-SP3_s390x=1636982978
+revision_15-SP3_aarch64=1636982975 revision_15.3_x86_64=0 -->
 
 
  __Group [Maintenance: Containers 15-SP3 Updates@Server-DVD-Updates](https://openqa.suse.de/tests/overview?version=15-SP3&groupid=369&flavor=Server-DVD-Updates&distri=sle&build=20211115-1)__
@@ -150,6 +162,7 @@ Feel free to add issues in github or send pull requests.
 * For git commit messages use the rules stated on
   [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/)
   as a reference.
+* Every commit MUST ensure full statement and branch coverage.
 * Run `make tidy` before committing changes to format code according to our
   standards. Preferably also run other tests as described in the subsequent
   section.
@@ -173,11 +186,16 @@ install dependencies:
     source .venv/bin/activate
     uv sync
 
+There are several Makefile targets available for development. Run `make help`
+to see a full list of available targets.
+
 There are currently only limited automatic tests available. Run `make test`
 or `pytest` to execute Python-based unit tests. Run e.g.
 `pytest tests/test_amqp.py` to execute a single test.
 
-Run `make checkstyle` to check coding style and `make lint` for linting.
+Run `make test-with-coverage` to check for 100% statement and branch coverage.
+
+Run `make checkstyle` to run all style and static analysis checks.
 
 Run `check-maintainability` to check maintainability. This requires the tool
 `radon`. You can also check individual files displaying the exact percentage via
@@ -190,10 +208,11 @@ details. There is also
 for the grades.
 
 Another simple way for at least syntax correctness checks is to just call
-`python3 ./qem-bot.py --help` to show the help text if the source can be correctly
-parsed. The next recommended way for testing is to call `qem-bot.py` with the
-`--dry` command line parameter in different modes. This might need additional
-data, e.g. "metadata" from https://gitlab.suse.de/qa-maintenance/metadata/ .
+`python3 ./qem-bot.py --help` to show the help text if the source can be
+correctly parsed. The next recommended way for testing is to call `qem-bot.py`
+with the `--dry` command line parameter in different modes. This might need
+additional data, e.g. "metadata" from
+https://gitlab.suse.de/qa-maintenance/metadata/ .
 For example with cloning this metadata as well as specifying a fake token
 value that is enough for testing:
 
@@ -204,12 +223,12 @@ python3 ./qem-bot.py --configs metadata -t 1234 --dry inc-approve
 
 This should walk over the list of current incidents pending approval.
 
-It is possible to run qem-bot inside container, please see
+It is possible to run qem-bot inside a container, please see
 [docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
 
 #### Local integration testing with qem-dashboard and openQA
-Checkout [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
-the instructions from its README to setup up. Then all you need to do to start
+Check out [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
+the instructions from its README to set up. Then all you need to do to start
 the dashboard is:
 
 ```
@@ -228,7 +247,9 @@ The first bot command you want to invoke is one of the `…-sync` commands, e.g.
 the following one to sync Gitea PRs into the dashboard:
 
 ```
-python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data -c etc/openqabot gitea-sync --allow-build-failures --consider-unrequested-prs
+python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data \
+    -c etc/openqabot gitea-sync --allow-build-failures \
+    --consider-unrequested-prs
 ```
 
 The `--fake-data` switch means that it will not actually query Gitea and just
@@ -258,10 +279,11 @@ MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/sl
 ```
 
 To fake test results you can use an SQL command like
-`update jobs set state = 'done', result = 'softfailed' where state = 'scheduled';`
+`update jobs set state = 'done', result = 'softfailed'
+where state = 'scheduled';`
 on your local openQA database.
 
-If you want to re-try these steps from scratch you need to clean-up incident
+If you want to re-try these steps from scratch you need to clean up incident
 settings from the qem-dashboard database with an SQL command like
 `delete from incident_openqa_settings where id >= …;`.
 
@@ -285,7 +307,7 @@ You can also test the increment approval, e.g.:
 ./bot-ng.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
 ```
 
-In production you should specify the config via `--config`, though. Checkout
+In production you should specify the config via `--config`, though. Check out
 [the config documentation](doc/config.md) for details. It also explains what
 this command does step by step.
 

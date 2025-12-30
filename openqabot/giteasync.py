@@ -24,7 +24,7 @@ class GiteaSync:
             number=args.pr_number,
         )
         log.info(
-            "Loaded %i active PRs/incidents from %s",
+            "Loaded %d active PRs from %s",
             len(self.open_prs),
             args.gitea_repo,
         )
@@ -38,13 +38,10 @@ class GiteaSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
-        log.info("Starting to sync incidents from Gitea to dashboard")
-
         data = self.incidents
-        log.info("Updating info about %s incidents", len(data))
-        log.debug("Data: %s", pformat(data))
-
+        log.debug("Data for %d incidents: %s", len(data), pformat(data))
         if self.dry:
-            log.info("Dry run, nothing synced")
+            log.info("Dry run: Would update QEM Dashboard data for %d incidents", len(data))
             return 0
+        log.info("Syncing Gitea PRs to QEM Dashboard: Considering %d incidents", len(data))
         return update_incidents(self.dashboard_token, data, params={"type": "git"}, retry=self.retry)

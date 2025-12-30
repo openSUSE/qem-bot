@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from logging import getLogger
 from typing import Any
 
@@ -17,18 +18,18 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 class Incident:
     def __init__(self, incident: dict[str, Any]) -> None:
-        self.rr = incident["rr_number"]
-        self.project = incident["project"]
-        self.id = incident["number"]
-        self.rrid = f"{self.project}:{self.rr}" if self.rr else None
-        self.staging = not incident["inReview"]
-        self.ongoing = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
-        self.embargoed = incident["embargoed"]
-        self.priority = incident.get("priority")
-        self.type = incident.get("type", "smelt")
-        self.arch_filter = None
+        self.rr: int | None = incident["rr_number"]
+        self.project: str = incident["project"]
+        self.id: int = incident["number"]
+        self.rrid: str | None = f"{self.project}:{self.rr}" if self.rr else None
+        self.staging: bool = not incident["inReview"]
+        self.ongoing: bool = incident["isActive"] and incident["inReviewQAM"] and not incident["approved"]
+        self.embargoed: bool = incident["embargoed"]
+        self.priority: int | None = incident.get("priority")
+        self.type: str = incident.get("type", "smelt")
+        self.arch_filter: list[str] | None = None
 
-        self.channels = [
+        self.channels: list[Repos] = [
             Repos(p, v, a)
             for p, v, a in (
                 val
@@ -64,23 +65,23 @@ class Incident:
         if not self.channels:
             raise EmptyChannelsError(self.project)
 
-        self.packages = sorted(incident["packages"], key=len)
+        self.packages: list[str] = sorted(incident["packages"], key=len)
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
-        self.emu = incident["emu"]
-        self.revisions = None  # lazy-initialized via revisions_with_fallback()
+        self.emu: bool = incident["emu"]
+        self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod
-    def create(cls, incident_data: dict) -> Incident | None:
+    def create(cls, data: dict) -> Incident | None:
         try:
-            return cls(incident_data)
+            return cls(data)
         except EmptyChannelsError:
-            log.info("Project %s has empty channels - check incident in SMELT", incident_data.get("project"))
+            log.info("Incident %s ignored: No channels found for project %s", data.get("number"), data.get("project"))
             return None
         except EmptyPackagesError:
-            log.info("Project %s has empty packages - check incident in SMELT", incident_data.get("project"))
+            log.info("Incident %s ignored: No packages found for project %s", data.get("number"), data.get("project"))
             return None
 
     def compute_revisions_for_product_repo(
@@ -97,11 +98,14 @@ class Incident:
             arch_ver = ArchVer(arch, ver)
             # An unversioned SLE12 module will have ArchVer version "12"
             # but settings["VERSION"] can be any of "12","12-SP1" ... "12-SP5".
-            if arch_ver not in self.revisions and ver.startswith("12"):
+            if self.revisions is not None and arch_ver not in self.revisions and ver.startswith("12"):
                 arch_ver = ArchVer(arch, "12")
+            if self.revisions is None:
+                log.debug("Incident %s: No revisions available", self.id)
+                return None
             return self.revisions[arch_ver]
         except KeyError:
-            log.debug("Incident %s does not have %s arch in %s", self.id, arch, ver)
+            log.debug("Incident %s: Architecture %s not found for version %s", self.id, arch, ver)
             return None
 
     @staticmethod
@@ -113,38 +117,25 @@ class Incident:
         product_version: str | None,
     ) -> dict[ArchVer, int]:
         rev: dict[ArchVer, int] = {}
-        tmpdict: dict[ArchVer, list[tuple[str, str]]] = {}
+        tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
         for repo in channels:
             if arch_filter is not None and repo.arch not in arch_filter:
                 continue
             version = repo.version
-            v = re.match(version_pattern, repo.version)
-            if v:
+            if v := re.match(version_pattern, repo.version):
                 version = v.group(0)
 
-            repo_info = (repo.product, repo.version, repo.product_version)
             ver = repo.product_version or version
-            arch_ver = ArchVer(repo.arch, ver)
-            if arch_ver in tmpdict:
-                tmpdict[arch_ver].append(repo_info)
-            else:
-                tmpdict[arch_ver] = [repo_info]
+            tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
-        if tmpdict:
-            for archver, lrepos in tmpdict.items():
-                last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
-                max_rev = get_max_revision(
-                    lrepos,
-                    archver.arch,
-                    project,
-                    last_product_repo,
-                    product_version,
-                )
-                if max_rev > 0:
-                    rev[archver] = max_rev
+        last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
+        for archver, lrepos in tmpdict.items():
+            max_rev = get_max_revision(lrepos, archver.arch, project, last_product_repo, product_version)
+            if max_rev > 0:
+                rev[archver] = max_rev
 
-        if len(rev) == 0:
+        if not rev:
             raise NoRepoFoundError
         return rev
 
@@ -158,19 +149,9 @@ class Incident:
 
     @staticmethod
     def _is_livepatch(packages: list[str]) -> bool:
-        kgraft = False
-
-        for package in packages:
-            if package.startswith(("kernel-default", "kernel-source", "kernel-azure")):
-                return False
-            if package.startswith(("kgraft-patch-", "kernel-livepatch")):
-                kgraft = True
-
-        return kgraft
+        if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
+            return False
+        return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
-        for package in self.packages:
-            for req in requires:
-                if package.startswith(req) and package != "kernel-livepatch-tools":
-                    return True
-        return False
+        return any(p != "kernel-livepatch-tools" and p.startswith(tuple(requires)) for p in self.packages)

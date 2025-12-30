@@ -3,8 +3,8 @@
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
 
 import logging
-from collections.abc import Generator
-from typing import Any, NamedTuple, NoReturn
+from argparse import Namespace
+from typing import Any, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
@@ -16,19 +16,8 @@ from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 
 
-class Namespace(NamedTuple):
-    dry: bool
-    ignore_onetime: bool
-    token: str
-    singlearch: str
-    openqa_instance: str
-    configs: str
-    disable_aggregates: bool
-    disable_incidents: bool
-
-
 @pytest.fixture
-def mock_openqa_passed(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_openqa_passed(mocker: MockerFixture) -> Any:
     class FakeClient:
         def __init__(self, args: Namespace) -> None:
             self.url: ParseResult = args.openqa_instance
@@ -44,7 +33,7 @@ def mock_openqa_passed(mocker: MockerFixture) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_openqa_exception(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_openqa_exception(mocker: MockerFixture) -> Any:
     class FakeClient:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -56,7 +45,7 @@ def mock_openqa_exception(mocker: MockerFixture) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_runtime(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_runtime(mocker: MockerFixture) -> None:
     class FakeWorker:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
@@ -99,7 +88,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
 
 
@@ -124,7 +113,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 6
-    assert "Would trigger 1 products in openQA"
+    assert "Dry run: Would trigger 1 products in openQA" in messages
 
 
 @responses.activate
@@ -148,9 +137,9 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert "No valid openQA configuration specified: '{'fake': 'result'}' not posted to dashboard" in messages
+    assert "Skipping dashboard update: No valid openQA configuration found for data: {'fake': 'result'}" in messages
 
 
 @responses.activate
@@ -174,6 +163,6 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
 
     messages = [m[-1] for m in caplog.record_tuples]
     assert len(messages) == 7
-    assert "1 incidents loaded from qem dashboard" in messages
+    assert "Loaded 1 incidents from QEM Dashboard" in messages
     assert "Triggering 1 products in openQA" in messages
-    assert "POST failed, not updating dashboard" in messages
+    assert "Skipping dashboard update: Job post failed" in messages

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
+
 from collections.abc import Sequence
 from itertools import chain
 from logging import getLogger
@@ -20,9 +22,9 @@ log = getLogger("bot.loader.qem")
 class IncReq(NamedTuple):
     inc: int
     req: int
-    type: str = None
-    url: str = None
-    scm_info: str = None
+    type: str | None = None
+    url: str | None = None
+    scm_info: str | None = None
 
 
 class JobAggr(NamedTuple):
@@ -98,10 +100,10 @@ def get_incident_settings(inc: int, token: dict[str, str], *, all_incidents: boo
 
 
 def get_incident_settings_data(token: dict[str, str], number: int) -> Sequence[Data]:
-    log.info("Getting settings for %s", number)
+    log.info("Fetching settings for incident %s", number)
     data = get_json("api/incident_settings/" + f"{number}", headers=token)
     if "error" in data:
-        log.warning("Incident %s contains error: %s", number, data["error"])
+        log.warning("Incident %s error: %s", number, data["error"])
         return []
 
     return [
@@ -149,10 +151,10 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
     settings = get_json(url, headers=token)
     if not settings:
-        log.info("Product: %s on arch: %s does not have any settings", data.product, data.arch)
+        log.info("No aggregate settings found for product %s on arch %s", data.product, data.arch)
         return []
 
-    log.debug("Getting id for %s", pformat(data))
+    log.debug("Resolving aggregate ID for data: %s", pformat(data))
 
     # use last three schedule
     return [
@@ -183,7 +185,7 @@ def get_aggregate_results(inc: int, token: dict[str, Any]) -> list[dict[str, Any
     return list(chain.from_iterable(all_data))
 
 
-def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any) -> int:
+def update_incidents(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
@@ -191,18 +193,15 @@ def update_incidents(token: dict[str, str], data: dict[str, Any], **kwargs: Any)
         try:
             ret = patch("api/incidents", headers=token, params=query_params, json=data)
         except requests.exceptions.RequestException:
-            log.exception("Request to QEM Dashboard failed")
+            log.exception("QEM Dashboard API request failed")
             return 1
         if ret.status_code == 200:
-            log.info("Smelt/Gitea Incidents updated")
+            log.info("QEM Dashboard incidents updated successfully")
         else:
-            log.error(
-                "Smelt/Gitea Incidents were not synced to dashboard: error %s",
-                ret.status_code,
-            )
+            log.error("QEM Dashboard incident sync failed: Status %s", ret.status_code)
             error_text = ret.text
             if len(error_text):
-                log.error(error_text)
+                log.error("QEM Dashboard error response: %s", error_text)
             continue
         return 0
     return 2
@@ -212,17 +211,17 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
     try:
         result = put("api/jobs", headers=token, json=data)
         if result.status_code != 200:
-            log.error(result.text)
+            log.error("Dashboard API error: Could not post job: %s", result.text)
 
     except requests.exceptions.RequestException:
-        log.exception("Request to QEM Dashboard failed")
+        log.exception("QEM Dashboard API request failed")
 
 
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     try:
         result = patch(f"api/jobs/{job_id}", headers=token, json=data)
         if result.status_code != 200:
-            log.error(result.text)
+            log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 
     except requests.exceptions.RequestException:
-        log.exception("Request to QEM Dashboard failed")
+        log.exception("QEM Dashboard API request failed")

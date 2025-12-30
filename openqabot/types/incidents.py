@@ -97,7 +97,7 @@ class Incidents(BaseConf):
             url = f"{QEM_DASHBOARD}api/incident_settings/{inc.id}"
             jobs = retried_requests.get(url, headers=token).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Failed to get scheduled jobs for incident %s", inc.id)
+            log.exception("Dashboard API error: Could not retrieve scheduled jobs for incident %s", inc.id)
 
         if not jobs:
             return False
@@ -131,35 +131,34 @@ class Incidents(BaseConf):
         flavor = ctx.flavor
         data = ctx.data
         if inc.type == "git" and not inc.ongoing:
-            log.info(
-                # ruff: noqa: E501 line-too-long
-                "Scheduling no jobs for incident %s (arch '%s', flavor '%s') as the PR is either closed, approved or review is no longer requested.",
+            log.debug(
+                "PR %s skipped (arch %s, flavor %s): PR is closed, approved, or review no longer requested",
                 inc.id,
                 arch,
                 flavor,
             )
             return None
         if self.filter_embargoed(flavor) and inc.embargoed:
-            log.info(
-                "Incident %s is embargoed and filtering embargoed updates enabled",
-                inc.id,
-            )
+            log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
             return None
-        full_post: dict[str, Any] = {}
-        full_post["api"] = "api/incident_settings"
-        full_post["qem"] = {}
-        full_post["openqa"] = {}
-        full_post["openqa"].update(self.settings)
-        full_post["qem"]["incident"] = inc.id
-        full_post["openqa"]["ARCH"] = arch
-        full_post["qem"]["arch"] = arch
-        full_post["openqa"]["FLAVOR"] = flavor
-        full_post["qem"]["flavor"] = flavor
-        full_post["openqa"]["VERSION"] = self.settings["VERSION"]
-        full_post["qem"]["version"] = self.settings["VERSION"]
-        full_post["openqa"]["DISTRI"] = self.settings["DISTRI"]
-        full_post["openqa"].update(OBSOLETE_PARAMS)
-        full_post["openqa"]["INCIDENT_ID"] = inc.id
+        full_post: dict[str, Any] = {
+            "api": "api/incident_settings",
+            "qem": {
+                "incident": inc.id,
+                "arch": arch,
+                "flavor": flavor,
+                "version": self.settings["VERSION"],
+            },
+            "openqa": {
+                **self.settings,
+                "ARCH": arch,
+                "FLAVOR": flavor,
+                "VERSION": self.settings["VERSION"],
+                "DISTRI": self.settings["DISTRI"],
+                "INCIDENT_ID": inc.id,
+                **OBSOLETE_PARAMS,
+            },
+        }
 
         if cfg.ci_url:
             full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
@@ -193,10 +192,10 @@ class Incidents(BaseConf):
         channels_set = set()
         issue_dict = {}
 
-        log.debug("Incident channels: %s", inc.channels)
+        log.debug("Incident %s: Active channels: %s", inc.id, inc.channels)
         for issue, channel in data["issues"].items():
             log.debug(
-                "Meta-data channel: %s, %s, %s",
+                "Checking metadata channel: product=%s, version=%s, arch=%s",
                 channel.product,
                 f"{channel.version}#{channel.product_version}",
                 arch,
@@ -204,16 +203,12 @@ class Incidents(BaseConf):
             f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
             if channel.product == "SLFO":
                 for inc_channel in inc.channels:
-                    if (
-                        inc_channel.product == "SUSE:SLFO"
-                        and (
-                            channel.product_version == inc_channel.product_version
-                            if len(channel.product_version) > 0
-                            else inc_channel.version.startswith(channel.version)
-                        )
-                        and channel.product_version in {"", inc_channel.product_version}
-                        and inc_channel.arch == arch
-                    ):
+                    version_matches = (
+                        channel.product_version == inc_channel.product_version
+                        if channel.product_version
+                        else inc_channel.version.startswith(channel.version)
+                    )
+                    if inc_channel.arch == arch and version_matches:
                         issue_dict[issue] = inc
                         channels_set.add(inc_channel)
             elif f_channel in inc.channels:
@@ -221,20 +216,15 @@ class Incidents(BaseConf):
                 channels_set.add(f_channel)
 
         if not issue_dict:
-            log.debug("No channels in %s for %s on %s", inc.id, flavor, arch)
+            log.debug("Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch)
             return None
 
         if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
             return None
 
-        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, self.settings["VERSION"], flavor):
-            log.info(
-                "not scheduling: Flavor: %s, version: %s incident: %s, arch: %s  - exists in openQA",
-                flavor,
-                self.settings["VERSION"],
-                inc.id,
-                arch,
-            )
+        version = self.settings["VERSION"]
+        if not cfg.ignore_onetime and self._is_scheduled_job(cfg.token, inc, arch, version, flavor):
+            log.info("Incident %s already scheduled for %s on %s (version: %s)", inc.id, flavor, arch, version)
             return None
 
         if (
@@ -249,7 +239,7 @@ class Incidents(BaseConf):
                 "COCO_TEST_ISSUES",  # Confidential Computing kernel
             })
         ):
-            log.warning("Kernel incident %s doesn't have product repository", inc)
+            log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
             return None
 
         for key, value in issue_dict.items():
@@ -274,11 +264,11 @@ class Incidents(BaseConf):
                 return False
             if neg and neg.isdisjoint(openqa_keys):
                 return False
-            return neg and pos
+            return bool(neg and pos)
 
         if not aggregate_job and not _should_aggregate(data, set(full_post["openqa"].keys())):
             full_post["qem"]["withAggregate"] = False
-            log.info("Aggregate not needed for incident %s", inc.id)
+            log.info("Incident %s: Aggregate job not required", inc.id)
 
         delta_prio = data.get("override_priority", 0)
 
@@ -286,21 +276,22 @@ class Incidents(BaseConf):
             delta_prio -= 50
         else:
             if flavor.endswith("Minimal"):
-                delta_prio -= 5
-            if not inc.staging:
+                delta_prio += 5
+            else:
                 delta_prio += 10
             if inc.emu:
                 delta_prio = -20
-            # override default prio only for specific jobs
-            if delta_prio:
-                full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
+
+        # override default prio only for specific jobs
+        if delta_prio:
+            full_post["openqa"]["_PRIORITY"] = BASE_PRIO + delta_prio
 
         # add custom vars to job settings
         if "params_expand" in data and any(
             forbidden_key in data["params_expand"] for forbidden_key in ["DISTRI", "VERSION"]
         ):
             log.error(
-                "flavor:%s ignored as DISTRI and VERSION not allowed in params_expand",
+                "Flavor %s ignored: 'params_expand' contains forbidden keys 'DISTRI' or 'VERSION'",
                 flavor,
             )
             return None
@@ -342,9 +333,9 @@ class Incidents(BaseConf):
             return self._handle_incident(ctx, cfg)
         except NoRepoFoundError as e:
             log.info(
-                "Project %s can't calculate repohash of incident %i: %s .. skipping",
-                ctx.inc.project,
+                "Incident %s skipped: RepoHash calculation failed for project %s: %s",
                 ctx.inc.id,
+                ctx.inc.project,
                 e,
             )
             return None
@@ -356,7 +347,7 @@ class Incidents(BaseConf):
         ci_url: str | None,
         *,
         ignore_onetime: bool,
-    ) -> list[dict[str, Any] | None]:
+    ) -> list[dict[str, Any]]:
         cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
         results = [
             self._process_inc_context(
