@@ -150,6 +150,7 @@ Feel free to add issues in github or send pull requests.
 * For git commit messages use the rules stated on
   [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/)
   as a reference.
+* Every commit MUST ensure full statement and branch coverage.
 * Run `make tidy` before committing changes to format code according to our
   standards. Preferably also run other tests as described in the subsequent
   section.
@@ -176,6 +177,8 @@ install dependencies:
 There are currently only limited automatic tests available. Run `make test`
 or `pytest` to execute Python-based unit tests. Run e.g.
 `pytest tests/test_amqp.py` to execute a single test.
+
+Run `make test-with-coverage` to check for 100% statement and branch coverage.
 
 Run `make checkstyle` to check coding style and `make lint` for linting.
 
