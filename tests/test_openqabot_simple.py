@@ -112,7 +112,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 6
+    assert len(messages) == 5
     assert "Dry run: Would trigger 1 products in openQA" in messages
 
 

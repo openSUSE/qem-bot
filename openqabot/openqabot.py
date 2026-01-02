@@ -58,7 +58,7 @@ class OpenQABot:
         if self.dry:
             log.info("Dry run: Would trigger %d products in openQA", len(post))
             for job in post:
-                log.info(job)
+                log.debug("Job details from dashboard: %s", job)
             log.info("Bot run completed")
             return 0
 
