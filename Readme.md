@@ -10,6 +10,7 @@ updates information about incidents and related openQA tests.
 
 ## Usage:
 
+<!-- usage_start -->
     >>> qem-bot.py --help
     usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
                    -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
@@ -55,6 +56,7 @@ updates information about incidents and related openQA tests.
                             Yaml config with list of singlearch packages for
                             incidents run
       -r, --retry RETRY     Number of retries
+<!-- usage_end -->
 
 ## Expected workflow
 

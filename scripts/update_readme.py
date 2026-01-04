@@ -32,8 +32,8 @@ def update_readme() -> None:
     content = readme_path.read_text(encoding="utf-8")
     help_output = get_help_output()
     formatted_help = format_block(help_output)
-    start_marker = "## Usage:"
-    end_marker = "## Expected workflow"
+    start_marker = "<!-- usage_start -->"
+    end_marker = "<!-- usage_end -->"
     pattern = re.compile(f"({re.escape(start_marker)})(.*?)({re.escape(end_marker)})", re.DOTALL)
     new_section_content = f"\n\n    >>> qem-bot.py --help\n{formatted_help}\n\n"
     match = pattern.search(content)
