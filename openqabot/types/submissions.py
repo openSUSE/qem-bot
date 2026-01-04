@@ -144,8 +144,8 @@ class Submissions(BaseConf):
 
     def _should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
         sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
-        if sub.type == "git" and not sub.ongoing:
-            log.debug("PR %s skipped (%s, %s): closed, approved, or review no longer requested", sub, arch, flavor)
+        if not sub.ongoing:
+            log.debug("Submission %s skipped (%s, %s): closed/approved/review no longer requested", sub, arch, flavor)
             return True
         if (self.filter_embargoed(flavor) and sub.embargoed) or sub.staging:
             if sub.embargoed:
