@@ -1,5 +1,4 @@
 SOURCE_FILES ?= $(shell git ls-files "**.py")
-USE_TY_TYPECHECK ?= 0
 ISOLATE ?= 1
 
 ifeq ($(ISOLATE),1)
@@ -50,24 +49,13 @@ check-code-health: ## Find dead code (vulture)
 	@echo "Checking code health…"
 	@vulture ${SOURCE_FILES} --min-confidence 80
 
-.PHONY: typecheck-pyright
-typecheck-pyright: ## Run pyright type checker
-	PYRIGHT_PYTHON_FORCE_VERSION=latest pyright --skipunannotated --warnings
-
 .PHONY: typecheck-ty
 typecheck-ty: ## Run ty type checker
 	ty check
 .PHONY: only-test-with-coverage
 
 .PHONY: typecheck
-ifeq ($(USE_TY_TYPECHECK),0)
-# Using pyright for typechecking as part of top-level target due to easier
-# dependencies. ty is recommended if available to you
-typecheck_target = typecheck-pyright
-else
-typecheck_target = typecheck-ty
-endif
-typecheck: $(typecheck_target) ## Run default type checker
+typecheck: typecheck-ty
 
 only-test-with-coverage: ## Run unit tests with coverage report
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing

@@ -33,7 +33,6 @@ qem-bot = "openqabot.main:main"
 
 [dependency-groups]
 dev = [
-    "pyright",
     "pytest",
     "pytest-cov",
     "pytest-xdist",
@@ -199,9 +198,6 @@ notice-rgx = "Copyright"
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "os.system".msg = "Use `subprocess.run` or `sh` library instead."
 "subprocess.call".msg = "Use `subprocess.run` with `check=True`."
-
-[tool.pyright]
-include = ["openqabot", "tests", "*.py"]
 
 [tool.ty.terminal]
 error-on-warning = true
