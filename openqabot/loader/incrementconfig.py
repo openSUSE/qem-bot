@@ -16,6 +16,7 @@ from openqabot.utils import get_yml_list
 
 log = getLogger("bot.increment_config")
 DEFAULT_FLAVOR_SUFFIX = "Increments"
+DEFAULT_VERSION_REGEX = r"[\d.]+"
 
 
 @dataclass
@@ -30,7 +31,7 @@ class IncrementConfig:
     build_listing_sub_path: str = ""
     build_regex: str = ""
     product_regex: str = ""
-    version_regex: str = ""
+    version_regex: str = DEFAULT_VERSION_REGEX
     packages: list[str] = field(default_factory=list)
     archs: set[str] = field(default_factory=set)
     settings: dict[str, str] = field(default_factory=dict)
@@ -66,6 +67,7 @@ class IncrementConfig:
             build_listing_sub_path=entry["build_listing_sub_path"],
             build_regex=entry["build_regex"],
             product_regex=entry["product_regex"],
+            version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
             packages=entry.get("packages", []),
             archs=set(entry.get("archs", [])),
             settings=entry.get("settings", {}),
@@ -109,6 +111,7 @@ class IncrementConfig:
                 "build_listing_sub_path",
                 "build_regex",
                 "product_regex",
+                "version_regex",
                 "packages",
                 "archs",
                 "settings",

@@ -274,6 +274,9 @@ class IncrementApprover:
 
             distri = config.distri
             version = m.group("version")
+            if not self._get_regex_match(config.version_regex, version):
+                log.info("Skipping version string '%s' not matching version regex '%s'", version, config.version_regex)
+                return None
             arch = m.group("arch")
             build = m.group("build")
             try:

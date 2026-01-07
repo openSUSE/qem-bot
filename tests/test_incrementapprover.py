@@ -630,6 +630,12 @@ def test_determine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker:
     }
     res = approver._determine_build_info(config)  # noqa: SLF001
     assert res == set()
+    config.product_regex = "SLES"
+    mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
+        "data": [{"name": "SLES-brokenversion-Online-x86_64-Build1.1-Source.report.spdx.json"}]
+    }
+    res = approver._determine_build_info(config)  # noqa: SLF001
+    assert res == set()
 
 
 def test_extra_builds_no_match(caplog: pytest.LogCaptureFixture) -> None:
@@ -697,7 +703,7 @@ def test_determine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixt
     # custom regex without flavor group
     config = IncrementConfig(
         distri="sle",
-        version="any",
+        version="16.0",
         flavor="any",
         project_base="BASE",
         build_project_suffix="TEST",
