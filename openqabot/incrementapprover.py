@@ -29,7 +29,8 @@ from .utils import retry10 as retried_requests
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
-default_flavor = "Online-Increments"
+default_flavor_suffix = "Increments"
+default_flavor = "Online"
 
 
 OpenQAResult = dict[str, dict[str, dict[str, Any]]]
@@ -276,9 +277,10 @@ class IncrementApprover:
             arch = m.group("arch")
             build = m.group("build")
             try:
-                flavor = m.group("flavor") + "-Increments"
+                flavor = m.group("flavor")
             except IndexError:
                 flavor = default_flavor
+            flavor = f"{flavor}-{config.flavor_suffix}"
 
             if (
                 config.distri in {"any", distri}

@@ -15,6 +15,7 @@ from openqabot.config import OBS_DOWNLOAD_URL
 from openqabot.utils import get_yml_list
 
 log = getLogger("bot.increment_config")
+DEFAULT_FLAVOR_SUFFIX = "Increments"
 
 
 @dataclass
@@ -22,12 +23,14 @@ class IncrementConfig:
     distri: str
     version: str
     flavor: str
+    flavor_suffix: str = DEFAULT_FLAVOR_SUFFIX
     project_base: str = ""
     build_project_suffix: str = ""
     diff_project_suffix: str = ""
     build_listing_sub_path: str = ""
     build_regex: str = ""
     product_regex: str = ""
+    version_regex: str = ""
     packages: list[str] = field(default_factory=list)
     archs: set[str] = field(default_factory=set)
     settings: dict[str, str] = field(default_factory=dict)
@@ -56,6 +59,7 @@ class IncrementConfig:
             distri=entry["distri"],
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
+            flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
             project_base=entry["project_base"],
             build_project_suffix=entry["build_project_suffix"],
             diff_project_suffix=entry["diff_project_suffix"],
@@ -98,6 +102,7 @@ class IncrementConfig:
                 "distri",
                 "version",
                 "flavor",
+                "flavor_suffix",
                 "project_base",
                 "build_project_suffix",
                 "diff_project_suffix",
