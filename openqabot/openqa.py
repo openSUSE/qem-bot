@@ -18,7 +18,7 @@ from openqabot.utils import number_of_retries
 
 from .errors import PostOpenQAError
 from .loader.qem import update_job
-from .types import Data
+from .types.types import Data
 
 if TYPE_CHECKING:
     from urllib.parse import ParseResult

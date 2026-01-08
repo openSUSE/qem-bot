@@ -15,7 +15,7 @@ import pika.spec
 from .approver import Approver
 from .loader.qem import get_incident_settings_data
 from .syncres import SyncRes
-from .types import Data
+from .types.types import Data
 from .utils import compare_incident_data
 
 if TYPE_CHECKING:

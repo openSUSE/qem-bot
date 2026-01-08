@@ -17,9 +17,9 @@ from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utc import UTC
 
-from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
+from .types import ProdVer, Repos
 
 log = getLogger("bot.types.aggregate")
 

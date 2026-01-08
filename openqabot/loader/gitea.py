@@ -26,7 +26,7 @@ from openqabot.config import GIT_REVIEW_BOT, GITEA, OBS_DOWNLOAD_URL, OBS_GROUP,
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
-    from openqabot.types import Repos
+    from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 

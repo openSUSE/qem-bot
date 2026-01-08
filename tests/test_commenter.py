@@ -12,8 +12,8 @@ from pytest_mock import MockerFixture
 
 from openqabot.commenter import Commenter
 from openqabot.errors import NoResultsError
-from openqabot.types import ArchVer
 from openqabot.types.incident import Incident
+from openqabot.types.types import ArchVer
 
 
 @pytest.fixture

@@ -8,9 +8,9 @@ from pathlib import Path
 from ruamel.yaml import YAML, YAMLError
 
 from openqabot.errors import NoTestIssuesError
-from openqabot.types import Data
 from openqabot.types.aggregate import Aggregate
 from openqabot.types.incidents import Incidents
+from openqabot.types.types import Data
 from openqabot.utils import get_yml_list
 
 log = getLogger("bot.loader.config")

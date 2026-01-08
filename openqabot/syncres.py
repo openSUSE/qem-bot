@@ -10,7 +10,7 @@ from typing import Any
 from .config import ALLOW_DEVELOPMENT_GROUPS
 from .loader.qem import post_job
 from .openqa import openQAInterface
-from .types import Data
+from .types.types import Data
 from .utils import normalize_results
 
 log = getLogger("bot.syncres")

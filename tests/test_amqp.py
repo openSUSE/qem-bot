@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 import responses
 from openqabot.amqp import AMQP
 from openqabot.config import QEM_DASHBOARD
-from openqabot.types import Data
+from openqabot.types.types import Data
 
 args = Namespace(
     dry=True,

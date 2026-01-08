@@ -28,7 +28,7 @@ from openqabot.loader.gitea import (
     read_xml,
     review_pr,
 )
-from openqabot.types import Repos
+from openqabot.types.types import Repos
 from responses import GET, matchers
 
 

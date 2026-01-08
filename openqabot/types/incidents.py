@@ -21,9 +21,9 @@ from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
 
-from . import ProdVer, Repos
 from .baseconf import BaseConf
 from .incident import Incident
+from .types import ProdVer, Repos
 
 
 class IncContext(NamedTuple):

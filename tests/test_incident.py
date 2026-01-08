@@ -9,8 +9,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
-from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
+from openqabot.types.types import ArchVer, Repos
 
 test_data = {
     "approved": False,

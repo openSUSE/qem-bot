@@ -247,7 +247,7 @@ def test_get_aggregate_settings(mocker: MockerFixture) -> None:
 
 def test_get_aggregate_settings_data(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"id": 1, "build": "build"}])
-    from openqabot.types import Data
+    from openqabot.types.types import Data
 
     data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)
@@ -280,7 +280,7 @@ def test_get_aggregate_results_error(mocker: MockerFixture) -> None:
 def test_get_aggregate_settings_data_none(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(20)  # INFO
     mocker.patch("openqabot.loader.qem.get_json", return_value=[])
-    from openqabot.types import Data
+    from openqabot.types.types import Data
 
     data = Data(0, 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)

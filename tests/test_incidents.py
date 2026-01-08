@@ -9,9 +9,9 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.errors import NoRepoFoundError
-from openqabot.types import ArchVer, Repos
 from openqabot.types.incident import Incident
 from openqabot.types.incidents import IncConfig, IncContext, Incidents
+from openqabot.types.types import ArchVer, Repos
 
 
 def test_incidents_constructor() -> None:

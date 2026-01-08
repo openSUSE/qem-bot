@@ -10,8 +10,8 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.errors import SameBuildExistsError
-from openqabot.types import Repos
 from openqabot.types.aggregate import Aggregate
+from openqabot.types.types import Repos
 from openqabot.utc import UTC
 
 

@@ -13,8 +13,8 @@ import requests
 
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
-from openqabot.types import Data
 from openqabot.types.incident import Incident
+from openqabot.types.types import Data
 
 log = getLogger("bot.loader.qem")
 

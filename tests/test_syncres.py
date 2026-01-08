@@ -7,7 +7,7 @@ from unittest.mock import patch
 from urllib.parse import urlparse
 
 from openqabot.syncres import SyncRes
-from openqabot.types import Data
+from openqabot.types.types import Data
 
 
 def test_clone_dry() -> None:

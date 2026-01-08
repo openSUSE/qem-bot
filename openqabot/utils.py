@@ -12,7 +12,7 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .types import Data
+from .types.types import Data
 
 
 def create_logger(name: str) -> logging.Logger:

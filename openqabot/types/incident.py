@@ -9,7 +9,7 @@ from typing import Any
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader.repohash import get_max_revision
 
-from . import ArchVer, Repos
+from .types import ArchVer, Repos
 
 log = getLogger("bot.types.incident")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")

@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 from ruamel.yaml import YAMLError
 
 from openqabot.loader.config import get_onearch, load_metadata, read_products
-from openqabot.types import Data
+from openqabot.types.types import Data
 
 __root__ = Path(__file__).parent / "fixtures/config"
 
