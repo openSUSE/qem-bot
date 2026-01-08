@@ -22,7 +22,7 @@ class OpenQABot:
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
-        self.submissions = get_submissions(self.token)
+        self.submissions = get_submissions(self.token, args.submission)
         log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
 
         for sub in self.submissions:
