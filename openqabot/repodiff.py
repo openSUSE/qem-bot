@@ -10,8 +10,8 @@ from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
+import pyzstd
 import requests
-import zstandard
 from lxml import etree  # type: ignore[unresolved-import]
 
 from .config import OBS_DOWNLOAD_URL
@@ -53,7 +53,7 @@ class RepoDiff:
         if repo_data_file.endswith(".gz"):
             return gzip.decompress(repo_data_raw)
         if repo_data_file.endswith(".zst"):
-            return zstandard.decompress(repo_data_raw)
+            return pyzstd.decompress(repo_data_raw)
         return repo_data_raw
 
     def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
