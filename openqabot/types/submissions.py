@@ -56,6 +56,7 @@ class Submissions(BaseConf):
         super().__init__(product, product_repo, product_version, settings, config)
         self.flavors = self.normalize_repos(config["FLAVOR"])
         self.singlearch = extrasettings
+        self.valid_archs = {arch for data in self.flavors.values() for arch in data["archs"]}
 
     def __repr__(self) -> str:
         return f"<Submissions product: {self.product}>"
@@ -259,9 +260,11 @@ class Submissions(BaseConf):
         }
         if self._should_skip(ctx, cfg, matches):
             return None
-        version = self.product_version or self.settings["VERSION"]
-        if not sub.compute_revisions_for_product_repo(self.product_repo, self.product_version):
+        if not sub.compute_revisions_for_product_repo(
+            self.product_repo, self.product_version, limit_archs=self.valid_archs
+        ):
             return None
+        version = self.product_version or self.settings["VERSION"]
         if not (revs := sub.revisions_with_fallback(arch, version)):
             return None
         settings = self._get_base_settings(ctx, revs, cfg)

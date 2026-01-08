@@ -14,10 +14,12 @@ from requests import ConnectionError, HTTPError  # noqa: A004
 import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
+from openqabot.loader.repohash import RepoOptions
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"
 PROJECT = "SUSE:Maintenance:12345"
+SLES_URL = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml"
 
 
 @responses.activate
@@ -45,16 +47,8 @@ arch = "x86_64"
 
 
 def add_sles_sled_response(sled_body: str | ConnectionError | HTTPError | BufferError) -> None:
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
-        body=SLES,
-    )
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLED_15SP3_x86_64/repodata/repomd.xml",
-        body=sled_body,
-    )
+    responses.add(responses.GET, url=SLES_URL, body=SLES)
+    responses.add(responses.GET, url=SLES_URL.replace("SLES", "SLED"), body=sled_body)
 
 
 @responses.activate
@@ -123,12 +117,7 @@ def test_get_max_revision_retry_error(caplog: pytest.LogCaptureFixture) -> None:
     repos = [("SLES", "15SP3")]
     arch = "x86_64"
     project = "SUSE:Maintenance:12345"
-
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml",
-        body=requests.exceptions.RetryError("Max retries exceeded"),
-    )
+    responses.add(responses.GET, url=SLES_URL, body=requests.exceptions.RetryError("Max retries exceeded"))
 
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, project)
@@ -140,10 +129,23 @@ def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
     repos = [("SLES", "15SP3")]
     arch = "x86_64"
     project = "SUSE:Maintenance:12345"
-    url = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml"
-    responses.add(responses.GET, url=url, status=404)
+    responses.add(responses.GET, url=SLES_URL, status=404)
 
     assert rp.get_max_revision(repos, arch, project) == 0
+    assert "Submission skipped: RepoHash metadata not found at" in caplog.text
+
+
+@responses.activate
+def test_get_max_revision_with_submission_id_not_ok(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    repos = [("SLES", "15SP3")]
+    arch = "x86_64"
+    project = "SUSE:Maintenance:12345"
+    opts = RepoOptions(submission_id="git:1461")
+    responses.add(responses.GET, url=SLES_URL, status=404)
+    ret = rp.get_max_revision(repos, arch, project, options=opts)
+
+    assert ret == 0
     assert "Submission skipped: RepoHash metadata not found at" in caplog.text
 
 
@@ -164,7 +166,8 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     responses.add(responses.GET, url=url, body=BASE_XML % "123")
 
     # Call with product_version
-    ret = rp.get_max_revision(repos, arch, project, product_version=product_version)
+    opts = RepoOptions(product_version=product_version)
+    ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
     mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99", product_version), arch)
 
@@ -174,6 +177,7 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
 
     # Call with product_name set
-    ret = rp.get_max_revision(repos, arch, project, product_name="SLES")
+    opts = RepoOptions(product_name="SLES")
+    ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
     mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
