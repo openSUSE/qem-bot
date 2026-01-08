@@ -51,8 +51,21 @@ class NoAggregateResultsError(NoResultsError):
         super().__init__(f"Submission {sub} does not have any aggregate settings")
 
 
-def get_submissions(token: dict[str, str]) -> list[Submission]:
-    submissions = get_json("api/incidents", headers=token, verify=True)
+def _get_submission(token: dict[str, str], submission_id: int, submission_type: str | None = None) -> dict:
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    return get_json(f"api/incidents/{submission_id}", headers=token, params=params)
+
+
+def get_submissions(token: dict[str, str], submission: str | None = None) -> list[Submission]:
+    if submission:
+        s_type, s_id = submission.split(":")
+    submissions = (
+        [_get_submission(token, int(s_id), s_type)]
+        if submission
+        else get_json("api/incidents", headers=token, verify=True)
+    )
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
@@ -86,10 +99,7 @@ def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
 def get_single_submission(
     token: dict[str, str], submission_id: int, submission_type: str | None = None
 ) -> list[SubReq]:
-    params = {}
-    if submission_type:
-        params["type"] = submission_type
-    submission = get_json(f"api/incidents/{submission_id}", headers=token, params=params)
+    submission = _get_submission(token, submission_id, submission_type)
     return [SubReq(submission["number"], submission["rr_number"], submission.get("type"))]
 
 

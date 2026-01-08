@@ -82,6 +82,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -106,6 +107,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -130,6 +132,7 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -155,6 +158,7 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 

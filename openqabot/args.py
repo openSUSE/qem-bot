@@ -155,6 +155,13 @@ def get_parser() -> ArgumentParser:
         action="store_true",
         help="Ignore onetime and schedule those test runs",
     )
+    cmdfull.add_argument(
+        "-I",
+        "--submission",
+        required=False,
+        type=str,
+        help="Submission ID (to process only a single submission)",
+    )
     cmdfull.set_defaults(func=do_full_schedule)
 
     cmdsub = commands.add_parser(
@@ -167,6 +174,13 @@ def get_parser() -> ArgumentParser:
         action="store_true",
         help="Ignore onetime and schedule those test runs",
     )
+    cmdsub.add_argument(
+        "-I",
+        "--submission",
+        required=False,
+        type=str,
+        help="Submission ID (to process only a single submission)",
+    )
     cmdsub.set_defaults(func=do_submission_schedule)
 
     cmdinc = commands.add_parser(
@@ -178,6 +192,13 @@ def get_parser() -> ArgumentParser:
         "--ignore-onetime",
         action="store_true",
         help="Ignore onetime and schedule those test runs",
+    )
+    cmdinc.add_argument(
+        "-I",
+        "--submission",
+        required=False,
+        type=str,
+        help="Submission ID (to process only a single submission)",
     )
     cmdinc.set_defaults(func=do_submission_schedule)
 

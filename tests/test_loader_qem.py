@@ -56,6 +56,12 @@ def test_get_submissions_simple(mocker: MockerFixture) -> None:
     get_json_mock.assert_called_once_with("api/incidents", headers={}, verify=True)
 
 
+def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:
+    get_sub_mock = mocker.patch("openqabot.loader.qem._get_submission")
+    get_submissions({}, "git:42")
+    get_sub_mock.assert_called_once_with({}, 42, "git")
+
+
 def test_get_submissions_error(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.qem.get_json", return_value={"error": "some error"})
     with pytest.raises(LoaderQemError):
