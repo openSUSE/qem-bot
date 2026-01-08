@@ -206,7 +206,8 @@ def test_sub_rev_product_repo_list(mocker: MockerFixture) -> None:
     sub = Submission(test_data)
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
     sub.compute_revisions_for_product_repo(["repo1", "repo2"], None)
-    assert mock_get_max.call_args[0][3] == "repo2"
+    # options is the 4th positional argument (index 3)
+    assert mock_get_max.call_args[0][3].product_name == "repo2"
 
 
 def test_sub_rev_non_matching_version(mocker: MockerFixture) -> None:
@@ -269,7 +270,7 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
 
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
-    submission._rev_cache_params = (None, None)  # noqa: SLF001
+    submission._rev_cache_params = (None, None, None)  # noqa: SLF001
     submission.revisions = {"some": "data"}  # type: ignore[assignment]
     # Should return True without calling _rev
     mock_rev = mocker.patch.object(submission, "_rev")
@@ -279,7 +280,7 @@ def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
 
 def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
-    submission._rev_cache_params = (None, None)  # noqa: SLF001
+    submission._rev_cache_params = (None, None, None)  # noqa: SLF001
     submission.revisions = None
     # Should return False without calling _rev
     mock_rev = mocker.patch.object(submission, "_rev")
@@ -317,6 +318,21 @@ def test_compute_revisions_logging_once(mocker: MockerFixture, caplog: pytest.Lo
     # Third call with different params (bypass cache, but already logged)
     assert not sub.compute_revisions_for_product_repo("different", "params")
     assert "RepoHash calculation failed" not in caplog.text
+
+
+def test_sub_rev_limit_archs(mocker: MockerFixture) -> None:
+    data = deepcopy(test_data)
+    data["channels"] = [
+        "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:x86_64",
+        "SUSE:Updates:SLE-Module-Public-Cloud:15-SP4:aarch64",
+    ]
+    sub = Submission(data)
+    mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
+    # limit_archs only includes x86_64, aarch64 should be skipped
+    sub.compute_revisions_for_product_repo(None, None, limit_archs={"x86_64"})
+    # verify get_max_revision was called only once (for x86_64)
+    assert mock_get_max.call_count == 1
+    assert mock_get_max.call_args[0][1] == "x86_64"
 
 
 def test_log_skipped_twice(caplog: pytest.LogCaptureFixture) -> None:

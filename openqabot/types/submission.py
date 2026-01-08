@@ -10,7 +10,7 @@ from typing import Any
 from openqabot.config import DEFAULT_SUBMISSION_TYPE, OBS_PRODUCTS
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader import gitea
-from openqabot.loader.repohash import get_max_revision
+from openqabot.loader.repohash import RepoOptions, get_max_revision
 
 from .types import ArchVer, Repos
 
@@ -84,7 +84,7 @@ class Submission:
 
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
-        self._rev_cache_params: tuple[Any, Any] | None = None
+        self._rev_cache_params: tuple[Any, ...] | None = None
         self._rev_logged: bool = False
         self.livepatch: bool = self._is_livepatch(self.packages)
 
@@ -111,14 +111,23 @@ class Submission:
         self,
         product_repo: list[str] | str | None,
         product_version: str | None,
+        limit_archs: set[str] | None = None,
     ) -> bool:
-        params = (product_repo, product_version)
+        params = (product_repo, product_version, frozenset(limit_archs) if limit_archs else None)
         if self._rev_cache_params == params:
             return self.revisions is not None
 
         self._rev_cache_params = params
+        product_name = product_repo[-1] if isinstance(product_repo, list) else product_repo
+        opts = RepoOptions(product_name, product_version, str(self))
+
         try:
-            self.revisions = self._rev(self.channels, self.project, product_repo, product_version, str(self))
+            self.revisions = self._rev(
+                self.channels,
+                self.project,
+                opts,
+                limit_archs,
+            )
         except NoRepoFoundError as e:
             if not self._rev_logged:
                 msg = "Submission %s skipped: RepoHash calculation failed for project %s"
@@ -151,14 +160,15 @@ class Submission:
     def _rev(
         channels: list[Repos],
         project: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
-        submission_id: str | None = None,
+        options: RepoOptions,
+        limit_archs: set[str] | None = None,
     ) -> dict[ArchVer, int]:
         rev: dict[ArchVer, int] = {}
         tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
         for repo in channels:
+            if limit_archs and repo.arch not in limit_archs:
+                continue
             version = repo.version
             if v := re.match(version_pattern, repo.version):
                 version = v.group(0)
@@ -166,9 +176,8 @@ class Submission:
             ver = repo.product_version or version
             tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
-        last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
         for archver, lrepos in tmpdict.items():
-            max_rev = get_max_revision(lrepos, archver.arch, project, last_product_repo, product_version, submission_id)
+            max_rev = get_max_revision(lrepos, archver.arch, project, options)
             if max_rev > 0:
                 rev[archver] = max_rev
 

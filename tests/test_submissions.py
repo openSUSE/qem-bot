@@ -139,6 +139,7 @@ class MockSubmission(Submission):
         self,
         product_repo: list[str] | str | None,  # noqa: ARG002
         product_version: str | None,  # noqa: ARG002
+        limit_archs: set[str] | None = None,  # noqa: ARG002
     ) -> bool:
         return self.compute_revisions_value
 
