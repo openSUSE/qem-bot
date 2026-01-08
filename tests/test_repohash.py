@@ -136,7 +136,18 @@ def test_get_max_revision_retry_error(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(NoRepoFoundError):
         rp.get_max_revision(repos, arch, project)
 
-    assert "Incident skipped: RepoHash metadata not found at" in caplog.records[0].msg
+
+@responses.activate
+def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
+    repos = [("SLES", "15SP3")]
+    arch = "x86_64"
+    project = "SUSE:Maintenance:12345"
+    url = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml"
+    responses.add(responses.GET, url=url, status=404)
+
+    assert rp.get_max_revision(repos, arch, project) == 0
+    assert "Incident skipped: RepoHash metadata not found at" in caplog.text
 
 
 @responses.activate

@@ -52,7 +52,11 @@ def get_max_revision(
             url = f"{url_base}/SUSE_Updates_{repo[0]}_{repo[1]}_{arch}/repodata/repomd.xml"
 
         try:
-            root = etree.fromstring(retried_requests.get(url).content)
+            req = retried_requests.get(url)
+            if not req.ok:
+                log.info("Incident skipped: RepoHash metadata not found at %s", url)
+                continue
+            root = etree.fromstring(req.content)
             cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
             etree.ParseError,
