@@ -123,6 +123,21 @@ class Incidents(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{inc.id}/SUSE_Updates_{'_'.join(self._repo_osuse(chan))}"
         )
 
+    def _get_matching_channels(self, inc: Incident, channel: ProdVer, arch: str) -> list[Repos]:
+        if channel.product == "SLFO":
+            return [
+                ic
+                for ic in inc.channels
+                if ic.arch == arch
+                and (
+                    channel.product_version == ic.product_version
+                    if channel.product_version
+                    else ic.version.startswith(channel.version)
+                )
+            ]
+        f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
+        return [f_channel] if f_channel in inc.channels else []
+
     def _handle_incident(  # noqa: PLR0911,C901
         self, ctx: IncContext, cfg: IncConfig
     ) -> dict[str, Any] | None:
@@ -141,6 +156,21 @@ class Incidents(BaseConf):
         if self.filter_embargoed(flavor) and inc.embargoed:
             log.info("Incident %s skipped: Embargoed and embargo-filtering enabled", inc.id)
             return None
+        if inc.staging:
+            return None
+        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
+            return None
+        if (
+            "excluded_packages" in data
+            and data["excluded_packages"] is not None
+            and inc.contains_package(data["excluded_packages"])
+        ):
+            return None
+        # old bot used variable "REPO_ID"
+        if not inc.compute_revisions_for_product_repo(self.product_repo, self.product_version):
+            return None
+        if not (revs := inc.revisions_with_fallback(arch, self.settings["VERSION"])):
+            return None
         full_post: dict[str, Any] = {
             "api": "api/incident_settings",
             "qem": {
@@ -156,70 +186,27 @@ class Incidents(BaseConf):
                 "VERSION": self.settings["VERSION"],
                 "DISTRI": self.settings["DISTRI"],
                 "INCIDENT_ID": inc.id,
+                "REPOHASH": revs,
+                "BUILD": f":{inc.id}:{inc.packages[0]}",
                 **OBSOLETE_PARAMS,
+                **({"__CI_JOB_URL": cfg.ci_url} if cfg.ci_url else {}),
+                **({"KGRAFT": "1"} if inc.livepatch else {}),
+                **({"RRID": inc.rrid} if inc.rrid else {}),
             },
         }
 
-        if cfg.ci_url:
-            full_post["openqa"]["__CI_JOB_URL"] = cfg.ci_url
-        if inc.staging:
-            return None
-
-        if "packages" in data and data["packages"] is not None and not inc.contains_package(data["packages"]):
-            return None
-
-        if (
-            "excluded_packages" in data
-            and data["excluded_packages"] is not None
-            and inc.contains_package(data["excluded_packages"])
-        ):
-            return None
-
-        if inc.livepatch:
-            full_post["openqa"]["KGRAFT"] = "1"
-
-        full_post["openqa"]["BUILD"] = f":{inc.id}:{inc.packages[0]}"
-
-        if inc.rrid:
-            full_post["openqa"]["RRID"] = inc.rrid
-
-        # old bot used variable "REPO_ID"
-        inc.compute_revisions_for_product_repo(self.product_repo, self.product_version)
-        revs = inc.revisions_with_fallback(arch, self.settings["VERSION"])
-        if not revs:
-            return None
-        full_post["openqa"]["REPOHASH"] = revs
-        channels_set = set()
-        issue_dict = {}
-
         log.debug("Incident %s: Active channels: %s", inc.id, inc.channels)
-        for issue, channel in data["issues"].items():
-            log.debug(
-                "Checking metadata channel: product=%s, version=%s, arch=%s",
-                channel.product,
-                f"{channel.version}#{channel.product_version}",
-                arch,
-            )
-            f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
-            if channel.product == "SLFO":
-                for inc_channel in inc.channels:
-                    version_matches = (
-                        channel.product_version == inc_channel.product_version
-                        if channel.product_version
-                        else inc_channel.version.startswith(channel.version)
-                    )
-                    if inc_channel.arch == arch and version_matches:
-                        issue_dict[issue] = inc
-                        channels_set.add(inc_channel)
-            elif f_channel in inc.channels:
-                issue_dict[issue] = inc
-                channels_set.add(f_channel)
+        matches = {
+            issue: matched
+            for issue, channel in data["issues"].items()
+            if (matched := self._get_matching_channels(inc, channel, arch))
+        }
 
-        if not issue_dict:
+        if not matches:
             log.debug("Incident %s skipped for %s on %s: No matching channels found in metadata", inc.id, flavor, arch)
             return None
 
-        if "required_issues" in data and set(issue_dict.keys()).isdisjoint(data["required_issues"]):
+        if "required_issues" in data and set(matches.keys()).isdisjoint(data["required_issues"]):
             return None
 
         version = self.settings["VERSION"]
@@ -231,7 +218,7 @@ class Incidents(BaseConf):
             "Kernel" in flavor
             and not inc.livepatch
             and not flavor.endswith("Azure")
-            and set(issue_dict.keys()).isdisjoint({
+            and set(matches.keys()).isdisjoint({
                 "OS_TEST_ISSUES",  # standard product dir
                 "LTSS_TEST_ISSUES",  # LTSS product dir
                 "BASE_TEST_ISSUES",  # GA product dir SLE15+
@@ -242,9 +229,10 @@ class Incidents(BaseConf):
             log.warning("Incident %s skipped: Kernel incident missing product repository", inc.id)
             return None
 
-        for key, value in issue_dict.items():
-            full_post["openqa"][key] = str(value.id)
+        for issue in matches:
+            full_post["openqa"][issue] = str(inc.id)
 
+        channels_set = {c for matched in matches.values() for c in matched}
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
             sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
@@ -270,9 +258,7 @@ class Incidents(BaseConf):
             full_post["qem"]["withAggregate"] = False
             log.info("Incident %s: Aggregate job not required", inc.id)
 
-        delta_prio = data.get("override_priority", 0)
-
-        if delta_prio:
+        if delta_prio := data.get("override_priority", 0):
             delta_prio -= 50
         else:
             if flavor.endswith("Minimal"):
@@ -328,7 +314,6 @@ class Incidents(BaseConf):
         return full_post
 
     def _process_inc_context(self, ctx: IncContext, cfg: IncConfig) -> dict[str, Any] | None:
-        ctx.inc.arch_filter = ctx.data["archs"]
         try:
             return self._handle_incident(ctx, cfg)
         except NoRepoFoundError as e:
@@ -349,18 +334,12 @@ class Incidents(BaseConf):
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
         cfg = IncConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
-        results = [
-            self._process_inc_context(
-                IncContext(
-                    inc=inc,
-                    arch=arch,
-                    flavor=flavor,
-                    data=data,
-                ),
-                cfg,
-            )
+        active = [i for i in incidents if i.compute_revisions_for_product_repo(self.product_repo, self.product_version)]
+
+        return [
+            r
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
-            for inc in incidents
+            for inc in active
+            if (r := self._process_inc_context(IncContext(inc, arch, flavor, data), cfg))
         ]
-        return [r for r in results if r]

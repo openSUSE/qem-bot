@@ -7,7 +7,9 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any
 
+from openqabot.config import OBS_PRODUCTS
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
+from openqabot.loader import gitea
 from openqabot.loader.repohash import get_max_revision
 
 from .types import ArchVer, Repos
@@ -27,7 +29,6 @@ class Incident:
         self.embargoed: bool = incident["embargoed"]
         self.priority: int | None = incident.get("priority")
         self.type: str = incident.get("type", "smelt")
-        self.arch_filter: list[str] | None = None
 
         self.channels: list[Repos] = [
             Repos(p, v, a)
@@ -49,11 +50,22 @@ class Incident:
             )
         ]
         # add channels for Gitea-based incidents
-        self.channels += [
-            Repos(":".join(val[0:2]), ":".join(val[2:-1]), *(val[-1].split("#")))
-            for val in (r.split(":") for r in (i for i in incident["channels"] if i.startswith("SUSE:SLFO")))
-            if len(val) > 3
-        ]
+        skipped_products = set()
+        for r in incident["channels"]:
+            if not r.startswith("SUSE:SLFO"):
+                continue
+            val = r.split(":")
+            if len(val) <= 3:
+                continue
+            obs_project = ":".join(val[2:-1])
+            product = gitea.get_product_name(obs_project)
+            if product in OBS_PRODUCTS:
+                self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
+            else:
+                skipped_products.add(product)
+
+        for product in sorted(skipped_products):
+            log.info("Incident %s: Product %s is not in considered products", self.id, product)
 
         # remove Manager-Server on aarch64 from channels
         self.channels = [
@@ -71,6 +83,7 @@ class Incident:
 
         self.emu: bool = incident["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
+        self._rev_cache_params: tuple[Any, Any] | None = None
         self.livepatch: bool = self._is_livepatch(self.packages)
 
     @classmethod
@@ -88,8 +101,19 @@ class Incident:
         self,
         product_repo: list[str] | str | None,
         product_version: str | None,
-    ) -> None:
-        self.revisions = self._rev(self.arch_filter, self.channels, self.project, product_repo, product_version)
+    ) -> bool:
+        params = (product_repo, product_version)
+        if self._rev_cache_params == params:
+            return self.revisions is not None
+
+        self._rev_cache_params = params
+        try:
+            self.revisions = self._rev(self.channels, self.project, product_repo, product_version)
+        except NoRepoFoundError:
+            self.revisions = None
+            return False
+        else:
+            return True
 
     def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
         if self.revisions is None:
@@ -110,7 +134,6 @@ class Incident:
 
     @staticmethod
     def _rev(
-        arch_filter: list[str] | None,
         channels: list[Repos],
         project: str,
         product_repo: list[str] | str | None,
@@ -120,8 +143,6 @@ class Incident:
         tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
         for repo in channels:
-            if arch_filter is not None and repo.arch not in arch_filter:
-                continue
             version = repo.version
             if v := re.match(version_pattern, repo.version):
                 version = v.group(0)

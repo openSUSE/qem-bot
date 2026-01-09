@@ -84,8 +84,7 @@ def test_inc_normal_livepatch() -> None:
 @pytest.mark.usefixtures("mock_ex")
 def test_inc_norepo() -> None:
     inc = Incident(test_data)
-    with pytest.raises(NoRepoFoundError):
-        inc.revisions_with_fallback("x86_64", "15-SP4")
+    assert inc.revisions_with_fallback("x86_64", "15-SP4") is None
 
 
 @pytest.mark.usefixtures("mock_good")
@@ -172,17 +171,6 @@ def test_slfo_channels_and_revisions() -> None:
     assert incident.revisions == expected_revisions
 
 
-@pytest.mark.usefixtures("mock_good")
-def test_inc_arch_filter() -> None:
-    inc = Incident(test_data)
-    inc.arch_filter = ["aarch64"]
-    # x86_64 should be skipped in _rev
-    inc.compute_revisions_for_product_repo(None, None)
-    assert inc.revisions is not None
-    assert ArchVer("aarch64", "15-SP4") in inc.revisions
-    assert ArchVer("x86_64", "15.4") not in inc.revisions
-
-
 def test_inc_rev_multiple_repos(mocker: MockerFixture) -> None:
     data: Any = deepcopy(test_data)
     cast("Any", data["channels"]).append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
@@ -197,8 +185,7 @@ def test_inc_rev_multiple_repos(mocker: MockerFixture) -> None:
 def test_inc_rev_no_repo_found(mocker: MockerFixture) -> None:
     inc = Incident(test_data)
     mocker.patch("openqabot.types.incident.get_max_revision", return_value=0)
-    with pytest.raises(NoRepoFoundError):
-        inc.compute_revisions_for_product_repo(None, None)
+    assert not inc.compute_revisions_for_product_repo(None, None)
 
 
 def test_inc_repr_no_rrid() -> None:
@@ -238,17 +225,63 @@ def test_inc_rev_empty_channels() -> None:
     inc = MagicMock(spec=Incident)
     inc.id = 123
     inc.channels = []
-    inc.arch_filter = []
+    inc._rev_cache_params = None  # noqa: SLF001
     inc.project = "project"
     inc.compute_revisions_for_product_repo = Incident.compute_revisions_for_product_repo.__get__(inc, Incident)
     inc._rev = Incident._rev  # noqa: SLF001
-    with pytest.raises(NoRepoFoundError):
-        inc.compute_revisions_for_product_repo(None, None)
+    assert not inc.compute_revisions_for_product_repo(None, None)
 
 
 def test_revisions_with_fallback_no_revisions(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     inc = Incident(test_data)
     mocker.patch.object(inc, "compute_revisions_for_product_repo")
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.types.incident")
     assert inc.revisions_with_fallback("x86_64", "15-SP4") is None
     assert "Incident 24618: No revisions available" in caplog.text
+
+
+def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.INFO)
+    slfo_data = deepcopy(test_data)
+    slfo_data["channels"] = [
+        "SUSE:SLFO:1.1.99:PullRequest:166:SLES:x86_64#15.99",  # normal
+        "SUSE:SLFO:too_short",  # too short, line 58
+        "SUSE:SLFO:1.1.99:PullRequest:166:UNKNOWN:x86_64#15.99",  # unknown product, line 64
+    ]
+
+    # Mock gitea.get_product_name to return something for SLES and UNKNOWN
+    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "UNKNOWN")
+    # Ensure SLES is in OBS_PRODUCTS but UNKNOWN is not
+    mocker.patch("openqabot.types.incident.OBS_PRODUCTS", ["SLES"])
+
+    incident = Incident(slfo_data)
+
+    assert "Incident 24618: Product UNKNOWN is not in considered products" in caplog.text
+    assert len(incident.channels) == 1  # only the first one
+    assert incident.channels[0].product == "SUSE:SLFO"
+    assert incident.channels[0].version == "1.1.99:PullRequest:166:SLES"
+
+
+def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
+    incident = Incident(test_data)
+    mock_rev = mocker.patch.object(incident, "_rev", return_value={"x86_64": 123})
+
+    # First call
+    assert incident.compute_revisions_for_product_repo("repo", "version") is True
+    assert mock_rev.call_count == 1
+
+    # Second call (cache hit)
+    assert incident.compute_revisions_for_product_repo("repo", "version") is True
+    assert mock_rev.call_count == 1
+
+
+def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
+    incident = Incident(test_data)
+    # Mocking _rev to be called would be a failure since it should hit cache
+    mock_rev = mocker.patch.object(incident, "_rev", side_effect=Exception("Should not be called"))
+
+    incident._rev_cache_params = ("repo", "version")  # noqa: SLF001
+    incident.revisions = None
+
+    assert incident.compute_revisions_for_product_repo("repo", "version") is False
+    assert mock_rev.call_count == 0

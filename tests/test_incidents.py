@@ -94,9 +94,11 @@ class MyIncident_0(Incident):
         self.arch_filter = None
 
     def compute_revisions_for_product_repo(
-        self, product_repo: list[str] | str | None, product_version: str | None
-    ) -> None:
-        pass
+        self,
+        product_repo: list[str] | str | None,  # noqa: ARG002
+        product_version: str | None,  # noqa: ARG002
+    ) -> bool:
+        return True
 
     def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
         pass
@@ -1070,3 +1072,42 @@ def test_handle_incident_priority_minimal(mocker: MockerFixture) -> None:
     assert result is not None
     # BASE_PRIO(50) + 10 (not staging) - 5 (Minimal) = 55
     assert result["openqa"]["_PRIORITY"] == 55
+
+
+class MyIncident_NoRev(Incident):
+    def __init__(self) -> None:
+        self.id = 1
+        self.packages = ["pkg"]
+        self.rrid = "RRID"
+        self.livepatch = False
+        self.type = "smelt"
+        self.ongoing = True
+        self.staging = False
+        self.embargoed = False
+        self.revisions = None
+        self.channels = []
+
+    def compute_revisions_for_product_repo(
+        self,
+        product_repo: list[str] | str | None,  # noqa: ARG002
+        product_version: str | None,  # noqa: ARG002
+    ) -> bool:
+        return False
+
+
+def test_handle_incident_no_revisions_return_none() -> None:
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    incidents_obj = Incidents(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+        config=test_config,
+        extrasettings=set(),
+    )
+
+    inc = MyIncident_NoRev()
+    ctx = IncContext(inc=inc, arch="x86_64", flavor="AAA", data={})
+    cfg = IncConfig(token={}, ci_url=None, ignore_onetime=False)
+
+    assert incidents_obj._handle_incident(ctx, cfg) is None  # noqa: SLF001
