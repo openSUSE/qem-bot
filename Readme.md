@@ -16,22 +16,30 @@ updates information about incidents and related openQA tests.
     usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
                    -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
                    [-r RETRY]
-                   {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
+                   {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
 
     QEM-Dashboard, SMELT, Gitea and openQA connector
 
     positional arguments:
-      {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
+      {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
         full-run            Full schedule for Maintenance Submissions in openQA
-        incidents-run       Submissions only schedule for Maintenance Submissions
+        submissions-run     Submissions only schedule for Maintenance Submissions
                             in openQA
+        incidents-run       DEPRECATED: Submissions only schedule for Maintenance
+                            Submissions in openQA (use submissions-run)
         updates-run         Aggregates only schedule for Maintenance Submissions
                             in openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
-        inc-approve         Approve submissions which passed tests
-        inc-comment         Comment submissions in BuildService
-        inc-sync-results    Sync results of openQA submission jobs to Dashboard
+        sub-approve         Approve submissions which passed tests
+        inc-approve         DEPRECATED: Approve submissions which passed tests
+                            (use sub-approve)
+        sub-comment         Comment submissions in BuildService
+        inc-comment         DEPRECATED: Comment submissions in BuildService (use
+                            sub-comment)
+        sub-sync-results    Sync results of openQA submission jobs to Dashboard
+        inc-sync-results    DEPRECATED: Sync results of openQA submission jobs to
+                            Dashboard (use sub-sync-results)
         aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard
         increment-approve   Approve the most recent product increment for an OBS
                             project if tests passed
