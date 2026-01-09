@@ -67,7 +67,6 @@ class openQAInterface:
         log.info("Fetching openQA jobs for %s", pformat(data))
         param = {}
         param["scope"] = "relevant"
-        param["latest"] = "1"
         param["flavor"] = data.flavor
         param["distri"] = data.distri
         param["build"] = data.build
