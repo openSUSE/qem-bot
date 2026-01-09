@@ -73,3 +73,18 @@ def test_main_keyboard_interrupt(mocker: MockerFixture) -> None:
     mocker.patch("sys.argv", ["qem-bot", "full-run"])
     main()
     mock_exit.assert_called_with(1)
+
+
+def test_main_no_func(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mock_configs_path = mocker.Mock()
+    mock_configs_path.is_dir.return_value = True
+    mock_args = mocker.Mock()
+    mock_args.configs = mock_configs_path
+    del mock_args.func
+    del mock_args.no_config
+    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
+    sys_exit_spy = mocker.spy(sys, "exit")
+    with pytest.raises(SystemExit):
+        main()
+    sys_exit_spy.assert_called_once_with(1)
+    assert "Command is required" in caplog.text
