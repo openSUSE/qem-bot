@@ -56,7 +56,8 @@ class SMELTSync:
     @staticmethod
     def _has_qam_review(rr_number: dict[str, Any]) -> bool:
         return any(
-            r.get("assignedByGroup", {}).get("name") == "qam-openqa"
+            r
+            and r.get("assignedByGroup", {}).get("name") == "qam-openqa"
             and r.get("status", {}).get("name") in {"review", "new"}
             for r in rr_number.get("reviewSet", [])
         )

@@ -12,7 +12,7 @@ from openqabot.repodiff import RepoDiff
 
 
 def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
-    diff = RepoDiff(None)  # type: ignore[arg-type]
+    diff = RepoDiff(None)
     assert diff() == 1
     assert "RepoDiff called without arguments" in caplog.text
 
