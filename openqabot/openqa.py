@@ -65,22 +65,22 @@ class openQAInterface:
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         log.info("Fetching openQA jobs for %s", pformat(data))
-        param = {}
-        param["scope"] = "relevant"
-        param["latest"] = "1"
-        param["flavor"] = data.flavor
-        param["distri"] = data.distri
-        param["build"] = data.build
-        param["version"] = data.version
-        param["arch"] = data.arch
+        param = {
+            "scope": "relevant",
+            "latest": "1",
+            "flavor": data.flavor,
+            "distri": data.distri,
+            "build": data.build,
+            "version": data.version,
+            "arch": data.arch,
+        }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
     @lru_cache(maxsize=512)
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
-        ret = []
         try:
             ret = self.openqa.openqa_request("GET", f"jobs/{job_id}/comments", retries=self.retries)
-            ret = [{"text": c.get("text", "")} for c in ret]
+            return [{"text": c.get("text", "")} for c in ret]
         except RequestError as e:
             (_, _, status_code, *_) = e.args
             if status_code == 404:
@@ -89,7 +89,7 @@ class openQAInterface:
                 log.exception("openQA API error when fetching comments for job %s", job_id)
         except requests.exceptions.RequestException:
             log.exception("openQA API error when fetching comments for job %s", job_id)
-        return ret
+        return []
 
     @lru_cache(maxsize=256)
     def is_devel_group(self, groupid: int) -> bool:
@@ -99,23 +99,21 @@ class openQAInterface:
 
     @lru_cache(maxsize=256)
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:
-        ret = None
         try:
-            ret = self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
+            return self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
         except RequestError:
             log.exception("openQA API error when fetching job %s", job_id)
-        return ret
+        return None
 
     @lru_cache(maxsize=256)
     def get_older_jobs(self, job_id: int, limit: int) -> dict:
-        ret = {"data": []}
         try:
-            ret = self.openqa.openqa_request(
+            return self.openqa.openqa_request(
                 "GET", f"/tests/{job_id}/ajax?previous_limit={limit}&next_limit=0", retries=self.retries
             )
         except RequestError:
             log.exception("openQA API error when fetching older jobs for job %s", job_id)
-        return ret
+        return {"data": []}
 
     def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from logging import getLogger
 from typing import Any
 
@@ -116,38 +117,25 @@ class Incident:
         product_version: str | None,
     ) -> dict[ArchVer, int]:
         rev: dict[ArchVer, int] = {}
-        tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = {}
+        tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
         for repo in channels:
             if arch_filter is not None and repo.arch not in arch_filter:
                 continue
             version = repo.version
-            v = re.match(version_pattern, repo.version)
-            if v:
+            if v := re.match(version_pattern, repo.version):
                 version = v.group(0)
 
-            repo_info = (repo.product, repo.version, repo.product_version)
             ver = repo.product_version or version
-            arch_ver = ArchVer(repo.arch, ver)
-            if arch_ver in tmpdict:
-                tmpdict[arch_ver].append(repo_info)
-            else:
-                tmpdict[arch_ver] = [repo_info]
+            tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
-        if tmpdict:
-            for archver, lrepos in tmpdict.items():
-                last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
-                max_rev = get_max_revision(
-                    lrepos,
-                    archver.arch,
-                    project,
-                    last_product_repo,
-                    product_version,
-                )
-                if max_rev > 0:
-                    rev[archver] = max_rev
+        last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
+        for archver, lrepos in tmpdict.items():
+            max_rev = get_max_revision(lrepos, archver.arch, project, last_product_repo, product_version)
+            if max_rev > 0:
+                rev[archver] = max_rev
 
-        if len(rev) == 0:
+        if not rev:
             raise NoRepoFoundError
         return rev
 
@@ -161,19 +149,9 @@ class Incident:
 
     @staticmethod
     def _is_livepatch(packages: list[str]) -> bool:
-        kgraft = False
-
-        for package in packages:
-            if package.startswith(("kernel-default", "kernel-source", "kernel-azure")):
-                return False
-            if package.startswith(("kgraft-patch-", "kernel-livepatch")):
-                kgraft = True
-
-        return kgraft
+        if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
+            return False
+        return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
-        for package in self.packages:
-            for req in requires:
-                if package.startswith(req) and package != "kernel-livepatch-tools":
-                    return True
-        return False
+        return any(p != "kernel-livepatch-tools" and p.startswith(tuple(requires)) for p in self.packages)

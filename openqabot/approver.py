@@ -277,16 +277,18 @@ class Approver:
         return all(self.is_job_acceptable(inc, api, r) for r in job_results)
 
     def get_incident_result(self, jobs: list[JobAggr], api: str, inc: int) -> bool:
-        res = False
+        if not jobs:
+            return False
 
+        res = False
         for job_aggr in jobs:
             try:
-                res = self.get_jobs(job_aggr, api, inc)
-            except NoResultsError as e:
+                if not self.get_jobs(job_aggr, api, inc):
+                    return False
+                res = True
+            except NoResultsError as e:  # noqa: PERF203
                 log.info("Approval check for incident %s failed: %s", inc, e)
                 continue
-            if not res:
-                return False
 
         return res
 

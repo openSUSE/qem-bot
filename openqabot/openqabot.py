@@ -39,10 +39,7 @@ class OpenQABot:
 
     def post_qem(self, data: dict[str, Any], api: str) -> None:
         if not self.openqa:
-            log.warning(
-                "Skipping dashboard update: No valid openQA configuration found for data: %s",
-                data,
-            )
+            log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
 
         res = put(api, headers=self.token, json=data)
@@ -54,9 +51,9 @@ class OpenQABot:
 
     def __call__(self) -> int:
         log.info("Entering bot main loop")
-        post: list[dict[str, Any]] = []
-        for worker in self.workers:
-            post += worker(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+        post = [
+            p for w in self.workers for p in w(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+        ]
 
         if self.dry:
             log.info("Dry run: Would trigger %d products in openQA", len(post))
