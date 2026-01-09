@@ -55,12 +55,11 @@ class SMELTSync:
 
     @staticmethod
     def _has_qam_review(rr_number: dict[str, Any]) -> bool:
-        return any(
-            r
-            and r.get("assignedByGroup", {}).get("name") == "qam-openqa"
-            and r.get("status", {}).get("name") in {"review", "new"}
-            for r in rr_number.get("reviewSet", [])
-        )
+        if not rr_number["reviewSet"]:
+            return False
+        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+        return bool(review) and review[0]["status"]["name"] in {"review", "new"}
 
     @classmethod
     def _create_record(cls, inc: dict[str, Any]) -> dict[str, Any]:

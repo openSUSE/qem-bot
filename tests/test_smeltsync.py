@@ -94,7 +94,7 @@ def fake_dashboard_replyback() -> None:
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
 def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.syncres")
+    caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fetching details for incident 100 from SMELT" in messages
@@ -135,7 +135,7 @@ def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> No
 def test_sync_approved(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.syncres")
+    caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert "Fetching details for incident 100 from SMELT" in messages
