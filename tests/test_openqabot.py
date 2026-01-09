@@ -3,6 +3,7 @@
 
 import logging
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -58,3 +59,17 @@ def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
     with pytest.raises(SystemExit):
         main()
+
+
+def test_main_keyboard_interrupt(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.main.create_logger")
+    mock_args = MagicMock()
+    mock_args.configs.is_dir.return_value = True
+    mock_args.debug = False
+    mock_args.func.side_effect = KeyboardInterrupt
+    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
+    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+    mock_exit = mocker.patch("sys.exit")
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+    main()
+    mock_exit.assert_called_with(1)

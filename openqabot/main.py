@@ -24,4 +24,8 @@ def main() -> None:
     if cfg.debug:
         log.setLevel(logging.DEBUG)
 
-    sys.exit(cfg.func(cfg))
+    try:
+        sys.exit(cfg.func(cfg))
+    except KeyboardInterrupt:
+        log.info("Interrupted by user")
+        sys.exit(1)
