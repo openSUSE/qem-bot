@@ -2,11 +2,12 @@
 [![codecov](https://codecov.io/gh/openSUSE/qem-bot/branch/master/graph/badge.svg?token=LTQET0ZPBG)](https://codecov.io/gh/openSUSE/qem-bot)
 # qem-bot
 "qem-bot" is a tool for scheduling maintenance tests on openQA based
-on [SMELT](https://tools.io.suse.de/smelt) incidents and Gitea PRs.
+on submissions like [SMELT](https://tools.io.suse.de/smelt) incidents and
+Gitea PRs.
 
 It is tightly coupled with
 [qem-dashboard](https://github.com/openSUSE/qem-dashboard) where it reads and
-updates information about incidents and related openQA tests.
+updates information about submissions and related openQA tests.
 
 ## Usage:
 
@@ -16,22 +17,30 @@ updates information about incidents and related openQA tests.
     usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
                    -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
                    [-r RETRY]
-                   {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
+                   {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
 
     QEM-Dashboard, SMELT, Gitea and openQA connector
 
     positional arguments:
-      {full-run,incidents-run,updates-run,smelt-sync,gitea-sync,inc-approve,inc-comment,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
+      {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
         full-run            Full schedule for Maintenance Submissions in openQA
-        incidents-run       Submissions only schedule for Maintenance Submissions
+        submissions-run     Submissions only schedule for Maintenance Submissions
                             in openQA
+        incidents-run       DEPRECATED: Submissions only schedule for Maintenance
+                            Submissions in openQA (use submissions-run)
         updates-run         Aggregates only schedule for Maintenance Submissions
                             in openQA
         smelt-sync          Sync data from SMELT into QEM Dashboard
         gitea-sync          Sync data from Gitea into QEM Dashboard
-        inc-approve         Approve submissions which passed tests
-        inc-comment         Comment submissions in BuildService
-        inc-sync-results    Sync results of openQA submission jobs to Dashboard
+        sub-approve         Approve submissions which passed tests
+        inc-approve         DEPRECATED: Approve submissions which passed tests
+                            (use sub-approve)
+        sub-comment         Comment submissions in BuildService
+        inc-comment         DEPRECATED: Comment submissions in BuildService (use
+                            sub-comment)
+        sub-sync-results    Sync results of openQA submission jobs to Dashboard
+        inc-sync-results    DEPRECATED: Sync results of openQA submission jobs to
+                            Dashboard (use sub-sync-results)
         aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard
         increment-approve   Approve the most recent product increment for an OBS
                             project if tests passed
@@ -65,7 +74,7 @@ updates information about incidents and related openQA tests.
 * For every incident in SMELT an entry should show up in qem-dashboard
   (`smelt-sync`)
 * For every incident in qem-dashboard, incident and aggregate tests are
-  triggered (`incidents-run+updates-run`)
+  triggered (`submissions-run+updates-run`)
 * Results from incident + aggregate tests show up on the dashboard
   (`inc-sync-results+aggr-sync-results`)
 * If there is a non-zero amount of related openQA jobs *and* none of them
@@ -221,7 +230,7 @@ git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
 python3 ./qem-bot.py --configs metadata -t 1234 --dry inc-approve
 ```
 
-This should walk over the list of current incidents pending approval.
+This should walk over the list of current submissions pending approval.
 
 It is possible to run qem-bot inside a container, please see
 [docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
@@ -261,7 +270,7 @@ Gitea as well.
 Then you can trigger some openQA tests specifying some metadata:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' incidents-run
+MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' submissions-run
 ```
 
 The YAML document containing metadata can look like
@@ -289,15 +298,15 @@ settings from the qem-dashboard database with an SQL command like
 
 ---
 
-You can also finally approve incidents/PRs based on the openQA test results,
+You can also finally approve submissions based on the openQA test results,
 e.g.:
 
 ```
 MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-approve
 ```
 
-If you want to approve incidents for real you have to leave out the `--dry` flag
-of course. Then a token with write-permissions is required.
+If you want to approve submissions for real you have to leave out the `--dry`
+flag of course. Then a token with write-permissions is required.
 
 ---
 

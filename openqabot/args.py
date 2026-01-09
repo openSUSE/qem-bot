@@ -158,7 +158,7 @@ def get_parser() -> ArgumentParser:
     cmdfull.set_defaults(func=do_full_schedule)
 
     cmdsub = commands.add_parser(
-        "incidents-run",
+        "submissions-run",
         help="Submissions only schedule for Maintenance Submissions in openQA",
     )
     cmdsub.add_argument(
@@ -168,6 +168,18 @@ def get_parser() -> ArgumentParser:
         help="Ignore onetime and schedule those test runs",
     )
     cmdsub.set_defaults(func=do_submission_schedule)
+
+    cmdinc = commands.add_parser(
+        "incidents-run",
+        help="DEPRECATED: Submissions only schedule for Maintenance Submissions in openQA (use submissions-run)",
+    )
+    cmdinc.add_argument(
+        "-i",
+        "--ignore-onetime",
+        action="store_true",
+        help="Ignore onetime and schedule those test runs",
+    )
+    cmdinc.set_defaults(func=do_submission_schedule)
 
     cmdupd = commands.add_parser("updates-run", help="Aggregates only schedule for Maintenance Submissions in openQA")
     cmdupd.add_argument(
@@ -208,7 +220,7 @@ def get_parser() -> ArgumentParser:
     )
     cmdgiteasync.set_defaults(func=do_sync_gitea)
 
-    cmdappr = commands.add_parser("inc-approve", help="Approve submissions which passed tests")
+    cmdappr = commands.add_parser("sub-approve", help="Approve submissions which passed tests")
     cmdappr.add_argument(
         "--all-submissions",
         action="store_true",
@@ -216,19 +228,46 @@ def get_parser() -> ArgumentParser:
     )
     cmdappr.add_argument(
         "-I",
+        "--submission",
+        required=False,
+        type=str,
+        help="Submission ID (to approve only a single submission)",
+    )
+    cmdappr.set_defaults(func=do_approve)
+
+    cmdappr_deprecated = commands.add_parser(
+        "inc-approve", help="DEPRECATED: Approve submissions which passed tests (use sub-approve)"
+    )
+    cmdappr_deprecated.add_argument(
+        "--all-submissions",
+        action="store_true",
+        help="use all submissions without care about rrid",
+    )
+    cmdappr_deprecated.add_argument(
+        "-I",
         "--incident",
         required=False,
         type=str,
         help="Submission ID (to approve only a single submission)",
     )
+    cmdappr_deprecated.set_defaults(func=do_approve)
 
-    cmdappr.set_defaults(func=do_approve)
-
-    cmdcomment = commands.add_parser("inc-comment", help="Comment submissions in BuildService")
+    cmdcomment = commands.add_parser("sub-comment", help="Comment submissions in BuildService")
     cmdcomment.set_defaults(func=do_comment)
 
-    cmdsubsync = commands.add_parser("inc-sync-results", help="Sync results of openQA submission jobs to Dashboard")
+    cmdcomment_deprecated = commands.add_parser(
+        "inc-comment", help="DEPRECATED: Comment submissions in BuildService (use sub-comment)"
+    )
+    cmdcomment_deprecated.set_defaults(func=do_comment)
+
+    cmdsubsync = commands.add_parser("sub-sync-results", help="Sync results of openQA submission jobs to Dashboard")
     cmdsubsync.set_defaults(func=do_sync_sub_results)
+
+    cmdsubsync_deprecated = commands.add_parser(
+        "inc-sync-results",
+        help="DEPRECATED: Sync results of openQA submission jobs to Dashboard (use sub-sync-results)",
+    )
+    cmdsubsync_deprecated.set_defaults(func=do_sync_sub_results)
 
     cmdaggrsync = commands.add_parser("aggr-sync-results", help="Sync results of openQA aggregate jobs to Dashboard")
     cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
