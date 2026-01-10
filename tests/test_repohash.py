@@ -34,12 +34,8 @@ def test_get_max_revision_opensuse() -> None:
     repos = [("openSUSE-SLE", "4.1")]
     arch = "aarch64"
     opensuse = BASE_XML % "256"
-
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml",
-        body=opensuse,
-    )
+    url = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml"
+    responses.add(responses.GET, url=url, body=opensuse)
     ret = rp.get_max_revision(repos, arch, PROJECT)
     assert ret == 256
 
@@ -163,15 +159,9 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     product_version = "15.99"
 
     mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
-    mock_compute_url = mocker.patch(
-        "openqabot.loader.repohash.gitea.compute_repo_url",
-        return_value="http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml",
-    )
-    responses.add(
-        responses.GET,
-        url="http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml",
-        body=BASE_XML % "123",
-    )
+    url = "http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml"
+    mock_compute_url = mocker.patch("openqabot.loader.repohash.gitea.compute_repo_url", return_value=url)
+    responses.add(responses.GET, url=url, body=BASE_XML % "123")
 
     # Call with product_version
     ret = rp.get_max_revision(repos, arch, project, product_version=product_version)
