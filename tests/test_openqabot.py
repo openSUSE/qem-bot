@@ -3,7 +3,7 @@
 
 import logging
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -11,17 +11,16 @@ from pytest_mock import MockerFixture
 from openqabot.main import main  # SUT
 
 
-def test_help() -> None:
-    with patch.object(sys, "argv", ["--help"]), pytest.raises(SystemExit):
+def test_help(mocker: MockerFixture) -> None:
+    mocker.patch.object(sys, "argv", ["--help"])
+    with pytest.raises(SystemExit):
         main()
 
 
-def test_no_args_prints_help() -> None:
-    with (
-        patch.object(sys, "argv", []),
-        patch("openqabot.args.ArgumentParser.print_help"),
-        pytest.raises(SystemExit),
-    ):
+def test_no_args_prints_help(mocker: MockerFixture) -> None:
+    mocker.patch.object(sys, "argv", [])
+    mocker.patch("openqabot.args.ArgumentParser.print_help")
+    with pytest.raises(SystemExit):
         main()
 
 
@@ -60,3 +59,32 @@ def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
     with pytest.raises(SystemExit):
         main()
+
+
+def test_main_keyboard_interrupt(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.main.create_logger")
+    mock_args = MagicMock()
+    mock_args.configs.is_dir.return_value = True
+    mock_args.debug = False
+    mock_args.func.side_effect = KeyboardInterrupt
+    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
+    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+    mock_exit = mocker.patch("sys.exit")
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+    main()
+    mock_exit.assert_called_with(1)
+
+
+def test_main_no_func(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mock_configs_path = mocker.Mock()
+    mock_configs_path.is_dir.return_value = True
+    mock_args = mocker.Mock()
+    mock_args.configs = mock_configs_path
+    del mock_args.func
+    del mock_args.no_config
+    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
+    sys_exit_spy = mocker.spy(sys, "exit")
+    with pytest.raises(SystemExit):
+        main()
+    sys_exit_spy.assert_called_once_with(1)
+    assert "Command is required" in caplog.text

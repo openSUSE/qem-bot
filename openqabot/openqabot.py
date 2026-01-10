@@ -10,7 +10,7 @@ from openqabot.dashboard import put
 
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
-from .loader.qem import get_incidents
+from .loader.qem import get_submissions
 from .openqa import openQAInterface
 
 log = getLogger("bot.openqabot")
@@ -22,15 +22,18 @@ class OpenQABot:
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
-        self.incidents = get_incidents(self.token)
-        log.info("Loaded %s incidents from QEM Dashboard", len(self.incidents))
+        self.submissions = get_submissions(self.token, args.submission)
+        log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
+
+        for sub in self.submissions:
+            sub.log_skipped()
 
         extrasettings = get_onearch(args.singlearch)
 
         self.workers = load_metadata(
             args.configs,
             aggregate=args.disable_aggregates,
-            incidents=args.disable_incidents,
+            submissions=args.disable_submissions,
             extrasettings=extrasettings,
         )
 
@@ -43,8 +46,8 @@ class OpenQABot:
             return
 
         res = put(api, headers=self.token, json=data)
-        res_id = res.json().get("id", "No id?")
-        log.info("Dashboard update successful: Status %s, Database ID %s", res.status_code, res_id)
+        res_id = res.json().get("id", "unknown")
+        log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 
     def post_openqa(self, data: dict[str, Any]) -> None:
         self.openqa.post_job(data)
@@ -52,7 +55,9 @@ class OpenQABot:
     def __call__(self) -> int:
         log.info("Entering bot main loop")
         post = [
-            p for w in self.workers for p in w(self.incidents, self.token, self.ci, ignore_onetime=self.ignore_onetime)
+            p
+            for w in self.workers
+            for p in w(self.submissions, self.token, self.ci, ignore_onetime=self.ignore_onetime)
         ]
 
         if self.dry:
