@@ -3,7 +3,6 @@
 
 import logging
 import sys
-from unittest.mock import patch
 
 import pytest
 from pytest_mock import MockerFixture
@@ -11,17 +10,16 @@ from pytest_mock import MockerFixture
 from openqabot.main import main  # SUT
 
 
-def test_help() -> None:
-    with patch.object(sys, "argv", ["--help"]), pytest.raises(SystemExit):
+def test_help(mocker: MockerFixture) -> None:
+    mocker.patch.object(sys, "argv", ["--help"])
+    with pytest.raises(SystemExit):
         main()
 
 
-def test_no_args_prints_help() -> None:
-    with (
-        patch.object(sys, "argv", []),
-        patch("openqabot.args.ArgumentParser.print_help"),
-        pytest.raises(SystemExit),
-    ):
+def test_no_args_prints_help(mocker: MockerFixture) -> None:
+    mocker.patch.object(sys, "argv", [])
+    mocker.patch("openqabot.args.ArgumentParser.print_help")
+    with pytest.raises(SystemExit):
         main()
 
 
