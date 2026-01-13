@@ -57,17 +57,13 @@ class OpenQABot:
             for p in w(self.submissions, self.token, self.ci, ignore_onetime=self.ignore_onetime)
         ]
 
-        if self.dry:
-            log.info("Dry run: Would trigger %d products in openQA", len(post))
-            for job in post:
-                log.info("Job details from dashboard: %s", job)
-            log.info("Bot run completed")
-            return 0
-
         log.info("Triggering %d products in openQA", len(post))
 
         def poster(job: dict[str, Any]) -> None:
-            log.info("Triggering job: %s", job)
+            if self.dry:
+                log.info("Would trigger job with details from dashboard: %s", job)
+                return
+            log.info("Triggering job with details from dashboard: %s", job)
             try:
                 self.post_openqa(job["openqa"])
             except PostOpenQAError:
@@ -77,7 +73,5 @@ class OpenQABot:
 
         with ThreadPoolExecutor() as executor:
             wait([executor.submit(poster, job) for job in post])
-
         log.info("Bot run completed")
-
         return 0
