@@ -232,11 +232,11 @@ class Incidents(BaseConf):
         for issue in matches:
             full_post["openqa"][issue] = str(inc.id)
 
-        channels_set = {c for matched in matches.values() for c in matched}
+        version = self.product_version or self.settings["VERSION"]
+        channels_set = {c for matched in matches.values() for c in matched if c.product_version == version}
         full_post["openqa"]["INCIDENT_REPO"] = ",".join(
             sorted(self._make_repo_url(inc, chan) for chan in channels_set),
         )  # sorted for testability
-
         full_post["qem"]["withAggregate"] = True
         aggregate_job = data.get("aggregate_job", True)
 
