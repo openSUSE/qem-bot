@@ -18,23 +18,17 @@ log = getLogger("bot.loader.smelt")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-ACTIVE_FST = (
-    '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo '
-    "\n{ hasNextPage endCursor} edges { node { incidentId }}}}"
-)
+ACTIVE_FST = '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo \
+{ hasNextPage endCursor} edges { node { incidentId }}}}'
 
-ACTIVE_NEXT = (
-    '{ incidents(status_Name_Iexact:"active", first: 100, \n '
-    'after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { incidentId}}}}'
-)
+ACTIVE_NEXT = '{ incidents(status_Name_Iexact:"active", first: 100, \
+after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { incidentId}}}}'
 
-INCIDENT = (
-    "{incidents(incidentId: %(incident)s) { edges { node {emu project \n"
-    'repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \n'
-    "{ requestId status { name } reviewSet { edges { node { assignedByGroup { name } \n"
-    "status { name } } } } } } } packages { edges { node { name } } } } \n"
-    "    edges{ node { crd priority } } } }"
-)
+INCIDENT = '{incidents(incidentId: %(incident)s) { edges { node {emu project \
+repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
+{ requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
+status { name } } } } } } } packages { edges { node { name } } } } } \
+    edges{ node { crd priority } } } }'
 
 ACTIVE_INC_SCHEMA = {
     "type": "object",
