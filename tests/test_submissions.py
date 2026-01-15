@@ -1150,3 +1150,24 @@ def test_is_aggregate_needed_logic(
     assert submissions_obj._is_aggregate_needed(ctx, matches) is expected  # noqa: SLF001
     if log_msg:
         assert log_msg in caplog.text
+
+
+def test_handle_submission_prevents_empty_incident_repo() -> None:
+    arch, flavor, version = "x86_64", "Server-DVD-HA-Incidents", "15-SP7"
+    config = {"FLAVOR": {flavor: {"archs": [arch], "issues": {"BASE_TEST_ISSUES": "SLE:any#15-SP7"}}}}
+    subs = Submissions("SLE", None, "MISMATCH", {"VERSION": version, "DISTRI": "sle"}, config, set())
+
+    sub = MockSubmission()
+    sub.channels = [Repos("SLE", "any", arch, "15-SP7")]
+    sub.revisions = {ArchVer(arch, "MISMATCH"): 12345}
+
+    ctx = SubContext(sub, arch, flavor, subs.flavors[flavor])
+    cfg = SubConfig(token={}, ci_url=None, ignore_onetime=True)
+
+    res = subs._handle_submission(ctx, cfg)  # noqa: SLF001
+
+    assert res is not None
+    assert (
+        res["openqa"]["INCIDENT_REPO"]
+        == "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/0/SUSE_Updates_SLE_any_x86_64"
+    )

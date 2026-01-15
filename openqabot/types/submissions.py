@@ -261,7 +261,8 @@ class Submissions(BaseConf):
         settings = self._get_base_settings(ctx, revs, cfg)
         for issue in matches:
             settings[issue] = str(sub.id)
-        repos = {c for matched in matches.values() for c in matched if c.product_version == version}
+        all_repos = {c for matched in matches.values() for c in matched}
+        repos = {c for c in all_repos if c.product_version == version} or all_repos
         settings["INCIDENT_REPO"] = ",".join(sorted(self._make_repo_url(sub, chan) for chan in repos))
         if prio := self._get_priority(ctx):
             settings["_PRIORITY"] = prio
