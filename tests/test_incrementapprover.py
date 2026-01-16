@@ -327,25 +327,15 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
     for resp in fake_no_jobs_with_param_matching:
         assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
 
-    def assert_arch(arch: str) -> None:
+    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
         assert re.search(
             f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
         )
-        if arch == "x86_64":
-            expected_log_message = R"Skipping approval.*no relevant jobs"
-            expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
-            expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
-            assert re.search(
-                expected_log_message,
-                caplog.text,
-            ), "the scheduled product for the additional_builds is considered for x86_64 as well"
-        else:
-            assert re.search(
-                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
-            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
-
-    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
-        assert_arch(arch)
+    expected_log_message = R"Skipping approval.*no relevant jobs"
+    expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
+    expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
+    assert re.search(expected_log_message, caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@s390x.*Foo-Increments", caplog.text)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
 
 
@@ -360,17 +350,8 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
     for resp in fake_only_jobs_of_additional_builds_with_param_matching:
         assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
 
-    def assert_arch(arch: str) -> None:
-        assert re.search(
-            f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
-        )
-        if arch != "x86_64":
-            assert re.search(
-                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
-            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
-
-    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
-        assert_arch(arch)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@x86_64.*Online-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@ppc64le.*Foo-Increments", caplog.text)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
     assert re.search(R".*openQA jobs.*with result 'failed':\n - http://openqa-instance/tests/21", caplog.messages[-1])
 
