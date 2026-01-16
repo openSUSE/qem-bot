@@ -363,3 +363,54 @@ def test_log_skipped_twice(caplog: pytest.LogCaptureFixture) -> None:
     # Second call should return early
     sub.log_skipped()
     assert "Product UNKNOWN is not in considered products" not in caplog.text
+
+
+def test_rev_filtering_non_sensible_combinations(mocker: MockerFixture) -> None:
+    # A submission with both SLES and SL-Micro channels
+    data = deepcopy(test_data)
+    data["project"] = "SLFO"
+    data["channels"] = [
+        "SUSE:SLFO:1.2:PullRequest:1696:SLES:x86_64#16.0",
+        "SUSE:SLFO:1.2:PullRequest:1696:SL-Micro:x86_64#6.2",
+    ]
+    sub = Submission(data)
+
+    mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
+    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "SL-Micro")
+
+    # If we request SLES 16.0, SL-Micro 6.2 should be filtered out
+    assert sub.compute_revisions_for_product_repo("SLES", "16.0")
+    # Should be called once for SLES
+    assert mock_get_max.call_count == 1
+    # Check that lrepos passed to get_max_revision only contains SLES
+    lrepos = mock_get_max.call_args[0][0]
+    assert len(lrepos) == 1
+    assert "SLES" in lrepos[0][1]
+
+    # Use a fresh submission for next check to avoid cache
+    sub2 = Submission(data)
+    mock_get_max.reset_mock()
+
+    # If we request SL-Micro 6.2, SLES 16.0 should be filtered out
+    assert sub2.compute_revisions_for_product_repo("SL-Micro", "6.2")
+    assert mock_get_max.call_count == 1
+    lrepos = mock_get_max.call_args[0][0]
+    assert len(lrepos) == 1
+    assert "SL-Micro" in lrepos[0][1]
+
+
+def test_rev_filtering_slfo_no_compatible_repos(mocker: MockerFixture) -> None:
+    data = deepcopy(test_data)
+    data["project"] = "SLFO"
+    data["channels"] = [
+        "SUSE:SLFO:1.2:PullRequest:1696:SLES:x86_64#16.0",
+    ]
+    sub = Submission(data)
+
+    mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
+    # Requested product is SL-Micro, which doesn't start with SLES
+    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
+
+    # Should raise NoRepoFoundError (caught by compute_revisions_for_product_repo returning False)
+    # because the only repo is SLES but we want SL-Micro
+    assert not sub.compute_revisions_for_product_repo("SL-Micro", "16.0")
