@@ -68,8 +68,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         "Fetching settings for submission smelt:100",
         (
             "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
@@ -127,8 +126,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         "Fetching settings for submission smelt:100",
         (
             "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
@@ -187,8 +185,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         "Fetching settings for submission smelt:100",
         (
             "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
@@ -251,8 +248,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         "Fetching settings for submission smelt:100",
         (
             "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
@@ -315,8 +311,7 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         "Fetching settings for submission smelt:100",
         (
             "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
