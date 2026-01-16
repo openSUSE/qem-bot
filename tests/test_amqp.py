@@ -89,8 +89,7 @@ def test_handling_aggregate(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> Non
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "12345678-9"}).encode()
     )
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Aggregate 12345678-9: openQA build finished" in messages  # currently noop
+    assert "Aggregate 12345678-9: openQA build finished" in caplog.messages  # currently noop
 
 
 def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
