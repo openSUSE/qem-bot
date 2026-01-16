@@ -22,10 +22,8 @@ def get_a_s(mocker: MockerFixture) -> Generator[None, None, None]:
     return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[100])
 
 
-@responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
+@pytest.fixture
+def mock_dashboard_settings() -> None:
     data = [
         {
             "id": 110,
@@ -36,6 +34,21 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
         },
     ]
     responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
+
+
+@pytest.fixture
+def args() -> Namespace:
+    return Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+
+
+def prepare_syncer(caplog: pytest.LogCaptureFixture, args: Namespace) -> SubResultsSync:
+    caplog.set_level(logging.INFO)
+    return SubResultsSync(args)
+
+
+@responses.activate
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -50,9 +63,8 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
         ],
     }
     responses.add(method="GET", url=openqa_url, json=data)
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
@@ -68,19 +80,8 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-    responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -94,9 +95,8 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
         ],
     }
     responses.add(method="GET", url=openqa_url, json=data)
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
@@ -112,24 +112,8 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -148,9 +132,8 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
         url=openqa_url,
         json=data,
     )
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
@@ -166,19 +149,8 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-    responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -195,9 +167,8 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(method="GET", url=openqa_url, json=data)
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
@@ -213,19 +184,8 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-    responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -242,9 +202,8 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(method="GET", url=openqa_url, json=data)
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
 
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
