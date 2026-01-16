@@ -108,13 +108,27 @@ def fake_get_multibuild_data(obs_project: str) -> str:
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
 
+@pytest.fixture
+def args() -> Namespace:
+    return Namespace(
+        dry=False,
+        fake_data=False,
+        token="123",
+        gitea_token="456",
+        retry=False,
+        gitea_repo="products/SLFO",
+        allow_build_failures=True,
+        consider_unrequested_prs=False,
+        pr_number=None,
+    )
+
+
 def run_gitea_sync(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
+    args: Namespace,
     *,
     no_build_results: bool = False,
-    allow_failures: bool = True,
-    dry: bool = False,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
@@ -128,31 +142,24 @@ def run_gitea_sync(
     mocker.patch(xml_parse_patch_target, side_effect=fake_osc_xml_parse)
     mocker.patch(get_config_patch_target, side_effect=fake_osc_get_config)
     mocker.patch(get_multibuild_data_patch_target, side_effect=fake_get_multibuild_data)
-    args = Namespace(
-        dry=dry,
-        fake_data=False,
-        token="123",
-        gitea_token="456",
-        retry=False,
-        gitea_repo="products/SLFO",
-        allow_build_failures=allow_failures,
-        consider_unrequested_prs=False,
-        pr_number=None,
-    )
+
     assert GiteaSync(args)() == 0
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_gitea_sync_on_dry_run_does_not_sync(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(mocker, caplog, dry=True)
+def test_gitea_sync_on_dry_run_does_not_sync(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace
+) -> None:
+    args.dry = True
+    run_gitea_sync(mocker, caplog, args)
     assert "Dry run: Would update QEM Dashboard data for 1 submissions" in caplog.text
 
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(mocker, caplog)
+def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+    run_gitea_sync(mocker, caplog, args)
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in caplog.messages
     assert "Loaded 7 active PRs from products/SLFO" in caplog.messages
@@ -188,9 +195,10 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
 def test_sync_with_product_version_from_repo_listing(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
+    args: Namespace,
 ) -> None:
     mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
-    run_gitea_sync(mocker, caplog)
+    run_gitea_sync(mocker, caplog, args)
 
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     submission = cast("Any", responses.calls[-1].response).json()[0]
@@ -204,10 +212,10 @@ def test_sync_with_product_version_from_repo_listing(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")
     mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", "")
-    run_gitea_sync(mocker, caplog)
+    run_gitea_sync(mocker, caplog, args)
 
     # expect the codestream repo to be used
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
@@ -226,8 +234,9 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, caplog: pytest.LogCapt
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback")
-def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    run_gitea_sync(mocker, caplog, no_build_results=True, allow_failures=False)
+def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+    args.allow_build_failures = False
+    run_gitea_sync(mocker, caplog, args, no_build_results=True)
     m = "Skipping PR git:124: No packages have been built/published (there are 0 failed/unpublished packages)"
     assert m in caplog.messages
 
