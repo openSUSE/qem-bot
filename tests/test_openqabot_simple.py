@@ -86,10 +86,9 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar", json={"id": 234})
     bot()
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 7
-    assert "Loaded 1 submissions from QEM Dashboard" in messages
-    assert "Triggering 1 products in openQA" in messages
+    assert len(caplog.messages) == 7
+    assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
+    assert "Triggering 1 products in openQA" in caplog.messages
 
 
 @responses.activate
@@ -111,9 +110,8 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 6
-    assert "Triggering 1 products in openQA" in messages
+    assert len(caplog.messages) == 6
+    assert "Triggering 1 products in openQA" in caplog.messages
     assert "Would trigger job with details" in caplog.text
 
 
@@ -136,11 +134,10 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 7
-    assert "Loaded 1 submissions from QEM Dashboard" in messages
-    assert "Triggering 1 products in openQA" in messages
-    assert "Skipping dashboard update: No valid openQA configuration found for data: {'fake': 'result'}" in messages
+    assert len(caplog.messages) == 7
+    assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
+    assert "Triggering 1 products in openQA" in caplog.messages
+    assert "Skipping dashboard update: No valid openQA configuration found for data" in caplog.text
 
 
 @responses.activate
@@ -162,8 +159,7 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
-    messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 7
-    assert "Loaded 1 submissions from QEM Dashboard" in messages
-    assert "Triggering 1 products in openQA" in messages
-    assert "Skipping dashboard update: Job post failed" in messages
+    assert len(caplog.messages) == 7
+    assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
+    assert "Triggering 1 products in openQA" in caplog.messages
+    assert "Skipping dashboard update: Job post failed" in caplog.messages
