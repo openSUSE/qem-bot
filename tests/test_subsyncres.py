@@ -71,8 +71,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
             f"Fetching openQA jobs for Data(submission=100, "
@@ -105,8 +104,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
             f"Fetching openQA jobs for Data(submission=100, "
@@ -144,8 +142,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
             f"Fetching openQA jobs for Data(submission=100, "
@@ -181,8 +178,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
             f"Fetching openQA jobs for Data(submission=100, "
@@ -218,8 +214,7 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
+    assert caplog.messages == [
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
             f"Fetching openQA jobs for Data(submission=100, "
