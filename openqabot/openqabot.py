@@ -22,8 +22,11 @@ class OpenQABot:
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
         self.token = {"Authorization": "Token " + args.token}
-        self.submissions = get_submissions(self.token)
+        self.submissions = get_submissions(self.token, args.submission)
         log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
+
+        for sub in self.submissions:
+            sub.log_skipped()
 
         extrasettings = get_onearch(args.singlearch)
 
@@ -43,8 +46,8 @@ class OpenQABot:
             return
 
         res = put(api, headers=self.token, json=data)
-        res_id = res.json().get("id", "No id?")
-        log.info("Dashboard update successful: Status %s, Database ID %s", res.status_code, res_id)
+        res_id = res.json().get("id", "unknown")
+        log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 
     def post_openqa(self, data: dict[str, Any]) -> None:
         self.openqa.post_job(data)
@@ -57,17 +60,13 @@ class OpenQABot:
             for p in w(self.submissions, self.token, self.ci, ignore_onetime=self.ignore_onetime)
         ]
 
-        if self.dry:
-            log.info("Dry run: Would trigger %d products in openQA", len(post))
-            for job in post:
-                log.debug("Job details from dashboard: %s", job)
-            log.info("Bot run completed")
-            return 0
-
         log.info("Triggering %d products in openQA", len(post))
 
         def poster(job: dict[str, Any]) -> None:
-            log.info("Triggering job: %s", job)
+            if self.dry:
+                log.info("Would trigger job with details from dashboard: %s", job)
+                return
+            log.info("Triggering job with details from dashboard: %s", job)
             try:
                 self.post_openqa(job["openqa"])
             except PostOpenQAError:
@@ -77,7 +76,5 @@ class OpenQABot:
 
         with ThreadPoolExecutor() as executor:
             wait([executor.submit(poster, job) for job in post])
-
         log.info("Bot run completed")
-
         return 0

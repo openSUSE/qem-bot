@@ -94,6 +94,7 @@ class SMELTSync:
         submission["inReviewQAM"] = in_review_qam
         submission["embargoed"] = bool(sub["crd"])
         submission["priority"] = sub["priority"]
+        submission["type"] = "smelt"
 
         return submission
 

@@ -39,7 +39,7 @@ def test_get_open_prs_metadata_error(mocker: MockerFixture, caplog: pytest.LogCa
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.RequestException("error"))
     res = gitea.get_open_prs({}, "repo", dry=False, number=124)
     assert res == []
-    assert "PR #124 ignored: Could not read PR metadata" in caplog.text
+    assert "PR git:124 ignored: Could not read PR metadata" in caplog.text
 
 
 def test_get_open_prs_iter_pages(mocker: MockerFixture) -> None:
@@ -135,7 +135,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     # Skip due to no channels
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
-    assert "PR 123 skipped: No channels found" in caplog.text
+    assert "PR git:123 skipped: No channels found" in caplog.text
 
     # Skip due to build not acceptable
     caplog.clear()
@@ -153,7 +153,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     mocker.patch("openqabot.loader.gitea.is_build_acceptable_and_log_if_not", return_value=True)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
-    assert "PR 123 skipped: No packages found" in caplog.text
+    assert "PR git:123 skipped: No packages found" in caplog.text
 
 
 def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -167,7 +167,7 @@ def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: py
 
     gitea.add_build_result(incident, res, set(), set(), set(), set())
 
-    assert "PR 1: Inconsistent SCM info for project project: found 'new' vs 'old'" in caplog.text
+    assert "PR git:1: Inconsistent SCM info for project project: found 'new' vs 'old'" in caplog.text
 
 
 def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -268,7 +268,7 @@ def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog:
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=0)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=True, dry=False)
     assert res is None
-    assert "PR 123 skipped: No reviews by" in caplog.text
+    assert "PR git:123 skipped: No reviews by" in caplog.text
 
 
 def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -287,7 +287,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
     incident = {"number": 123}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
-    assert "PR 123: Some packages failed: pkg1" in caplog.text
+    assert "PR git:123: Some packages failed: pkg1" in caplog.text
     assert "pkg1" in cast("list", incident["failed_or_unpublished_packages"])
 
 
@@ -295,7 +295,7 @@ def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     incident = {"failed_or_unpublished_packages": ["pkg1"], "successful_packages": ["pkg2"]}
     assert not gitea.is_build_acceptable_and_log_if_not(incident, 123)
-    assert "Skipping PR 123: Not all packages succeeded or published" in caplog.text
+    assert "Skipping PR git:123: Not all packages succeeded or published" in caplog.text
 
 
 def test_is_build_result_relevant_repo_match(mocker: MockerFixture) -> None:
@@ -317,7 +317,7 @@ def test_make_submission_from_gitea_pr_exception(caplog: pytest.LogCaptureFixtur
     pr = {"number": 123}  # Missing base/repo
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
-    assert "Gitea API error: Unable to process PR 123" in caplog.text
+    assert "Gitea API error: Unable to process PR git:123" in caplog.text
 
 
 def test_is_build_acceptable_success() -> None:
