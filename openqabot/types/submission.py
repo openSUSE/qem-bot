@@ -61,7 +61,7 @@ class Submission:
                 continue
             obs_project = ":".join(val[2:-1])
             product = gitea.get_product_name(obs_project)
-            if product in OBS_PRODUCTS:
+            if "all" in OBS_PRODUCTS or product in OBS_PRODUCTS:
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
             else:
                 self.skipped_products.add(product)
