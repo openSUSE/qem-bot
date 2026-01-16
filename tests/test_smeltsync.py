@@ -96,10 +96,9 @@ def fake_dashboard_replyback() -> None:
 def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for SMELT incident smelt:100" in messages
-    assert "Syncing SMELT incidents to QEM Dashboard" in messages
-    assert "Updating 1 submissions on QEM Dashboard" in messages
+    assert "Fetching details for SMELT incident smelt:100" in caplog.messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in caplog.messages
+    assert "Updating 1 submissions on QEM Dashboard" in caplog.messages
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
     submission = cast("Any", responses.calls[1].response).json()[0]
@@ -137,10 +136,9 @@ def test_sync_approved(
 ) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for SMELT incident smelt:100" in messages
-    assert "Syncing SMELT incidents to QEM Dashboard" in messages
-    assert "Updating 1 submissions on QEM Dashboard" in messages
+    assert "Fetching details for SMELT incident smelt:100" in caplog.messages
+    assert "Syncing SMELT incidents to QEM Dashboard" in caplog.messages
+    assert "Updating 1 submissions on QEM Dashboard" in caplog.messages
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
     assert not cast("Any", responses.calls[1].response).json()[0]["inReviewQAM"]
