@@ -50,8 +50,21 @@ class NoAggregateResultsError(NoResultsError):
         super().__init__(f"Submission {sub} does not have any aggregate settings")
 
 
-def get_submissions(token: dict[str, str]) -> list[Submission]:
-    submissions = get_json("api/incidents", headers=token, verify=True)
+def _get_submission(token: dict[str, str], submission_id: int, submission_type: str | None = None) -> dict:
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    return get_json(f"api/incidents/{submission_id}", headers=token, params=params)
+
+
+def get_submissions(token: dict[str, str], submission: str | None = None) -> list[Submission]:
+    if submission:
+        s_type, s_id = submission.split(":")
+    submissions = (
+        [_get_submission(token, int(s_id), s_type)]
+        if submission
+        else get_json("api/incidents", headers=token, verify=True)
+    )
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
@@ -59,8 +72,11 @@ def get_submissions(token: dict[str, str]) -> list[Submission]:
     return [submission for s in submissions if (submission := Submission.create(s))]
 
 
-def get_active_submissions(token: dict[str, str]) -> Sequence[int]:
-    data = get_json("api/incidents", headers=token)
+def get_active_submissions(token: dict[str, str], submission_type: str | None = None) -> Sequence[int]:
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    data = get_json("api/incidents", headers=token, params=params)
     return list({i["number"] for i in data})
 
 
@@ -79,13 +95,20 @@ def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
     ]
 
 
-def get_single_submission(token: dict[str, str], submission_id: int) -> list[SubReq]:
-    submission = get_json(f"api/incidents/{submission_id}", headers=token)
-    return [SubReq(submission["number"], submission["rr_number"])]
+def get_single_submission(
+    token: dict[str, str], submission_id: int, submission_type: str | None = None
+) -> list[SubReq]:
+    submission = _get_submission(token, submission_id, submission_type)
+    return [SubReq(submission["number"], submission["rr_number"], submission.get("type"))]
 
 
-def get_submission_settings(sub: int, token: dict[str, str], *, all_submissions: bool = False) -> list[JobAggr]:
-    settings = get_json(f"api/incident_settings/{sub}", headers=token)
+def get_submission_settings(
+    sub: int, token: dict[str, str], *, all_submissions: bool = False, submission_type: str | None = None
+) -> list[JobAggr]:
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    settings = get_json(f"api/incident_settings/{sub}", headers=token, params=params)
     if not settings:
         raise NoSubmissionResultsError(sub)
 
@@ -99,16 +122,22 @@ def get_submission_settings(sub: int, token: dict[str, str], *, all_submissions:
     return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
-def get_submission_settings_data(token: dict[str, str], number: int) -> Sequence[Data]:
-    log.info("Fetching settings for submission %s", number)
-    data = get_json("api/incident_settings/" + f"{number}", headers=token)
+def get_submission_settings_data(
+    token: dict[str, str], number: int, submission_type: str | None = None
+) -> Sequence[Data]:
+    log.info("Fetching settings for submission %s:%s", submission_type or "smelt", number)
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    data = get_json("api/incident_settings/" + f"{number}", headers=token, params=params)
     if "error" in data:
-        log.warning("Submission %s error: %s", number, data["error"])
+        log.warning("Submission %s:%s error: %s", submission_type or "smelt", number, data["error"])
         return []
 
     return [
         Data(
             number,
+            submission_type or "smelt",
             d["id"],
             d["flavor"],
             d["arch"],
@@ -121,8 +150,8 @@ def get_submission_settings_data(token: dict[str, str], number: int) -> Sequence
     ]
 
 
-def get_submission_results(sub: int, token: dict[str, Any]) -> list[dict[str, Any]]:
-    settings = get_submission_settings(sub, token, all_submissions=False)
+def get_submission_results(sub: int, token: dict[str, Any], submission_type: str | None = None) -> list[dict[str, Any]]:
+    settings = get_submission_settings(sub, token, all_submissions=False, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
@@ -134,8 +163,11 @@ def get_submission_results(sub: int, token: dict[str, Any]) -> list[dict[str, An
     return list(chain.from_iterable(all_data))
 
 
-def get_aggregate_settings(sub: int, token: dict[str, str]) -> list[JobAggr]:
-    settings = get_json(f"api/update_settings/{sub}", headers=token)
+def get_aggregate_settings(sub: int, token: dict[str, str], submission_type: str | None = None) -> list[JobAggr]:
+    params = {}
+    if submission_type:
+        params["type"] = submission_type
+    settings = get_json(f"api/update_settings/{sub}", headers=token, params=params)
     if not settings:
         raise NoAggregateResultsError(sub)
 
@@ -160,6 +192,7 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
     return [
         Data(
             0,
+            "aggregate",
             s["id"],
             data.flavor,
             data.arch,
@@ -172,8 +205,8 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
     ]
 
 
-def get_aggregate_results(sub: int, token: dict[str, Any]) -> list[dict[str, Any]]:
-    settings = get_aggregate_settings(sub, token)
+def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str | None = None) -> list[dict[str, Any]]:
+    settings = get_aggregate_settings(sub, token, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)

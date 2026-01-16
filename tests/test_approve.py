@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 # ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+from __future__ import annotations
 
 import io
 import logging
@@ -221,7 +222,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     # sub 3 part needs aggregates
     # sub 4 dont need aggregates
 
-    def f_sub_settins(sub: int, _token: str, **_kwargs: Any) -> list[JobAggr]:
+    def f_sub_settins(sub: int, _token: str, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # noqa: ARG001
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -240,7 +241,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def f_aggr_settings(sub: int, _token: str) -> list[JobAggr]:
+    def f_aggr_settings(sub: int, _token: str, submission_type: str | None = None) -> list[JobAggr]:  # noqa: ARG001
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -253,7 +254,10 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    mocker.patch("openqabot.approver.get_single_submission", side_effect=lambda _, i: [f_sub_approver()[i - 1]])
+    mocker.patch(
+        "openqabot.approver.get_single_submission",
+        side_effect=lambda _, i, submission_type=None: [f_sub_approver()[i - 1]],  # noqa: ARG005
+    )
     mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
@@ -378,7 +382,7 @@ def test_single_submission_failed_not_approved(caplog: pytest.LogCaptureFixture,
         "SUSE:Maintenance:1:100",
         "SUSE:Maintenance:1:100 has at least one failed job in submission tests",
     )
-    assert "Found failed, not-ignored job http://instance.qa/t100001 for submission 1" in caplog.messages
+    assert "Found failed, not-ignored job http://instance.qa/t100001 for submission smelt:1" in caplog.messages
 
 
 @responses.activate
@@ -531,7 +535,7 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
         "Approving git:5",
     ]
     assert_log_messages(caplog.messages, expected)
-    mock_review_pr.assert_called_once()
+    mock_review_pr.assert_called_once_with(mocker.ANY, mocker.ANY, 5, mocker.ANY, mocker.ANY)
 
 
 @responses.activate
@@ -555,7 +559,7 @@ def test_one_submission_failed(caplog: pytest.LogCaptureFixture, mocker: MockerF
     assert approver() == 0
     expected = [
         "SUSE:Maintenance:1:100 has at least one failed job in submission tests",
-        "Found failed, not-ignored job http://instance.qa/t100001 for submission 1",
+        "Found failed, not-ignored job http://instance.qa/t100001 for submission smelt:1",
         "* SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
@@ -590,7 +594,7 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
     assert approver() == 0
     expected = [
         "SUSE:Maintenance:2:200 has at least one failed job in aggregate tests",
-        "Found failed, not-ignored job http://instance.qa/t100001 for submission 2",
+        "Found failed, not-ignored job http://instance.qa/t100001 for submission smelt:2",
         "* SUSE:Maintenance:1:100",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
@@ -633,7 +637,7 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
     assert approver() == 0
     expected = [
         "* SUSE:Maintenance:2:200",
-        "Ignoring failed job http://instance.qa/t100002 for submission 2 (manually marked as acceptable)",
+        "Ignoring failed job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -686,7 +690,7 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
 
     assert approver() == 0
     expected = [
-        "Ignoring failed job http://instance.qa/t100002 for submission 2 (manually marked as acceptable)",
+        "Ignoring failed job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
     ]
     assert_log_messages(caplog.messages, expected)
     assert "* SUSE:Maintenance:2:200" not in caplog.messages, "submission not approved due to one unacceptable failure"
@@ -877,7 +881,7 @@ def test_approval_unblocked_with_various_comment_formats(
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" in caplog.messages
     assert (
-        "Ignoring failed job http://instance.qa/t100002 for submission 2 (manually marked as acceptable)"
+        "Ignoring failed job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)"
         in caplog.messages
     )
 
@@ -906,7 +910,7 @@ def test_mark_job_as_acceptable_for_submission_request_error(
     approver_instance = Approver(args)
     mocker.patch("openqabot.approver.patch", side_effect=f_patch)
     approver_instance.mark_job_as_acceptable_for_submission(1, 1)
-    assert "Unable to mark job 1 as acceptable for submission 1" in caplog.text
+    assert "Unable to mark job 1 as acceptable for submission smelt:1" in caplog.text
 
 
 @pytest.mark.parametrize(

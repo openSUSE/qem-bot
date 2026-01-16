@@ -35,11 +35,11 @@ class Commenter:
 
         for sub in self.submissions:
             if sub.type != "smelt":
-                log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub.id, sub.type)
+                log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub, sub.type)
                 continue
             try:
-                s_jobs = get_submission_results(sub.id, self.token)
-                a_jobs = get_aggregate_results(sub.id, self.token)
+                s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
+                a_jobs = get_aggregate_results(sub.id, self.token, submission_type=sub.type)
             except ValueError as e:
                 log.debug(e)
                 continue
@@ -64,7 +64,7 @@ class Commenter:
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
         if sub.rr is None:
-            log.debug("Comment skipped for submission %s: No release request defined", sub.id)
+            log.debug("Comment skipped for submission %s: No release request defined", sub)
             return
 
         if not msg:
