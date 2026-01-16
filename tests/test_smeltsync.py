@@ -5,16 +5,20 @@
 import logging
 import re
 from argparse import Namespace
-from collections.abc import Generator
 from typing import Any, cast
-from unittest.mock import patch
 
 import pytest
+from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
 from responses import matchers
+
+
+@pytest.fixture
+def args() -> Namespace:
+    return Namespace(dry=False, token="123", retry=False)
 
 
 @pytest.fixture
@@ -64,12 +68,8 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
-def fake_qem() -> Generator[None, None, None]:
-    def f_active_sub(*_args: Any) -> list[str]:
-        return ["100"]
-
-    with patch("openqabot.smeltsync.get_active_submission_ids", side_effect=f_active_sub):
-        yield
+def fake_qem(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.smeltsync.get_active_submission_ids", return_value=["100"])
 
 
 @pytest.fixture
@@ -86,16 +86,15 @@ def fake_dashboard_replyback() -> None:
 
 
 @responses.activate
-@pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
     [["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
+def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     caplog.set_level(logging.DEBUG)
-    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(args)() == 0
     assert "Fetching details for SMELT incident smelt:100" in caplog.messages
     assert "Syncing SMELT incidents to QEM Dashboard" in caplog.messages
     assert "Updating 1 submissions on QEM Dashboard" in caplog.messages
@@ -110,12 +109,11 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> None:
+def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
-    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(args)() == 0
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
     submission = cast("Any", responses.calls[1].response).json()[0]
@@ -124,40 +122,38 @@ def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture) -> No
 
 
 @responses.activate
-@pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
     [["qam-openqa", "accepted", "new", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_sync_approved(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_sync_approved(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     caplog.set_level(logging.DEBUG)
-    assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
+    assert SMELTSync(args)() == 0
     assert "Fetching details for SMELT incident smelt:100" in caplog.messages
     assert "Syncing SMELT incidents to QEM Dashboard" in caplog.messages
     assert "Updating 1 submissions on QEM Dashboard" in caplog.messages
     assert len(responses.calls) == 2
     assert len(cast("Any", responses.calls[1].response).json()) == 1
-    assert not cast("Any", responses.calls[1].response).json()[0]["inReviewQAM"]
-    assert not cast("Any", responses.calls[1].response).json()[0]["isActive"]
-    assert cast("Any", responses.calls[1].response).json()[0]["approved"]
-    assert cast("Any", responses.calls[1].response).json()[0]["embargoed"]
+    result = cast("Any", responses.calls[1].response).json()[0]
+    assert not result["inReviewQAM"]
+    assert not result["isActive"]
+    assert result["approved"]
+    assert result["embargoed"]
 
 
 @responses.activate
-@pytest.mark.parametrize("fake_qem", [()], indirect=True)
 @pytest.mark.parametrize(
     "fake_smelt_api",
     [["qam-openqa", "new", "review", "2023-01-01 04:31:12", 600]],
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api")
-def test_sync_dry_run(caplog: pytest.LogCaptureFixture) -> None:
+def test_sync_dry_run(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     caplog.set_level(logging.INFO, logger="bot.smeltsync")
-    assert SMELTSync(Namespace(dry=True, token="123", retry=False))() == 0
+    args.dry = True
+    assert SMELTSync(args)() == 0
     assert "Dry run: Skipping dashboard update" in caplog.text
 
 
