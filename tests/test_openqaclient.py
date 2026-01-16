@@ -62,14 +62,12 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
     with pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
+    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in caplog.messages
     error = RequestError("POST", "no.where", 500, "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert any("openQA API error" in m for m in messages)
-    assert any("Job POST failed for settings" in m for m in messages)
+    assert any("openQA API error" in m for m in caplog.messages)
+    assert any("Job POST failed for settings" in m for m in caplog.messages)
 
 
 @responses.activate
@@ -79,8 +77,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
     client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.post_job({"foo": "bar"})
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in messages
+    assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in caplog.messages
     assert len(responses.calls) == 1
     assert responses.calls
     assert responses.calls[0].request.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
@@ -92,11 +89,10 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
 def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.handle_job_not_found(42)
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert len(messages) == 2
+    assert len(caplog.messages) == 2
     assert len(responses.calls) == 1
-    assert "Job 42 not found on openQA, marking as obsolete on dashboard" in messages
-    assert any("job not found" in m for m in messages)  # the 404 fixture is supposed to match
+    assert "Job 42 not found on openQA, marking as obsolete on dashboard" in caplog.messages
+    assert any("job not found" in m for m in caplog.messages)  # the 404 fixture is supposed to match
 
 
 def test_get_methods_handle_errors_gracefully() -> None:
