@@ -15,15 +15,6 @@ from openqabot.amqp import AMQP
 from openqabot.config import QEM_DASHBOARD
 from openqabot.types.types import Data
 
-args = Namespace(
-    dry=True,
-    token="ToKeN",
-    openqa_instance=urlparse("http://instance.qa"),
-    url=None,
-    gitea_token=None,
-)
-amqp = AMQP(args)
-
 
 class FakeMethod(NamedTuple):
     routing_key: str
@@ -32,43 +23,45 @@ class FakeMethod(NamedTuple):
 fake_job_done = FakeMethod("suse.openqa.job.done")
 
 
-def test_init_no_url() -> None:
-    assert amqp.connection is None
-    amqp.stop()
-
-
-def test_call(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.amqp.pika")
-
-    args_with_url = Namespace(
-        dry=True,
-        token="ToKeN",
-        openqa_instance=urlparse("http://instance.qa"),
-        url="amqp://test.url",
-        gitea_token=None,
-    )
-    amqp_with_url = AMQP(args_with_url)
-    amqp_with_url()
-    amqp_with_url.channel.start_consuming.assert_called_once()
-    amqp_with_url.connection.close.assert_called_once()
-
-
-def test_call_no_channel(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.ERROR)
-    args_no_url = Namespace(
+@pytest.fixture
+def args() -> Namespace:
+    return Namespace(
         dry=True,
         token="ToKeN",
         openqa_instance=urlparse("http://instance.qa"),
         url=None,
         gitea_token=None,
     )
-    amqp_no_url = AMQP(args_no_url)
+
+
+@pytest.fixture
+def amqp(args: Namespace) -> AMQP:
+    return AMQP(args)
+
+
+def test_init_no_url(amqp: AMQP) -> None:
+    assert amqp.connection is None
+    amqp.stop()
+
+
+def test_call(mocker: MockerFixture, args: Namespace) -> None:
+    mocker.patch("openqabot.amqp.pika")
+    args.url = "amqp://test.url"
+    amqp_with_url = AMQP(args)
+    amqp_with_url()
+    amqp_with_url.channel.start_consuming.assert_called_once()
+    amqp_with_url.connection.close.assert_called_once()
+
+
+def test_call_no_channel(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+    caplog.set_level(logging.ERROR)
+    amqp_no_url = AMQP(args)
     assert amqp_no_url() == 1
     assert "AMQP listener not started: No channel available" in caplog.text
 
 
 @responses.activate
-def test_handling_submission(caplog: pytest.LogCaptureFixture) -> None:
+def test_handling_submission(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     # define response for get_submission_settings_data
     data = [
         {
@@ -125,7 +118,7 @@ def test_handling_submission(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
+def test_handling_aggregate(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message(
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "12345678-9"}).encode()
@@ -135,7 +128,7 @@ def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
     assert "Aggregate 12345678-9: openQA build finished" in messages  # currently noop
 
 
-def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
+def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     fake_job_fail = FakeMethod("suse.openqa.job.fail")
     amqp.on_message(
@@ -147,7 +140,7 @@ def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
     assert not caplog.text
 
 
-def test_on_message_no_build(caplog: pytest.LogCaptureFixture) -> None:
+def test_on_message_no_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message(
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"NOBUILD": "12345678-9"}).encode()
@@ -155,7 +148,7 @@ def test_on_message_no_build(caplog: pytest.LogCaptureFixture) -> None:
     assert not caplog.text
 
 
-def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
+def test_on_message_bad_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     amqp.on_message(
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "badbuild"}).encode()
@@ -164,16 +157,14 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-def test_handle_submission_value_error(
-    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
-) -> None:  # Added mocker type hint
+def test_handle_submission_value_error(caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=ValueError)
     amqp.handle_submission(33222, {})
     assert not caplog.text
 
 
-def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture) -> None:
+def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: AMQP) -> None:
     mocker.patch("openqabot.approver.get_single_submission")
     mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
     mocker.patch("openqabot.amqp.compare_submission_data", return_value=True)
@@ -184,7 +175,7 @@ def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture) -> Non
     fetch_openqa_results_mock.assert_called()
 
 
-def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture) -> None:
+def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     r = {"job_id": 42}
     message = job
@@ -200,7 +191,7 @@ def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture) -> None:
     get_jobs_mock.assert_called_once_with({})
 
 
-def test_fetch_openqa_results_unfiltered(mocker: MockerFixture) -> None:
+def test_fetch_openqa_results_unfiltered(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     message = job
 
@@ -212,7 +203,7 @@ def test_fetch_openqa_results_unfiltered(mocker: MockerFixture) -> None:
     post_result_mock.assert_not_called()
 
 
-def test_fetch_openqa_results_key_error(mocker: MockerFixture) -> None:
+def test_fetch_openqa_results_key_error(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     message = job
 
@@ -225,7 +216,7 @@ def test_fetch_openqa_results_key_error(mocker: MockerFixture) -> None:
     post_result_mock.assert_not_called()
 
 
-def test_fetch_openqa_results_no_id(mocker: MockerFixture) -> None:
+def test_fetch_openqa_results_no_id(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     r = {"job_id": 42}
     message = {"id": 43}
