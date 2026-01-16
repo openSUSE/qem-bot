@@ -260,6 +260,11 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
     gitea.add_build_result(incident, res, set(), set(), unpublished, set())
     assert "chan" in unpublished
 
+    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["all"])
+    unpublished.clear()
+    gitea.add_build_result(incident, res, set(), set(), unpublished, set())
+    assert "chan" in unpublished
+
 
 def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")

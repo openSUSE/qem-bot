@@ -262,7 +262,7 @@ def add_channel_for_build_result(
     )
 
     # read product version from directory listing if the project is for a concrete product
-    if len(product_name) != 0 and len(product_version) == 0 and product_name in OBS_PRODUCTS:
+    if len(product_name) != 0 and len(product_version) == 0 and ("all" in OBS_PRODUCTS or product_name in OBS_PRODUCTS):
         product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
@@ -294,7 +294,7 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
             continue
         submission[scm_key] = found
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, projects)
-    if product not in OBS_PRODUCTS:
+    if "all" not in OBS_PRODUCTS and product not in OBS_PRODUCTS:
         return
     if res.get("state") != "published":
         unpublished_repos.add(channel)
@@ -406,7 +406,7 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         "successful_packages": sorted(results["successful"]),
     })
 
-    if "scminfo" not in submission and len(OBS_PRODUCTS) == 1:
+    if "scminfo" not in submission and len(OBS_PRODUCTS) == 1 and "all" not in OBS_PRODUCTS:
         submission["scminfo"] = submission.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
 
 
