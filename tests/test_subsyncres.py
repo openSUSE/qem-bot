@@ -14,18 +14,16 @@ import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.subsyncres import SubResultsSync
 
+openqa_url = "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch"
+
 
 @pytest.fixture
 def get_a_s(mocker: MockerFixture) -> Generator[None, None, None]:
     return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[100])
 
 
-@responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-
-    # get_submission_settings_data
+@pytest.fixture
+def mock_dashboard_settings() -> None:
     data = [
         {
             "id": 110,
@@ -35,14 +33,22 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
             "version": "13.3",
         },
     ]
+    responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
 
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
 
-    # get jobs
+@pytest.fixture
+def args() -> Namespace:
+    return Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+
+
+def prepare_syncer(caplog: pytest.LogCaptureFixture, args: Namespace) -> SubResultsSync:
+    caplog.set_level(logging.INFO)
+    return SubResultsSync(args)
+
+
+@responses.activate
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -56,23 +62,16 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
             },
         ],
     }
-    responses.add(
-        method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
-        json=data,
-    )
+    responses.add(method="GET", url=openqa_url, json=data)
 
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
-
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
-        "Fetching settings for submission 100",
+    assert caplog.messages == [
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -81,28 +80,8 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-
-    # get_submission_settings_data
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
-
-    # get jobs
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -115,23 +94,16 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
             },
         ],
     }
-    responses.add(
-        method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
-        json=data,
-    )
+    responses.add(method="GET", url=openqa_url, json=data)
 
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
-
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
-        "Fetching settings for submission 100",
+    assert caplog.messages == [
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -140,28 +112,8 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-
-    # get_submission_settings_data
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
-
-    # get jobs
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -177,21 +129,18 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
     }
     responses.add(
         method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
+        url=openqa_url,
         json=data,
     )
 
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
-
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
-        "Fetching settings for submission 100",
+    assert caplog.messages == [
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -200,28 +149,8 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-
-    # get_submission_settings_data
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
-
-    # get jobs
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -235,27 +164,18 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
             },
         ],
     }
-    responses.add(
-        method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
-        json=data,
-    )
-
-    # parent id
+    responses.add(method="GET", url=openqa_url, json=data)
     data = [{"parent_id": 9}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
-
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
-        "Fetching settings for submission 100",
+    assert caplog.messages == [
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -264,28 +184,8 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
-@pytest.mark.usefixtures("get_a_s")
-def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO)
-
-    # get_submission_settings_data
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "123"},
-            "version": "13.3",
-        },
-    ]
-
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/100",
-        json=data,
-    )
-
-    # get jobs
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     data = {
         "jobs": [
             {
@@ -299,31 +199,22 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture) -> None:
             },
         ],
     }
-    responses.add(
-        method="GET",
-        url="http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch",
-        json=data,
-    )
-
-    # parent id
+    responses.add(method="GET", url=openqa_url, json=data)
     data = [{"parent_id": 100}]
     responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=data)
 
-    args = Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
-
-    syncer = SubResultsSync(args)
+    syncer = prepare_syncer(caplog, args)
 
     ret = syncer()
     assert ret == 0
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert messages == [
-        "Fetching settings for submission 100",
+    assert caplog.messages == [
+        "Fetching settings for submission smelt:100",
         (
-            "Fetching openQA jobs for Data(submission=100, settings_id=110, "
+            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Syncing submission job 1234: Status passed",
+        "Syncing submission job 1234 for submission smelt:100: Status passed",
         "Dry run: Skipping dashboard update",
         "Submission results sync completed",
     ]

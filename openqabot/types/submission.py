@@ -10,7 +10,7 @@ from typing import Any
 from openqabot.config import OBS_PRODUCTS
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader import gitea
-from openqabot.loader.repohash import get_max_revision
+from openqabot.loader.repohash import RepoOptions, get_max_revision
 
 from .types import ArchVer, Repos
 
@@ -28,7 +28,7 @@ class Submission:
         self.ongoing: bool = submission["isActive"] and submission["inReviewQAM"] and not submission["approved"]
         self.embargoed: bool = submission["embargoed"]
         self.priority: int | None = submission.get("priority")
-        self.type: str = submission.get("type", "smelt")
+        self.type: str = submission.get("type") or "smelt"
 
         self.channels: list[Repos] = [
             Repos(p, v, a)
@@ -52,7 +52,7 @@ class Submission:
             )
         ]
         # add channels for Gitea-based submissions
-        skipped_products = set()
+        self.skipped_products = set()
         for r in submission["channels"]:
             if not r.startswith("SUSE:SLFO"):
                 continue
@@ -61,13 +61,12 @@ class Submission:
                 continue
             obs_project = ":".join(val[2:-1])
             product = gitea.get_product_name(obs_project)
-            if product in OBS_PRODUCTS:
+            if "all" in OBS_PRODUCTS or product in OBS_PRODUCTS:
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
             else:
-                skipped_products.add(product)
+                self.skipped_products.add(product)
 
-        for product in sorted(skipped_products):
-            log.info("Submission %s: Product %s is not in considered products", self.id, product)
+        self._logged_skipped = False
 
         # remove Manager-Server on aarch64 from channels
         self.channels = [
@@ -85,33 +84,56 @@ class Submission:
 
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
-        self._rev_cache_params: tuple[Any, Any] | None = None
+        self._rev_cache_params: tuple[Any, ...] | None = None
+        self._rev_logged: bool = False
         self.livepatch: bool = self._is_livepatch(self.packages)
+
+    def log_skipped(self) -> None:
+        if self._logged_skipped:
+            return
+        for product in sorted(self.skipped_products):
+            log.info("Submission %s: Product %s is not in considered products", self, product)
+        self._logged_skipped = True
 
     @classmethod
     def create(cls, data: dict) -> Submission | None:
+        sub_id = f"{data.get('type') or 'smelt'}:{data.get('number')}"
         try:
             return cls(data)
         except EmptyChannelsError:
-            log.info("Submission %s ignored: No channels found for project %s", data.get("number"), data.get("project"))
+            log.info("Submission %s ignored: No channels found for project %s", sub_id, data.get("project"))
             return None
         except EmptyPackagesError:
-            log.info("Submission %s ignored: No packages found for project %s", data.get("number"), data.get("project"))
+            log.info("Submission %s ignored: No packages found for project %s", sub_id, data.get("project"))
             return None
 
     def compute_revisions_for_product_repo(
         self,
         product_repo: list[str] | str | None,
         product_version: str | None,
+        limit_archs: set[str] | None = None,
     ) -> bool:
-        params = (product_repo, product_version)
+        params = (product_repo, product_version, frozenset(limit_archs) if limit_archs else None)
         if self._rev_cache_params == params:
             return self.revisions is not None
 
         self._rev_cache_params = params
+        product_name = product_repo[-1] if isinstance(product_repo, list) else product_repo
+        opts = RepoOptions(product_name, product_version, str(self))
+
         try:
-            self.revisions = self._rev(self.channels, self.project, product_repo, product_version)
-        except NoRepoFoundError:
+            self.revisions = self._rev(
+                self.channels,
+                self.project,
+                opts,
+                limit_archs,
+            )
+        except NoRepoFoundError as e:
+            if not self._rev_logged:
+                msg = "Submission %s skipped: RepoHash calculation failed for project %s"
+                msg = f"{msg}: {e}" if len(str(e)) > 0 else msg
+                log.info(msg, self, self.project)
+                self._rev_logged = True
             self.revisions = None
             return False
         else:
@@ -127,24 +149,26 @@ class Submission:
             if self.revisions is not None and arch_ver not in self.revisions and ver.startswith("12"):
                 arch_ver = ArchVer(arch, "12")
             if self.revisions is None:
-                log.debug("Submission %s: No revisions available", self.id)
+                log.debug("Submission %s: No revisions available", self)
                 return None
             return self.revisions[arch_ver]
         except KeyError:
-            log.debug("Submission %s: Architecture %s not found for version %s", self.id, arch, ver)
+            log.debug("Submission %s: Architecture %s not found for version %s", self, arch, ver)
             return None
 
     @staticmethod
     def _rev(
         channels: list[Repos],
         project: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
+        options: RepoOptions,
+        limit_archs: set[str] | None = None,
     ) -> dict[ArchVer, int]:
         rev: dict[ArchVer, int] = {}
         tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
         for repo in channels:
+            if limit_archs and repo.arch not in limit_archs:
+                continue
             version = repo.version
             if v := re.match(version_pattern, repo.version):
                 version = v.group(0)
@@ -152,9 +176,8 @@ class Submission:
             ver = repo.product_version or version
             tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
-        last_product_repo = product_repo[-1] if isinstance(product_repo, list) else product_repo
         for archver, lrepos in tmpdict.items():
-            max_rev = get_max_revision(lrepos, archver.arch, project, last_product_repo, product_version)
+            max_rev = get_max_revision(lrepos, archver.arch, project, options)
             if max_rev > 0:
                 rev[archver] = max_rev
 
@@ -164,11 +187,11 @@ class Submission:
 
     def __repr__(self) -> str:
         if self.rrid:
-            return f"<Submission: {self.rrid}>"
-        return f"<Submission: {self.project}>"
+            return f"<Submission: {self.type}:{self.rrid}>"
+        return f"<Submission: {self.type}:{self.project}>"
 
     def __str__(self) -> str:
-        return str(self.id)
+        return f"{self.type}:{self.id}"
 
     @staticmethod
     def _is_livepatch(packages: list[str]) -> bool:
