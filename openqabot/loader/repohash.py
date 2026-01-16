@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from hashlib import md5
 from logging import getLogger
+from typing import NamedTuple
 
 import requests
 from lxml import etree  # type: ignore[unresolved-import]
@@ -19,24 +20,36 @@ from . import gitea
 log = getLogger("bot.loader.repohash")
 
 
+class RepoOptions(NamedTuple):
+    product_name: str | None = None
+    product_version: str | None = None
+    submission_id: str | None = None
+
+
 def get_max_revision(
     repos: Sequence[tuple[str, ...]],
     arch: str,
     project: str,
-    product_name: str | None = None,
-    product_version: str | None = None,
+    options: RepoOptions | None = None,
 ) -> int:
     max_rev = 0
+    options = options or RepoOptions()
+    sub_msg = (
+        f"Submission {options.submission_id} skipped"
+        if options.submission_id
+        else f"Submission for project {project} skipped"
+    )
+
     url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
 
     for repo in repos:
         # handle URLs for SLFO specifically
         if project == "SLFO":
-            if product_name is None:
-                product_name = gitea.get_product_name(repo[1])
-            if product_version is not None:
-                repo = (repo[0], repo[1], product_version)
-            url = gitea.compute_repo_url(OBS_DOWNLOAD_URL, product_name, repo, arch)
+            if options.product_version is not None:
+                repo = (repo[0], repo[1], options.product_version)
+            url = gitea.compute_repo_url(
+                OBS_DOWNLOAD_URL, options.product_name or gitea.get_product_name(repo[1]), repo, arch
+            )
             log.debug("Computing RepoHash for %s from %s", repo[1], url)
         # openSUSE and SLE submissions have different handling of architecture
         elif repo[0].startswith("openSUSE"):
@@ -57,11 +70,11 @@ def get_max_revision(
             requests.HTTPError,
             RetryError,
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
-            log.info("Submission skipped: RepoHash metadata not found at %s", url)
+            log.info("%s: RepoHash metadata not found at %s", sub_msg, url)
             raise NoRepoFoundError from e
 
         if cs is None:
-            log.info("Submission skipped: RepoHash calculation failed, no revision tag found in %s", url)
+            log.info("%s: RepoHash calculation failed, no revision tag found in %s", sub_msg, url)
             raise NoRepoFoundError
         max_rev = max(max_rev, int(str(cs.text)))
 

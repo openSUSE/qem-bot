@@ -56,8 +56,10 @@ def mock_runtime(mocker: MockerFixture) -> None:
     def f_load_metadata(*_args: Any, **_kwds: Any) -> list[FakeWorker]:
         return [FakeWorker()]
 
-    def f_get_submissions(*_args: Any, **_kwds: Any) -> list[int]:
-        return [123]
+    def f_get_submissions(*_args: Any, **_kwds: Any) -> list[Any]:
+        sub = mocker.MagicMock()
+        sub.log_skipped = mocker.Mock()
+        return [sub]
 
     def f_get_onearch(*_args: Any, **_kwds: Any) -> set[Any]:
         return set()
@@ -80,6 +82,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -105,6 +108,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -112,8 +116,9 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
     bot()
 
     messages = [m[-1] for m in caplog.record_tuples]
-    assert len(messages) == 5
-    assert "Dry run: Would trigger 1 products in openQA" in messages
+    assert len(messages) == 6
+    assert "Triggering 1 products in openQA" in messages
+    assert "Would trigger job with details" in caplog.text
 
 
 @responses.activate
@@ -129,6 +134,7 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -155,6 +161,7 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
         configs=None,
         disable_aggregates=False,
         disable_submissions=False,
+        submission=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 

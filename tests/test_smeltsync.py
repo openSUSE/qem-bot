@@ -97,7 +97,7 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for SMELT incident 100" in messages
+    assert "Fetching details for SMELT incident smelt:100" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
     assert "Updating 1 submissions on QEM Dashboard" in messages
     assert len(responses.calls) == 2
@@ -138,7 +138,7 @@ def test_sync_approved(
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(Namespace(dry=False, token="123", retry=False))() == 0
     messages = [x[-1] for x in caplog.record_tuples]
-    assert "Fetching details for SMELT incident 100" in messages
+    assert "Fetching details for SMELT incident smelt:100" in messages
     assert "Syncing SMELT incidents to QEM Dashboard" in messages
     assert "Updating 1 submissions on QEM Dashboard" in messages
     assert len(responses.calls) == 2
