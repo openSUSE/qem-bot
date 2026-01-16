@@ -1,32 +1,52 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+from unittest.mock import MagicMock
+from urllib.parse import urlparse
+
+import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.aggrsync import AggregateResultsSync
 
 
-def test_call(mocker: MockerFixture) -> None:
-    args = mocker.Mock()
-    mocker.patch("openqabot.syncres.openQAInterface")
-    mocker.patch("openqabot.aggrsync.read_products", return_value=[])
-    sync = AggregateResultsSync(args)
-    sync()
-
-
-def test_call_with_results(mocker: MockerFixture) -> None:
+@pytest.fixture
+def args(mocker: MockerFixture) -> MagicMock:
     args = mocker.Mock()
     args.configs = "configs"
     args.token = "token"  # noqa: S105
     args.dry = False
+    args.openqa_instance = urlparse("http://instance.qa")
+    return args
 
+
+@pytest.fixture
+def mock_read_products(mocker: MockerFixture) -> MagicMock:
+    return mocker.patch("openqabot.aggrsync.read_products")
+
+
+@pytest.fixture
+def mock_openqa_interface(mocker: MockerFixture) -> MagicMock:
+    return mocker.patch("openqabot.syncres.openQAInterface")
+
+
+@pytest.mark.usefixtures("mock_openqa_interface")
+def test_call(args: MagicMock, mock_read_products: MagicMock) -> None:
+    mock_read_products.return_value = []
+    sync = AggregateResultsSync(args)
+    sync()
+
+
+def test_call_with_results(
+    args: MagicMock, mocker: MockerFixture, mock_read_products: MagicMock, mock_openqa_interface: MagicMock
+) -> None:
     # Mock dependencies
-    mocker.patch("openqabot.aggrsync.read_products", return_value=["product1"])
+    mock_read_products.return_value = ["product1"]
     mocker.patch(
         "openqabot.aggrsync.get_aggregate_settings_data",
         return_value=[mocker.Mock(spec=["settings_id"])],
     )
 
-    mock_client = mocker.patch("openqabot.syncres.openQAInterface").return_value
+    mock_client = mock_openqa_interface.return_value
     mock_client.get_jobs.return_value = [{"id": 1, "group": "group", "clone_id": None, "result": "passed"}]
 
     sync = AggregateResultsSync(args)
