@@ -241,6 +241,10 @@ class IncrementApprover:
         reasons_to_disapprove = approval_status.reasons_to_disapprove
         reqid = approval_status.request.reqid
         id_msg = f"OBS request ID '{reqid}'"
+
+        if len(reasons_to_disapprove) == 0 and len(approval_status.ok_jobs) == 0:
+            reasons_to_disapprove.append("No openQA jobs were found/checked for this request.")
+
         if len(reasons_to_disapprove) == 0:
             results_str = "/".join(sorted(ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
@@ -423,42 +427,64 @@ class IncrementApprover:
                 error_count += 1
         return error_count
 
+    def _process_build_info(
+        self,
+        config: IncrementConfig,
+        build_info: BuildInfo,
+        request: osc.core.Request,
+        approval_status: ApprovalStatus,
+    ) -> int:
+        error_count = 0
+        params = self._make_scheduling_parameters(request, config, build_info)
+        log.debug("Prepared scheduling parameters: %s", params)
+        if len(params) < 1:
+            log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
+            return error_count
+
+        info_str = "or".join([build_info.string_with_params(p) for p in params])
+        log.debug("Requesting openQA job results for OBS request ID '%s' for %s", request.reqid, info_str)
+        res = self._request_openqa_job_results(params, info_str)
+
+        if self.args.reschedule:
+            approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
+            error_count += self._schedule_openqa_jobs(build_info, params)
+            return error_count
+
+        openqa_jobs_ready = self._check_openqa_jobs(res, build_info, params)
+        if openqa_jobs_ready is None:
+            approval_status.reasons_to_disapprove.append("No jobs scheduled for " + info_str)
+            if self.args.schedule:
+                error_count += self._schedule_openqa_jobs(build_info, params)
+        elif openqa_jobs_ready:
+            approval_status.add(*(self._evaluate_list_of_openqa_job_results(res)))
+        else:
+            approval_status.reasons_to_disapprove.append("Not all jobs ready for " + info_str)
+
+        return error_count
+
     def _process_request_for_config(self, request: osc.core.Request | None, config: IncrementConfig) -> int:
         error_count = 0
         if request is None:
             return error_count
+
         request_id = request.reqid
-        requests_to_approve = self.requests_to_approve
-        if request_id in requests_to_approve:
-            approval_status = requests_to_approve[request_id]
+        if request_id in self.requests_to_approve:
+            approval_status = self.requests_to_approve[request_id]
         else:
             approval_status = ApprovalStatus(request)
-            requests_to_approve[request_id] = approval_status
+            self.requests_to_approve[request_id] = approval_status
+
+        found_relevant_build = False
         for build_info in self._determine_build_info(config):
             if len(config.archs) > 0 and build_info.arch not in config.archs:
                 continue
-            params = self._make_scheduling_parameters(request, config, build_info)
-            log.debug("Prepared scheduling parameters: %s", params)
-            if len(params) < 1:
-                log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
-                continue
-            info_str = "or".join([build_info.string_with_params(p) for p in params])
-            log.debug("Requesting openQA job results for OBS request ID '%s' for %s", request_id, info_str)
-            res = self._request_openqa_job_results(params, info_str)
-            if self.args.reschedule:
-                approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
-                error_count += self._schedule_openqa_jobs(build_info, params)
-                continue
-            openqa_jobs_ready = self._check_openqa_jobs(res, build_info, params)
-            if openqa_jobs_ready is None:
-                approval_status.reasons_to_disapprove.append("No jobs scheduled for " + info_str)
-                if self.args.schedule:
-                    error_count += self._schedule_openqa_jobs(build_info, params)
-                continue
-            if openqa_jobs_ready:
-                approval_status.add(*(self._evaluate_list_of_openqa_job_results(res)))
-            else:
-                approval_status.reasons_to_disapprove.append("Not all jobs ready for " + info_str)
+            found_relevant_build = True
+            error_count += self._process_build_info(config, build_info, request, approval_status)
+
+        if not found_relevant_build:
+            approval_status.reasons_to_disapprove.append(
+                f"No builds found for config {config} in {config.build_project()}"
+            )
         return error_count
 
     def __call__(self) -> int:

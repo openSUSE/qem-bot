@@ -36,6 +36,7 @@ class ReviewState(NamedTuple):
 
 
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
+obs_product_table_url = OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1"
 
 
 @dataclass
@@ -113,11 +114,7 @@ def fake_ok_jobs() -> None:
 
 @pytest.fixture
 def fake_product_repo() -> None:
-    responses.add(
-        GET,
-        OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1",
-        json=read_json("test-product-repo"),
-    )
+    responses.add(GET, obs_product_table_url, json=read_json("test-product-repo"))
 
 
 @pytest.fixture
@@ -334,18 +331,11 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
         assert re.search(
             f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
         )
-        if arch == "x86_64":
-            expected_log_message = R"Skipping approval.*no relevant jobs"
-            expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
-            expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
-            assert re.search(
-                expected_log_message,
-                caplog.text,
-            ), "the scheduled product for the additional_builds is considered for x86_64 as well"
-        else:
-            assert re.search(
-                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
-            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
+    expected_log_message = R"Skipping approval.*no relevant jobs"
+    expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
+    expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
+    assert re.search(expected_log_message, caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@s390x.*Foo-Increments", caplog.text)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
 
 
@@ -360,14 +350,8 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
     for resp in fake_only_jobs_of_additional_builds_with_param_matching:
         assert resp.call_count == 1, "every relevant scheduled product in openQA is checked exactly once"
 
-    for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
-        assert re.search(
-            f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
-        )
-        if arch != "x86_64":
-            assert re.search(
-                f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Foo-Increments", caplog.text
-            ), "for archs other than x86_64 the additional_builds have no additional scheduled products to consider"
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@x86_64.*Online-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@ppc64le.*Foo-Increments", caplog.text)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.messages[-1]
     assert re.search(R".*openQA jobs.*with result 'failed':\n - http://openqa-instance/tests/21", caplog.messages[-1])
 
@@ -411,25 +395,18 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         assert base_params | {"ARCH": arch} in jobs, f"regular {arch} jobs created"
     assert base_params | {"ARCH": "s390x"} not in jobs, "s390x filtered out"
 
-    expected_livepatch_params = base_params | {
-        "FLAVOR": "Default-qcow-Updates",
-        "BUILD": "139.1-kernel-livepatch-6.12.0-160000.5",
-        "KERNEL_VERSION": "6.12.0-160000.5",
-        "KGRAFT": "1",
-    }
-    expected_livepatch_rt_params = expected_livepatch_params | {
-        "FLAVOR": "Base-RT-Updates",
-        "BUILD": "139.1-kernel-livepatch-rt-6.12.0-160000.5",
-    }
-    assert expected_livepatch_params | {"ARCH": "ppc64le"} in jobs, (
-        "additional kernel livepatch jobs of default flavor created"
-    )
-    assert expected_livepatch_rt_params | {"ARCH": "ppc64le"} in jobs, (
-        "additional kernel livepatch jobs of RT flavor created"
-    )
-    assert expected_livepatch_params | {"ARCH": "aarch64"} not in jobs, (
-        "additional kernel livepatch jobs only created if package is new"
-    )
+    def assert_livepatch(flavor: str, build_suffix: str, kernel_version: str) -> None:
+        expected_params = base_params | {
+            "FLAVOR": flavor,
+            "BUILD": f"139.1-{build_suffix}",
+            "KERNEL_VERSION": kernel_version,
+            "KGRAFT": "1",
+        }
+        assert expected_params | {"ARCH": "ppc64le"} in jobs, f"additional kernel livepatch jobs of {flavor} created"
+
+    assert_livepatch("Default-qcow-Updates", "kernel-livepatch-6.12.0-160000.5", "6.12.0-160000.5")
+    assert_livepatch("Base-RT-Updates", "kernel-livepatch-rt-6.12.0-160000.5", "6.12.0-160000.5")
+    assert base_params | {"ARCH": "aarch64"} in jobs
 
 
 @responses.activate
@@ -518,6 +495,44 @@ def test_specified_obs_request_found_renders_request(mocker: MockerFixture, capl
     approver._find_request_on_obs("foo")  # noqa: SLF001
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
+
+
+@responses.activate
+def test_no_approval_if_no_builds_found(caplog: pytest.LogCaptureFixture) -> None:
+    responses.add(GET, obs_product_table_url, json={"data": []})
+
+    approver = prepare_approver(caplog)
+    approver()
+
+    assert "Not approving OBS request ID '42' for the following reasons:" in caplog.text
+    assert "No builds found for config" in caplog.text
+
+
+@responses.activate
+def test_no_approval_if_one_of_two_configs_has_no_builds(caplog: pytest.LogCaptureFixture) -> None:
+    responses.add(GET, obs_product_table_url, json={"data": [{"name": "SLES-16.0-Online-x86_64-Build139.1.spdx.json"}]})
+    responses.add(GET, openqa_url, json={"done": {"passed": {"job_ids": [100]}}})
+
+    approver = prepare_approver(caplog)
+    # Add a second config that looks for a different flavor
+    config2 = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="Full-Increments",
+        project_base="OBS:PROJECT",
+        build_project_suffix="TEST",
+        build_listing_sub_path="product",
+        build_regex=approver.config[0].build_regex,
+        product_regex=".*",
+    )
+    approver.config.append(config2)
+    approver()
+
+    approval_messages = [m for m in caplog.messages if "Approving OBS request ID '42'" in m]
+    assert not approval_messages
+    assert "Not approving OBS request ID '42' for the following reasons:" in caplog.text
+    assert "No builds found for config sle (no settings) in OBS:PROJECT:TEST" in caplog.text
+    assert "All 1 openQA jobs have passed/softfailed" not in caplog.text
 
 
 @responses.activate
@@ -611,6 +626,25 @@ def test_handle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFix
     approver._handle_approval(status)  # noqa: SLF001
     mock_osc.assert_not_called()
     assert "Approving OBS request ID '123': All 1 openQA jobs have passed/softfailed" in caplog.text
+
+
+def test_approve_on_obs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    approver.args.dry = True
+    mock_osc = mocker.patch("osc.core.change_review_state")
+    approver._approve_on_obs("123", "msg")  # noqa: SLF001
+    mock_osc.assert_not_called()
+
+
+def test_handle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = 123
+    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[])
+
+    approver._handle_approval(status)  # noqa: SLF001
+    assert "No openQA jobs were found/checked for this request." in caplog.text
+    assert "Not approving OBS request ID '123' for the following reasons:" in caplog.text
 
 
 def test_determine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
