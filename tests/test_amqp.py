@@ -123,11 +123,10 @@ def test_handling_submission(caplog: pytest.LogCaptureFixture) -> None:
         json.dumps({"BUILD": ":smelt:33222:emacs"}).encode(),
     )
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Submission smelt:33222: openQA job finished" in messages
-    assert "Starting approving submissions in IBS or Gitea…" in messages
-    assert "Submissions to approve:" in messages
-    assert "* smelt:33222" in messages
+    assert "Submission smelt:33222: openQA job finished" in caplog.messages
+    assert "Starting approving submissions in IBS or Gitea…" in caplog.messages
+    assert "Submissions to approve:" in caplog.messages
+    assert "* smelt:33222" in caplog.messages
 
 
 @responses.activate
@@ -137,8 +136,7 @@ def test_handling_aggregate(caplog: pytest.LogCaptureFixture) -> None:
         cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "12345678-9"}).encode()
     )
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert "Aggregate 12345678-9: openQA build finished" in messages  # currently noop
+    assert "Aggregate 12345678-9: openQA build finished" in caplog.messages  # currently noop
 
 
 def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture) -> None:
