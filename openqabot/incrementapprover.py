@@ -59,8 +59,12 @@ class BuildInfo(NamedTuple):
 
 class ApprovalStatus(NamedTuple):
     request: osc.core.Request
-    ok_jobs: set[int] = set()  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
-    reasons_to_disapprove: list[str] = []  # noqa: RUF012 - Suggestion using ClassVar does not work; maybe a false positive.
+    ok_jobs: set[int]
+    reasons_to_disapprove: list[str]
+
+    @classmethod
+    def create(cls, request: osc.core.Request) -> ApprovalStatus:
+        return cls(request, set(), [])
 
     def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
         self.ok_jobs.update(ok_jobs)
@@ -471,7 +475,7 @@ class IncrementApprover:
         if request_id in self.requests_to_approve:
             approval_status = self.requests_to_approve[request_id]
         else:
-            approval_status = ApprovalStatus(request)
+            approval_status = ApprovalStatus.create(request)
             self.requests_to_approve[request_id] = approval_status
 
         found_relevant_build = False
