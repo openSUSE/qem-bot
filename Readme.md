@@ -1,9 +1,14 @@
 [![ci](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/openSUSE/qem-bot/branch/master/graph/badge.svg?token=LTQET0ZPBG)](https://codecov.io/gh/openSUSE/qem-bot)
 # qem-bot
-"qem-bot" is a tool for scheduling maintenance tests on openQA based
-on submissions like [SMELT](https://tools.io.suse.de/smelt) incidents and
-Gitea PRs.
+"qem-bot" is a tool for scheduling maintenance tests on openQA based on
+various submission types:
+* **SMELT incidents:** Maintenance incidents tracked in [SMELT](https://tools.io.suse.de/smelt).
+* **Gitea PRs:** Pull Requests on Gitea (e.g. for [SLFO](https://src.suse.de/products/SLFO)).
+* **Aggregates:** Testing of multiple maintenance incidents together in a single
+  product repository.
+* **Product Increments:** Approval of new product increments in OBS based on
+  openQA results.
 
 It is tightly coupled with
 [qem-dashboard](https://github.com/openSUSE/qem-dashboard) where it reads and
@@ -71,14 +76,16 @@ updates information about submissions and related openQA tests.
 
 ## Expected workflow
 
-* For every incident in SMELT an entry should show up in qem-dashboard
-  (`smelt-sync`)
-* For every incident in qem-dashboard, incident and aggregate tests are
-  triggered (`submissions-run+updates-run`)
-* Results from incident + aggregate tests show up on the dashboard
-  (`inc-sync-results+aggr-sync-results`)
+* For every incident in SMELT or PR in Gitea an entry should show up in
+  qem-dashboard (`smelt-sync`, `gitea-sync`)
+* For every submission in qem-dashboard, submission and aggregate tests are
+  triggered (`submissions-run`, `updates-run`)
+* Results from submission + aggregate tests show up on the dashboard
+  (`sub-sync-results`, `aggr-sync-results`)
 * If there is a non-zero amount of related openQA jobs *and* none of them
-  failed then qem-bot approves in IBS (`inc-approve`)
+  failed then qem-bot approves in IBS/OBS or Gitea (`sub-approve`)
+* For product increments, qem-bot can also trigger tests and approve them
+  (`increment-approve`)
 
 ### Deployment
 This script is *not* a service that is running constantly at some host. So the
@@ -93,7 +100,7 @@ SUSE-internal CI setup.
 
 ## Commenting in IBS
 
-Action `inc-comment` can be used to add comments to release requests inside IBS (like [qa-maintenance/openQABot](https://gitlab.suse.de/qa-maintenance/openQABot) did).
+Action `sub-comment` can be used to add comments to release requests inside IBS (like [qa-maintenance/openQABot](https://gitlab.suse.de/qa-maintenance/openQABot) did).
 
 An example of such comment:
 
@@ -227,7 +234,7 @@ value that is enough for testing:
 
 ```
 git clone --depth 1 gitlab@gitlab.suse.de:qa-maintenance/metadata.git
-python3 ./qem-bot.py --configs metadata -t 1234 --dry inc-approve
+python3 ./qem-bot.py --configs metadata -t 1234 --dry sub-approve
 ```
 
 This should walk over the list of current submissions pending approval.
@@ -284,7 +291,7 @@ definitions would also generally be possible but hasn't been tried yet.
 Then you can sync back the result of the openQA tests to the dashboard:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-sync-results
+MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' sub-sync-results
 ```
 
 To fake test results you can use an SQL command like
@@ -302,7 +309,7 @@ You can also finally approve submissions based on the openQA test results,
 e.g.:
 
 ```
-MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' inc-approve
+MAIN_OPENQA_DOMAIN=[::1]:9526 python3 ./qem-bot.py --dry -g "$GITEA_TOKEN_WRITE" -t s3cret -c etc/openqabot/slfo.yml -s etc/openqabot/slfo.yml -i 'http://[::1]:9526' sub-approve
 ```
 
 If you want to approve submissions for real you have to leave out the `--dry`
@@ -313,7 +320,7 @@ flag of course. Then a token with write-permissions is required.
 You can also test the increment approval, e.g.:
 
 ```
-./bot-ng.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
+python3 ./qem-bot.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
 ```
 
 In production you should specify the config via `--config`, though. Check out
