@@ -11,10 +11,13 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.config import QEM_DASHBOARD
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, QEM_DASHBOARD
 from openqabot.subsyncres import SubResultsSync
 
-openqa_url = "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&version=13.3&arch=arch"
+openqa_url = (
+    "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123"
+    "&version=13.3&arch=arch"
+)
 
 
 @pytest.fixture
@@ -70,9 +73,10 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission smelt:100",
+        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
-            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
+            f"Fetching openQA jobs for Data(submission=100, "
+            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -103,9 +107,10 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission smelt:100",
+        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
-            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
+            f"Fetching openQA jobs for Data(submission=100, "
+            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -141,9 +146,10 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission smelt:100",
+        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
-            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
+            f"Fetching openQA jobs for Data(submission=100, "
+            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -177,9 +183,10 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission smelt:100",
+        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
-            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
+            f"Fetching openQA jobs for Data(submission=100, "
+            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
@@ -213,13 +220,14 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     messages = [x[-1] for x in caplog.record_tuples]
     assert messages == [
-        "Fetching settings for submission smelt:100",
+        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         (
-            "Fetching openQA jobs for Data(submission=100, submission_type='smelt', settings_id=110, "
+            f"Fetching openQA jobs for Data(submission=100, "
+            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
             "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
             "build='123', product='')"
         ),
-        "Syncing submission job 1234 for submission smelt:100: Status passed",
+        f"Syncing submission job 1234 for submission {DEFAULT_SUBMISSION_TYPE}:100: Status passed",
         "Dry run: Skipping dashboard update",
         "Submission results sync completed",
     ]

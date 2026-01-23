@@ -7,7 +7,7 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any
 
-from openqabot.config import OBS_PRODUCTS
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, OBS_PRODUCTS
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.loader.repohash import get_max_revision
@@ -28,7 +28,7 @@ class Submission:
         self.ongoing: bool = submission["isActive"] and submission["inReviewQAM"] and not submission["approved"]
         self.embargoed: bool = submission["embargoed"]
         self.priority: int | None = submission.get("priority")
-        self.type: str = submission.get("type") or "smelt"
+        self.type: str = submission.get("type") or DEFAULT_SUBMISSION_TYPE
 
         self.channels: list[Repos] = [
             Repos(p, v, a)
@@ -97,7 +97,7 @@ class Submission:
 
     @classmethod
     def create(cls, data: dict) -> Submission | None:
-        sub_id = f"{data.get('type') or 'smelt'}:{data.get('number')}"
+        sub_id = f"{data.get('type') or DEFAULT_SUBMISSION_TYPE}:{data.get('number')}"
         try:
             return cls(data)
         except EmptyChannelsError:

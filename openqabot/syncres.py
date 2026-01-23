@@ -7,7 +7,7 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any
 
-from .config import ALLOW_DEVELOPMENT_GROUPS
+from .config import ALLOW_DEVELOPMENT_GROUPS, DEFAULT_SUBMISSION_TYPE
 from .loader.qem import post_job
 from .openqa import openQAInterface
 from .types.types import Data
@@ -74,7 +74,8 @@ class SyncRes:
         sub_id = ""
         if result.get("incident_settings"):
             sub_id = (
-                f" for submission {result.get('submission_type', 'smelt')}:{result.get('submission_id', 'unknown')}"
+                f" for submission {result.get('submission_type', DEFAULT_SUBMISSION_TYPE)}:"
+                f"{result.get('submission_id', 'unknown')}"
             )
         elif result.get("update_settings"):
             sub_id = " for aggregate"

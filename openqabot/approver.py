@@ -16,7 +16,14 @@ import osc.conf
 import osc.core
 from openqa_client.exceptions import RequestError
 
-from openqabot.config import OBS_GROUP, OBS_MAINT_PRJ, OBS_URL, OLDEST_APPROVAL_JOB_DAYS, QEM_DASHBOARD
+from openqabot.config import (
+    DEFAULT_SUBMISSION_TYPE,
+    OBS_GROUP,
+    OBS_MAINT_PRJ,
+    OBS_URL,
+    OLDEST_APPROVAL_JOB_DAYS,
+    QEM_DASHBOARD,
+)
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import openQAInterface
@@ -145,7 +152,7 @@ class Approver:
             log.info(
                 "Unable to mark job %i as acceptable for submission %s:%i: %s",
                 job_id,
-                self.submission_type or "smelt",
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
                 e,
             )
@@ -277,7 +284,7 @@ class Approver:
             log.info(
                 "Ignoring failed job %s for submission %s:%s (manually marked as acceptable)",
                 url,
-                self.submission_type or "smelt",
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
             return True
@@ -285,11 +292,16 @@ class Approver:
             log.info(
                 "Ignoring failed aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
                 url,
-                self.submission_type or "smelt",
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
             return True
-        log.info("Found failed, not-ignored job %s for submission %s:%s", url, self.submission_type or "smelt", sub)
+        log.info(
+            "Found failed, not-ignored job %s for submission %s:%s",
+            url,
+            self.submission_type or DEFAULT_SUBMISSION_TYPE,
+            sub,
+        )
         return False
 
     @lru_cache(maxsize=128)
@@ -299,7 +311,9 @@ class Approver:
             params["type"] = submission_type
         job_results = get_json(api + str(job_aggr.id), headers=self.token, params=params)
         if not job_results:
-            msg = f"Job setting {job_aggr.id} not found for submission {submission_type or 'smelt'}:{sub}"
+            msg = (
+                f"Job setting {job_aggr.id} not found for submission {submission_type or DEFAULT_SUBMISSION_TYPE}:{sub}"
+            )
             raise NoResultsError(msg)
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
         return all(self.is_job_acceptable(sub, api, r) for r in job_results)
@@ -317,7 +331,12 @@ class Approver:
                     return False
                 res = True
             except NoResultsError as e:  # noqa: PERF203
-                log.info("Approval check for submission %s:%s failed: %s", submission_type or "smelt", sub, e)
+                log.info(
+                    "Approval check for submission %s:%s failed: %s",
+                    submission_type or DEFAULT_SUBMISSION_TYPE,
+                    sub,
+                    e,
+                )
                 continue
 
         return res

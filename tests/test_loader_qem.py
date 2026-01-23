@@ -9,6 +9,7 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.loader.qem import (
     LoaderQemError,
     NoAggregateResultsError,
@@ -121,16 +122,16 @@ def test_get_submissions_approver(mocker: MockerFixture) -> None:
 
 def test_get_single_submission(mocker: MockerFixture) -> None:
     mock_json = mocker.patch(
-        "openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123, "type": "smelt"}
+        "openqabot.loader.qem.get_json", return_value={"number": 1, "rr_number": 123, "type": DEFAULT_SUBMISSION_TYPE}
     )
 
-    res = get_single_submission({}, 1, submission_type="smelt")
+    res = get_single_submission({}, 1, submission_type=DEFAULT_SUBMISSION_TYPE)
 
     assert len(res) == 1
     assert res[0].sub == 1
     assert res[0].req == 123
-    assert res[0].type == "smelt"
-    mock_json.assert_called_once_with("api/incidents/1", headers={}, params={"type": "smelt"})
+    assert res[0].type == DEFAULT_SUBMISSION_TYPE
+    mock_json.assert_called_once_with("api/incidents/1", headers={}, params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_submission_settings_no_settings(mocker: MockerFixture) -> None:
@@ -193,7 +194,7 @@ def test_get_submission_settings_data(mocker: MockerFixture) -> None:
         }
     ]
 
-    res = get_submission_settings_data({}, 1, submission_type="smelt")
+    res = get_submission_settings_data({}, 1, submission_type=DEFAULT_SUBMISSION_TYPE)
 
     assert len(res) == 1
     assert res[0].submission == 1
@@ -203,7 +204,7 @@ def test_get_submission_settings_data(mocker: MockerFixture) -> None:
     assert res[0].distri == "distri"
     assert res[0].version == "version"
     assert res[0].build == "build"
-    mock_json.assert_called_once_with("api/incident_settings/1", headers={}, params={"type": "smelt"})
+    mock_json.assert_called_once_with("api/incident_settings/1", headers={}, params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_submission_settings_data_error(mocker: MockerFixture) -> None:
@@ -401,9 +402,11 @@ def test_update_job_request_exception(mocker: MockerFixture, caplog: pytest.LogC
 
 def test_get_active_submissions_with_type(mocker: MockerFixture) -> None:
     mock_get = mocker.patch("openqabot.loader.qem.get_json", return_value=[{"number": 123}])
-    res = get_active_submissions({"token": "foo"}, submission_type="smelt")
+    res = get_active_submissions({"token": "foo"}, submission_type=DEFAULT_SUBMISSION_TYPE)
     assert res == [123]
-    mock_get.assert_called_once_with("api/incidents", headers={"token": "foo"}, params={"type": "smelt"})
+    mock_get.assert_called_once_with(
+        "api/incidents", headers={"token": "foo"}, params={"type": DEFAULT_SUBMISSION_TYPE}
+    )
 
 
 def test_get_active_submissions_no_type(mocker: MockerFixture) -> None:
@@ -416,18 +419,20 @@ def test_get_active_submissions_no_type(mocker: MockerFixture) -> None:
 def test_get_single_submission_with_type(mocker: MockerFixture) -> None:
     mock_get = mocker.patch(
         "openqabot.loader.qem.get_json",
-        return_value={"number": 123, "rr_number": 456, "type": "smelt"},
+        return_value={"number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE},
     )
-    res = get_single_submission({"token": "foo"}, 123, submission_type="smelt")
+    res = get_single_submission({"token": "foo"}, 123, submission_type=DEFAULT_SUBMISSION_TYPE)
     assert len(res) == 1
     assert res[0].sub == 123
-    mock_get.assert_called_once_with("api/incidents/123", headers={"token": "foo"}, params={"type": "smelt"})
+    mock_get.assert_called_once_with(
+        "api/incidents/123", headers={"token": "foo"}, params={"type": DEFAULT_SUBMISSION_TYPE}
+    )
 
 
 def test_get_single_submission_no_type(mocker: MockerFixture) -> None:
     mock_get = mocker.patch(
         "openqabot.loader.qem.get_json",
-        return_value={"number": 123, "rr_number": 456, "type": "smelt"},
+        return_value={"number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE},
     )
     res = get_single_submission({"token": "foo"}, 123)
     assert len(res) == 1

@@ -11,6 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.commenter import Commenter
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
@@ -61,7 +62,7 @@ def mock_args() -> Namespace:
 def mock_submission_smelt() -> Mock:
     mock_submission = Mock(spec=Submission)
     mock_submission.id = 1
-    mock_submission.type = "smelt"
+    mock_submission.type = DEFAULT_SUBMISSION_TYPE
     mock_submission.revisions = {}
     return mock_submission
 
@@ -70,7 +71,7 @@ def mock_submission_smelt() -> Mock:
 def mock_submission_smelt_with_revisions() -> Mock:
     mock_submission = Mock(spec=Submission)
     mock_submission.id = 2
-    mock_submission.type = "smelt"
+    mock_submission.type = DEFAULT_SUBMISSION_TYPE
     mock_submission.revisions = {
         ArchVer("x86_64", "15-SP4"): 12345,
         ArchVer("aarch64", "15-SP4"): 12346,

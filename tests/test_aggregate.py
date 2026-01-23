@@ -11,6 +11,7 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
 from openqabot.types.aggregate import Aggregate, _PostData  # noqa: PLC2701
 from openqabot.types.submission import Submission
@@ -76,7 +77,7 @@ def submission_mock() -> Callable[..., Any]:
             self.staging = None
             self.channels = [repo]
             self.embargoed = embargoed
-            self.type = "smelt"
+            self.type = DEFAULT_SUBMISSION_TYPE
 
         def __str__(self) -> str:
             return str(self.id)
@@ -337,13 +338,13 @@ def test_aggregate_duplicate_submissions() -> None:
     sub1.livepatch = False
     sub1.staging = False
     sub1.embargoed = False
-    sub1.type = "smelt"
+    sub1.type = DEFAULT_SUBMISSION_TYPE
     sub2 = MagicMock(spec=Submission)
     sub2.id = 123
     sub2.livepatch = False
     sub2.staging = False
     sub2.embargoed = False
-    sub2.type = "smelt"
+    sub2.type = DEFAULT_SUBMISSION_TYPE
 
     test_submissions = defaultdict(list)
     test_submissions["ISSUE"] = [sub1, sub2]

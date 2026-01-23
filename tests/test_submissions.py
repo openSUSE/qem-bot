@@ -10,6 +10,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
 from openqabot.types.submission import Submission
 from openqabot.types.submissions import SubConfig, SubContext, Submissions
@@ -123,7 +124,7 @@ class MockSubmission(Submission):
         self.revisions = kwargs.get("revisions", {})
         self.project = kwargs.get("project", "")
         self.ongoing = kwargs.get("ongoing", True)
-        self.type = kwargs.get("type", "smelt")
+        self.type = kwargs.get("type", DEFAULT_SUBMISSION_TYPE)
         self.embargoed = kwargs.get("embargoed", False)
         self.channels = kwargs.get("channels", [])
         self.rr = kwargs.get("rr")
@@ -595,7 +596,7 @@ def test_handle_submission_with_ci_url(mocker: MockerFixture) -> None:
         "packages": ["foo"],
         "channels": ["SUSE:Updates:SLE-Product-SLES:15-SP3:x86_64"],
         "emu": False,
-        "type": "smelt",
+        "type": DEFAULT_SUBMISSION_TYPE,
     }
     sub = Submission(sub_data)
 
@@ -1073,7 +1074,7 @@ def test_should_skip_embargoed(caplog: pytest.LogCaptureFixture, mocker: MockerF
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     assert submissions_obj._should_skip(ctx, cfg, {}) is True  # noqa: SLF001
-    assert "Submission smelt:1 skipped: Embargoed and embargo-filtering enabled" in caplog.text
+    assert f"Submission {DEFAULT_SUBMISSION_TYPE}:1 skipped: Embargoed and embargo-filtering enabled" in caplog.text
 
 
 def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> None:
@@ -1103,13 +1104,13 @@ def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> No
             {"aggregate_job": False, "aggregate_check_true": ["MATCH"]},
             {"MATCH", "OTHER"},
             False,
-            "Submission smelt:1: Aggregate job not required",
+            f"Submission {DEFAULT_SUBMISSION_TYPE}:1: Aggregate job not required",
         ),
         (
             {"aggregate_job": False, "aggregate_check_false": ["MISSING"]},
             {"OTHER"},
             False,
-            "Submission smelt:1: Aggregate job not required",
+            f"Submission {DEFAULT_SUBMISSION_TYPE}:1: Aggregate job not required",
         ),
         (
             {"aggregate_job": False, "aggregate_check_true": ["POS"], "aggregate_check_false": ["NEG"]},

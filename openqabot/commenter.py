@@ -10,7 +10,7 @@ from typing import Any
 import osc.conf
 import osc.core
 
-from openqabot.config import OBS_URL
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, OBS_URL
 from openqabot.errors import NoResultsError
 
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
@@ -34,7 +34,7 @@ class Commenter:
         log.info("Starting to comment SMELT incidents in IBS")
 
         for sub in self.submissions:
-            if sub.type != "smelt":
+            if sub.type != DEFAULT_SUBMISSION_TYPE:
                 log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub, sub.type)
                 continue
             try:

@@ -10,7 +10,13 @@ from typing import Any, NamedTuple
 
 import requests
 
-from openqabot.config import DEPRIORITIZE_LIMIT, DOWNLOAD_MAINTENANCE, QEM_DASHBOARD, SMELT_URL
+from openqabot.config import (
+    DEFAULT_SUBMISSION_TYPE,
+    DEPRIORITIZE_LIMIT,
+    DOWNLOAD_MAINTENANCE,
+    QEM_DASHBOARD,
+    SMELT_URL,
+)
 from openqabot.dashboard import get_json
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
@@ -161,7 +167,9 @@ class Aggregate(BaseConf):
             f"{QEM_DASHBOARD}incident/{sub.id}?type={sub.type}" for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-            f"{SMELT_URL}/incident/{sub.id}" for sub in full_post["qem"]["incidents"] if sub.type == "smelt"
+            f"{SMELT_URL}/incident/{sub.id}"
+            for sub in full_post["qem"]["incidents"]
+            if sub.type == DEFAULT_SUBMISSION_TYPE
         )
 
         full_post["qem"]["settings"] = full_post["openqa"]
