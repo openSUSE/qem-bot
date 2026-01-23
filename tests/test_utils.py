@@ -9,8 +9,18 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.utils import get_yml_list, make_retry_session, normalize_results, walk
+from openqabot.types.types import Data
+from openqabot.utils import compare_submission_data, get_yml_list, make_retry_session, normalize_results, walk
 from responses import registries
+
+
+def test_compare_submission_data() -> None:
+    sub = Data(1, "type", 1, "flavor", "arch", "distri", "version", "build", "product")
+    assert compare_submission_data(sub, {"BUILD": "build"}) is True
+    assert compare_submission_data(sub, {"BUILD": "wrong"}) is False
+    assert compare_submission_data(sub, {"FLAVOR": "flavor", "ARCH": "arch"}) is True
+    assert compare_submission_data(sub, {"FLAVOR": "flavor", "ARCH": "wrong"}) is False
+    assert compare_submission_data(sub, {"SOMETHING_ELSE": "foo"}) is True
 
 
 def test_normalize_results() -> None:

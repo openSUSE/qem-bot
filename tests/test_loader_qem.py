@@ -140,6 +140,9 @@ def test_get_submission_settings_no_settings(mocker: MockerFixture) -> None:
     with pytest.raises(NoSubmissionResultsError):
         get_submission_settings(1, {})
 
+    with pytest.raises(NoSubmissionResultsError):
+        get_submission_settings(1, {}, submission_type=DEFAULT_SUBMISSION_TYPE)
+
 
 def test_get_submission_settings_all_submissions(mocker: MockerFixture) -> None:
     mock_json = mocker.patch("openqabot.loader.qem.get_json")
@@ -240,6 +243,9 @@ def test_get_aggregate_settings_no_settings(mocker: MockerFixture) -> None:
 
     with pytest.raises(NoAggregateResultsError):
         get_aggregate_settings(1, {})
+
+    with pytest.raises(NoAggregateResultsError):
+        get_aggregate_settings(1, {}, submission_type=DEFAULT_SUBMISSION_TYPE)
 
 
 def test_get_aggregate_settings(mocker: MockerFixture) -> None:

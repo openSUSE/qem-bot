@@ -13,6 +13,7 @@ import pika.channel
 import pika.spec
 
 from .approver import Approver
+from .config import DEFAULT_SUBMISSION_TYPE
 from .loader.qem import get_submission_settings_data
 from .syncres import SyncRes
 from .types.types import Data
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 
 log = getLogger("bot.amqp")
-build_sub_regex = re.compile(r":([^:]+):(\d+):.*")
+build_sub_regex = re.compile(r":(?:(?P<type>[^:]+):)?(?P<id>\d+)(?::.*)?")
 build_agg_regex = re.compile(r"\d{8}-\d+")
 
 
@@ -72,8 +73,8 @@ class AMQP(SyncRes):
         if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
         if match := build_sub_regex.match(message["BUILD"]):
-            sub_type = match.group(1)
-            sub_nr = match.group(2)
+            sub_type = match.group("type") or DEFAULT_SUBMISSION_TYPE
+            sub_nr = match.group("id")
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Submission %s:%s: openQA job finished", sub_type, sub_nr)
             return self.handle_submission(int(sub_nr), sub_type, message)

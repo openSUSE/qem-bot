@@ -14,7 +14,7 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.amqp import AMQP
-from openqabot.config import DEFAULT_SUBMISSION_TYPE, QEM_DASHBOARD
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.types.types import Data
 
 
@@ -62,65 +62,24 @@ def test_call_no_channel(caplog: pytest.LogCaptureFixture, args: Namespace) -> N
     assert "AMQP listener not started: No channel available" in caplog.text
 
 
-@responses.activate
-def test_handling_submission(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
-    # define response for get_submission_settings_data
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "33222"},
-            "version": "13.3",
-            "withAggregate": False,
-        },
-    ]
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incident_settings/33222",
-        json=data,
-    )
-    # define response for get_aggregate_settings
-    data = [
-        {
-            "id": 110,
-            "flavor": "FakeFlavor",
-            "arch": "arch",
-            "settings": {"DISTRI": "linux", "BUILD": "33222"},
-            "version": "13.3",
-            "build": "33222",
-        },
-    ]
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/update_settings/33222",
-        json=data,
-    )
-    # define response for get_jobs
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/jobs/incident/110",
-        json=[{"submission_settings": 1000, "job_id": 110, "status": "passed"}],
-    )
-    # define submission
-    responses.add(
-        method="GET",
-        url=f"{QEM_DASHBOARD}api/incidents/33222",
-        json={"number": 33222, "rr_number": 42, "type": DEFAULT_SUBMISSION_TYPE},
-    )
-    caplog.set_level(logging.DEBUG)
-    amqp.on_message(
-        cast("Any", ""),
-        cast("Any", fake_job_done),
-        cast("Any", ""),
-        json.dumps({"BUILD": f":{DEFAULT_SUBMISSION_TYPE}:33222:emacs"}).encode(),
-    )
+@pytest.mark.parametrize(
+    ("build", "expected_type", "expected_id"),
+    [
+        (f":{DEFAULT_SUBMISSION_TYPE}:33222:emacs", DEFAULT_SUBMISSION_TYPE, 33222),
+        (":33222:emacs", DEFAULT_SUBMISSION_TYPE, 33222),
+        (":gitea:123:foo", "gitea", 123),
+    ],
+)
+def test_on_message_parsing(
+    amqp: AMQP, mocker: MockerFixture, build: str, expected_type: str, expected_id: int
+) -> None:
+    mock_handle = mocker.patch.object(amqp, "handle_submission")
+    message = {"BUILD": build}
+    body = json.dumps(message).encode()
 
-    messages = [x[-1] for x in caplog.record_tuples]
-    assert f"Submission {DEFAULT_SUBMISSION_TYPE}:33222: openQA job finished" in messages
-    assert "Starting approving submissions in IBS or Gitea…" in messages
-    assert "Submissions to approve:" in messages
-    assert f"* {DEFAULT_SUBMISSION_TYPE}:33222" in messages
+    amqp.on_message(cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), body)
+
+    mock_handle.assert_called_once_with(expected_id, expected_type, message)
 
 
 @responses.activate
@@ -179,6 +138,22 @@ def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: 
 
     amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
     fetch_openqa_results_mock.assert_called()
+
+
+def test_handle_submission_exception(mocker: MockerFixture, amqp: AMQP) -> None:
+    mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=Exception("error"))
+    with pytest.raises(Exception, match="error"):
+        amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+
+
+def test_handle_submission_not_matching_data(mocker: MockerFixture, amqp: AMQP) -> None:
+    mocker.patch("openqabot.approver.get_single_submission")
+    mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
+    mocker.patch("openqabot.amqp.compare_submission_data", return_value=False)
+    fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP._fetch_openqa_results")
+
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+    fetch_openqa_results_mock.assert_not_called()
 
 
 def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP) -> None:
