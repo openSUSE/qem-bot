@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from openqabot.types.baseconf import BaseConf, Submission
+from openqabot.types.baseconf import BaseConf, JobConfig, Submission
 
 
 class FakeBaseConf(BaseConf):
@@ -31,7 +31,7 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 @pytest.fixture
 def baseconf_gen() -> FakeBaseConf:
-    return FakeBaseConf(prod_name, None, None, settings, {})
+    return FakeBaseConf(JobConfig(prod_name, None, None, settings, {}))
 
 
 def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:

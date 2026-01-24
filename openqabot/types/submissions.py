@@ -20,7 +20,7 @@ from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
 
-from .baseconf import BaseConf
+from .baseconf import BaseConf, JobConfig
 from .submission import Submission
 from .types import ProdVer, Repos
 
@@ -44,17 +44,9 @@ BASE_PRIO = 50
 
 
 class Submissions(BaseConf):
-    def __init__(  # noqa: PLR0917 too-many-positional-arguments
-        self,
-        product: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
-        settings: dict[str, Any],
-        config: dict[str, Any],
-        extrasettings: set[str],
-    ) -> None:
-        super().__init__(product, product_repo, product_version, settings, config)
-        self.flavors = self.normalize_repos(config["FLAVOR"])
+    def __init__(self, config: JobConfig, extrasettings: set[str]) -> None:
+        super().__init__(config)
+        self.flavors = self.normalize_repos(config.config["FLAVOR"])
         self.singlearch = extrasettings
         self.valid_archs = {arch for data in self.flavors.values() for arch in data["archs"]}
 
@@ -91,18 +83,16 @@ class Submissions(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _is_scheduled_job(  # noqa: PLR0917
-        token: dict[str, str], sub: Submission, arch: str, ver: str, flavor: str, submission_type: str | None = None
-    ) -> bool:
+    def _is_scheduled_job(token: dict[str, str], ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
         jobs = {}
         try:
-            url = f"{QEM_DASHBOARD}api/incident_settings/{sub.id}"
+            url = f"{QEM_DASHBOARD}api/incident_settings/{ctx.sub.id}"
             params = {}
             if submission_type:
                 params["type"] = submission_type
             jobs = retried_requests.get(url, headers=token, params=params).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub)
+            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", ctx.sub)
 
         if not jobs:
             return False
@@ -110,12 +100,12 @@ class Submissions(BaseConf):
         if isinstance(jobs, dict) and "error" in jobs:
             return False
 
-        revs = sub.revisions_with_fallback(arch, ver)
+        revs = ctx.sub.revisions_with_fallback(ctx.arch, ver)
         if not revs:
             return False
         return any(
-            job["flavor"] == flavor
-            and job["arch"] == arch
+            job["flavor"] == ctx.flavor
+            and job["arch"] == ctx.arch
             and job["version"] == ver
             and job["settings"]["REPOHASH"] == revs
             for job in jobs
@@ -169,7 +159,7 @@ class Submissions(BaseConf):
             return True
 
         if not cfg.ignore_onetime and self._is_scheduled_job(
-            cfg.token, sub, arch, self.settings["VERSION"], flavor, submission_type=sub.type
+            cfg.token, ctx, self.settings["VERSION"], submission_type=sub.type
         ):
             log.info("Submission %s already scheduled for %s on %s", sub, flavor, arch)
             return True

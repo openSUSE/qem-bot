@@ -7,6 +7,7 @@ from collections.abc import Generator
 import pytest
 from pytest_mock import MockerFixture
 
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Repos
 
@@ -18,11 +19,13 @@ def test_submissions_call() -> None:
     test_config = {}
     test_config["FLAVOR"] = {}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
@@ -33,11 +36,13 @@ def test_submissions_call_with_flavors() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": []}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
@@ -48,11 +53,13 @@ def test_submissions_call_with_submissions() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
@@ -63,11 +70,13 @@ def test_submissions_call_with_issues() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
@@ -91,11 +100,13 @@ def test_submissions_call_with_channels() -> None:
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -113,11 +124,13 @@ def test_submissions_call_with_packages() -> None:
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}}
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -157,16 +170,18 @@ def test_submissions_call_with_params_expand() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "",
-            "DISTRI": None,
-            "SOMETHING": "original",
-            "SOMETHING_ELSE": "original_else",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "",
+                "DISTRI": None,
+                "SOMETHING": "original",
+                "SOMETHING_ELSE": "original_else",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -217,15 +232,17 @@ def test_submissions_call_with_params_expand_distri_version() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "1.2.3",
-            "DISTRI": "IM_A_DISTRI",
-            "SOMETHING": "original",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "1.2.3",
+                "DISTRI": "IM_A_DISTRI",
+                "SOMETHING": "original",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -270,16 +287,18 @@ def test_submissions_call_with_params_expand_isolated() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "",
-            "DISTRI": None,
-            "SOMETHING": "original",
-            "SOMETHING_ELSE": "original_else",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "",
+                "DISTRI": None,
+                "SOMETHING": "original",
+                "SOMETHING_ELSE": "original_else",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Repos
 
@@ -13,11 +14,13 @@ def test_submissions_constructor() -> None:
     test_config = {}
     test_config["FLAVOR"] = {}
     Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
 
@@ -27,11 +30,13 @@ def test_submissions_printable() -> None:
     test_config = {}
     test_config["FLAVOR"] = {}
     sub = Submissions(
-        product="hello",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="hello",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     assert str(sub) == "<Submissions product: hello>"
@@ -41,11 +46,13 @@ def test_making_repo_url() -> None:
     s = {"VERSION": "", "DISTRI": None}
     c = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
     subs = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings=s,
-        config=c,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings=s,
+            config=c,
+        ),
         extrasettings=set(),
     )
     sub = MockSubmission()

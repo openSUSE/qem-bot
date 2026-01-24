@@ -3,24 +3,27 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from .submission import Submission
 
 
+@dataclass
+class JobConfig:
+    product: str
+    product_repo: list[str] | str | None
+    product_version: str | None
+    settings: dict[str, Any]
+    config: dict[str, Any]
+
+
 class BaseConf(ABC):
-    def __init__(
-        self,
-        product: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
-        settings: dict[str, Any],
-        _config: dict[str, Any],  # Consider to remove and adapt code
-    ) -> None:
-        self.product = product
-        self.product_repo = product_repo
-        self.product_version = product_version
-        self.settings = settings
+    def __init__(self, config: JobConfig) -> None:
+        self.product = config.product
+        self.product_repo = config.product_repo
+        self.product_version = config.product_version
+        self.settings = config.settings
 
     @abstractmethod
     def __call__(

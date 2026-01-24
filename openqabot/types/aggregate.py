@@ -23,7 +23,7 @@ from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utc import UTC
 
-from .baseconf import BaseConf
+from .baseconf import BaseConf, JobConfig
 from .submission import Submission
 from .types import ProdVer, Repos
 
@@ -38,19 +38,12 @@ class _PostData(NamedTuple):
 
 
 class Aggregate(BaseConf):
-    def __init__(
-        self,
-        product: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
-        settings: dict[str, Any],
-        config: dict[str, Any],
-    ) -> None:
-        super().__init__(product, product_repo, product_version, settings, config)
-        self.flavor = config["FLAVOR"]
-        self.archs = config["archs"]
-        self.onetime = config.get("onetime", False)
-        self.test_issues = self.normalize_repos(config)
+    def __init__(self, config: JobConfig) -> None:
+        super().__init__(config)
+        self.flavor = config.config["FLAVOR"]
+        self.archs = config.config["archs"]
+        self.onetime = config.config.get("onetime", False)
+        self.test_issues = self.normalize_repos(config.config)
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:

@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
 from openqabot.types.aggregate import Aggregate, _PostData  # noqa: PLC2701
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
 from openqabot.utc import UTC
@@ -29,7 +30,7 @@ def config() -> dict[str, Any]:
 def aggregate_factory() -> Any:
     def _factory(product: str = "", settings: dict | None = None, config: dict | None = None) -> Aggregate:
         return Aggregate(
-            product, None, None, settings or {}, config or {"FLAVOR": "None", "archs": [], "test_issues": {}}
+            JobConfig(product, None, None, settings or {}, config or {"FLAVOR": "None", "archs": [], "test_issues": {}})
         )
 
     return _factory
@@ -62,7 +63,7 @@ def request_mock(mocker: MockerFixture) -> Any:
 
 def test_aggregate_constructor() -> None:
     """Test for the bare minimal set of arguments needed by the constructor."""
-    Aggregate("", None, None, {}, {"FLAVOR": "None", "archs": None, "test_issues": {}})
+    Aggregate(JobConfig("", None, None, {}, {"FLAVOR": "None", "archs": None, "test_issues": {}}))
 
 
 def test_aggregate_printable(aggregate_factory: Any) -> None:
@@ -317,12 +318,10 @@ def test_aggregate_duplicate_submissions(aggregate_factory: Any, submission_mock
     assert res["qem"]["incidents"][0] == 123
 
 
-def test_aggregate_url_format(mocker: MockerFixture) -> None:
+def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> None:
     config = {"FLAVOR": "AAA", "archs": ["x86_64"], "test_issues": {"ISSUE": "product:version"}}
-    agg = Aggregate(
+    agg = aggregate_factory(
         product="SLES",
-        product_repo=None,
-        product_version=None,
         settings={"VERSION": "15-SP3", "DISTRI": "sles"},
         config=config,
     )

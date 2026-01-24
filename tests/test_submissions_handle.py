@@ -11,6 +11,7 @@ from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.submissions import SubConfig, SubContext, Submissions
 from openqabot.types.types import ArchVer, Repos
@@ -28,11 +29,13 @@ def _get_submissions_obj(
     if extrasettings is None:
         extrasettings = set()
     return Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings=settings,
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings=settings,
+            config=test_config,
+        ),
         extrasettings=extrasettings,
     )
 
@@ -70,11 +73,13 @@ def test_handle_submission_git_not_ongoing() -> None:
 
     test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {}}}}
     submissions_obj = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
 
@@ -104,11 +109,13 @@ def test_handle_submission_with_ci_url(mocker: MockerFixture) -> None:
 
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLE-Product-SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo="SLE-Product-SLES",
-        product_version="15-SP3",
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo="SLE-Product-SLES",
+            product_version="15-SP3",
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     submissions_obj.singlearch = set()
@@ -127,7 +134,8 @@ def test_is_scheduled_job_error(mocker: MockerFixture) -> None:
     sub = MockSubmission()
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
-    assert not Submissions._is_scheduled_job({}, sub, "arch", "ver", "flavor")
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions._is_scheduled_job({}, ctx, "ver")
 
 
 def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
@@ -135,20 +143,21 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
-    assert not Submissions._is_scheduled_job({}, sub, "arch", "ver", "flavor")
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions._is_scheduled_job({}, ctx, "ver")
 
 
 def test_handle_submission_embargoed_skip() -> None:
     sub = MockSubmission()
-    sub.embargoed = True
-    sub.id = 1
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     # Patch filter_embargoed to return True
@@ -161,30 +170,30 @@ def test_handle_submission_embargoed_skip() -> None:
 def test_handle_submission_staging_skip() -> None:
     sub = MockSubmission()
     sub.staging = True
-    sub.id = 1
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     assert submissions_obj._handle_submission(ctx, cfg) is None
 
-
-def test_handle_submission_packages_skip() -> None:
-    sub = MockSubmission(id=1, contains_package_value=False)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     data = {"packages": ["somepkg"]}
@@ -197,11 +206,13 @@ def test_handle_submission_excluded_packages_skip() -> None:
     sub = MockSubmission(id=1, contains_package_value=True)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     data = {"excluded_packages": ["badpkg"]}
@@ -221,11 +232,13 @@ def test_handle_submission_livepatch_kgraft(mocker: MockerFixture) -> None:
 
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -243,11 +256,13 @@ def test_handle_submission_no_issue_skip() -> None:
 
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -268,11 +283,13 @@ def test_handle_submission_required_issues_skip() -> None:
         }
     }
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -285,11 +302,13 @@ def test_handle_submission_already_scheduled(mocker: MockerFixture) -> None:
 
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -310,11 +329,13 @@ def test_handle_submission_kernel_no_product_repo_skip(mocker: MockerFixture) ->
         }
     }
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(
@@ -339,11 +360,13 @@ def test_handle_submission_singlearch_no_aggregate(mocker: MockerFixture) -> Non
 
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings={"singlepkg"},
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -395,11 +418,13 @@ def test_handle_submission_params_expand_forbidden(mocker: MockerFixture) -> Non
         }
     }
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -413,11 +438,13 @@ def test_handle_submission_pc_tools_image_fail(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -432,11 +459,13 @@ def test_handle_submission_pc_pint_image_fail(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_PINT_QUERY": "test"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_PINT_QUERY": "test"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -453,11 +482,13 @@ def test_process_sub_context_norepfound(mocker: MockerFixture) -> None:
     sub = MockSubmission(id=1, project="project", packages=["pkg"])
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={"archs": ["x86_64"]})
@@ -501,11 +532,13 @@ def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES", "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
@@ -519,15 +552,15 @@ def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None
     assert result is not None
     assert result["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "some_image"
 
-
-def test_apply_pc_images_pint_success(mocker: MockerFixture) -> None:
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     mocker.patch(
@@ -542,11 +575,13 @@ def test_apply_pc_images_pint_success(mocker: MockerFixture) -> None:
 def test_handle_submission_no_revisions_return_none() -> None:
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     sub_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     sub = MockSubmission(id=1, rrid="RRID", revisions=None, channels=[])
@@ -583,11 +618,13 @@ def test_should_skip_embargoed(caplog: pytest.LogCaptureFixture, mocker: MockerF
     caplog.set_level(logging.INFO)
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config=test_config,
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     mocker.patch.object(submissions_obj, "filter_embargoed", return_value=True)
@@ -601,11 +638,13 @@ def test_should_skip_embargoed(caplog: pytest.LogCaptureFixture, mocker: MockerF
 def test_should_skip_kernel_missing_repo(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.WARNING)
     submissions_obj = Submissions(
-        product="SLES",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
-        config={"FLAVOR": {}},
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config={"FLAVOR": {}},
+        ),
         extrasettings=set(),
     )
     sub = MockSubmission(id=1, rrid="RRID", revisions=None, channels=[], livepatch=False)
@@ -656,7 +695,7 @@ def test_is_aggregate_needed_logic(
 def test_handle_submission_prevents_empty_incident_repo() -> None:
     arch, flavor, version = "x86_64", "Server-DVD-HA-Incidents", "15-SP7"
     config = {"FLAVOR": {flavor: {"archs": [arch], "issues": {"BASE_TEST_ISSUES": "SLE:any#15-SP7"}}}}
-    subs = Submissions("SLE", None, "MISMATCH", {"VERSION": version, "DISTRI": "sle"}, config, set())
+    subs = Submissions(JobConfig("SLE", None, "MISMATCH", {"VERSION": version, "DISTRI": "sle"}, config), set())
 
     sub = MockSubmission()
     sub.channels = [Repos("SLE", "any", arch, "15-SP7")]

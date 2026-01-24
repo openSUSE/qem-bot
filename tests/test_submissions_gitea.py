@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import responses
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import ArchVer, Repos
 
@@ -67,7 +68,7 @@ def test_gitea_submissions() -> None:
     sub.revisions = {ArchVer(arch, product_ver): repo_hash for arch in archs}
 
     # compute openQA/dashboard settings for submission and check results
-    subs = Submissions("SLFO", None, None, settings, test_config, set())
+    subs = Submissions(JobConfig("SLFO", None, None, settings, test_config), set())
     subs.singlearch = set()
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = subs(submissions=[sub], token={}, ci_url="", ignore_onetime=False)
