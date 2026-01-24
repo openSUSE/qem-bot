@@ -8,6 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
+from openqabot.loader.gitea import BuildResults
 
 
 def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -19,7 +20,7 @@ def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: py
     res.get.return_value = "project"
     res.findall.return_value = [mocker.Mock(text="new")]
     mocker.patch("openqabot.loader.gitea.add_channel_for_build_result")
-    gitea.add_build_result(incident, res, set(), set(), set(), set())
+    gitea.add_build_result(incident, res, BuildResults())
     assert "PR git:1: Inconsistent SCM info for project project: found 'new' vs 'old'" in caplog.text
 
 
@@ -61,13 +62,13 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
     res = mocker.Mock()
     res.findall.return_value = []
     res.get.side_effect = lambda k: "other" if k == "state" else "val"
-    unpublished = set()
-    gitea.add_build_result(incident, res, set(), set(), unpublished, set())
-    assert "chan" in unpublished
+    results = BuildResults()
+    gitea.add_build_result(incident, res, results)
+    assert "chan" in results.unpublished
     mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["all"])
-    unpublished.clear()
-    gitea.add_build_result(incident, res, set(), set(), unpublished, set())
-    assert "chan" in unpublished
+    results.unpublished.clear()
+    gitea.add_build_result(incident, res, results)
+    assert "chan" in results.unpublished
 
 
 def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:

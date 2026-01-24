@@ -7,6 +7,7 @@ import re
 import urllib.error
 from collections import Counter
 from concurrent import futures
+from dataclasses import dataclass, field
 from functools import lru_cache
 from logging import getLogger
 from pathlib import Path
@@ -33,6 +34,16 @@ ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 log = getLogger("bot.loader.gitea")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+@dataclass
+class BuildResults:
+    projects: set[str] = field(default_factory=set)
+    successful: set[str] = field(default_factory=set)
+    unpublished: set[str] = field(default_factory=set)
+    failed: set[str] = field(default_factory=set)
+    unavailable: set[str] = field(default_factory=set)
+
 
 PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
@@ -276,13 +287,10 @@ def add_channel_for_build_result(
     return channel
 
 
-def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
+def add_build_result(
     submission: dict[str, Any],
     res: Any,
-    projects: set[str],
-    successful_packages: set[str],
-    unpublished_repos: set[str],
-    failed_packages: set[str],
+    results: BuildResults,
 ) -> None:
     project = res.get("project")
     product = get_product_name(project)
@@ -293,15 +301,15 @@ def add_build_result(  # noqa: PLR0917 too-many-positional-arguments
             log.warning(msg, submission["number"], project, found, existing)
             continue
         submission[scm_key] = found
-    channel = add_channel_for_build_result(project, res.get("arch"), product, res, projects)
+    channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
     if "all" not in OBS_PRODUCTS and product not in OBS_PRODUCTS:
         return
     if res.get("state") != "published":
-        unpublished_repos.add(channel)
+        results.unpublished.add(channel)
         return
     statuses = res.findall("status")
-    successful_packages.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
-    failed_packages.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
+    results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
+    results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
 
 
 def get_multibuild_data(obs_project: str) -> str:
@@ -346,14 +354,14 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def _get_project_results(obs_project: str, *, dry: bool, unavailable_projects: set[str]) -> list[Any]:
+def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[Any]:
     build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
     if dry:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
     try:
         return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
     except urllib.error.HTTPError:
-        unavailable_projects.add(obs_project)
+        results.unavailable.add(obs_project)
         log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
         return []
 
@@ -363,7 +371,7 @@ def _process_obs_url(
     submission: dict[str, Any],
     *,
     dry: bool,
-    results: dict[str, set[str]],
+    results: BuildResults,
 ) -> None:
     if not (project_match := OBS_PROJECT_SHOW_REGEX.search(url)):
         return
@@ -371,39 +379,30 @@ def _process_obs_url(
     log.debug("Checking OBS project %s", obs_project)
     relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
 
-    for res in _get_project_results(obs_project, dry=dry, unavailable_projects=results["unavailable"]):
+    for res in _get_project_results(obs_project, dry=dry, results=results):
         if is_build_result_relevant(res, relevant_archs):
-            add_build_result(
-                submission,
-                res,
-                results["projects"],
-                results["successful"],
-                results["unpublished"],
-                results["failed"],
-            )
+            add_build_result(submission, res, results)
 
 
 def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
-    results = {
-        "successful": set(),
-        "unavailable": set(),
-        "unpublished": set(),
-        "failed": set(),
-        "projects": set(),
-    }
+    results = BuildResults()
 
     for url in obs_urls:
         _process_obs_url(url, submission, dry=dry, results=results)
 
-    if results["unpublished"]:
-        log.info("PR git:%i: Some repos not published yet: %s", submission["number"], ", ".join(results["unpublished"]))
-    if results["failed"]:
-        log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results["failed"]))
+    if results.unpublished:
+        log.info(
+            "PR git:%i: Some repos not published yet: %s",
+            submission["number"],
+            ", ".join(results.unpublished),
+        )
+    if results.failed:
+        log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results.failed))
 
     submission.update({
-        "channels": sorted(results["projects"]),
-        "failed_or_unpublished_packages": sorted(results["failed"] | results["unpublished"] | results["unavailable"]),
-        "successful_packages": sorted(results["successful"]),
+        "channels": sorted(results.projects),
+        "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),
+        "successful_packages": sorted(results.successful),
     })
 
     if "scminfo" not in submission and len(OBS_PRODUCTS) == 1 and "all" not in OBS_PRODUCTS:
