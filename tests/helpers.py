@@ -20,7 +20,6 @@ import responses
 from openqabot.approver import QEM_DASHBOARD
 from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
-from openqabot.loader.gitea import read_json  # noqa: F401
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.utils import merge_dicts

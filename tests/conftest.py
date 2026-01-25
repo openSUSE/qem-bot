@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 import responses
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
+from openqabot.loader.gitea import read_json
 from openqabot.loader.qem import JobAggr
 from openqabot.repodiff import Package
 
@@ -24,7 +25,6 @@ from .helpers import (
     make_passing_and_failing_job,
     obs_product_table_url,
     openqa_url,
-    read_json,
 )
 
 
