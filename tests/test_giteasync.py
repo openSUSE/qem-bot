@@ -245,7 +245,7 @@ def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFi
 
 
 def test_extracting_product_name_and_version() -> None:
-    assert get_product_name("1.1.99:PullRequest:166") == ""
+    assert not get_product_name("1.1.99:PullRequest:166")
     assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
 
     slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"

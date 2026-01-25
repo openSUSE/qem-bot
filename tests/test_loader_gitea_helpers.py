@@ -26,7 +26,7 @@ def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture)
     mock_response.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
     mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
     res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert res == ""
+    assert not res
     assert mock_log.info.called
 
 
@@ -37,7 +37,7 @@ def test_get_product_version_from_repo_listing_http_error(mocker: MockerFixture)
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error")
     mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
     res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert res == ""
+    assert not res
     assert mock_log.warning.called
 
 
@@ -48,7 +48,7 @@ def test_get_product_version_from_repo_listing_request_exception(
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.retried_requests.get", side_effect=requests.RequestException("error"))
     res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert res == ""
+    assert not res
     assert "Product version unresolved" in caplog.text
 
 

@@ -116,7 +116,7 @@ def compute_repo_url(
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
-    if product_name == "":
+    if not product_name:
         return f"{start}/{path}"
 
     msg = f"Product version must be provided for {product_name}"
@@ -320,7 +320,7 @@ def get_multibuild_data(obs_project: str) -> str:
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
-    if product_name == "":
+    if not product_name:
         return None
     product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     prefix_len = len(product_prefix)

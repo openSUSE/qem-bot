@@ -177,7 +177,6 @@ ignore = [
     "ANN401", # any-type
     "S101",
     "PLR6301", # no-self-use
-    "PLC1901", # compare-to-empty-string
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma

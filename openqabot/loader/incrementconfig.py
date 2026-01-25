@@ -38,7 +38,7 @@ class IncrementConfig:
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
 
     def _concat_project(self, project: str) -> str:
-        return project if self.project_base == "" else f"{self.project_base}:{project}"
+        return project if not self.project_base else f"{self.project_base}:{project}"
 
     def build_project(self) -> str:
         return self._concat_project(self.build_project_suffix)

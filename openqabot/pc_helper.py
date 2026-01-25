@@ -116,7 +116,7 @@ def get_recent_pint_image(
         for image in images
         if name.match(image["name"]) is not None
         and (state is None or image["state"] == state)
-        and (region is None or region == "" or region == image["region"])
+        and (region is None or not region or region == image["region"])
     ]
     if not filtered_images:
         return None
