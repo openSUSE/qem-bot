@@ -160,7 +160,6 @@ ignore = [
     "N802",   # invalid-function-name
     "N803",   # invalid-argument-name
     "N806",   # invalid-variable-name
-    "UP032",
     "PLC0415", # import-outside-toplevel
     "PLC1802", # use-implicit-booleaness-not-len
     "PLR0912", # too-many-branches
