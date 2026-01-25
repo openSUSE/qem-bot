@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from http import HTTPStatus
 from itertools import chain
 from logging import getLogger
 from operator import itemgetter
@@ -229,7 +230,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
         except requests.exceptions.RequestException:
             log.exception("QEM Dashboard API request failed")
             return 1
-        if ret.status_code == 200:
+        if ret.status_code == HTTPStatus.OK:
             log.info("QEM Dashboard submissions updated successfully")
         else:
             log.error("QEM Dashboard submission sync failed: Status %s", ret.status_code)
@@ -244,7 +245,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
 def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
     try:
         result = put("api/jobs", headers=token, json=data)
-        if result.status_code != 200:
+        if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not post job: %s", result.text)
 
     except requests.exceptions.RequestException:
@@ -254,7 +255,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     try:
         result = patch(f"api/jobs/{job_id}", headers=token, json=data)
-        if result.status_code != 200:
+        if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 
     except requests.exceptions.RequestException:

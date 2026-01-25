@@ -161,7 +161,6 @@ ignore = [
     "PLR0913", # too-many-arguments
     "PLR0914", # too-many-locals
     "PLR0915", # too-many-statements
-    "PLR2004", # magic-value-comparison
     "D213", # multi-line-summary-second-line
     "PLW2901", # redefined-loop-name
     "PLW0127", # self-assigning-variable
@@ -180,6 +179,9 @@ ignore = [
     "TC003", # typing-only-standard-library-import
     "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from argparse import Namespace
 from functools import lru_cache
+from http import HTTPStatus
 from itertools import starmap
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
@@ -83,7 +84,7 @@ class OpenQAInterface:
             return [{"text": c.get("text", "")} for c in ret]
         except RequestError as e:
             (_, _, status_code, *_) = e.args
-            if status_code == 404:
+            if status_code == HTTPStatus.NOT_FOUND:
                 self.handle_job_not_found(job_id)
             else:
                 log.exception("openQA API error when fetching comments for job %s", job_id)

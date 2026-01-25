@@ -120,7 +120,7 @@ def compute_repo_url(
         return f"{start}/{path}"
 
     msg = f"Product version must be provided for {product_name}"
-    assert len(repo) > 2, msg
+    assert len(repo) > 2, msg  # noqa: PLR2004
     assert repo[2], msg
     product_version = repo[2]
     return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
@@ -490,7 +490,7 @@ def make_submission_from_gitea_pr(
             "type": "git",
         }
         if dry:
-            if number == 124:
+            if number == 124:  # noqa: PLR2004
                 reviews = read_json("reviews-124")
                 comments = read_json("comments-124")
                 files = read_json("files-124")

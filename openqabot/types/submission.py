@@ -35,7 +35,7 @@ class Submission:
             for p, v, a in (
                 val
                 for val in (r.split(":")[2:] for r in submission["channels"] if r.startswith("SUSE:Updates"))
-                if len(val) == 3
+                if len(val) == 3  # noqa: PLR2004
             )
             if p != "SLE-Module-Development-Tools-OBS"
         ]
@@ -48,7 +48,7 @@ class Submission:
                 for val in (
                     r.split(":")[2:] for r in (i for i in submission["channels"] if i.startswith("SUSE:Updates"))
                 )
-                if len(val) == 2
+                if len(val) == 2  # noqa: PLR2004
             )
         ]
         # add channels for Gitea-based submissions
@@ -57,7 +57,7 @@ class Submission:
             if not r.startswith("SUSE:SLFO"):
                 continue
             val = r.split(":")
-            if len(val) <= 3:
+            if len(val) <= 3:  # noqa: PLR2004
                 continue
             obs_project = ":".join(val[2:-1])
             product = gitea.get_product_name(obs_project)
