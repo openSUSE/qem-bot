@@ -156,10 +156,6 @@ ignore = [
     "D105",   # missing-magic-method-docstring
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
-    "N801",   # invalid-class-name
-    "N802",   # invalid-function-name
-    "N803",   # invalid-argument-name
-    "N806",   # invalid-variable-name
     "PLC0415", # import-outside-toplevel
     "PLC1802", # use-implicit-booleaness-not-len
     "PLR0912", # too-many-branches
@@ -176,6 +172,7 @@ ignore = [
     "ANN401", # any-type
     "S101",
     "PLR6301", # no-self-use
+    "PLR0904", # too-many-public-methods
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
