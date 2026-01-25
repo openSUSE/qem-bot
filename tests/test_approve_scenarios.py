@@ -126,7 +126,7 @@ def test_single_submission_failed_not_approved(caplog: pytest.LogCaptureFixture,
         return [{"submission_settings": int(url.rsplit("/", maxsplit=1)[-1]), "job_id": 100001, "status": "failed"}]
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
-    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=[])
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
 
     approver(submission=1)
     assert_submission_not_approved(

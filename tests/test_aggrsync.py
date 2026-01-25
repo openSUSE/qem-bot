@@ -26,7 +26,7 @@ def mock_read_products(mocker: MockerFixture) -> MagicMock:
 
 @pytest.fixture
 def mock_openqa_interface(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("openqabot.syncres.openQAInterface")
+    return mocker.patch("openqabot.syncres.OpenQAInterface")
 
 
 @pytest.mark.usefixtures("mock_openqa_interface")

@@ -18,7 +18,7 @@ import osc.core
 from lxml import etree  # type: ignore[unresolved-import]
 
 from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
-from openqabot.openqa import openQAInterface
+from openqabot.openqa import OpenQAInterface
 
 from .errors import PostOpenQAError
 from .loader.incrementconfig import IncrementConfig
@@ -75,7 +75,7 @@ class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
         self.args = args
         self.token = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args)
+        self.client = OpenQAInterface(args)
         self.package_diff = {}
         self.requests_to_approve = {}
         self.config = IncrementConfig.from_args(args)

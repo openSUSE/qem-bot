@@ -167,7 +167,7 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     comments_return_value = [{"text": "@review:acceptable_for:submission_2:foo"}]
-    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=comments_return_value)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
     mock_patch = mocker.patch("openqabot.approver.patch")
 
     assert approver() == 0
@@ -221,7 +221,7 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
             return [{"text": "@review:acceptable_for:submission_2:foo"}]
         return []
 
-    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", side_effect=mock_get_job_comments)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", side_effect=mock_get_job_comments)
     mock_patch = mocker.patch("openqabot.approver.patch")
 
     assert approver() == 0
@@ -266,7 +266,7 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     comments_return_value = [{"text": "@review:acceptable_for:submission_22:foo"}]
-    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=comments_return_value)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
 
     assert approver() == 0
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
@@ -298,7 +298,7 @@ def test_approval_via_openqa_older_ok_job(
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_older_jobs",
+        "openqabot.openqa.OpenQAInterface.get_older_jobs",
         return_value={
             "data": [
                 {"build": "20240115-1", "id": 100002, "result": "failed"},
@@ -307,7 +307,7 @@ def test_approval_via_openqa_older_ok_job(
         },
     )
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_single_job",
+        "openqabot.openqa.OpenQAInterface.get_single_job",
         return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
     )
 
@@ -335,7 +335,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_older_jobs",
+        "openqabot.openqa.OpenQAInterface.get_older_jobs",
         return_value={
             "data": [
                 {"build": "20240115-1", "id": 100002, "result": "failed"},
@@ -344,7 +344,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
         },
     )
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_single_job",
+        "openqabot.openqa.OpenQAInterface.get_single_job",
         return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
     )
 
@@ -409,7 +409,7 @@ def test_approval_unblocked_with_various_comment_formats(
     mock_get_json.side_effect = side_effect_get_json
 
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_job_comments",
+        "openqabot.openqa.OpenQAInterface.get_job_comments",
         return_value=[{"text": case.comment_text}],
     )
     mock_patch = mocker.patch("openqabot.approver.patch")

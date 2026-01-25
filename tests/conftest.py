@@ -78,12 +78,12 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
     from openqabot.approver import Approver
-    from openqabot.openqa import openQAInterface
+    from openqabot.openqa import OpenQAInterface
 
-    openQAInterface.get_job_comments.cache_clear()
-    openQAInterface.get_single_job.cache_clear()
-    openQAInterface.get_older_jobs.cache_clear()
-    openQAInterface.is_devel_group.cache_clear()
+    OpenQAInterface.get_job_comments.cache_clear()
+    OpenQAInterface.get_single_job.cache_clear()
+    OpenQAInterface.get_older_jobs.cache_clear()
+    OpenQAInterface.is_devel_group.cache_clear()
 
     Approver.is_job_marked_acceptable_for_submission.cache_clear()
     Approver.validate_job_qam.cache_clear()

@@ -26,7 +26,7 @@ from openqabot.config import (
 )
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
-from openqabot.openqa import openQAInterface
+from openqabot.openqa import OpenQAInterface
 
 from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
@@ -89,7 +89,7 @@ class Approver:
             self.all_submissions = False
             self.submission_type = submission_type
         self.token = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args)
+        self.client = OpenQAInterface(args)
 
     def __call__(self) -> int:
         log.info("Starting approving submissions in IBS or Gitea…")

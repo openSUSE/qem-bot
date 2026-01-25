@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("bot.openqa")
 
 
-class openQAInterface:
+class OpenQAInterface:
     def __init__(self, args: Namespace) -> None:
         self.url: ParseResult = args.openqa_instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)

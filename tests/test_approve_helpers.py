@@ -19,7 +19,7 @@ from .helpers import args
 
 def test_is_job_marked_acceptable_for_submission_request_error(mocker: MockerFixture) -> None:
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_job_comments",
+        "openqabot.openqa.OpenQAInterface.get_job_comments",
         side_effect=RequestError("Get out", url="http://foo.bar", status_code=404, text="Not Found"),
     )
     approver_instance = Approver(args)
@@ -86,7 +86,7 @@ def test_was_ok_before_no_suitable_older_jobs(
 ) -> None:
     approver_instance = Approver(args)
     caplog.set_level(logging.INFO)
-    mocker.patch("openqabot.openqa.openQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
     mocker.patch("openqabot.approver.Approver._was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
     assert any(log_message in m for m in caplog.messages)

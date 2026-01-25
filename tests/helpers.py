@@ -240,7 +240,7 @@ def run_approver(
     from unittest.mock import MagicMock
 
     mock_post_job = MagicMock()
-    mocker.patch("openqabot.openqa.openQAInterface.post_job", new=mock_post_job)
+    mocker.patch("openqabot.openqa.OpenQAInterface.post_job", new=mock_post_job)
     increment_approver = prepare_approver(
         caplog,
         schedule=schedule,
