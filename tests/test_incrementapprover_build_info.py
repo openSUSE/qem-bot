@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import BUILD_REGEX
+from openqabot.incrementapprover import BuildInfo
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.repodiff import Package
 from responses import GET
@@ -86,8 +87,6 @@ def test_extra_builds_no_match(caplog: pytest.LogCaptureFixture) -> None:
         flavor="any",
         additional_builds=[{"package_name_regex": "nevermatch", "build_suffix": "suffix"}],
     )
-    from openqabot.incrementapprover import BuildInfo
-
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None
@@ -137,8 +136,6 @@ def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFi
         flavor="any",
         additional_builds=[{"package_name_regex": "foo", "package_version_regex": "999", "build_suffix": "suffix"}],
     )
-    from openqabot.incrementapprover import BuildInfo
-
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None

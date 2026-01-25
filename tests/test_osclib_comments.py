@@ -9,12 +9,10 @@ import pytest
 from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
-from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError
+from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError, comment_as_dict
 
 
 def test_comment_as_dict() -> None:
-    from openqabot.osclib.comments import comment_as_dict
-
     xml = etree.fromstring('<comment who="user" when="2022-01-01 12:00:00 UTC" id="1" parent="0">text</comment>')
     res = comment_as_dict(xml)
     assert res["who"] == "user"

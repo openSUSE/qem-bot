@@ -7,6 +7,7 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.errors import PostOpenQAError
+from openqabot.incrementapprover import BuildInfo
 
 from .helpers import prepare_approver
 
@@ -22,8 +23,6 @@ def testget_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture) -> Non
 def test_schedule_jobs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     approver.args.dry = True
-    from openqabot.incrementapprover import BuildInfo
-
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     params = [{"BUILD": "1.1"}]
     mock_post = mocker.patch.object(approver.client, "post_job")
@@ -34,8 +33,6 @@ def test_schedule_jobs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixtu
 
 def test_schedule_jobs_fail(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
-    from openqabot.incrementapprover import BuildInfo
-
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     params = [{"BUILD": "1.1"}]
     mocker.patch.object(approver.client, "post_job", side_effect=PostOpenQAError)

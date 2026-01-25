@@ -20,6 +20,7 @@ from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,
     add_packages_from_files,
+    compute_repo_url,
     compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
@@ -291,8 +292,6 @@ def test_computing_repo_url() -> None:
 
 
 def test_computing_repo_url_empty_product() -> None:
-    from openqabot.loader.gitea import compute_repo_url
-
     repo = ("product", "1.2")
     url = compute_repo_url("base", "", repo, "x86_64")
     assert url == "base/product:/1.2/product/repodata/repomd.xml"

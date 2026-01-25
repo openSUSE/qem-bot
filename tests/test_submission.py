@@ -4,6 +4,7 @@ import logging
 from collections.abc import Generator
 from copy import deepcopy
 from typing import Any, NoReturn, cast
+from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -221,8 +222,6 @@ def test_sub_rev_non_matching_version(mocker: MockerFixture) -> None:
 
 
 def test_sub_rev_empty_channels() -> None:
-    from unittest.mock import MagicMock
-
     sub = MagicMock(spec=Submission)
     sub.id = 123
     sub.channels = []

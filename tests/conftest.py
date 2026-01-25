@@ -10,10 +10,13 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
+from openqabot.approver import Approver
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
+from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.qem import JobAggr
+from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
 
 from .helpers import (
@@ -21,6 +24,7 @@ from .helpers import (
     f_sub_approver,
     fake_change_review_state,
     fake_get_request_list,
+    fake_openqa_responses_with_param_matching,
     fake_osc_get_config,
     make_passing_and_failing_job,
     obs_product_table_url,
@@ -77,9 +81,6 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
-    from openqabot.approver import Approver
-    from openqabot.openqa import OpenQAInterface
-
     OpenQAInterface.get_job_comments.cache_clear()
     OpenQAInterface.get_single_job.cache_clear()
     OpenQAInterface.get_older_jobs.cache_clear()
@@ -98,43 +99,31 @@ def fake_two_passed_jobs() -> None:
 
 @pytest.fixture
 def fake_no_jobs() -> None:
-    import responses
-
     responses.add(responses.GET, openqa_url, json={})
 
 
 @pytest.fixture
 def fake_no_jobs_with_param_matching() -> list[responses.BaseResponse]:
-    from .helpers import fake_openqa_responses_with_param_matching
-
     return fake_openqa_responses_with_param_matching({})
 
 
 @pytest.fixture
 def fake_only_jobs_of_additional_builds_with_param_matching() -> list[responses.BaseResponse]:
-    from .helpers import fake_openqa_responses_with_param_matching
-
     return fake_openqa_responses_with_param_matching(make_passing_and_failing_job())
 
 
 @pytest.fixture
 def fake_pending_jobs() -> None:
-    import responses
-
     responses.add(responses.GET, openqa_url, json={"scheduled": {}, "running": {}})
 
 
 @pytest.fixture
 def fake_not_ok_jobs() -> None:
-    import responses
-
     responses.add(responses.GET, openqa_url, json=make_passing_and_failing_job())
 
 
 @pytest.fixture
 def fake_ok_jobs() -> None:
-    import responses
-
     responses.add(
         responses.GET,
         openqa_url,
@@ -144,8 +133,6 @@ def fake_ok_jobs() -> None:
 
 @pytest.fixture
 def fake_product_repo() -> None:
-    import responses
-
     responses.add(responses.GET, obs_product_table_url, json=read_json("test-product-repo"))
 
 
@@ -159,7 +146,6 @@ def fakeget_package_diff(mocker: MockerFixture) -> None:
 @pytest.fixture(autouse=True)
 def mock_osc(mocker: MockerFixture) -> None:
     # Clear caches to ensure isolation between tests
-    from openqabot.incrementapprover import IncrementApprover
 
     IncrementApprover.find_request_on_obs.cache_clear()
     IncrementApprover.get_obs_request_list.cache_clear()

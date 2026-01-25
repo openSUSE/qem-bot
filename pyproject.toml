@@ -156,7 +156,6 @@ ignore = [
     "D105",   # missing-magic-method-docstring
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
-    "PLC0415", # import-outside-toplevel
     "PLC1802", # use-implicit-booleaness-not-len
     "PLR0912", # too-many-branches
     "PLR0913", # too-many-arguments

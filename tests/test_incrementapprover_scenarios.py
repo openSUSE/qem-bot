@@ -14,6 +14,9 @@ from openqabot.incrementapprover import ApprovalStatus
 from openqabot.loader.incrementconfig import IncrementConfig
 
 from .helpers import (
+    fake_get_binary_file,
+    fake_get_binarylist,
+    fake_get_repos_of_project,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
@@ -164,8 +167,6 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 def test_scheduling_extra_livepatching_builds_based_on_source_report(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    from .helpers import fake_get_binary_file, fake_get_binarylist, fake_get_repos_of_project
-
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
     mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)

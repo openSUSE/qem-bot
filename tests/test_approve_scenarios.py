@@ -12,7 +12,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.approver import Approver
+from openqabot.approver import QEM_DASHBOARD, Approver
 
 from .helpers import (
     assert_log_messages,
@@ -32,10 +32,6 @@ def with_fake_qem(mode: str) -> Any:
 
 @pytest.fixture
 def fake_single_submission_mocks() -> None:
-    import re
-
-    from openqabot.approver import QEM_DASHBOARD
-
     responses.add(
         responses.GET,
         re.compile(f"{QEM_DASHBOARD}api/submission/.*"),
@@ -85,8 +81,6 @@ def fake_openqa_comment_api() -> None:
 
 @pytest.fixture
 def fake_responses_updating_job() -> None:
-    from openqabot.approver import QEM_DASHBOARD
-
     responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
 
 

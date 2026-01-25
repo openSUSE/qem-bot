@@ -28,6 +28,7 @@ from openqabot.loader.qem import (
     update_job,
     update_submissions,
 )
+from openqabot.types.types import Data
 
 
 @pytest.fixture
@@ -274,8 +275,6 @@ def test_get_aggregate_settings(mock_get_json: MagicMock) -> None:
 
 def test_get_aggregate_settings_data(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"id": 1, "build": "build"}]
-    from openqabot.types.types import Data
-
     data = Data(0, "aggregate", 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)
 
@@ -307,8 +306,6 @@ def test_get_aggregate_results_error(mock_get_json: MagicMock, mocker: MockerFix
 def test_get_aggregate_settings_data_none(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(20)  # INFO
     mock_get_json.return_value = []
-    from openqabot.types.types import Data
-
     data = Data(0, "aggregate", 0, "flavor", "arch", "distri", "version", "build", "product")
     res = get_aggregate_settings_data({}, data)
     assert res == []

@@ -44,8 +44,6 @@ def test_repodiff_compression(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_request_and_dump_not_found(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     args.fake_data = True
     diff = RepoDiff(args)
@@ -56,8 +54,6 @@ def test_request_and_dump_not_found(mocker: MockerFixture, caplog: pytest.LogCap
 
 
 def test_request_and_dump_invalid_json(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     args.fake_data = True
     diff = RepoDiff(args)
@@ -68,8 +64,6 @@ def test_request_and_dump_invalid_json(mocker: MockerFixture, caplog: pytest.Log
 
 
 def test_load_repodata_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     mocker.patch.object(diff, "request_and_dump", return_value=None)
@@ -79,8 +73,6 @@ def test_load_repodata_error(mocker: MockerFixture, caplog: pytest.LogCaptureFix
 
 
 def test_load_packages_empty(mocker: MockerFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     mocker.patch.object(diff, "load_repodata", return_value=None)
@@ -89,8 +81,6 @@ def test_load_packages_empty(mocker: MockerFixture) -> None:
 
 
 def test_load_packages_invalid_data(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     # Return a dict instead of etree.Element
@@ -101,8 +91,6 @@ def test_load_packages_invalid_data(mocker: MockerFixture, caplog: pytest.LogCap
 
 
 def test_request_and_dump_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     args.fake_data = False
     args.dump_data = False
@@ -114,8 +102,6 @@ def test_request_and_dump_exception(mocker: MockerFixture, caplog: pytest.LogCap
 
 
 def test_compute_diff_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     mocker.patch.object(diff, "load_packages", side_effect=Exception("foo"))
@@ -125,8 +111,6 @@ def test_compute_diff_exception(mocker: MockerFixture, caplog: pytest.LogCapture
 
 
 def test_request_and_dump_dump_data(mocker: MockerFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     args.fake_data = False
     args.dump_data = True
@@ -142,8 +126,6 @@ def test_request_and_dump_dump_data(mocker: MockerFixture) -> None:
 
 
 def test_request_and_dump_no_dump(mocker: MockerFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     args.fake_data = False
     args.dump_data = False
@@ -173,8 +155,6 @@ def test_repodiff_exit(mocker: MockerFixture) -> None:
 
 
 def test_find_primary_repodata_none(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     # no primary repodata in rows
@@ -185,8 +165,6 @@ def test_find_primary_repodata_none(mocker: MockerFixture, caplog: pytest.LogCap
 
 
 def test_load_repodata_request_failed(mocker: MockerFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     # repo_data_listing found, but subsequent request fails
@@ -196,8 +174,6 @@ def test_load_repodata_request_failed(mocker: MockerFixture) -> None:
 
 
 def test_load_packages_not_rpm(mocker: MockerFixture) -> None:
-    from openqabot.repodiff import RepoDiff
-
     args = mocker.Mock()
     diff = RepoDiff(args)
     # mock repo_data with non-rpm package

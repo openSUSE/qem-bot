@@ -20,6 +20,7 @@ from .helpers import (
     fake_get_request_list,
     fake_osc_get_config,
     prepare_approver,
+    run_approver,
 )
 
 
@@ -33,8 +34,6 @@ def test_specified_obs_request_not_found_skips_approval(
         assert reqid == 43
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
-    from .helpers import run_approver
-
     run_approver(mocker, caplog, request_id=43)
     assert "Checking specified request 43" in caplog.messages
     assert "Skipping approval: OBS:PROJECT:TEST: No relevant requests in states new/review/accepted" in caplog.messages

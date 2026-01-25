@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
 # ruff: noqa: ARG001
+import logging
 from typing import Any
 
 import pytest
@@ -28,8 +29,6 @@ def test_make_submission_from_gitea_pr_dry(mocker: MockerFixture) -> None:
 
 
 def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
     mocker.patch("openqabot.loader.gitea.get_json", return_value=[])
@@ -78,8 +77,6 @@ def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFix
 
 
 def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
     mocker.patch("openqabot.loader.gitea.get_json", return_value=[])

@@ -11,7 +11,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.approver import Approver
+from openqabot.approver import QEM_DASHBOARD, Approver
+from responses import matchers
 
 from .helpers import (
     args,
@@ -44,8 +45,6 @@ def f_osconf(mocker: MockerFixture) -> Any:
 
 @pytest.fixture
 def fake_responses_for_creating_pr_review() -> None:
-    from openqabot.approver import QEM_DASHBOARD
-    from responses import matchers
 
     responses.add(
         responses.POST,

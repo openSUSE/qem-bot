@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 import urllib.error
 from io import BytesIO
 from typing import Any, cast
@@ -12,8 +13,6 @@ from openqabot.loader.gitea import BuildResults
 
 
 def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
     incident = {"scminfo": "old", "number": 1}
     res = mocker.Mock()
@@ -35,8 +34,6 @@ def test_add_build_results_url_mismatch_just_passes() -> None:
 
 
 def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
     err = urllib.error.HTTPError("url", 404, "msg", cast("Any", {}), None)
@@ -72,8 +69,6 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
 
 
 def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
     mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", None)

@@ -4,12 +4,20 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from urllib.parse import urlparse
 
+from .aggrsync import AggregateResultsSync
+from .amqp import AMQP
+from .approver import Approver
+from .commenter import Commenter
 from .config import AMQP_URL, BUILD_REGEX, OBS_GROUP
+from .giteasync import GiteaSync
+from .incrementapprover import IncrementApprover
+from .openqabot import OpenQABot
+from .repodiff import RepoDiff
+from .smeltsync import SMELTSync
+from .subsyncres import SubResultsSync
 
 
 def do_full_schedule(args: Namespace) -> int:
-    from .openqabot import OpenQABot
-
     args.disable_submissions = False
     args.disable_aggregates = False
 
@@ -18,8 +26,6 @@ def do_full_schedule(args: Namespace) -> int:
 
 
 def do_submission_schedule(args: Namespace) -> int:
-    from .openqabot import OpenQABot
-
     args.disable_submissions = False
     args.disable_aggregates = True
 
@@ -28,8 +34,6 @@ def do_submission_schedule(args: Namespace) -> int:
 
 
 def do_aggregate_schedule(args: Namespace) -> int:
-    from .openqabot import OpenQABot
-
     args.disable_aggregates = False
     args.disable_submissions = True
 
@@ -38,64 +42,46 @@ def do_aggregate_schedule(args: Namespace) -> int:
 
 
 def do_sync_smelt(args: Namespace) -> int:
-    from .smeltsync import SMELTSync
-
     syncer = SMELTSync(args)
     return syncer()
 
 
 def do_sync_gitea(args: Namespace) -> int:
-    from .giteasync import GiteaSync
-
     syncer = GiteaSync(args)
     return syncer()
 
 
 def do_approve(args: Namespace) -> int:
-    from .approver import Approver
-
     approve = Approver(args)
     return approve()
 
 
 def do_comment(args: Namespace) -> int:
-    from .commenter import Commenter
-
     comment = Commenter(args)
     return comment()
 
 
 def do_sync_sub_results(args: Namespace) -> int:
-    from .subsyncres import SubResultsSync
-
     syncer = SubResultsSync(args)
     return syncer()
 
 
 def do_sync_aggregate_results(args: Namespace) -> int:
-    from .aggrsync import AggregateResultsSync
-
     syncer = AggregateResultsSync(args)
     return syncer()
 
 
 def do_increment_approve(args: Namespace) -> int:
-    from .incrementapprover import IncrementApprover
-
     approve = IncrementApprover(args)
     return approve()
 
 
 def do_repo_diff_computation(args: Namespace) -> int:
-    from .repodiff import RepoDiff
-
     repo_diff = RepoDiff(args)
     return repo_diff()
 
 
 def do_amqp(args: Namespace) -> int:
-    from .amqp import AMQP
-
     amqp = AMQP(args)
     return amqp()
 

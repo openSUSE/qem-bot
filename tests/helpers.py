@@ -10,6 +10,7 @@ from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
+from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import osc.core
@@ -237,8 +238,6 @@ def run_approver(
     config: IncrementConfig | None = None,
     request_id: int | None = None,
 ) -> tuple[int, list]:
-    from unittest.mock import MagicMock
-
     mock_post_job = MagicMock()
     mocker.patch("openqabot.openqa.OpenQAInterface.post_job", new=mock_post_job)
     increment_approver = prepare_approver(

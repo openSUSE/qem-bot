@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
+
 import pytest
 import requests
 from pytest_mock import MockerFixture
@@ -19,8 +21,6 @@ def test_get_open_prs_returns_specified_pr(mocker: MockerFixture) -> None:
 
 
 def test_get_open_prs_metadata_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.RequestException("error"))
     res = gitea.get_open_prs({}, "repo", dry=False, number=124)
@@ -35,8 +35,6 @@ def test_get_open_prs_iter_pages(mocker: MockerFixture) -> None:
 
 
 def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.JSONDecodeError("msg", "doc", 0))
     res = gitea.get_open_prs({}, "repo", dry=False, number=None)
@@ -45,8 +43,6 @@ def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptur
 
 
 def test_get_open_prs_request_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    import logging
-
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.RequestException("error"))
     res = gitea.get_open_prs({}, "repo", dry=False, number=None)
