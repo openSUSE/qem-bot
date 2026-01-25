@@ -56,11 +56,11 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:
+def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:  # noqa: ANN401
     return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
-def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:
+def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:  # noqa: ANN401
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
@@ -71,7 +71,7 @@ def read_utf8(name: str) -> str:
     return Path(f"responses/{name}").read_text(encoding="utf8")
 
 
-def read_json(name: str) -> Any:
+def read_json(name: str) -> Any:  # noqa: ANN401
     return json.loads(Path(f"responses/{name}.json").read_text(encoding="utf8"))
 
 
@@ -152,7 +152,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         log.debug("PR git:%i: %s", number, pr)
         return [pr]
 
-    def iter_pr_pages() -> Any:
+    def iter_pr_pages() -> Any:  # noqa: ANN401
         page = 1
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
@@ -255,7 +255,7 @@ def add_channel_for_build_result(
     project: str,
     arch: str,
     product_name: str,
-    res: Any,
+    res: Any,  # noqa: ANN401
     projects: set[str],
 ) -> str:
     channel = f"{project}:{arch}"
@@ -289,7 +289,7 @@ def add_channel_for_build_result(
 
 def add_build_result(
     submission: dict[str, Any],
-    res: Any,
+    res: Any,  # noqa: ANN401
     results: BuildResults,
 ) -> None:
     project = res.get("project")
@@ -347,7 +347,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
+def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")

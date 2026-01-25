@@ -126,7 +126,12 @@ class IncrementApprover:
         return relevant_request
 
     def add_packages_for_action_project(
-        self, action: Any, project: str, repo: str, arch: str, packages: defaultdict[str, set[Package]]
+        self,
+        action: Any,  # noqa: ANN401
+        project: str,
+        repo: str,
+        arch: str,
+        packages: defaultdict[str, set[Package]],
     ) -> None:
         log.debug(
             "Finding source reports for package %s in project %s for repo/arch %s/%s",

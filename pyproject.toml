@@ -167,7 +167,6 @@ ignore = [
     "PLW0128", # redeclared-assigned-name
     "PLW0129", # assert-on-string-literal
     "B019",
-    "ANN401", # any-type
     "S101",
     "PLR6301", # no-self-use
     "PLR0904", # too-many-public-methods
@@ -181,7 +180,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004"]
+"tests/*" = ["PLR2004", "ANN401"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

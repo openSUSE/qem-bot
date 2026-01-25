@@ -220,7 +220,7 @@ def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str 
     return list(chain.from_iterable(all_data))
 
 
-def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
+def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:  # noqa: ANN401
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
