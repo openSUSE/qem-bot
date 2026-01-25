@@ -82,4 +82,4 @@ def get_max_revision(
 
 
 def merge_repohash(hashes: list[str]) -> str:
-    return md5(b"start" + "".join(hashes).encode()).hexdigest()  # noqa: S324 hashlib-insecure-hash-function
+    return md5(b"start" + "".join(hashes).encode(), usedforsecurity=False).hexdigest()
