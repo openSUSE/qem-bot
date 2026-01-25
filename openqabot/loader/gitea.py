@@ -211,10 +211,10 @@ def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
-    PENDING_STATES = {"PENDING", "REQUEST_REVIEW"}
+    pending_states = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
     qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
-    has_other_pending = any(r.get("state", "") in PENDING_STATES for r in open_reviews if not is_review_requested_by(r))
+    has_other_pending = any(r.get("state", "") in pending_states for r in open_reviews if not is_review_requested_by(r))
     counts = Counter(qam_states)
     qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
     qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
