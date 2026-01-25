@@ -44,7 +44,7 @@ class CommentAPI:
     def __init__(self, apiurl: str) -> None:
         self.apiurl = apiurl
 
-    def _prepare_url(
+    def prepare_url(
         self,
         request_id: str | int | None = None,
         project_name: str | None = None,
@@ -79,7 +79,7 @@ class CommentAPI:
         :param package_name: Package name where to get comments.
         :returns: A list of comments (as a dictionary).
         """
-        url = self._prepare_url(request_id, project_name, package_name)
+        url = self.prepare_url(request_id, project_name, package_name)
         root = etree.parse(http_GET(url)).getroot()
         comments = {}
         for c in root.findall("comment"):
@@ -154,7 +154,7 @@ class CommentAPI:
         comment = self.truncate(comment.strip())
 
         query = {"parent_id": parent_id} if parent_id else {}
-        url = self._prepare_url(request_id, project_name, package_name, query)
+        url = self.prepare_url(request_id, project_name, package_name, query)
         return http_POST(url, data=comment)
 
     @staticmethod

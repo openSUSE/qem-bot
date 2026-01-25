@@ -226,11 +226,11 @@ def test_sub_rev_empty_channels() -> None:
     sub = MagicMock(spec=Submission)
     sub.id = 123
     sub.channels = []
-    sub._rev_cache_params = None  # noqa: SLF001
-    sub._rev_logged = False  # noqa: SLF001
+    sub.rev_cache_params = None
+    sub.rev_logged = False
     sub.project = "project"
     sub.compute_revisions_for_product_repo = Submission.compute_revisions_for_product_repo.__get__(sub, Submission)
-    sub._rev = Submission._rev  # noqa: SLF001
+    sub.rev = Submission.rev
     assert not sub.compute_revisions_for_product_repo(None, None)
 
 
@@ -285,20 +285,22 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
 
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
-    submission._rev_cache_params = (None, None, None)  # noqa: SLF001
+    submission.rev_cache_params = (None, None, None)
     submission.revisions = {"some": "data"}  # type: ignore[assignment]
-    # Should return True without calling _rev
-    mock_rev = mocker.patch.object(submission, "_rev")
+
+    # Should return True without calling rev
+    mock_rev = mocker.patch.object(submission, "rev")
     assert submission.compute_revisions_for_product_repo(None, None)
     mock_rev.assert_not_called()
 
 
 def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
-    submission._rev_cache_params = (None, None, None)  # noqa: SLF001
+    # Trigger setting cache params
+    submission.compute_revisions_for_product_repo(None, None)
     submission.revisions = None
-    # Should return False without calling _rev
-    mock_rev = mocker.patch.object(submission, "_rev")
+    # Should return False without calling rev
+    mock_rev = mocker.patch.object(submission, "rev")
     assert not submission.compute_revisions_for_product_repo(None, None)
     mock_rev.assert_not_called()
 
@@ -318,8 +320,8 @@ def test_compute_revisions_logging_once(mocker: MockerFixture, caplog: pytest.Lo
     data = deepcopy(test_data)
 
     sub = Submission(data)
-    # Mock _rev to raise NoRepoFoundError
-    mocker.patch.object(sub, "_rev", side_effect=NoRepoFoundError("test error"))
+    # Mock rev to raise NoRepoFoundError
+    mocker.patch.object(sub, "rev", side_effect=NoRepoFoundError("test error"))
 
     # First call should log
     assert not sub.compute_revisions_for_product_repo(None, None)

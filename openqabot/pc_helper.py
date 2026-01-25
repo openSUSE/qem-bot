@@ -56,6 +56,8 @@ def pint_query(query: str) -> dict[str, Any]:
 
 def apply_publiccloud_pint_image(settings: dict[str, Any]) -> dict[str, Any]:
     """Apply PUBLIC_CLOUD_IMAGE_LOCATION based on the given PUBLIC_CLOUD_IMAGE_REGEX."""
+    if "PUBLIC_CLOUD_IMAGE_ID" in settings:
+        return settings
     try:
         region = settings.get("PUBLIC_CLOUD_PINT_REGION")
         # We need to include active and inactive images. Active images have precedence

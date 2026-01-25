@@ -24,16 +24,15 @@ def test_comment_as_dict() -> None:
     assert res["comment"] == "text"
 
 
-def test_prepare_url() -> None:
+def testprepare_url() -> None:
     api = CommentAPI("https://api.opensuse.org")
-    assert api._prepare_url(request_id="123") == "https://api.opensuse.org/comments/request/123"  # noqa: SLF001
+    assert api.prepare_url(request_id="123") == "https://api.opensuse.org/comments/request/123"
     assert (
-        api._prepare_url(project_name="proj", package_name="pkg")  # noqa: SLF001
-        == "https://api.opensuse.org/comments/package/proj/pkg"
+        api.prepare_url(project_name="proj", package_name="pkg") == "https://api.opensuse.org/comments/package/proj/pkg"
     )
-    assert api._prepare_url(project_name="proj") == "https://api.opensuse.org/comments/project/proj"  # noqa: SLF001
+    assert api.prepare_url(project_name="proj") == "https://api.opensuse.org/comments/project/proj"
     with pytest.raises(OscCommentsValueError):
-        api._prepare_url()  # noqa: SLF001
+        api.prepare_url()
 
 
 def test_get_comments(mocker: MockerFixture) -> None:

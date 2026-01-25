@@ -1,6 +1,5 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: SLF001
 from __future__ import annotations
 
 import pytest
@@ -54,7 +53,7 @@ def test_no_approval_if_one_of_two_configs_has_no_builds(caplog: pytest.LogCaptu
     assert "All 1 openQA jobs have passed/softfailed" not in caplog.text
 
 
-def test_determine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testdetermine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="other",
@@ -68,13 +67,13 @@ def test_determine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker:
     mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver._determine_build_info(config)
+    res = approver.determine_build_info(config)
     assert res == set()
     config.product_regex = "SLES"
     mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-brokenversion-Online-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver._determine_build_info(config)
+    res = approver.determine_build_info(config)
     assert res == set()
 
 
@@ -90,11 +89,11 @@ def test_extra_builds_no_match(caplog: pytest.LogCaptureFixture) -> None:
     from openqabot.incrementapprover import BuildInfo
 
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
-    res = approver._extra_builds_for_package(package, config, build_info)
+    res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None
 
 
-def test_determine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testdetermine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle",
@@ -107,12 +106,12 @@ def test_determine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixt
     mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver._determine_build_info(config)
+    res = approver.determine_build_info(config)
     assert len(res) == 1
     assert next(iter(res)).flavor == "Online-Increments"
 
 
-def test_determine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testdetermine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle",
@@ -125,7 +124,7 @@ def test_determine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, 
     mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-Online-x86_64-Build1.1.spdx.json"}]
     }
-    res = approver._determine_build_info(config)
+    res = approver.determine_build_info(config)
     assert res == set()
 
 
@@ -141,5 +140,5 @@ def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFi
     from openqabot.incrementapprover import BuildInfo
 
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
-    res = approver._extra_builds_for_package(package, config, build_info)
+    res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None

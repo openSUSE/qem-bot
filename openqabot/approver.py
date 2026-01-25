@@ -45,11 +45,11 @@ ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}
 MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 
-def _ms2str(sub: SubReq) -> str:
+def ms2str(sub: SubReq) -> str:
     return f"{OBS_MAINT_PRJ}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
-def _handle_http_error(e: HTTPError, sub: SubReq) -> bool:
+def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
     if e.code == 403:
         log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, sub.req)
         return True
@@ -100,11 +100,11 @@ class Approver:
         )
 
         overall_result = True
-        submissions_to_approve = [sub for sub in subreqs if self._approvable(sub)]
+        submissions_to_approve = [sub for sub in subreqs if self.approvable(sub)]
 
         log.info("Submissions to approve:")
         for sub in submissions_to_approve:
-            log.info("* %s", _ms2str(sub))
+            log.info("* %s", ms2str(sub))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
@@ -115,31 +115,31 @@ class Approver:
 
         return 0 if overall_result else 1
 
-    def _approvable(self, sub: SubReq) -> bool:
+    def approvable(self, sub: SubReq) -> bool:
         try:
             s_jobs = get_submission_settings(
                 sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
             )
         except NoResultsError as e:
-            log.info("Approval check for %s skipped: %s", _ms2str(sub), e)
+            log.info("Approval check for %s skipped: %s", ms2str(sub), e)
             return False
         try:
             a_jobs = get_aggregate_settings(sub.sub, self.token, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
-                log.info("No aggregate test results found for %s", _ms2str(sub))
+                log.info("No aggregate test results found for %s", ms2str(sub))
                 return False
             log.info(e)
             a_jobs = []
 
         if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            log.info("%s has at least one failed job in submission tests", _ms2str(sub))
+            log.info("%s has at least one failed job in submission tests", ms2str(sub))
             return False
 
         if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
             a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
-            log.info("%s has at least one failed job in aggregate tests", _ms2str(sub))
+            log.info("%s has at least one failed job in aggregate tests", ms2str(sub))
             return False
 
         # everything is green --> add submission to approve list
@@ -182,7 +182,7 @@ class Approver:
             return False
         return True
 
-    def _was_older_job_ok(
+    def was_older_job_ok(
         self,
         failed_job_id: int,
         sub: int,
@@ -256,7 +256,7 @@ class Approver:
 
         regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(sub=sub))
         for job in older_jobs:
-            if (was_ok := self._was_older_job_ok(failed_job_id, sub, job, oldest_build_usable, regex)) is not None:
+            if (was_ok := self.was_older_job_ok(failed_job_id, sub, job, oldest_build_usable, regex)) is not None:
                 return was_ok
         log.info(
             "Cannot ignore aggregate failure %s for aggregate %s: No suitable older jobs found.", failed_job_id, sub
@@ -343,7 +343,7 @@ class Approver:
 
     def approve(self, sub: SubReq) -> bool:
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
-        log.info("Approving %s", _ms2str(sub))
+        log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod
@@ -357,7 +357,7 @@ class Approver:
                 message=msg,
             )
         except HTTPError as e:
-            return _handle_http_error(e, sub)
+            return handle_http_error(e, sub)
         except Exception:
             log.exception("OBS API error: Failed to approve request %s", sub.req)
             return False

@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 import re
+import sys
 from collections import defaultdict
 from logging import getLogger
 from pathlib import Path
@@ -41,22 +42,22 @@ class RepoDiff:
     def __init__(self, args: Namespace | None) -> None:
         self.args = args
 
-    def _make_repodata_url(self, project: str) -> str:
+    def make_repodata_url(self, project: str) -> str:
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def _find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:
+    def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
     @staticmethod
-    def _decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
+    def decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
         if repo_data_file.endswith(".gz"):
             return gzip.decompress(repo_data_raw)
         if repo_data_file.endswith(".zst"):
             return pyzstd.decompress(repo_data_raw)
         return repo_data_raw
 
-    def _request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
+    def request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
         log.debug("Fetching repository data from %s", url)
         name = "responses/" + name.replace("/", "_")
         try:
@@ -76,9 +77,9 @@ class RepoDiff:
             log.exception("Failed to fetch or dump data from %s", url)
         return None
 
-    def _load_repodata(self, project: str) -> etree.Element | None:
-        url = self._make_repodata_url(project)
-        repo_data_listing = self._request_and_dump(
+    def load_repodata(self, project: str) -> etree.Element | None:
+        url = self.make_repodata_url(project)
+        repo_data_listing = self.request_and_dump(
             url + "?jsontable=1",
             f"repodata-listing-{project}.json",
             as_json=True,
@@ -88,19 +89,19 @@ class RepoDiff:
             return None
 
         rows = repo_data_listing.get("data", [])
-        repo_data_file = self._find_primary_repodata(rows)
+        repo_data_file = self.find_primary_repodata(rows)
         if repo_data_file is None:
             log.warning("Repository metadata not found: Primary repodata missing in %s", url)
             return None
-        repo_data_raw = self._request_and_dump(url + repo_data_file, repo_data_file)
+        repo_data_raw = self.request_and_dump(url + repo_data_file, repo_data_file)
         if not isinstance(repo_data_raw, bytes):
             return None
-        repo_data = RepoDiff._decompress(repo_data_file, repo_data_raw)
+        repo_data = RepoDiff.decompress(repo_data_file, repo_data_raw)
         log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 
-    def _load_packages(self, project: str) -> defaultdict[str, set[Package]]:
-        repo_data = self._load_repodata(project)
+    def load_packages(self, project: str) -> defaultdict[str, set[Package]]:
+        repo_data = self.load_repodata(project)
         packages_by_arch = defaultdict(set)
         if repo_data is None or not hasattr(repo_data, "iterfind"):
             log.error("Could not load repo data for project %s", project)
@@ -138,8 +139,8 @@ class RepoDiff:
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
         try:
-            packages_by_arch_a = self._load_packages(repo_a)
-            packages_by_arch_b = self._load_packages(repo_b)
+            packages_by_arch_a = self.load_packages(repo_a)
+            packages_by_arch_b = self.load_packages(repo_b)
             return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
         except Exception:
             log.exception("Repo diff computation failed for projects %s and %s", repo_a, repo_b)
@@ -161,5 +162,5 @@ class RepoDiff:
             count,
             args.repo_a,
         )
-        print(json.dumps(diff, indent=4, default=list))  # noqa: T201
+        sys.stdout.write(json.dumps(diff, indent=4, default=list) + "\n")
         return len(diff)

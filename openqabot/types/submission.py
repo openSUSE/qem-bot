@@ -84,9 +84,9 @@ class Submission:
 
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
-        self._rev_cache_params: tuple[Any, ...] | None = None
-        self._rev_logged: bool = False
-        self.livepatch: bool = self._is_livepatch(self.packages)
+        self.rev_cache_params: tuple[Any, ...] | None = None
+        self.rev_logged: bool = False
+        self.livepatch: bool = self.is_livepatch(self.packages)
 
     def log_skipped(self) -> None:
         if self._logged_skipped:
@@ -114,26 +114,26 @@ class Submission:
         limit_archs: set[str] | None = None,
     ) -> bool:
         params = (product_repo, product_version, frozenset(limit_archs) if limit_archs else None)
-        if self._rev_cache_params == params:
+        if self.rev_cache_params == params:
             return self.revisions is not None
 
-        self._rev_cache_params = params
+        self.rev_cache_params = params
         product_name = product_repo[-1] if isinstance(product_repo, list) else product_repo
         opts = RepoOptions(product_name, product_version, str(self))
 
         try:
-            self.revisions = self._rev(
+            self.revisions = self.rev(
                 self.channels,
                 self.project,
                 opts,
                 limit_archs,
             )
         except NoRepoFoundError as e:
-            if not self._rev_logged:
+            if not self.rev_logged:
                 msg = "Submission %s skipped: RepoHash calculation failed for project %s"
                 msg = f"{msg}: {e}" if len(str(e)) > 0 else msg
                 log.info(msg, self, self.project)
-                self._rev_logged = True
+                self.rev_logged = True
             self.revisions = None
             return False
         else:
@@ -157,7 +157,7 @@ class Submission:
             return None
 
     @staticmethod
-    def _rev(
+    def rev(
         channels: list[Repos],
         project: str,
         options: RepoOptions,
@@ -203,7 +203,7 @@ class Submission:
         return f"{self.type}:{self.id}"
 
     @staticmethod
-    def _is_livepatch(packages: list[str]) -> bool:
+    def is_livepatch(packages: list[str]) -> bool:
         if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
             return False
         return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)

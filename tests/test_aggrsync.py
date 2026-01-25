@@ -53,7 +53,7 @@ def test_call_with_results(
 
     # Mock methods from base class SyncRes
     mocker.patch.object(sync, "filter_jobs", return_value=True)
-    mocker.patch.object(sync, "_normalize_data", return_value={"job_id": 1, "status": "passed"})
+    mocker.patch.object(sync, "normalize_data_safe", return_value={"job_id": 1, "status": "passed"})
     mock_post_result = mocker.patch.object(sync, "post_result")
 
     sync()

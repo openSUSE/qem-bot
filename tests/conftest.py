@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: SLF001, ARG001, ARG005
+# ruff: noqa: ARG001, ARG005
 from __future__ import annotations
 
 from collections import defaultdict
@@ -150,10 +150,10 @@ def fake_product_repo() -> None:
 
 
 @pytest.fixture
-def fake_package_diff(mocker: MockerFixture) -> None:
+def fakeget_package_diff(mocker: MockerFixture) -> None:
     package_diff = defaultdict(set)
     package_diff["x86_64"] = {Package("foo", "1", "2", "3", "x86_64")}
-    mocker.patch("openqabot.incrementapprover.IncrementApprover._package_diff", return_value=package_diff)
+    mocker.patch("openqabot.incrementapprover.IncrementApprover.get_package_diff", return_value=package_diff)
 
 
 @pytest.fixture(autouse=True)
@@ -161,8 +161,8 @@ def mock_osc(mocker: MockerFixture) -> None:
     # Clear caches to ensure isolation between tests
     from openqabot.incrementapprover import IncrementApprover
 
-    IncrementApprover._find_request_on_obs.cache_clear()
-    IncrementApprover._get_obs_request_list.cache_clear()
+    IncrementApprover.find_request_on_obs.cache_clear()
+    IncrementApprover.get_obs_request_list.cache_clear()
 
     mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
     mocker.patch("osc.core.change_review_state", side_effect=fake_change_review_state)

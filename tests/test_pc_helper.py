@@ -26,8 +26,11 @@ def test_apply_pc_tools_image(mocker: MockerFixture, caplog: pytest.LogCaptureFi
     mocker.patch("openqabot.pc_helper.get_latest_tools_image")
     apply_pc_tools_image(settings)
     settings = {"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "test"}
-    mocker.patch("openqabot.pc_helper.get_latest_tools_image", side_effect=BaseException)
+    mocker.patch("openqabot.pc_helper.get_latest_tools_image", side_effect=ValueError)
     apply_pc_tools_image(settings)
+    assert "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" not in settings
+    assert "PUBLIC_CLOUD_TOOLS_IMAGE_BASE" not in settings
+    assert "Public Cloud image base handling failed" in caplog.text
     assert "Public Cloud image base handling failed" in caplog.text
 
 
@@ -111,6 +114,28 @@ def test_apply_publiccloud_pint_image_no_recent_image_found(mocker: MockerFixtur
     assert "PUBLIC_CLOUD_PINT_NAME" not in settings
     assert "PUBLIC_CLOUD_PINT_REGION" not in settings
     assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+
+
+def test_apply_publiccloud_pint_image_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mocker.patch("openqabot.pc_helper.pint_query", side_effect=ValueError("oops"))
+    settings = {
+        "PUBLIC_CLOUD_PINT_QUERY": "test",
+        "PUBLIC_CLOUD_PINT_NAME": "test",
+        "PUBLIC_CLOUD_PINT_FIELD": "image_id",
+    }
+    apply_publiccloud_pint_image(settings)
+    assert settings["PUBLIC_CLOUD_IMAGE_ID"] is None
+    assert "PUBLIC_CLOUD_PINT_QUERY" not in settings
+    assert "PUBLIC_CLOUD_PINT_NAME" not in settings
+    assert "PUBLIC_CLOUD_PINT_FIELD" not in settings
+    assert "PUBLIC_CLOUD_PINT_QUERY handling failed for test: oops" in caplog.text
+
+
+def test_apply_publiccloud_pint_image_already_has_id(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.pc_helper.pint_query", return_value={"images": []})
+    settings = {"PUBLIC_CLOUD_IMAGE_ID": "existing"}
+    apply_publiccloud_pint_image(settings)
+    assert settings["PUBLIC_CLOUD_IMAGE_ID"] == "existing"
 
 
 def test_get_recent_pint_image() -> None:

@@ -34,10 +34,11 @@ class MockSubmission(Submission):
 
     def compute_revisions_for_product_repo(
         self,
-        product_repo: list[str] | str | None,  # noqa: ARG002
-        product_version: str | None,  # noqa: ARG002
-        limit_archs: set[str] | None = None,  # noqa: ARG002
+        product_repo: list[str] | str | None,
+        product_version: str | None,
+        limit_archs: set[str] | None = None,
     ) -> bool:
+        _ = (product_repo, product_version, limit_archs)
         return self.compute_revisions_value
 
     def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
