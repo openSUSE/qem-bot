@@ -13,10 +13,10 @@ from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscComm
 
 
 def test_comment_as_dict() -> None:
-    from openqabot.osclib.comments import _comment_as_dict  # noqa: PLC2701
+    from openqabot.osclib.comments import comment_as_dict
 
     xml = etree.fromstring('<comment who="user" when="2022-01-01 12:00:00 UTC" id="1" parent="0">text</comment>')
-    res = _comment_as_dict(xml)
+    res = comment_as_dict(xml)
     assert res["who"] == "user"
     assert isinstance(res["when"], datetime)
     assert res["id"] == "1"

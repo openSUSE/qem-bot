@@ -14,7 +14,7 @@ from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
-from openqabot.types.aggregate import Aggregate, _PostData  # noqa: PLC2701
+from openqabot.types.aggregate import Aggregate, PostData
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
@@ -310,7 +310,7 @@ def test_aggregate_duplicate_submissions(aggregate_factory: Any, submission_mock
     test_repos = defaultdict(list)
     test_repos["REPOS"] = ["repo"]
 
-    post_data = _PostData(test_submissions, test_repos, "hash", "build")
+    post_data = PostData(test_submissions, test_repos, "hash", "build")
     res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
 
     assert res is not None
@@ -342,7 +342,7 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     test_submissions["ISSUE"] = [sub]
     test_repos = defaultdict(list)
     test_repos["REPOS"] = [repo_url]
-    post_data = _PostData(test_submissions, test_repos, "hash", "build")
+    post_data = PostData(test_submissions, test_repos, "hash", "build")
 
     res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
 

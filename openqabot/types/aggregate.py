@@ -30,7 +30,7 @@ from .types import ProdVer, Repos
 log = getLogger("bot.types.aggregate")
 
 
-class _PostData(NamedTuple):
+class PostData(NamedTuple):
     test_submissions: defaultdict[str, list[Submission]]
     test_repos: defaultdict[str, list[str]]
     repohash: str
@@ -101,7 +101,7 @@ class Aggregate(BaseConf):
     def _create_full_post(  # noqa: C901
         self,
         arch: str,
-        data: _PostData,
+        data: PostData,
         ci_url: str | None,
     ) -> dict[str, Any] | None:
         full_post: dict[str, Any] = {}
@@ -231,7 +231,7 @@ class Aggregate(BaseConf):
 
         return self._create_full_post(
             arch,
-            _PostData(test_submissions, test_repos, repohash, build),
+            PostData(test_submissions, test_repos, repohash, build),
             ci_url,
         )
 

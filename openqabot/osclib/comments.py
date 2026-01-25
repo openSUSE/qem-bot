@@ -13,7 +13,7 @@ from osc.core import makeurl
 from openqabot.utc import UTC
 
 
-def _comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
+def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
     """Convert an XML element comment into a dictionary.
 
     :param comment_element: XML element that store a comment.
@@ -83,7 +83,7 @@ class CommentAPI:
         root = etree.parse(http_GET(url)).getroot()
         comments = {}
         for c in root.findall("comment"):
-            c = _comment_as_dict(c)
+            c = comment_as_dict(c)
             comments[c["id"]] = c
         return comments
 
