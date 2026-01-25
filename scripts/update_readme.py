@@ -11,8 +11,8 @@ from pathlib import Path
 def get_help_output() -> str:
     env = os.environ.copy()
     env["COLUMNS"] = "80"
-    result = subprocess.run(
-        ["python3", "qem-bot.py", "--help"],  # noqa: S607
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
         text=True,
         check=True,
