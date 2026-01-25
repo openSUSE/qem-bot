@@ -172,7 +172,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         return []
 
 
-def review_pr(
+def review_pr(  # noqa: PLR0913
     token: dict[str, str],
     repo_name: str,
     pr_number: int,

@@ -157,18 +157,9 @@ ignore = [
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
     "PLC1802", # use-implicit-booleaness-not-len
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0914", # too-many-locals
-    "PLR0915", # too-many-statements
     "D213", # multi-line-summary-second-line
-    "PLW2901", # redefined-loop-name
-    "PLW0127", # self-assigning-variable
-    "PLW0128", # redeclared-assigned-name
-    "PLW0129", # assert-on-string-literal
     "B019",
     "S101",
-    "PLR6301", # no-self-use
     "PLR0904", # too-many-public-methods
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
@@ -180,7 +171,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004", "ANN401"]
+"tests/*" = ["PLR2004", "ANN401", "PLR0913"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

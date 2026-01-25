@@ -118,7 +118,7 @@ class Submissions(BaseConf):
             else f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
-    def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:
+    def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
         if channel.product == "SLFO":
             return [
                 ic
@@ -189,7 +189,7 @@ class Submissions(BaseConf):
             **({"RRID": sub.rrid} if sub.rrid else {}),
         }
 
-    def get_priority(self, ctx: SubContext) -> int | None:
+    def get_priority(self, ctx: SubContext) -> int | None:  # noqa: PLR6301
         sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
         if delta_prio := data.get("override_priority", 0):
             delta_prio -= 50
@@ -199,7 +199,7 @@ class Submissions(BaseConf):
                 delta_prio = -20
         return BASE_PRIO + delta_prio if delta_prio else None
 
-    def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:
+    def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:  # noqa: PLR6301
         if "params_expand" not in data:
             return True
         params = data["params_expand"]
@@ -209,7 +209,7 @@ class Submissions(BaseConf):
         settings.update(params)
         return True
 
-    def add_metadata_urls(self, settings: dict[str, Any], sub: Submission) -> None:
+    def add_metadata_urls(self, settings: dict[str, Any], sub: Submission) -> None:  # noqa: PLR6301
         url = (
             f"{GITEA}/products/{sub.project}/pulls/{sub.id}"
             if sub.project == "SLFO"
@@ -218,7 +218,7 @@ class Submissions(BaseConf):
         settings["__SOURCE_CHANGE_URL"] = url
         settings["__DASHBOARD_INCIDENT_URL"] = f"{QEM_DASHBOARD}incident/{sub.id}"
 
-    def apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:
+    def apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:  # noqa: PLR6301
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)
             if not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE"):

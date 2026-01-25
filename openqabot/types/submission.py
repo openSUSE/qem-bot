@@ -181,12 +181,14 @@ class Submission:
             tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
         for archver, lrepos in tmpdict.items():
+            repos_to_check = lrepos
             if project == "SLFO" and options.product_name:
-                lrepos = [r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r[1]))]
-                if not lrepos:
+                filtered_repos = [r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r[1]))]
+                if not filtered_repos:
                     continue
+                repos_to_check = filtered_repos
 
-            max_rev = get_max_revision(lrepos, archver.arch, project, options)
+            max_rev = get_max_revision(repos_to_check, archver.arch, project, options)
             if max_rev > 0:
                 rev[archver] = max_rev
 

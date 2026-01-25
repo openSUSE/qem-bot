@@ -86,7 +86,7 @@ def do_amqp(args: Namespace) -> int:
     return amqp()
 
 
-def get_parser() -> ArgumentParser:
+def get_parser() -> ArgumentParser:  # noqa: PLR0914, PLR0915
     parser = ArgumentParser(description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot")
 
     parser.add_argument(

@@ -38,7 +38,7 @@ def mock_openqa_exception(mocker: MockerFixture) -> Any:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:
+        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:  # noqa: PLR6301
             raise PostOpenQAError
 
     return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)

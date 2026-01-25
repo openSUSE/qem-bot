@@ -42,11 +42,11 @@ class RepoDiff:
     def __init__(self, args: Namespace | None) -> None:
         self.args = args
 
-    def make_repodata_url(self, project: str) -> str:
+    def make_repodata_url(self, project: str) -> str:  # noqa: PLR6301
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
-    def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:
+    def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
     @staticmethod

@@ -82,8 +82,8 @@ class CommentAPI:
         url = self.prepare_url(request_id, project_name, package_name)
         root = etree.parse(http_GET(url)).getroot()
         comments = {}
-        for c in root.findall("comment"):
-            c = comment_as_dict(c)
+        for comment_element in root.findall("comment"):
+            c = comment_as_dict(comment_element)
             comments[c["id"]] = c
         return comments
 

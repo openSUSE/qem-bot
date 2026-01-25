@@ -82,7 +82,7 @@ class IncrementApprover:
         osc.conf.get_config(override_apiurl=OBS_URL)
 
     @lru_cache(maxsize=128)
-    def get_regex_match(self, pattern: str, string: str) -> re.Match | None:
+    def get_regex_match(self, pattern: str, string: str) -> re.Match | None:  # noqa: PLR6301
         match = None
         try:
             match = re.search(pattern, string)
@@ -125,7 +125,7 @@ class IncrementApprover:
                 log.debug(relevant_request.to_str())
         return relevant_request
 
-    def add_packages_for_action_project(
+    def add_packages_for_action_project(  # noqa: PLR6301
         self,
         action: Any,  # noqa: ANN401
         project: str,
@@ -160,8 +160,8 @@ class IncrementApprover:
                     target_filename=source_report_xml_path,
                 )
                 source_report_xml = etree.parse(source_report_xml_path)
-            source_report = source_report_xml.getroot()
-            for binary in source_report.iterfind("binary"):
+            source_report_root = source_report_xml.getroot()
+            for binary in source_report_root.iterfind("binary"):
                 arch = binary.get("arch")
                 packages[arch].add(Package(binary.get("name"), "", binary.get("version"), binary.get("release"), arch))
                 packages["noarch"].add(Package(binary.get("package"), "", "", "", "noarch"))
@@ -180,7 +180,7 @@ class IncrementApprover:
         return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
 
     @cache
-    def get_obs_request_list(self, project: str, req_state: tuple) -> list:
+    def get_obs_request_list(self, project: str, req_state: tuple) -> list:  # noqa: PLR6301
         return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
@@ -199,7 +199,7 @@ class IncrementApprover:
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
-    def check_openqa_jobs(self, results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
+    def check_openqa_jobs(self, results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:  # noqa: PLR6301
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
@@ -217,7 +217,7 @@ class IncrementApprover:
             return False
         return True
 
-    def evaluate_openqa_job_results(
+    def evaluate_openqa_job_results(  # noqa: PLR6301
         self,
         results: OpenQAResult,
         ok_jobs: set[int],

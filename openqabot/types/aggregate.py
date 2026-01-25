@@ -112,7 +112,7 @@ class Aggregate(BaseConf):
                 return None
         return settings
 
-    def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:
+    def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # noqa: PLR6301
         for template, issues in data.test_submissions.items():
             full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
             full_post["qem"]["incidents"] += issues

@@ -45,10 +45,11 @@ def get_max_revision(
     for repo in repos:
         # handle URLs for SLFO specifically
         if project == "SLFO":
+            repo_tuple = repo
             if options.product_version is not None:
-                repo = (repo[0], repo[1], options.product_version)
+                repo_tuple = (repo[0], repo[1], options.product_version)
             url = gitea.compute_repo_url(
-                OBS_DOWNLOAD_URL, options.product_name or gitea.get_product_name(repo[1]), repo, arch
+                OBS_DOWNLOAD_URL, options.product_name or gitea.get_product_name(repo[1]), repo_tuple, arch
             )
             log.debug("Computing RepoHash for %s from %s", repo[1], url)
         # openSUSE and SLE submissions have different handling of architecture

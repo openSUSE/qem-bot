@@ -264,7 +264,7 @@ class Approver:
         )
         return False
 
-    def is_job_passing(self, job_result: dict) -> bool:
+    def is_job_passing(self, job_result: dict) -> bool:  # noqa: PLR6301
         return job_result["status"] == "passed"
 
     def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
