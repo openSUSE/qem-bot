@@ -359,4 +359,4 @@ def test_aggregate_duplicate_submissions() -> None:
     # Verify unique incidents
     assert res is not None
     assert len(res["qem"]["incidents"]) == 1
-    assert res["qem"]["incidents"][0]["incident"] == 123
+    assert res["qem"]["incidents"][0] == 123

@@ -177,9 +177,7 @@ class Aggregate(BaseConf):
         full_post["qem"]["build"] = full_post["openqa"]["BUILD"]
         full_post["qem"]["arch"] = full_post["openqa"]["ARCH"]
         full_post["qem"]["product"] = self.product
-        full_post["qem"]["incidents"] = [
-            {"incident": sub.id, "type": sub.type} for sub in full_post["qem"]["incidents"]
-        ]
+        full_post["qem"]["incidents"] = [sub.id for sub in full_post["qem"]["incidents"]]
 
         return full_post
 
