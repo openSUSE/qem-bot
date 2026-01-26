@@ -160,6 +160,7 @@ def get_parser() -> ArgumentParser:
         "--submission",
         required=False,
         type=str,
+        default=None,
         help="Submission ID (to process only a single submission)",
     )
     cmdfull.set_defaults(func=do_full_schedule)
