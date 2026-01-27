@@ -329,7 +329,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     else:
         try:
             multibuild_data = get_multibuild_data(obs_project)
-        except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
             log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
             return None
 
