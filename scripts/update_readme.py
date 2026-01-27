@@ -44,7 +44,7 @@ def update_readme() -> None:
     if not match:
         log.error("Could not find Usage section in Readme.md")
         sys.exit(1)
-    assert match
+    assert match  # noqa: S101
     current_content = match.group(2)
     if current_content == new_section_content:
         log.info("Readme.md is already up to date.")

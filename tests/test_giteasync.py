@@ -285,9 +285,9 @@ def test_computing_repo_url() -> None:
     expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
 
-    # Test with empty product_version should now raise AssertionError
+    # Test with empty product_version should now raise ValueError
     repos_no_ver = Repos("product", "1.2", "x86_64", "")
-    with pytest.raises(AssertionError, match="Product version must be provided for Foo"):
+    with pytest.raises(ValueError, match="Product version must be provided for Foo"):
         compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
 
 
