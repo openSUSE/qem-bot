@@ -102,7 +102,7 @@ class Aggregate(BaseConf):
     def _get_repo_url(self, sub: Submission, issue: str, issues_arch: str) -> str:
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
-        base_url = f"{DOWNLOAD_MAINTENANCE}{sub}/SUSE_Updates_{product}_{version}"
+        base_url = f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
     def _create_full_post(  # noqa: C901
@@ -164,7 +164,7 @@ class Aggregate(BaseConf):
             return None
 
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{QEM_DASHBOARD}incident/{sub.id}?type={sub.type}" for sub in full_post["qem"]["incidents"]
+            f"{QEM_DASHBOARD}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
             f"{SMELT_URL}/incident/{sub.id}"

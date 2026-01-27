@@ -360,3 +360,40 @@ def test_aggregate_duplicate_submissions() -> None:
     assert res is not None
     assert len(res["qem"]["incidents"]) == 1
     assert res["qem"]["incidents"][0] == 123
+
+
+def test_aggregate_url_format(mocker: MockerFixture) -> None:
+    config = {"FLAVOR": "AAA", "archs": ["x86_64"], "test_issues": {"ISSUE": "product:version"}}
+    agg = Aggregate(
+        product="SLES",
+        product_repo=None,
+        product_version=None,
+        settings={"VERSION": "15-SP3", "DISTRI": "sles"},
+        config=config,
+    )
+    sub = mocker.MagicMock(spec=Submission)
+    sub.id = 42
+    sub.type = "smelt"
+    sub.livepatch = False
+    sub.staging = False
+    sub.embargoed = False
+    sub.__str__.side_effect = lambda: f"{sub.type}:{sub.id}"
+
+    repo_url = agg._get_repo_url(sub, "ISSUE", "x86_64")  # noqa: SLF001
+
+    assert "smelt:" not in repo_url
+    assert "/42/" in repo_url
+
+    test_submissions = defaultdict(list)
+    test_submissions["ISSUE"] = [sub]
+    test_repos = defaultdict(list)
+    test_repos["REPOS"] = [repo_url]
+    post_data = _PostData(test_submissions, test_repos, "hash", "build")
+
+    res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
+
+    assert res is not None
+    dashboard_url = res["openqa"]["__DASHBOARD_INCIDENTS_URL"]
+    assert "?type=" not in dashboard_url
+    assert "/incident/42" in dashboard_url
+    assert "smelt" not in dashboard_url  # Should be clean of type if it's the default
