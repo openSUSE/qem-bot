@@ -307,10 +307,14 @@ class Submissions(BaseConf):
     ) -> list[dict[str, Any]]:
         cfg = SubConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
 
+        active = [
+            s for s in submissions if s.compute_revisions_for_product_repo(self.product_repo, self.product_version)
+        ]
+
         return [
             r
             for flavor, data in self.flavors.items()
             for arch in data["archs"]
-            for sub in submissions
+            for sub in active
             if (r := self._process_sub_context(SubContext(sub, arch, flavor, data), cfg))
         ]
