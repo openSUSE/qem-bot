@@ -152,7 +152,6 @@ ignore = [
     "D101",   # missing-class-docstring
     "D102",   # missing-method-docstring
     "D103",   # missing-function-docstring
-    "D104",   # missing-package-docstring
     "D105",   # missing-magic-method-docstring
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
