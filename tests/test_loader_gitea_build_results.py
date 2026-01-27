@@ -62,10 +62,17 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
     results = BuildResults()
     gitea.add_build_result(incident, res, results)
     assert "chan" in results.unpublished
+
     mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["all"])
+    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="Foo")
     results.unpublished.clear()
     gitea.add_build_result(incident, res, results)
     assert "chan" in results.unpublished
+
+    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
+    results.unpublished.clear()
+    gitea.add_build_result(incident, res, results)
+    assert "chan" not in results.unpublished
 
 
 def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
