@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+import logging
 import os
 import re
 import subprocess  # noqa: S404
 import sys
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+log = logging.getLogger(__name__)
 
 
 def get_help_output() -> str:
@@ -38,16 +42,16 @@ def update_readme() -> None:
     new_section_content = f"\n\n    >>> qem-bot.py --help\n{formatted_help}\n\n"
     match = pattern.search(content)
     if not match:
-        print("Could not find Usage section in Readme.md")  # noqa: T201
+        log.error("Could not find Usage section in Readme.md")
         sys.exit(1)
     assert match
     current_content = match.group(2)
     if current_content == new_section_content:
-        print("Readme.md is already up to date.")  # noqa: T201
+        log.info("Readme.md is already up to date.")
         return
     new_content = pattern.sub(lambda m: m.group(1) + new_section_content + m.group(3), content)
     readme_path.write_text(new_content, encoding="utf-8")
-    print("Updated Readme.md with latest help output.")  # noqa: T201
+    log.info("Updated Readme.md with latest help output.")
 
 
 if __name__ == "__main__":
