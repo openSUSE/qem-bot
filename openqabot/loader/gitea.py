@@ -120,8 +120,8 @@ def compute_repo_url(
         return f"{start}/{path}"
 
     msg = f"Product version must be provided for {product_name}"
-    assert len(repo) > 2, msg  # noqa: PLR2004
-    assert repo[2], msg
+    if len(repo) <= 2 or not repo[2]:  # noqa: PLR2004
+        raise ValueError(msg)
     product_version = repo[2]
     return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
 
