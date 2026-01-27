@@ -505,6 +505,8 @@ def test_process_sub_context_norepfound(mocker: MockerFixture) -> None:
         ({"staging": False, "emu": False}, {"override_priority": 50}, None),
         ({}, {"override_priority": 100}, 100),
         ({"staging": False}, {"flavor": "Minimal"}, 55),
+        ({"staging": False, "priority": 100}, {}, 55),
+        ({"staging": False, "emu": True, "priority": 100}, {}, 25),
     ],
 )
 def test_handle_submission_priority_logic(

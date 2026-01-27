@@ -11,9 +11,11 @@ from typing import Any, NamedTuple
 import requests
 
 from openqabot.config import (
+    BASE_PRIO,
     DEFAULT_SUBMISSION_TYPE,
     DEPRIORITIZE_LIMIT,
     DOWNLOAD_MAINTENANCE,
+    PRIORITY_SCALE,
     QEM_DASHBOARD,
     SMELT_URL,
 )
@@ -175,6 +177,12 @@ class Aggregate(BaseConf):
 
         if not full_post["qem"]["incidents"]:
             return None
+
+        if max_prio := max(
+            (s.priority for s in chain.from_iterable(data.test_submissions.values()) if s.priority is not None),
+            default=0,
+        ):
+            full_post["openqa"]["_PRIORITY"] = BASE_PRIO - (max_prio // PRIORITY_SCALE)
 
         self._finalize_post(full_post, arch)
         return full_post
