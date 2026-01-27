@@ -20,6 +20,7 @@ class SyncRes:
     operation = "null"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the SyncRes class."""
         self.dry: bool = args.dry
         self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)

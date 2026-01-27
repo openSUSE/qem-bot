@@ -41,6 +41,7 @@ class PostData(NamedTuple):
 
 class Aggregate(BaseConf):
     def __init__(self, config: JobConfig) -> None:
+        """Initialize the Aggregate class."""
         super().__init__(config)
         self.flavor = config.config["FLAVOR"]
         self.archs = config.config["archs"]

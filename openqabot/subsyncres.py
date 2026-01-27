@@ -15,6 +15,7 @@ class SubResultsSync(SyncRes):
     operation = "submission"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the SubResultsSync class."""
         super().__init__(args)
         self.active = get_active_submissions(self.token)
 

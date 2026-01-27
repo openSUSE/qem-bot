@@ -40,6 +40,7 @@ class Package(NamedTuple):
 
 class RepoDiff:
     def __init__(self, args: Namespace | None) -> None:
+        """Initialize the RepoDiff class."""
         self.args = args
 
     def make_repodata_url(self, project: str) -> str:  # noqa: PLR6301

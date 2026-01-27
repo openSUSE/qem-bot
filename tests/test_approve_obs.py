@@ -30,11 +30,13 @@ def with_fake_qem(mode: str) -> Any:
 
 class ObsHTTPError(HTTPError):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the ObsHTTPError class."""
         super().__init__("Fake OBS", *args, **kwargs)
 
 
 class ArbitraryObsError(Exception):
     def __init__(self) -> None:
+        """Initialize the ArbitraryObsError class."""
         super().__init__("Fake OBS exception")
 
 

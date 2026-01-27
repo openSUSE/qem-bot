@@ -73,6 +73,7 @@ class ApprovalStatus(NamedTuple):
 
 class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the IncrementApprover class."""
         self.args = args
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)

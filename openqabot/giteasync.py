@@ -13,6 +13,7 @@ log = getLogger("bot.giteasync")
 
 class GiteaSync:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the GiteaSync class."""
         self.dry: bool = args.dry
         self.fake_data: bool = args.fake_data
         self.dashboard_token: dict[str, str] = {"Authorization": "Token " + args.token}
