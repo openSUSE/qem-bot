@@ -9,10 +9,12 @@ from typing import Any, NamedTuple
 import requests
 
 from openqabot.config import (
+    BASE_PRIO,
     DOWNLOAD_BASE,
     DOWNLOAD_MAINTENANCE,
     GITEA,
     OBSOLETE_PARAMS,
+    PRIORITY_SCALE,
     QEM_DASHBOARD,
     SMELT_URL,
 )
@@ -39,8 +41,6 @@ class SubConfig(NamedTuple):
 
 
 log = getLogger("bot.types.submissions")
-
-BASE_PRIO = 50
 
 
 class Submissions(BaseConf):
@@ -197,6 +197,8 @@ class Submissions(BaseConf):
             delta_prio = 5 if flavor.endswith("Minimal") else 10
             if sub.emu:
                 delta_prio = -20
+            if sub.priority:
+                delta_prio -= sub.priority // PRIORITY_SCALE
         return BASE_PRIO + delta_prio if delta_prio else None
 
     def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:  # noqa: PLR6301

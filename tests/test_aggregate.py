@@ -48,6 +48,7 @@ def submission_mock(mocker: MockerFixture) -> Any:
         sub.channels = [Repos(product=product, version=version, arch=arch)]
         sub.embargoed = embargoed
         sub.type = DEFAULT_SUBMISSION_TYPE
+        sub.priority = None
         sub.__str__.return_value = str(sub.id)
         return sub
 
@@ -280,6 +281,34 @@ def test_aggregate_call_pc_tools_success(aggregate_factory: Any, submission_mock
     assert res[0]["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "Base"
 
 
+def test_aggregate_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
+    acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
+    mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
+    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
+
+    sub = submission_mock(product="P", version="V", arch="A")
+    sub.priority = 100
+    res = acc([sub], {}, ci_url=None)
+    assert res[0]["openqa"]["_PRIORITY"] == 45
+
+
+def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
+    acc = aggregate_factory(
+        "product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I1": "P:V", "I2": "P:V"}}
+    )
+    mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
+    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
+
+    sub1 = submission_mock(product="P", version="V", arch="A")
+    sub1.id = 1
+    sub1.priority = 100
+    sub2 = submission_mock(product="P", version="V", arch="A")
+    sub2.id = 2
+    sub2.priority = 200
+    res = acc([sub1, sub2], {}, ci_url=None)
+    assert res[0]["openqa"]["_PRIORITY"] == 40
+
+
 def test_process_arch_same_build_exists(
     aggregate_factory: Any, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -331,6 +360,7 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     sub.livepatch = False
     sub.staging = False
     sub.embargoed = False
+    sub.priority = None
     sub.__str__.side_effect = lambda: f"{sub.type}:{sub.id}"
 
     repo_url = agg._get_repo_url(sub, "ISSUE", "x86_64")  # noqa: SLF001
