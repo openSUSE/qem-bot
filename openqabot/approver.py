@@ -79,6 +79,7 @@ class Approver:
         single_submission: int | None = None,
         submission_type: str | None = None,
     ) -> None:
+        """Initialize the Approver class."""
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_submission is None:

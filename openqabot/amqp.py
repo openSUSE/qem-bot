@@ -30,6 +30,7 @@ build_agg_regex = re.compile(r"\d{8}-\d+")
 
 class AMQP(SyncRes):
     def __init__(self, args: Namespace) -> None:
+        """Initialize the AMQP class."""
         super().__init__(args)
         self.args = args
         self.dry: bool = args.dry

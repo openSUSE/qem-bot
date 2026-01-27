@@ -30,6 +30,7 @@ log = logging.getLogger("bot.openqa")
 
 class OpenQAInterface:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the OpenQAInterface class."""
         self.url: ParseResult = args.openqa_instance
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = number_of_retries()

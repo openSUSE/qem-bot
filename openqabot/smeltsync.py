@@ -17,6 +17,7 @@ log = getLogger("bot.smeltsync")
 
 class SMELTSync:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the SMELTSync class."""
         self.dry: bool = args.dry
         self.token: dict[str, str] = {"Authorization": "Token " + args.token}
         self.submissions = get_submissions(get_active_submission_ids())

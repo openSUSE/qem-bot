@@ -18,6 +18,7 @@ log = getLogger("bot.openqabot")
 
 class OpenQABot:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the OpenQABot class."""
         log.info("Starting bot schedule")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime

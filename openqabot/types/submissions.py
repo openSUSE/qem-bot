@@ -45,6 +45,7 @@ log = getLogger("bot.types.submissions")
 
 class Submissions(BaseConf):
     def __init__(self, config: JobConfig, extrasettings: set[str]) -> None:
+        """Initialize the Submissions class."""
         super().__init__(config)
         self.flavors = self.normalize_repos(config.config["FLAVOR"])
         self.singlearch = extrasettings

@@ -13,6 +13,7 @@ class MockSubmission(Submission):
     """A flexible mock implementation of Submission class for testing."""
 
     def __init__(self, **kwargs: Any) -> None:
+        """Initialize the MockSubmission class."""
         self.id = kwargs.get("id", 0)
         self.staging = kwargs.get("staging", False)
         self.livepatch = kwargs.get("livepatch", False)

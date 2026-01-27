@@ -20,6 +20,7 @@ class JobConfig:
 
 class BaseConf(ABC):
     def __init__(self, config: JobConfig) -> None:
+        """Initialize the BaseConf class."""
         self.product = config.product
         self.product_repo = config.product_repo
         self.product_version = config.product_version

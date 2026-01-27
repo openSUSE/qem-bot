@@ -20,6 +20,7 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 class Submission:
     def __init__(self, submission: dict[str, Any]) -> None:
+        """Initialize the Submission class."""
         self.rr: int | None = submission["rr_number"]
         self.project: str = submission["project"]
         self.id: int = submission["number"]

@@ -23,6 +23,7 @@ log = getLogger("bot.commenter")
 
 class Commenter:
     def __init__(self, args: Namespace) -> None:
+        """Initialize the Commenter class."""
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)

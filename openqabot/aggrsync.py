@@ -16,6 +16,7 @@ class AggregateResultsSync(SyncRes):
     operation = "aggregate"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the AggregateResultsSync class."""
         super().__init__(args)
         self.product = read_products(args.configs)
 

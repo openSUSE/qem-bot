@@ -41,6 +41,7 @@ class LoaderQemError(Exception):
 
 class NoSubmissionResultsError(NoResultsError):
     def __init__(self, sub: int) -> None:
+        """Initialize the NoSubmissionResultsError class."""
         super().__init__(
             # ruff: noqa: E501 line-too-long
             f"Submission {sub} does not have any job_settings. Consider adding package specific settings to the metadata repository."
@@ -49,6 +50,7 @@ class NoSubmissionResultsError(NoResultsError):
 
 class NoAggregateResultsError(NoResultsError):
     def __init__(self, sub: int) -> None:
+        """Initialize the NoAggregateResultsError class."""
         super().__init__(f"Submission {sub} does not have any aggregate settings")
 
 
