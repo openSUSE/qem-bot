@@ -80,8 +80,9 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in caplog.messages
     assert len(responses.calls) == 1
     assert responses.calls
-    assert responses.calls[0].request.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
-    assert cast("Any", responses.calls[0].response).json() == {"bar": "foo"}
+    calls = cast("Any", responses.calls)
+    assert calls[0].request.headers["User-Agent"] == "python-OpenQA_Client/qem-bot/1.0.0"
+    assert calls[0].response.json() == {"bar": "foo"}
 
 
 @responses.activate
