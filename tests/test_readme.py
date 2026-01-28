@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 import os
 import subprocess  # noqa: S404
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,8 @@ def test_readme_usage_up_to_date() -> None:
     """Ensure the Usage section in Readme.md matches current --help output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
-    result = subprocess.run(
-        ["python3", "qem-bot.py", "--help"],  # noqa: S607
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
         text=True,
         check=True,

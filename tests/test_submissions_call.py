@@ -7,8 +7,9 @@ from collections.abc import Generator
 import pytest
 from pytest_mock import MockerFixture
 
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
-from openqabot.types.types import Repos
+from openqabot.types.types import ArchVer, Repos
 
 from .fixtures.submissions import MockSubmission
 
@@ -18,11 +19,13 @@ def test_submissions_call() -> None:
     test_config = {}
     test_config["FLAVOR"] = {}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
@@ -33,11 +36,13 @@ def test_submissions_call_with_flavors() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": []}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
@@ -48,11 +53,13 @@ def test_submissions_call_with_submissions() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {}}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
@@ -63,11 +70,13 @@ def test_submissions_call_with_issues() -> None:
     test_config = {}
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
@@ -91,11 +100,13 @@ def test_submissions_call_with_channels() -> None:
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}}}
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -113,11 +124,13 @@ def test_submissions_call_with_packages() -> None:
     test_config["FLAVOR"] = {"AAA": {"archs": [""], "issues": {"1234": ":"}, "packages": ["Donalduck"]}}
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={"VERSION": "", "DISTRI": None},
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -157,16 +170,18 @@ def test_submissions_call_with_params_expand() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "",
-            "DISTRI": None,
-            "SOMETHING": "original",
-            "SOMETHING_ELSE": "original_else",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "",
+                "DISTRI": None,
+                "SOMETHING": "original",
+                "SOMETHING_ELSE": "original_else",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -217,15 +232,17 @@ def test_submissions_call_with_params_expand_distri_version() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "1.2.3",
-            "DISTRI": "IM_A_DISTRI",
-            "SOMETHING": "original",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "1.2.3",
+                "DISTRI": "IM_A_DISTRI",
+                "SOMETHING": "original",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -270,16 +287,18 @@ def test_submissions_call_with_params_expand_isolated() -> None:
     }
 
     sub = Submissions(
-        product="",
-        product_repo=None,
-        product_version=None,
-        settings={
-            "VERSION": "",
-            "DISTRI": None,
-            "SOMETHING": "original",
-            "SOMETHING_ELSE": "original_else",
-        },
-        config=test_config,
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={
+                "VERSION": "",
+                "DISTRI": None,
+                "SOMETHING": "original",
+                "SOMETHING_ELSE": "original_else",
+            },
+            config=test_config,
+        ),
         extrasettings=set(),
     )
     res = sub(
@@ -292,3 +311,43 @@ def test_submissions_call_with_params_expand_isolated() -> None:
     )
     assert len(res) == 2
     assert res[1]["openqa"]["SOMETHING"] == "original"
+
+
+class LimitArchsSubmission(MockSubmission):
+    """A mock submission that produces different revisions depending on limit_archs."""
+
+    def compute_revisions_for_product_repo(
+        self,
+        product_repo: list[str] | str | None,  # noqa: ARG002
+        product_version: str | None,  # noqa: ARG002
+        limit_archs: set[str] | None = None,
+    ) -> bool:
+        self.revisions = {ArchVer("x86_64", "15-SP3"): 9999} if limit_archs else {ArchVer("x86_64", "15-SP3"): 12345}
+        return True
+
+
+@pytest.mark.usefixtures("request_mock")
+def test_submissions_call_reproduction_of_repeated_schedule(mocker: MockerFixture) -> None:
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    sub_obj = Submissions(
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
+        extrasettings=set(),
+    )
+    sub = LimitArchsSubmission(channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=None)
+    mock_jobs = [
+        {
+            "flavor": "AAA",
+            "arch": "x86_64",
+            "version": "15-SP3",
+            "settings": {"REPOHASH": 12345},  # Global hash
+        }
+    ]
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = mock_jobs
+    res = sub_obj(submissions=[sub], token={}, ci_url="", ignore_onetime=False)
+    assert res == []

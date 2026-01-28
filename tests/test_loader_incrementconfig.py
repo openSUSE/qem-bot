@@ -42,7 +42,7 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert configs[1].distri == "bar"
     assert configs[1].version == "42"
     assert configs[1].flavor == "Test-Increments"
-    assert configs[1].project_base == ""
+    assert configs[1].project_base == ""  # noqa: PLC1901
     assert configs[1].build_project() == "ToTest"
     assert configs[1].diff_project() == "none"
 

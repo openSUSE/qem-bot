@@ -14,7 +14,7 @@ from openqa_client.exceptions import RequestError
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
-from openqabot.openqa import openQAInterface as oQAI
+from openqabot.openqa import OpenQAInterface as oQAI
 from responses import matchers
 
 

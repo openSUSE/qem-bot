@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 import pytest
-from jsonschema import ValidationError
+from jsonschema import ValidationError, validate
 from pytest_mock import MockerFixture
 
 from openqabot.loader.smelt import (
@@ -121,8 +121,6 @@ def test_get_submission_from_smelt_exception(mocker: MockerFixture, caplog: pyte
 
 
 def test_active_inc_schema_validation() -> None:
-    from jsonschema import validate
-
     valid_data = {
         "data": {
             "incidents": {
@@ -140,8 +138,6 @@ def test_active_inc_schema_validation() -> None:
 
 
 def test_incident_schema_validation() -> None:
-    from jsonschema import validate
-
     valid_data = {
         "data": {
             "incidents": {

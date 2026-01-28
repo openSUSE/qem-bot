@@ -7,6 +7,7 @@ import string
 from argparse import Namespace
 from datetime import datetime, timedelta
 from functools import lru_cache
+from http import HTTPStatus
 from logging import getLogger
 from re import Pattern
 from urllib.error import HTTPError
@@ -26,7 +27,7 @@ from openqabot.config import (
 )
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
-from openqabot.openqa import openQAInterface
+from openqabot.openqa import OpenQAInterface
 
 from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
@@ -45,15 +46,15 @@ ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}
 MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 
-def _ms2str(sub: SubReq) -> str:
+def ms2str(sub: SubReq) -> str:
     return f"{OBS_MAINT_PRJ}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
-def _handle_http_error(e: HTTPError, sub: SubReq) -> bool:
-    if e.code == 403:
+def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
+    if e.code == HTTPStatus.FORBIDDEN:
         log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, sub.req)
         return True
-    if e.code == 404:
+    if e.code == HTTPStatus.NOT_FOUND:
         log.info(
             "OBS API error for request %s (removed or server issue): %s - %s",
             sub.req,
@@ -78,6 +79,7 @@ class Approver:
         single_submission: int | None = None,
         submission_type: str | None = None,
     ) -> None:
+        """Initialize the Approver class."""
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_submission is None:
@@ -89,7 +91,7 @@ class Approver:
             self.all_submissions = False
             self.submission_type = submission_type
         self.token = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args)
+        self.client = OpenQAInterface(args)
 
     def __call__(self) -> int:
         log.info("Starting approving submissions in IBS or Gitea…")
@@ -100,11 +102,11 @@ class Approver:
         )
 
         overall_result = True
-        submissions_to_approve = [sub for sub in subreqs if self._approvable(sub)]
+        submissions_to_approve = [sub for sub in subreqs if self.approvable(sub)]
 
         log.info("Submissions to approve:")
         for sub in submissions_to_approve:
-            log.info("* %s", _ms2str(sub))
+            log.info("* %s", ms2str(sub))
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=OBS_URL)
@@ -115,31 +117,31 @@ class Approver:
 
         return 0 if overall_result else 1
 
-    def _approvable(self, sub: SubReq) -> bool:
+    def approvable(self, sub: SubReq) -> bool:
         try:
             s_jobs = get_submission_settings(
                 sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
             )
         except NoResultsError as e:
-            log.info("Approval check for %s skipped: %s", _ms2str(sub), e)
+            log.info("Approval check for %s skipped: %s", ms2str(sub), e)
             return False
         try:
             a_jobs = get_aggregate_settings(sub.sub, self.token, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
-                log.info("No aggregate test results found for %s", _ms2str(sub))
+                log.info("No aggregate test results found for %s", ms2str(sub))
                 return False
             log.info(e)
             a_jobs = []
 
         if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            log.info("%s has at least one failed job in submission tests", _ms2str(sub))
+            log.info("%s has at least one failed job in submission tests", ms2str(sub))
             return False
 
         if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
             a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
-            log.info("%s has at least one failed job in aggregate tests", _ms2str(sub))
+            log.info("%s has at least one failed job in aggregate tests", ms2str(sub))
             return False
 
         # everything is green --> add submission to approve list
@@ -182,7 +184,7 @@ class Approver:
             return False
         return True
 
-    def _was_older_job_ok(
+    def was_older_job_ok(
         self,
         failed_job_id: int,
         sub: int,
@@ -256,14 +258,14 @@ class Approver:
 
         regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(sub=sub))
         for job in older_jobs:
-            if (was_ok := self._was_older_job_ok(failed_job_id, sub, job, oldest_build_usable, regex)) is not None:
+            if (was_ok := self.was_older_job_ok(failed_job_id, sub, job, oldest_build_usable, regex)) is not None:
                 return was_ok
         log.info(
             "Cannot ignore aggregate failure %s for aggregate %s: No suitable older jobs found.", failed_job_id, sub
         )
         return False
 
-    def is_job_passing(self, job_result: dict) -> bool:
+    def is_job_passing(self, job_result: dict) -> bool:  # noqa: PLR6301
         return job_result["status"] == "passed"
 
     def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
@@ -305,16 +307,19 @@ class Approver:
         return False
 
     @lru_cache(maxsize=128)
-    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool:
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool | None:
         params = {}
         if submission_type:
             params["type"] = submission_type
         job_results = get_json(api + str(job_aggr.id), headers=self.token, params=params)
         if not job_results:
-            msg = (
-                f"Job setting {job_aggr.id} not found for submission {submission_type or DEFAULT_SUBMISSION_TYPE}:{sub}"
+            log.info(
+                "Job setting %s not found for submission %s:%s",
+                job_aggr.id,
+                submission_type or DEFAULT_SUBMISSION_TYPE,
+                sub,
             )
-            raise NoResultsError(msg)
+            return None
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
         return all(self.is_job_acceptable(sub, api, r) for r in job_results)
 
@@ -326,24 +331,17 @@ class Approver:
 
         res = False
         for job_aggr in jobs:
-            try:
-                if not self.get_jobs(job_aggr, api, sub, submission_type=submission_type):
-                    return False
+            success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
+            if success is False:
+                return False
+            if success is True:
                 res = True
-            except NoResultsError as e:  # noqa: PERF203
-                log.info(
-                    "Approval check for submission %s:%s failed: %s",
-                    submission_type or DEFAULT_SUBMISSION_TYPE,
-                    sub,
-                    e,
-                )
-                continue
 
         return res
 
     def approve(self, sub: SubReq) -> bool:
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
-        log.info("Approving %s", _ms2str(sub))
+        log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod
@@ -357,7 +355,7 @@ class Approver:
                 message=msg,
             )
         except HTTPError as e:
-            return _handle_http_error(e, sub)
+            return handle_http_error(e, sub)
         except Exception:
             log.exception("OBS API error: Failed to approve request %s", sub.req)
             return False

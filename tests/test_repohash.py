@@ -9,7 +9,8 @@ from unittest.mock import ANY
 import pytest
 import requests
 from pytest_mock import MockerFixture
-from requests import ConnectionError, HTTPError  # noqa: A004
+from requests import ConnectionError as RequestsConnectionError
+from requests import HTTPError as RequestsHTTPError
 
 import openqabot.loader.repohash as rp
 import responses
@@ -46,7 +47,9 @@ repos = [("SLES", "15SP3"), ("SLED", "15SP3")]
 arch = "x86_64"
 
 
-def add_sles_sled_response(sled_body: str | ConnectionError | HTTPError | BufferError) -> None:
+def add_sles_sled_response(
+    sled_body: str | RequestsConnectionError | RequestsHTTPError | BufferError,
+) -> None:
     responses.add(responses.GET, url=SLES_URL, body=SLES)
     responses.add(responses.GET, url=SLES_URL.replace("SLES", "SLED"), body=sled_body)
 

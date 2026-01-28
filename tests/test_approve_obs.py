@@ -11,7 +11,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.approver import Approver
+from openqabot.approver import QEM_DASHBOARD, Approver
+from responses import matchers
 
 from .helpers import (
     args,
@@ -29,11 +30,13 @@ def with_fake_qem(mode: str) -> Any:
 
 class ObsHTTPError(HTTPError):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the ObsHTTPError class."""
         super().__init__("Fake OBS", *args, **kwargs)
 
 
 class ArbitraryObsError(Exception):
     def __init__(self) -> None:
+        """Initialize the ArbitraryObsError class."""
         super().__init__("Fake OBS exception")
 
 
@@ -44,8 +47,6 @@ def f_osconf(mocker: MockerFixture) -> Any:
 
 @pytest.fixture
 def fake_responses_for_creating_pr_review() -> None:
-    from openqabot.approver import QEM_DASHBOARD
-    from responses import matchers
 
     responses.add(
         responses.POST,
