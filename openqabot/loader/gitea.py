@@ -56,11 +56,11 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:
+def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:  # noqa: ANN401
     return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
-def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:
+def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:  # noqa: ANN401
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
@@ -71,7 +71,7 @@ def read_utf8(name: str) -> str:
     return Path(f"responses/{name}").read_text(encoding="utf8")
 
 
-def read_json(name: str) -> Any:
+def read_json(name: str) -> Any:  # noqa: ANN401
     return json.loads(Path(f"responses/{name}.json").read_text(encoding="utf8"))
 
 
@@ -116,11 +116,11 @@ def compute_repo_url(
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
-    if product_name == "":
+    if not product_name:
         return f"{start}/{path}"
 
     msg = f"Product version must be provided for {product_name}"
-    assert len(repo) > 2, msg
+    assert len(repo) > 2, msg  # noqa: PLR2004
     assert repo[2], msg
     product_version = repo[2]
     return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
@@ -152,7 +152,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         log.debug("PR git:%i: %s", number, pr)
         return [pr]
 
-    def iter_pr_pages() -> Any:
+    def iter_pr_pages() -> Any:  # noqa: ANN401
         page = 1
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
@@ -172,7 +172,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         return []
 
 
-def review_pr(
+def review_pr(  # noqa: PLR0913
     token: dict[str, str],
     repo_name: str,
     pr_number: int,
@@ -211,10 +211,10 @@ def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
-    PENDING_STATES = {"PENDING", "REQUEST_REVIEW"}
+    pending_states = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
     qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
-    has_other_pending = any(r.get("state", "") in PENDING_STATES for r in open_reviews if not is_review_requested_by(r))
+    has_other_pending = any(r.get("state", "") in pending_states for r in open_reviews if not is_review_requested_by(r))
     counts = Counter(qam_states)
     qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
     qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
@@ -255,7 +255,7 @@ def add_channel_for_build_result(
     project: str,
     arch: str,
     product_name: str,
-    res: Any,
+    res: Any,  # noqa: ANN401
     projects: set[str],
 ) -> str:
     channel = f"{project}:{arch}"
@@ -289,7 +289,7 @@ def add_channel_for_build_result(
 
 def add_build_result(
     submission: dict[str, Any],
-    res: Any,
+    res: Any,  # noqa: ANN401
     results: BuildResults,
 ) -> None:
     project = res.get("project")
@@ -320,7 +320,7 @@ def get_multibuild_data(obs_project: str) -> str:
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
-    if product_name == "":
+    if not product_name:
         return None
     product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     prefix_len = len(product_prefix)
@@ -347,7 +347,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
+def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
@@ -490,7 +490,7 @@ def make_submission_from_gitea_pr(
             "type": "git",
         }
         if dry:
-            if number == 124:
+            if number == 124:  # noqa: PLR2004
                 reviews = read_json("reviews-124")
                 comments = read_json("comments-124")
                 files = read_json("files-124")

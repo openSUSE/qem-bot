@@ -14,7 +14,7 @@ from openqabot.config import DEFAULT_SUBMISSION_TYPE, OBS_URL
 from openqabot.errors import NoResultsError
 
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
-from .openqa import openQAInterface
+from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
 from .types.submission import Submission
 
@@ -25,7 +25,7 @@ class Commenter:
     def __init__(self, args: Namespace) -> None:
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args)
+        self.client = OpenQAInterface(args)
         self.submissions = get_submissions(self.token)
         osc.conf.get_config(override_apiurl=OBS_URL)
         self.commentapi = CommentAPI(OBS_URL)

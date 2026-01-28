@@ -156,28 +156,11 @@ ignore = [
     "D105",   # missing-magic-method-docstring
     "D107",   # missing-init-docstring
     "D203",   # incorrect-blank-line-before-class
-    "N801",   # invalid-class-name
-    "N802",   # invalid-function-name
-    "N803",   # invalid-argument-name
-    "N806",   # invalid-variable-name
-    "UP032",
-    "PLC0415", # import-outside-toplevel
     "PLC1802", # use-implicit-booleaness-not-len
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0914", # too-many-locals
-    "PLR0915", # too-many-statements
-    "PLR2004", # magic-value-comparison
     "D213", # multi-line-summary-second-line
-    "PLW2901", # redefined-loop-name
-    "PLW0127", # self-assigning-variable
-    "PLW0128", # redeclared-assigned-name
-    "PLW0129", # assert-on-string-literal
     "B019",
-    "ANN401", # any-type
     "S101",
-    "PLR6301", # no-self-use
-    "PLC1901", # compare-to-empty-string
+    "PLR0904", # too-many-public-methods
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
@@ -186,6 +169,9 @@ ignore = [
     "TC003", # typing-only-standard-library-import
     "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004", "ANN401", "PLR0913"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

@@ -84,10 +84,10 @@ class AMQP(SyncRes):
             log.info("Aggregate %s: openQA build finished", build_nr)
         return None
 
-    def _fetch_openqa_results(self, sub: Data, message: dict[str, Any]) -> None:
+    def fetch_openqa_results(self, sub: Data, message: dict[str, Any]) -> None:
         AMQP.operation = "submission"
         for job in self.client.get_jobs(sub):
-            if self.filter_jobs(job) and (r := self._normalize_data(sub, job)) and r["job_id"] == message["id"]:
+            if self.filter_jobs(job) and (r := self.normalize_data_safe(sub, job)) and r["job_id"] == message["id"]:
                 self.post_result(r)
 
     def handle_submission(self, sub_nr: int, sub_type: str, message: dict[str, Any]) -> None:
@@ -101,7 +101,7 @@ class AMQP(SyncRes):
             # Filter out not matching submission Data
             if not compare_submission_data(sub, message):
                 continue
-            self._fetch_openqa_results(sub, message)
+            self.fetch_openqa_results(sub, message)
 
         # Try to approve submission
         approve = Approver(self.args, single_submission=sub_nr, submission_type=sub_type)

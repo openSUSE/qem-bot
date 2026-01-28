@@ -10,6 +10,7 @@ from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
+from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import osc.core
@@ -20,7 +21,6 @@ import responses
 from openqabot.approver import QEM_DASHBOARD
 from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import IncrementApprover
-from openqabot.loader.gitea import read_json  # noqa: F401
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.utils import merge_dicts
@@ -238,10 +238,8 @@ def run_approver(
     config: IncrementConfig | None = None,
     request_id: int | None = None,
 ) -> tuple[int, list]:
-    from unittest.mock import MagicMock
-
     mock_post_job = MagicMock()
-    mocker.patch("openqabot.openqa.openQAInterface.post_job", new=mock_post_job)
+    mocker.patch("openqabot.openqa.OpenQAInterface.post_job", new=mock_post_job)
     increment_approver = prepare_approver(
         caplog,
         schedule=schedule,
