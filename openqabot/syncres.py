@@ -9,7 +9,7 @@ from typing import Any
 
 from .config import ALLOW_DEVELOPMENT_GROUPS, DEFAULT_SUBMISSION_TYPE
 from .loader.qem import post_job
-from .openqa import openQAInterface
+from .openqa import OpenQAInterface
 from .types.types import Data
 from .utils import normalize_results
 
@@ -20,9 +20,10 @@ class SyncRes:
     operation = "null"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the SyncRes class."""
         self.dry: bool = args.dry
         self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
-        self.client = openQAInterface(args)
+        self.client = OpenQAInterface(args)
 
     @classmethod
     def normalize_data(cls, data: Data, job: dict[str, Any]) -> dict[str, Any]:
@@ -44,13 +45,13 @@ class SyncRes:
 
         return ret
 
-    def _normalize_data(self, key: Data, job: dict[str, Any]) -> dict[str, Any] | None:
+    def normalize_data_safe(self, key: Data, job: dict[str, Any]) -> dict[str, Any] | None:
         try:
             return self.normalize_data(key, job)
         except KeyError:
             return None
 
-    def _is_in_devel_group(self, data: dict[str, Any]) -> bool:
+    def is_in_devel_group(self, data: dict[str, Any]) -> bool:
         return not ALLOW_DEVELOPMENT_GROUPS and (
             "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
         )
@@ -64,7 +65,7 @@ class SyncRes:
             log.debug("Skipping job %s: Already has a clone %s", data["id"], data["clone_id"])
             return False
 
-        if self._is_in_devel_group(data):
+        if self.is_in_devel_group(data):
             log.debug("Skipping job %s: Belongs to development group '%s'", data["id"], data["group"])
             return False
 

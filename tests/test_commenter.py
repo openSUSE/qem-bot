@@ -81,7 +81,7 @@ def mock_submission_smelt_with_revisions() -> Mock:
 
 @pytest.fixture
 def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
-    mock_client = mocker.patch("openqabot.commenter.openQAInterface")
+    mock_client = mocker.patch("openqabot.commenter.OpenQAInterface")
     mock_get_subs = mocker.patch("openqabot.commenter.get_submissions")
     mocker.patch("openqabot.commenter.osc.conf.get_config")
     mock_comment_api = mocker.patch("openqabot.commenter.CommentAPI")
