@@ -29,7 +29,7 @@ def mock_openqa_passed(mocker: MockerFixture) -> Any:
         def post_job(self, *args: Any, **kwargs: Any) -> None:
             pass
 
-    return mocker.patch("openqabot.openqabot.openQAInterface", FakeClient)
+    return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
 
 
 @pytest.fixture
@@ -38,10 +38,10 @@ def mock_openqa_exception(mocker: MockerFixture) -> Any:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:
+        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:  # noqa: PLR6301
             raise PostOpenQAError
 
-    return mocker.patch("openqabot.openqabot.openQAInterface", FakeClient)
+    return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
 
 
 @pytest.fixture

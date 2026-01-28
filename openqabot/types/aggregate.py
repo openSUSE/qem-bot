@@ -23,14 +23,14 @@ from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utc import UTC
 
-from .baseconf import BaseConf
+from .baseconf import BaseConf, JobConfig
 from .submission import Submission
 from .types import ProdVer, Repos
 
 log = getLogger("bot.types.aggregate")
 
 
-class _PostData(NamedTuple):
+class PostData(NamedTuple):
     test_submissions: defaultdict[str, list[Submission]]
     test_repos: defaultdict[str, list[str]]
     repohash: str
@@ -38,19 +38,12 @@ class _PostData(NamedTuple):
 
 
 class Aggregate(BaseConf):
-    def __init__(
-        self,
-        product: str,
-        product_repo: list[str] | str | None,
-        product_version: str | None,
-        settings: dict[str, Any],
-        config: dict[str, Any],
-    ) -> None:
-        super().__init__(product, product_repo, product_version, settings, config)
-        self.flavor = config["FLAVOR"]
-        self.archs = config["archs"]
-        self.onetime = config.get("onetime", False)
-        self.test_issues = self.normalize_repos(config)
+    def __init__(self, config: JobConfig) -> None:
+        super().__init__(config)
+        self.flavor = config.config["FLAVOR"]
+        self.archs = config.config["archs"]
+        self.onetime = config.config.get("onetime", False)
+        self.test_issues = self.normalize_repos(config.config)
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
@@ -72,7 +65,7 @@ class Aggregate(BaseConf):
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
-    def _filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
+    def filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
         def is_valid(submission: Submission) -> bool:
             if any((submission.livepatch, submission.staging)):
                 return False
@@ -83,7 +76,7 @@ class Aggregate(BaseConf):
 
         return [s for s in submissions if is_valid(s)]
 
-    def _get_test_submissions_and_repos(
+    def get_test_submissions_and_repos(
         self, valid_submissions: list[Submission], issues_arch: str
     ) -> tuple[defaultdict[str, list[Submission]], defaultdict[str, list[str]]]:
         test_submissions = defaultdict(list)
@@ -105,26 +98,7 @@ class Aggregate(BaseConf):
         base_url = f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
-    def _create_full_post(  # noqa: C901
-        self,
-        arch: str,
-        data: _PostData,
-        ci_url: str | None,
-    ) -> dict[str, Any] | None:
-        full_post: dict[str, Any] = {}
-        full_post["openqa"] = {}
-        full_post["qem"] = {}
-        full_post["qem"]["incidents"] = []
-        full_post["qem"]["settings"] = {}
-        full_post["api"] = "api/update_settings"
-        if ci_url:
-            full_post["openqa"]["__CI_JOB_URL"] = ci_url
-
-        full_post["openqa"]["REPOHASH"] = data.repohash
-        full_post["openqa"]["BUILD"] = data.build
-
-        settings = self.settings.copy()
-
+    def _apply_public_cloud_settings(self, settings: dict[str, Any]) -> dict[str, Any] | None:
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)
             if not settings or not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
@@ -136,15 +110,9 @@ class Aggregate(BaseConf):
             if not settings or not settings.get("PUBLIC_CLOUD_IMAGE_ID", False):
                 log.info("No PINT image found for %s", self)
                 return None
+        return settings
 
-        full_post["openqa"].update(settings)
-        full_post["openqa"]["FLAVOR"] = self.flavor
-        full_post["openqa"]["ARCH"] = arch
-        full_post["openqa"]["_DEPRIORITIZEBUILD"] = 1
-
-        if DEPRIORITIZE_LIMIT is not None:
-            full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
-
+    def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # noqa: PLR6301
         for template, issues in data.test_submissions.items():
             full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
             full_post["qem"]["incidents"] += issues
@@ -160,9 +128,7 @@ class Aggregate(BaseConf):
                 unique_incidents.append(sub)
         full_post["qem"]["incidents"] = unique_incidents
 
-        if not full_post["qem"]["incidents"]:
-            return None
-
+    def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
             f"{QEM_DASHBOARD}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
         )
@@ -175,13 +141,45 @@ class Aggregate(BaseConf):
         full_post["qem"]["settings"] = full_post["openqa"]
         full_post["qem"]["repohash"] = full_post["openqa"]["REPOHASH"]
         full_post["qem"]["build"] = full_post["openqa"]["BUILD"]
-        full_post["qem"]["arch"] = full_post["openqa"]["ARCH"]
+        full_post["qem"]["arch"] = arch
         full_post["qem"]["product"] = self.product
         full_post["qem"]["incidents"] = [sub.id for sub in full_post["qem"]["incidents"]]
 
+    def create_full_post(
+        self,
+        arch: str,
+        data: PostData,
+        ci_url: str | None,
+    ) -> dict[str, Any] | None:
+        full_post: dict[str, Any] = {
+            "openqa": {"REPOHASH": data.repohash, "BUILD": data.build},
+            "qem": {"incidents": [], "settings": {}},
+            "api": "api/update_settings",
+        }
+        if ci_url:
+            full_post["openqa"]["__CI_JOB_URL"] = ci_url
+
+        settings = self._apply_public_cloud_settings(self.settings.copy())
+        if settings is None:
+            return None
+
+        full_post["openqa"].update(settings)
+        full_post["openqa"]["FLAVOR"] = self.flavor
+        full_post["openqa"]["ARCH"] = arch
+        full_post["openqa"]["_DEPRIORITIZEBUILD"] = 1
+
+        if DEPRIORITIZE_LIMIT is not None:
+            full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
+
+        self._add_incident_data(full_post, data)
+
+        if not full_post["qem"]["incidents"]:
+            return None
+
+        self._finalize_post(full_post, arch)
         return full_post
 
-    def _process_arch(
+    def process_arch(
         self,
         arch: str,
         valid_submissions: list[Submission],
@@ -193,7 +191,7 @@ class Aggregate(BaseConf):
         # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
         issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
-        test_submissions, test_repos = self._get_test_submissions_and_repos(valid_submissions, issues_arch)
+        test_submissions, test_repos = self.get_test_submissions_and_repos(valid_submissions, issues_arch)
 
         repohash = merge_repohash(
             sorted({str(sub.id) for sub in chain.from_iterable(test_submissions.values())}),
@@ -236,9 +234,9 @@ class Aggregate(BaseConf):
         if not ignore_onetime and (self.onetime and build.split("-")[-1] != "1"):
             return None
 
-        return self._create_full_post(
+        return self.create_full_post(
             arch,
-            _PostData(test_submissions, test_repos, repohash, build),
+            PostData(test_submissions, test_repos, repohash, build),
             ci_url,
         )
 
@@ -250,10 +248,10 @@ class Aggregate(BaseConf):
         *,
         ignore_onetime: bool = False,
     ) -> list[dict[str, Any]]:
-        valid_submissions = self._filter_submissions(submissions)
+        valid_submissions = self.filter_submissions(submissions)
 
         results = [
-            self._process_arch(arch, valid_submissions, token, ci_url, ignore_onetime=ignore_onetime)
+            self.process_arch(arch, valid_submissions, token, ci_url, ignore_onetime=ignore_onetime)
             for arch in self.archs
         ]
 

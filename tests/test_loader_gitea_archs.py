@@ -17,10 +17,11 @@ def test_determine_relevant_archs_from_multibuild_info_success(mocker: MockerFix
 
 
 def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="prod")
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=Exception("oops"))
+    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=ValueError("oops"))
     res = gitea.determine_relevant_archs_from_multibuild_info("project", dry=False)
+    assert res is None
+    assert "Could not determine relevant architectures for project: oops" in caplog.text
     assert res is None
     assert "Could not determine relevant architectures for project: oops" in caplog.text
 

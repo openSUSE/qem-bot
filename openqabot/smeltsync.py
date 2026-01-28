@@ -25,7 +25,7 @@ class SMELTSync:
     def __call__(self) -> int:
         log.info("Syncing SMELT incidents to QEM Dashboard")
 
-        data = self._create_list(self.submissions)
+        data = self.create_list(self.submissions)
         log.info("Updating %d submissions on QEM Dashboard", len(data))
         log.debug("Data: %s", pformat(data))
 
@@ -35,7 +35,7 @@ class SMELTSync:
         return update_submissions(self.token, data, retry=self.retry)
 
     @staticmethod
-    def _review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
         valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
@@ -43,19 +43,19 @@ class SMELTSync:
         return rr if rr["status"]["name"] in valid else None
 
     @staticmethod
-    def _is_inreview(rr_number: dict[str, Any]) -> bool:
+    def is_inreview(rr_number: dict[str, Any]) -> bool:
         return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
 
     @staticmethod
-    def _is_revoked(rr_number: dict[str, Any]) -> bool:
+    def is_revoked(rr_number: dict[str, Any]) -> bool:
         return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
 
     @staticmethod
-    def _is_accepted(rr_number: dict[str, Any]) -> bool:
+    def is_accepted(rr_number: dict[str, Any]) -> bool:
         return rr_number["status"]["name"] in {"accepted", "new"}
 
     @staticmethod
-    def _has_qam_review(rr_number: dict[str, Any]) -> bool:
+    def has_qam_review(rr_number: dict[str, Any]) -> bool:
         if not rr_number["reviewSet"]:
             return False
         rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
@@ -63,7 +63,7 @@ class SMELTSync:
         return bool(review) and review[0]["status"]["name"] in {"review", "new"}
 
     @classmethod
-    def _create_record(cls, sub: dict[str, Any]) -> dict[str, Any]:
+    def create_record(cls, sub: dict[str, Any]) -> dict[str, Any]:
         submission = {}
         submission["isActive"] = True
 
@@ -73,12 +73,12 @@ class SMELTSync:
         revoked = False
         rr_id = None
 
-        rr = cls._review_rrequest(sub["requestSet"])
+        rr = cls.review_rrequest(sub["requestSet"])
         if rr:
-            in_review = cls._is_inreview(rr)
-            approved = cls._is_accepted(rr)
-            in_review_qam = cls._has_qam_review(rr)
-            revoked = cls._is_revoked(rr)
+            in_review = cls.is_inreview(rr)
+            approved = cls.is_accepted(rr)
+            in_review_qam = cls.has_qam_review(rr)
+            revoked = cls.is_revoked(rr)
             rr_id = rr["requestId"]
 
         if approved or revoked:
@@ -100,5 +100,5 @@ class SMELTSync:
         return submission
 
     @classmethod
-    def _create_list(cls, submissions: list[Any]) -> list[dict[str, Any]]:
-        return [cls._create_record(sub) for sub in submissions]
+    def create_list(cls, submissions: list[Any]) -> list[dict[str, Any]]:
+        return [cls.create_record(sub) for sub in submissions]

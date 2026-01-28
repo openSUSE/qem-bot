@@ -14,7 +14,8 @@ from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
-from openqabot.types.aggregate import Aggregate, _PostData  # noqa: PLC2701
+from openqabot.types.aggregate import Aggregate, PostData
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
 from openqabot.utc import UTC
@@ -29,7 +30,7 @@ def config() -> dict[str, Any]:
 def aggregate_factory() -> Any:
     def _factory(product: str = "", settings: dict | None = None, config: dict | None = None) -> Aggregate:
         return Aggregate(
-            product, None, None, settings or {}, config or {"FLAVOR": "None", "archs": [], "test_issues": {}}
+            JobConfig(product, None, None, settings or {}, config or {"FLAVOR": "None", "archs": [], "test_issues": {}})
         )
 
     return _factory
@@ -62,7 +63,7 @@ def request_mock(mocker: MockerFixture) -> Any:
 
 def test_aggregate_constructor() -> None:
     """Test for the bare minimal set of arguments needed by the constructor."""
-    Aggregate("", None, None, {}, {"FLAVOR": "None", "archs": None, "test_issues": {}})
+    Aggregate(JobConfig("", None, None, {}, {"FLAVOR": "None", "archs": None, "test_issues": {}}))
 
 
 def test_aggregate_printable(aggregate_factory: Any) -> None:
@@ -188,7 +189,7 @@ def test_filter_submissions_embargoed(
     acc = aggregate_factory("product")
     acc.filter_embargoed = lambda _x: True
     sub = submission_mock(embargoed=True)
-    res = acc._filter_submissions([sub])  # noqa: SLF001
+    res = acc.filter_submissions([sub])
     assert res == []
     assert "skipped: Embargoed" in caplog.text
 
@@ -196,7 +197,7 @@ def test_filter_submissions_embargoed(
 def test_filter_submissions_staging(aggregate_factory: Any, submission_mock: Any) -> None:
     acc = aggregate_factory("product")
     sub = submission_mock(staging=True)
-    res = acc._filter_submissions([sub])  # noqa: SLF001
+    res = acc.filter_submissions([sub])
     assert res == []
 
 
@@ -205,8 +206,8 @@ def test_get_test_submissions_repos_existing(aggregate_factory: Any, submission_
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
     sub_mismatch = submission_mock(product="Other", version="V", arch="A")
-    acc._get_test_submissions_and_repos([sub, sub_mismatch], "A")  # noqa: SLF001
-    res_sub, res_repos = acc._get_test_submissions_and_repos([sub], "A")  # noqa: SLF001
+    acc.get_test_submissions_and_repos([sub, sub_mismatch], "A")
+    res_sub, res_repos = acc.get_test_submissions_and_repos([sub], "A")
     assert "ISSUES_1" in res_sub
     assert "REPOS_1" in res_repos
 
@@ -250,7 +251,7 @@ def test_process_arch_onetime_skip(aggregate_factory: Any, config: dict, mocker:
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="new")
     today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": today + "-1", "repohash": "old"}])
-    assert acc._process_arch("ciao", [], {}, None, ignore_onetime=False) is None  # noqa: SLF001
+    assert acc.process_arch("ciao", [], {}, None, ignore_onetime=False) is None
 
 
 def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
@@ -288,7 +289,7 @@ def test_process_arch_same_build_exists(
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="same")
     today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": today + "-1", "repohash": "same"}])
-    assert acc._process_arch("A", [], {}, None, ignore_onetime=False) is None  # noqa: SLF001
+    assert acc.process_arch("A", [], {}, None, ignore_onetime=False) is None
     assert "A build with the same RepoHash already exists" in caplog.text
 
 
@@ -309,20 +310,18 @@ def test_aggregate_duplicate_submissions(aggregate_factory: Any, submission_mock
     test_repos = defaultdict(list)
     test_repos["REPOS"] = ["repo"]
 
-    post_data = _PostData(test_submissions, test_repos, "hash", "build")
-    res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
+    post_data = PostData(test_submissions, test_repos, "hash", "build")
+    res = agg.create_full_post("x86_64", post_data, None)
 
     assert res is not None
     assert len(res["qem"]["incidents"]) == 1
     assert res["qem"]["incidents"][0] == 123
 
 
-def test_aggregate_url_format(mocker: MockerFixture) -> None:
+def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> None:
     config = {"FLAVOR": "AAA", "archs": ["x86_64"], "test_issues": {"ISSUE": "product:version"}}
-    agg = Aggregate(
+    agg = aggregate_factory(
         product="SLES",
-        product_repo=None,
-        product_version=None,
         settings={"VERSION": "15-SP3", "DISTRI": "sles"},
         config=config,
     )
@@ -343,9 +342,9 @@ def test_aggregate_url_format(mocker: MockerFixture) -> None:
     test_submissions["ISSUE"] = [sub]
     test_repos = defaultdict(list)
     test_repos["REPOS"] = [repo_url]
-    post_data = _PostData(test_submissions, test_repos, "hash", "build")
+    post_data = PostData(test_submissions, test_repos, "hash", "build")
 
-    res = agg._create_full_post("x86_64", post_data, None)  # noqa: SLF001
+    res = agg.create_full_post("x86_64", post_data, None)
 
     assert res is not None
     dashboard_url = res["openqa"]["__DASHBOARD_INCIDENTS_URL"]

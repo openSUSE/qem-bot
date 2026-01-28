@@ -9,6 +9,7 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any
 
+import ruamel.yaml
 from ruamel.yaml import YAML
 
 from openqabot.config import OBS_DOWNLOAD_URL
@@ -38,7 +39,7 @@ class IncrementConfig:
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
 
     def _concat_project(self, project: str) -> str:
-        return project if self.project_base == "" else f"{self.project_base}:{project}"
+        return project if not self.project_base else f"{self.project_base}:{project}"
 
     def build_project(self) -> str:
         return self._concat_project(self.build_project_suffix)
@@ -85,7 +86,7 @@ class IncrementConfig:
         except AttributeError:
             log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
             return iter(())
-        except Exception as e:  # noqa: BLE001 true-positive: Consider to use fine-grained exceptions
+        except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
             log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
             return iter(())
 
