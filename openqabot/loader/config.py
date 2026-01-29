@@ -10,6 +10,7 @@ from ruamel.yaml import YAML, YAMLError
 
 from openqabot.errors import NoTestIssuesError
 from openqabot.types.aggregate import Aggregate
+from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
 from openqabot.utils import get_yml_list
@@ -58,10 +59,12 @@ def _load_one_metadata(
 
     for key in data:
         if key == "incidents" and not submissions:
-            yield Submissions(product, product_repo, product_version, settings, data["incidents"], extrasettings)
+            yield Submissions(
+                JobConfig(product, product_repo, product_version, settings, data["incidents"]), extrasettings
+            )
         elif key == "aggregate" and not aggregate:
             try:
-                yield Aggregate(product, product_repo, product_version, settings, data["aggregate"])
+                yield Aggregate(JobConfig(product, product_repo, product_version, settings, data["aggregate"]))
             except NoTestIssuesError:
                 log.info("Aggregate configuration skipped: Missing 'test_issues' for product %s", product)
 

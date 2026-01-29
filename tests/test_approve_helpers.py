@@ -11,7 +11,7 @@ import pytest
 from openqa_client.exceptions import RequestError
 from pytest_mock import MockerFixture
 
-from openqabot.approver import Approver
+from openqabot.approver import Approver, JobStatus
 from openqabot.utc import UTC
 
 from .helpers import args
@@ -19,7 +19,7 @@ from .helpers import args
 
 def test_is_job_marked_acceptable_for_submission_request_error(mocker: MockerFixture) -> None:
     mocker.patch(
-        "openqabot.openqa.openQAInterface.get_job_comments",
+        "openqabot.openqa.OpenQAInterface.get_job_comments",
         side_effect=RequestError("Get out", url="http://foo.bar", status_code=404, text="Not Found"),
     )
     approver_instance = Approver(args)
@@ -56,13 +56,13 @@ def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) ->
         ({"build": "20200101-1", "result": "passed", "id": 123}, "Older jobs are too old"),
     ],
 )
-def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
+def testwas_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
     approver_instance = Approver(args)
     oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
     regex = re.compile(r".*")
 
     caplog.set_level(logging.INFO)
-    assert not approver_instance._was_older_job_ok(1, 1, job, oldest_build_usable, regex)  # noqa: SLF001
+    assert not approver_instance.was_older_job_ok(1, 1, job, oldest_build_usable, regex)
     assert any(log_message in m for m in caplog.messages)
 
 
@@ -86,12 +86,12 @@ def test_was_ok_before_no_suitable_older_jobs(
 ) -> None:
     approver_instance = Approver(args)
     caplog.set_level(logging.INFO)
-    mocker.patch("openqabot.openqa.openQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
-    mocker.patch("openqabot.approver.Approver._was_older_job_ok")
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
+    mocker.patch("openqabot.approver.Approver.was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
     assert any(log_message in m for m in caplog.messages)
 
 
 def test_get_submission_result_empty_jobs() -> None:
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is False
+    assert approver_instance.get_submission_result([], "api/", 1) == JobStatus.FAILED

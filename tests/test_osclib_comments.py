@@ -9,14 +9,12 @@ import pytest
 from lxml import etree  # type: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
-from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError
+from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError, comment_as_dict
 
 
 def test_comment_as_dict() -> None:
-    from openqabot.osclib.comments import _comment_as_dict  # noqa: PLC2701
-
     xml = etree.fromstring('<comment who="user" when="2022-01-01 12:00:00 UTC" id="1" parent="0">text</comment>')
-    res = _comment_as_dict(xml)
+    res = comment_as_dict(xml)
     assert res["who"] == "user"
     assert isinstance(res["when"], datetime)
     assert res["id"] == "1"
@@ -24,16 +22,15 @@ def test_comment_as_dict() -> None:
     assert res["comment"] == "text"
 
 
-def test_prepare_url() -> None:
+def testprepare_url() -> None:
     api = CommentAPI("https://api.opensuse.org")
-    assert api._prepare_url(request_id="123") == "https://api.opensuse.org/comments/request/123"  # noqa: SLF001
+    assert api.prepare_url(request_id="123") == "https://api.opensuse.org/comments/request/123"
     assert (
-        api._prepare_url(project_name="proj", package_name="pkg")  # noqa: SLF001
-        == "https://api.opensuse.org/comments/package/proj/pkg"
+        api.prepare_url(project_name="proj", package_name="pkg") == "https://api.opensuse.org/comments/package/proj/pkg"
     )
-    assert api._prepare_url(project_name="proj") == "https://api.opensuse.org/comments/project/proj"  # noqa: SLF001
+    assert api.prepare_url(project_name="proj") == "https://api.opensuse.org/comments/project/proj"
     with pytest.raises(OscCommentsValueError):
-        api._prepare_url()  # noqa: SLF001
+        api.prepare_url()
 
 
 def test_get_comments(mocker: MockerFixture) -> None:

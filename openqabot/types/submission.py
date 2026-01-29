@@ -20,6 +20,7 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 class Submission:
     def __init__(self, submission: dict[str, Any]) -> None:
+        """Initialize the Submission class."""
         self.rr: int | None = submission["rr_number"]
         self.project: str = submission["project"]
         self.id: int = submission["number"]
@@ -35,7 +36,7 @@ class Submission:
             for p, v, a in (
                 val
                 for val in (r.split(":")[2:] for r in submission["channels"] if r.startswith("SUSE:Updates"))
-                if len(val) == 3
+                if len(val) == 3  # noqa: PLR2004
             )
             if p != "SLE-Module-Development-Tools-OBS"
         ]
@@ -48,7 +49,7 @@ class Submission:
                 for val in (
                     r.split(":")[2:] for r in (i for i in submission["channels"] if i.startswith("SUSE:Updates"))
                 )
-                if len(val) == 2
+                if len(val) == 2  # noqa: PLR2004
             )
         ]
         # add channels for Gitea-based submissions
@@ -57,7 +58,7 @@ class Submission:
             if not r.startswith("SUSE:SLFO"):
                 continue
             val = r.split(":")
-            if len(val) <= 3:
+            if len(val) <= 3:  # noqa: PLR2004
                 continue
             obs_project = ":".join(val[2:-1])
             product = gitea.get_product_name(obs_project)
@@ -84,9 +85,9 @@ class Submission:
 
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
-        self._rev_cache_params: tuple[Any, ...] | None = None
-        self._rev_logged: bool = False
-        self.livepatch: bool = self._is_livepatch(self.packages)
+        self.rev_cache_params: tuple[Any, ...] | None = None
+        self.rev_logged: bool = False
+        self.livepatch: bool = self.is_livepatch(self.packages)
 
     def log_skipped(self) -> None:
         if self._logged_skipped:
@@ -114,26 +115,26 @@ class Submission:
         limit_archs: set[str] | None = None,
     ) -> bool:
         params = (product_repo, product_version, frozenset(limit_archs) if limit_archs else None)
-        if self._rev_cache_params == params:
+        if self.rev_cache_params == params:
             return self.revisions is not None
 
-        self._rev_cache_params = params
+        self.rev_cache_params = params
         product_name = product_repo[-1] if isinstance(product_repo, list) else product_repo
         opts = RepoOptions(product_name, product_version, str(self))
 
         try:
-            self.revisions = self._rev(
+            self.revisions = self.rev(
                 self.channels,
                 self.project,
                 opts,
                 limit_archs,
             )
         except NoRepoFoundError as e:
-            if not self._rev_logged:
+            if not self.rev_logged:
                 msg = "Submission %s skipped: RepoHash calculation failed for project %s"
                 msg = f"{msg}: {e}" if len(str(e)) > 0 else msg
                 log.info(msg, self, self.project)
-                self._rev_logged = True
+                self.rev_logged = True
             self.revisions = None
             return False
         else:
@@ -157,7 +158,7 @@ class Submission:
             return None
 
     @staticmethod
-    def _rev(
+    def rev(
         channels: list[Repos],
         project: str,
         options: RepoOptions,
@@ -181,12 +182,14 @@ class Submission:
             tmpdict[ArchVer(repo.arch, ver)].append((repo.product, repo.version, repo.product_version))
 
         for archver, lrepos in tmpdict.items():
+            repos_to_check = lrepos
             if project == "SLFO" and options.product_name:
-                lrepos = [r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r[1]))]
-                if not lrepos:
+                filtered_repos = [r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r[1]))]
+                if not filtered_repos:
                     continue
+                repos_to_check = filtered_repos
 
-            max_rev = get_max_revision(lrepos, archver.arch, project, options)
+            max_rev = get_max_revision(repos_to_check, archver.arch, project, options)
             if max_rev > 0:
                 rev[archver] = max_rev
 
@@ -203,7 +206,7 @@ class Submission:
         return f"{self.type}:{self.id}"
 
     @staticmethod
-    def _is_livepatch(packages: list[str]) -> bool:
+    def is_livepatch(packages: list[str]) -> bool:
         if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
             return False
         return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)

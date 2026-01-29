@@ -20,6 +20,7 @@ from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,
     add_packages_from_files,
+    compute_repo_url,
     compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
@@ -245,7 +246,7 @@ def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFi
 
 
 def test_extracting_product_name_and_version() -> None:
-    assert get_product_name("1.1.99:PullRequest:166") == ""
+    assert not get_product_name("1.1.99:PullRequest:166")
     assert get_product_name("1.1.99:PullRequest:166:SLES") == "SLES"
 
     slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"
@@ -284,15 +285,13 @@ def test_computing_repo_url() -> None:
     expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
 
-    # Test with empty product_version should now raise AssertionError
+    # Test with empty product_version should now raise ValueError
     repos_no_ver = Repos("product", "1.2", "x86_64", "")
-    with pytest.raises(AssertionError, match="Product version must be provided for Foo"):
+    with pytest.raises(ValueError, match="Product version must be provided for Foo"):
         compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
 
 
 def test_computing_repo_url_empty_product() -> None:
-    from openqabot.loader.gitea import compute_repo_url
-
     repo = ("product", "1.2")
     url = compute_repo_url("base", "", repo, "x86_64")
     assert url == "base/product:/1.2/product/repodata/repomd.xml"

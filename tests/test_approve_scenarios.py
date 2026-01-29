@@ -12,7 +12,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.approver import Approver
+from openqabot.approver import QEM_DASHBOARD, Approver
 
 from .helpers import (
     assert_log_messages,
@@ -32,10 +32,6 @@ def with_fake_qem(mode: str) -> Any:
 
 @pytest.fixture
 def fake_single_submission_mocks() -> None:
-    import re
-
-    from openqabot.approver import QEM_DASHBOARD
-
     responses.add(
         responses.GET,
         re.compile(f"{QEM_DASHBOARD}api/submission/.*"),
@@ -85,8 +81,6 @@ def fake_openqa_comment_api() -> None:
 
 @pytest.fixture
 def fake_responses_updating_job() -> None:
-    from openqabot.approver import QEM_DASHBOARD
-
     responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
 
 
@@ -126,7 +120,7 @@ def test_single_submission_failed_not_approved(caplog: pytest.LogCaptureFixture,
         return [{"submission_settings": int(url.rsplit("/", maxsplit=1)[-1]), "job_id": 100001, "status": "failed"}]
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
-    mocker.patch("openqabot.openqa.openQAInterface.get_job_comments", return_value=[])
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
 
     approver(submission=1)
     assert_submission_not_approved(
@@ -276,3 +270,43 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
         "Submission approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+def test_single_submission_waiting(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(_url: str, **_kwargs: Any) -> Any:
+        return [{"submission_settings": 1000, "job_id": 100001, "status": "waiting"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
+    approver(submission=1)
+    assert_submission_not_approved(
+        caplog.messages,
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:1:100 has tests still in progress in submission tests",
+    )
+    assert "Found unfinished job http://instance.qa/t100001 for submission smelt:1" in caplog.messages
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+def test_single_submission_stopped(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(_url: str, **_kwargs: Any) -> Any:
+        return [{"submission_settings": 1000, "job_id": 100001, "status": "stopped"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
+    approver(submission=1)
+    assert_submission_not_approved(
+        caplog.messages,
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:1:100 has stopped jobs in submission tests",
+    )
+    assert "Found stopped job http://instance.qa/t100001 for submission smelt:1" in caplog.messages

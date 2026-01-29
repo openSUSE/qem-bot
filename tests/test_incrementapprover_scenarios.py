@@ -5,13 +5,18 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import osc.core
 import pytest
 from pytest_mock import MockerFixture
 
 import responses
+from openqabot.incrementapprover import ApprovalStatus
 from openqabot.loader.incrementconfig import IncrementConfig
 
 from .helpers import (
+    fake_get_binary_file,
+    fake_get_binarylist,
+    fake_get_repos_of_project,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
@@ -46,7 +51,7 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCapt
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_product_repo", "fake_package_diff")
+@pytest.mark.usefixtures("fake_product_repo", "fakeget_package_diff")
 def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products_are_considered(
     caplog: pytest.LogCaptureFixture,
     fake_no_jobs_with_param_matching: list[responses.Response],
@@ -69,7 +74,7 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_product_repo", "fake_package_diff")
+@pytest.mark.usefixtures("fake_product_repo", "fakeget_package_diff")
 def test_skipping_with_only_jobs_of_additional_builds_present(
     caplog: pytest.LogCaptureFixture,
     fake_only_jobs_of_additional_builds_with_param_matching: list[responses.Response],
@@ -162,8 +167,6 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 def test_scheduling_extra_livepatching_builds_based_on_source_report(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    from .helpers import fake_get_binary_file, fake_get_binarylist, fake_get_repos_of_project
-
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
     configs = IncrementConfig.from_config_file(path)
     mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
@@ -191,3 +194,34 @@ def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCap
     assert "The following openQA jobs ended up with result 'failed'" in last_message
     assert "http://openqa-instance/tests/21" in last_message
     assert "http://openqa-instance/tests/20" not in last_message
+
+
+def testevaluate_list_of_openqa_job_results(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
+    results = [
+        {"done": {"passed": {"job_ids": [1]}, "failed": {"job_ids": [2]}}},
+        {"done": {"softfailed": {"job_ids": [3]}, "incomplete": {"job_ids": [4]}}},
+    ]
+    ok_jobs, reasons = approver.evaluate_list_of_openqa_job_results(results)
+    assert ok_jobs == {1, 3}
+    assert any("result 'failed':\n - http://openqa-instance/tests/2" in r for r in reasons)
+    assert any("result 'incomplete':\n - http://openqa-instance/tests/4" in r for r in reasons)
+
+
+def testhandle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = "42"
+    status = ApprovalStatus(req, ok_jobs={1, 2}, reasons_to_disapprove=[])
+    approver.handle_approval(status)
+    assert "Approving OBS request ID '42': All 2 openQA jobs have passed/softfailed" in caplog.text
+
+
+def testhandle_approval_disapprove(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = "42"
+    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=["failed jobs"])
+    approver.handle_approval(status)
+    assert "Not approving OBS request ID '42' for the following reasons:" in caplog.text
+    assert "failed jobs" in caplog.text

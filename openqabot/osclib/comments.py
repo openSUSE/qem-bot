@@ -13,7 +13,7 @@ from osc.core import makeurl
 from openqabot.utc import UTC
 
 
-def _comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
+def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
     """Convert an XML element comment into a dictionary.
 
     :param comment_element: XML element that store a comment.
@@ -30,11 +30,13 @@ def _comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
 
 class OscCommentsValueError(ValueError):
     def __init__(self) -> None:
+        """Initialize the OscCommentsValueError class."""
         super().__init__("Please, set request_id, project_name or / and package_name to add a comment.")
 
 
 class OscCommentsEmptyError(ValueError):
     def __init__(self) -> None:
+        """Initialize the OscCommentsEmptyError class."""
         super().__init__("Empty comment.")
 
 
@@ -42,9 +44,10 @@ class CommentAPI:
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
     def __init__(self, apiurl: str) -> None:
+        """Initialize the CommentAPI class."""
         self.apiurl = apiurl
 
-    def _prepare_url(
+    def prepare_url(
         self,
         request_id: str | int | None = None,
         project_name: str | None = None,
@@ -79,11 +82,11 @@ class CommentAPI:
         :param package_name: Package name where to get comments.
         :returns: A list of comments (as a dictionary).
         """
-        url = self._prepare_url(request_id, project_name, package_name)
+        url = self.prepare_url(request_id, project_name, package_name)
         root = etree.parse(http_GET(url)).getroot()
         comments = {}
-        for c in root.findall("comment"):
-            c = _comment_as_dict(c)
+        for comment_element in root.findall("comment"):
+            c = comment_as_dict(comment_element)
             comments[c["id"]] = c
         return comments
 
@@ -154,7 +157,7 @@ class CommentAPI:
         comment = self.truncate(comment.strip())
 
         query = {"parent_id": parent_id} if parent_id else {}
-        url = self._prepare_url(request_id, project_name, package_name, query)
+        url = self.prepare_url(request_id, project_name, package_name, query)
         return http_POST(url, data=comment)
 
     @staticmethod

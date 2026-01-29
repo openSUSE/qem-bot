@@ -16,6 +16,7 @@ class AggregateResultsSync(SyncRes):
     operation = "aggregate"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the AggregateResultsSync class."""
         super().__init__(args)
         self.product = read_products(args.configs)
 
@@ -34,7 +35,7 @@ class AggregateResultsSync(SyncRes):
             r
             for key, values in job_results.items()
             for v in values
-            if self.filter_jobs(v) and (r := self._normalize_data(key, v))
+            if self.filter_jobs(v) and (r := self.normalize_data_safe(key, v))
         ]
 
         for r in results:

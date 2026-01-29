@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from http import HTTPStatus
 from itertools import chain
 from logging import getLogger
 from operator import itemgetter
@@ -40,6 +41,7 @@ class LoaderQemError(Exception):
 
 class NoSubmissionResultsError(NoResultsError):
     def __init__(self, sub: int) -> None:
+        """Initialize the NoSubmissionResultsError class."""
         super().__init__(
             # ruff: noqa: E501 line-too-long
             f"Submission {sub} does not have any job_settings. Consider adding package specific settings to the metadata repository."
@@ -48,6 +50,7 @@ class NoSubmissionResultsError(NoResultsError):
 
 class NoAggregateResultsError(NoResultsError):
     def __init__(self, sub: int) -> None:
+        """Initialize the NoAggregateResultsError class."""
         super().__init__(f"Submission {sub} does not have any aggregate settings")
 
 
@@ -219,7 +222,7 @@ def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str 
     return list(chain.from_iterable(all_data))
 
 
-def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:
+def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:  # noqa: ANN401
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
@@ -229,7 +232,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
         except requests.exceptions.RequestException:
             log.exception("QEM Dashboard API request failed")
             return 1
-        if ret.status_code == 200:
+        if ret.status_code == HTTPStatus.OK:
             log.info("QEM Dashboard submissions updated successfully")
         else:
             log.error("QEM Dashboard submission sync failed: Status %s", ret.status_code)
@@ -244,7 +247,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
 def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
     try:
         result = put("api/jobs", headers=token, json=data)
-        if result.status_code != 200:
+        if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not post job: %s", result.text)
 
     except requests.exceptions.RequestException:
@@ -254,7 +257,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     try:
         result = patch(f"api/jobs/{job_id}", headers=token, json=data)
-        if result.status_code != 200:
+        if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 
     except requests.exceptions.RequestException:

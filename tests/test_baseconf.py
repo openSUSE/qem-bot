@@ -6,22 +6,24 @@ from typing import Any
 
 import pytest
 
-from openqabot.types.baseconf import BaseConf, Submission
+from openqabot.types.baseconf import BaseConf, JobConfig, Submission
 
 
 class FakeBaseConf(BaseConf):
     def __call__(
         self,
-        submissions: list[Submission],  # noqa: ARG002
-        token: dict[str, str],  # noqa: ARG002
-        ci_url: str | None,  # noqa: ARG002
+        submissions: list[Submission],
+        token: dict[str, str],
+        ci_url: str | None,
         *,
-        ignore_onetime: bool,  # noqa: ARG002
+        ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
+        _ = (submissions, token, ci_url, ignore_onetime)
         return [{"foo": "bar"}]
 
     @staticmethod
-    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:  # noqa: ARG004
+    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
+        _ = config
         return {}
 
 
@@ -31,7 +33,7 @@ settings = {"PUBLIC_CLOUD_SOMETHING": "1"}
 
 @pytest.fixture
 def baseconf_gen() -> FakeBaseConf:
-    return FakeBaseConf(prod_name, None, None, settings, {})
+    return FakeBaseConf(JobConfig(prod_name, None, None, settings, {}))
 
 
 def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:

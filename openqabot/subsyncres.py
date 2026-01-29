@@ -15,6 +15,7 @@ class SubResultsSync(SyncRes):
     operation = "submission"
 
     def __init__(self, args: Namespace) -> None:
+        """Initialize the SubResultsSync class."""
         super().__init__(args)
         self.active = get_active_submissions(self.token)
 
@@ -29,7 +30,7 @@ class SubResultsSync(SyncRes):
             r
             for key, value in full.items()
             for v in value
-            if self.filter_jobs(v) and (r := self._normalize_data(key, v))
+            if self.filter_jobs(v) and (r := self.normalize_data_safe(key, v))
         ]
         for r in results:
             self.post_result(r)
