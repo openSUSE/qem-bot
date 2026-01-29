@@ -433,7 +433,14 @@ def add_packages_from_patchinfo(
     if dry:
         patch_info = read_xml("patch-info")
     else:
-        patch_info = osc.util.xml.xml_fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).text)
+        try:
+            response = retried_requests.get(patch_info_url, verify=False, headers=token)
+            response.raise_for_status()
+            patch_info = etree.fromstring(response.content)
+        except (etree.ParseError, requests.RequestException) as e:
+            log.info("Failed to parse patchinfo from %s: %s", patch_info_url, e)
+            return
+
     submission["packages"].extend(res.text for res in patch_info.findall("package"))
 
 

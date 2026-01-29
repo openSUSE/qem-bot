@@ -54,10 +54,20 @@ def test_get_product_version_from_repo_listing_request_exception(
 
 def test_add_packages_from_patchinfo_non_dry(mocker: MockerFixture) -> None:
     mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get")
-    mock_get.return_value.text = "<patchinfo><package>pkg1</package></patchinfo>"
+    mock_get.return_value.content = b"<patchinfo><package>pkg1</package></patchinfo>"
     incident = {"packages": []}
     gitea.add_packages_from_patchinfo(incident, {}, "url", dry=False)
     assert incident["packages"] == ["pkg1"]
+
+
+def test_add_packages_from_patchinfo_parse_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
+    mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get")
+    mock_get.return_value.content = b"."
+    incident = {"packages": []}
+    gitea.add_packages_from_patchinfo(incident, {}, "url", dry=False)
+    assert incident["packages"] == []
+    assert "Failed to parse patchinfo from url: Start tag expected, '<' not found" in caplog.text
 
 
 def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
