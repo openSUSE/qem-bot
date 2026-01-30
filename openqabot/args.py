@@ -20,75 +20,85 @@ from .subsyncres import SubResultsSync
 
 
 def do_full_schedule(args: Namespace) -> int:
+    """Run both submission and aggregate scheduling."""
     args.disable_submissions = False
     args.disable_aggregates = False
-
     bot = OpenQABot(args)
-    return bot()
+    return bot.run()
 
 
 def do_submission_schedule(args: Namespace) -> int:
+    """Run only submission scheduling."""
     args.disable_submissions = False
     args.disable_aggregates = True
-
     bot = OpenQABot(args)
-    return bot()
+    return bot.run()
 
 
 def do_aggregate_schedule(args: Namespace) -> int:
+    """Run only aggregate scheduling."""
     args.disable_aggregates = False
     args.disable_submissions = True
-
     bot = OpenQABot(args)
-    return bot()
+    return bot.run()
 
 
 def do_sync_smelt(args: Namespace) -> int:
+    """Synchronize data from SMELT to the dashboard."""
     syncer = SMELTSync(args)
     return syncer()
 
 
 def do_sync_gitea(args: Namespace) -> int:
+    """Synchronize data from Gitea to the dashboard."""
     syncer = GiteaSync(args)
     return syncer()
 
 
 def do_approve(args: Namespace) -> int:
+    """Approve submissions that passed all tests."""
     approve = Approver(args)
     return approve()
 
 
 def do_comment(args: Namespace) -> int:
+    """Comment on submissions with test results."""
     comment = Commenter(args)
     return comment()
 
 
 def do_sync_sub_results(args: Namespace) -> int:
+    """Synchronize submission results from openQA to the dashboard."""
     syncer = SubResultsSync(args)
     return syncer()
 
 
 def do_sync_aggregate_results(args: Namespace) -> int:
+    """Synchronize aggregate results from openQA to the dashboard."""
     syncer = AggregateResultsSync(args)
     return syncer()
 
 
 def do_increment_approve(args: Namespace) -> int:
+    """Approve product increments based on test results."""
     approve = IncrementApprover(args)
     return approve()
 
 
 def do_repo_diff_computation(args: Namespace) -> int:
+    """Compute differences between two OBS repositories."""
     repo_diff = RepoDiff(args)
     return repo_diff()
 
 
 def do_amqp(args: Namespace) -> int:
+    """Start the AMQP listener."""
     amqp = AMQP(args)
     return amqp()
 
 
 def get_parser() -> ArgumentParser:  # noqa: PLR0914, PLR0915
+    """Construct the command-line argument parser."""
     parser = ArgumentParser(description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot")
 
     parser.add_argument(

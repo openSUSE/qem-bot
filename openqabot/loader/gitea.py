@@ -57,14 +57,17 @@ URL_FINDALL_REGEX = re.compile(r"https://[^ \n]*")
 
 
 def make_token_header(token: str) -> dict[str, str]:
+    """Create the Authorization header for Gitea API requests."""
     return {} if token is None else {"Authorization": "token " + token}
 
 
 def get_json(query: str, token: dict[str, str], host: str = GITEA) -> Any:  # noqa: ANN401
+    """Fetch JSON data from Gitea API."""
     return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
 def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GITEA) -> Any:  # noqa: ANN401
+    """Post JSON data to Gitea API."""
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
@@ -72,38 +75,46 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str = GIT
 
 
 def read_utf8(name: str) -> str:
+    """Read a UTF-8 encoded response file."""
     return Path(f"responses/{name}").read_text(encoding="utf8")
 
 
 def read_json(name: str) -> Any:  # noqa: ANN401
+    """Read a JSON response file."""
     return json.loads(Path(f"responses/{name}.json").read_text(encoding="utf8"))
 
 
 def read_xml(name: str) -> etree.ElementTree:
+    """Read an XML response file."""
     return etree.parse(f"responses/{name}.xml")
 
 
 def reviews_url(repo_name: str, number: int) -> str:
+    """Construct the URL for PR reviews."""
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullReviews
     return f"repos/{repo_name}/pulls/{number}/reviews"
 
 
 def changed_files_url(repo_name: str, number: int) -> str:
+    """Construct the URL for PR changed files."""
     # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
     return f"repos/{repo_name}/pulls/{number}/files"
 
 
 def comments_url(repo_name: str, number: int) -> str:
+    """Construct the URL for PR comments."""
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return f"repos/{repo_name}/issues/{number}/comments"
 
 
 def get_product_name(obs_project: str) -> str:
+    """Extract product name from an OBS project name."""
     product_match = PROJECT_PRODUCT_REGEX.search(obs_project)
     return product_match.group(1) if product_match else ""
 
 
 def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, str]:
+    """Extract product name and version from an scmsync URL."""
     m = SCMSYNC_REGEX.search(scmsync_url)
     return (m.group(1), m.group(2)) if m else ("", "")
 
@@ -115,6 +126,7 @@ def compute_repo_url(
     arch: str,
     path: str = "repodata/repomd.xml",
 ) -> str:
+    """Construct the repository URL for a Gitea submission."""
     # return codestream repo if product name is empty
     start = f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{OBS_REPO_TYPE}"
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
@@ -136,6 +148,7 @@ def compute_repo_url_for_job_setting(
     product_repo: list[str] | str | None,
     product_version: str | None,
 ) -> str:
+    """Construct repository URLs for openQA job settings."""
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     product_list = product_names if isinstance(product_names, list) else [product_names]
@@ -144,6 +157,7 @@ def compute_repo_url_for_job_setting(
 
 
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
+    """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
@@ -157,6 +171,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         return [pr]
 
     def iter_pr_pages() -> Any:  # noqa: ANN401
+        """Iterate through all pages of open PRs."""
         page = 1
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
@@ -185,6 +200,7 @@ def review_pr(  # noqa: PLR0913
     *,
     approve: bool = True,
 ) -> None:
+    """Post a review or comment on a Gitea PR."""
     if GIT_REVIEW_BOT:
         review_url = comments_url(repo_name, pr_number)
         review_cmd = f"@{GIT_REVIEW_BOT}: "
@@ -202,11 +218,13 @@ def review_pr(  # noqa: PLR0913
 
 
 def get_name(review: dict[str, Any], of: str, via: str) -> str:
+    """Extract a name from a Gitea review entity."""
     entity = review.get(of)
     return entity.get(via, "") if entity is not None else ""
 
 
 def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS_GROUP, GIT_REVIEW_BOT)) -> bool:
+    """Check if a review was requested by specific users or groups."""
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -215,6 +233,7 @@ def is_review_requested_by(review: dict[str, Any], users: tuple[str, ...] = (OBS
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
+    """Process PR reviews and update submission status."""
     pending_states = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
     qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
@@ -229,12 +248,14 @@ def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
 
 
 def _extract_version(name: str, prefix: str) -> str:
+    """Extract version number from a package name string."""
     remainder = name.removeprefix(prefix)
     return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
 
 
 @lru_cache(maxsize=512)
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
+    """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
     url = f"{OBS_DOWNLOAD_URL}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
@@ -262,6 +283,7 @@ def add_channel_for_build_result(
     res: Any,  # noqa: ANN401
     projects: set[str],
 ) -> str:
+    """Construct a channel string for a build result and add it to the project set."""
     channel = f"{project}:{arch}"
     if arch == "local":
         return channel
@@ -296,6 +318,7 @@ def add_build_result(
     res: Any,  # noqa: ANN401
     results: BuildResults,
 ) -> None:
+    """Process a single build result and update submission and results."""
     project = res.get("project")
     product = get_product_name(project)
     scm_key = f"scminfo_{product}" if product else "scminfo"
@@ -317,11 +340,13 @@ def add_build_result(
 
 
 def get_multibuild_data(obs_project: str) -> str:
+    """Fetch multibuild configuration data for an OBS project."""
     r = MultibuildFlavorResolver(OBS_URL, obs_project, "000productcompose")
     return r.get_multibuild_data()
 
 
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
+    """Determine which architectures are relevant for a product based on multibuild data."""
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
     if not product_name:
@@ -352,6 +377,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
 
 
 def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
+    """Check if a build result is relevant for the current product and architecture."""
     if OBS_REPO_TYPE and res.get("repository") != OBS_REPO_TYPE:
         return False
     arch = res.get("arch")
@@ -359,6 +385,7 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
 
 
 def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[Any]:
+    """Fetch build results for an OBS project."""
     build_info_url = osc.core.makeurl(OBS_URL, ["build", obs_project, "_result"])
     if dry:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
@@ -377,6 +404,7 @@ def _process_obs_url(
     dry: bool,
     results: BuildResults,
 ) -> None:
+    """Process an OBS URL and update submission build results."""
     if not (project_match := OBS_PROJECT_SHOW_REGEX.search(url)):
         return
     obs_project = project_match.group(1)
@@ -389,6 +417,7 @@ def _process_obs_url(
 
 
 def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+    """Aggregate build results from multiple OBS URLs into a submission."""
     results = BuildResults()
 
     for url in obs_urls:
@@ -419,6 +448,7 @@ def add_comments_and_referenced_build_results(
     *,
     dry: bool,
 ) -> None:
+    """Find and process build result URLs from bot comments on a PR."""
     bot_comment = next(
         (comment for comment in reversed(comments) if comment["user"]["username"] == "autogits_obs_staging_bot"),
         None,
@@ -434,6 +464,7 @@ def add_packages_from_patchinfo(
     *,
     dry: bool,
 ) -> None:
+    """Extract package names from a _patchinfo file URL."""
     if dry:
         patch_info = read_xml("patch-info")
     else:
@@ -449,6 +480,7 @@ def add_packages_from_patchinfo(
 
 
 def add_packages_from_files(submission: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
+    """Extract packages from all relevant files in a PR."""
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
@@ -457,6 +489,7 @@ def add_packages_from_files(submission: dict[str, Any], token: dict[str, str], f
 
 
 def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) -> bool:
+    """Check if all packages in a submission have been built and published successfully."""
     failed_or_unpublished_packages = len(submission["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
         log.info("Skipping PR git:%i: Not all packages succeeded or published", number)
@@ -476,6 +509,7 @@ def make_submission_from_gitea_pr(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
+    """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.get("number", "?"))
     try:
         number = pr["number"]
@@ -541,6 +575,7 @@ def get_submissions_from_open_prs(
     only_requested_prs: bool,
     dry: bool,
 ) -> list[dict[str, Any]]:
+    """Convert a list of open Gitea PRs into dashboard submissions."""
     submissions = []
 
     # configure osc to be able to request build info from OBS

@@ -129,11 +129,12 @@ INCIDENT_SCHEMA = {
 
 
 def get_json(query: str, host: str = SMELT) -> dict[str, Any]:
+    """Fetch JSON data from SMELT using a GraphQL query."""
     return retried_requests.get(host, params={"query": query}, verify=False).json()
 
 
 def get_active_submission_ids() -> set[int]:
-    """Get active incidents from SMELT GraphQL api."""
+    """Get active incidents from SMELT GraphQL API."""
     active: set[int] = set()
 
     has_next = True
@@ -159,6 +160,7 @@ def get_active_submission_ids() -> set[int]:
 
 
 def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
+    """Fetch detailed information for a single submission from SMELT."""
     query = INCIDENT % {"incident": incident}
 
     log.info("Fetching details for SMELT incident smelt:%s", incident)
@@ -177,6 +179,7 @@ def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
 
 
 def get_submissions(active: set[int]) -> list[dict[str, Any]]:
+    """Fetch detailed information for a set of submissions from SMELT in parallel."""
     with futures.ThreadPoolExecutor() as executor:
         future_sub = [executor.submit(get_submission_from_smelt, inc) for inc in active]
         submissions = (future.result() for future in futures.as_completed(future_sub))

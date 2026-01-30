@@ -36,6 +36,7 @@ def get_max_revision(
     project: str,
     options: RepoOptions | None = None,
 ) -> int:
+    """Calculate the maximum repository revision for a submission."""
     max_rev = 0
     options = options or RepoOptions()
     sub_msg = (
@@ -87,4 +88,5 @@ def get_max_revision(
 
 
 def merge_repohash(hashes: list[str]) -> str:
+    """Merge multiple repohashes into a single MD5 hash."""
     return md5(b"start" + "".join(hashes).encode(), usedforsecurity=False).hexdigest()

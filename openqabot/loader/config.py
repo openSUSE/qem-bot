@@ -21,6 +21,7 @@ log = getLogger("bot.loader.config")
 
 
 def _try_load(loader: YAML, path: Path) -> dict | None:
+    """Try to load a YAML file and return its content as a dictionary."""
     try:
         data = loader.load(path)
     except YAMLError:
@@ -46,6 +47,7 @@ def _load_one_metadata(
     submissions: bool,
     extrasettings: set[str],
 ) -> Iterator[Aggregate | Submissions]:
+    """Parse a single metadata configuration dictionary."""
     settings = data.get("settings")
     if not settings:
         log.info("Configuration skipped: Missing settings in '%s'", path)
@@ -78,6 +80,7 @@ def load_metadata(
     submissions: bool,
     extrasettings: set[str],
 ) -> list[Aggregate | Submissions]:
+    """Load metadata configurations from a directory of YAML files."""
     loader = YAML(typ="safe")
     log.debug("Loading metadata from %s: Submissions=%s, Aggregates=%s", path, not submissions, not aggregate)
 
@@ -92,6 +95,7 @@ def load_metadata(
 
 
 def _parse_product(path: Path, data: dict) -> Iterator[Data]:
+    """Parse product information from a configuration dictionary."""
     try:
         aggregate = data["aggregate"]
         flavor = aggregate["FLAVOR"]
@@ -108,6 +112,7 @@ def _parse_product(path: Path, data: dict) -> Iterator[Data]:
 
 
 def read_products(path: Path) -> list[Data]:
+    """Read product definitions from a directory of YAML files."""
     loader = YAML(typ="safe")
     log.debug("Loading product definitions from %s", path)
 
@@ -115,6 +120,7 @@ def read_products(path: Path) -> list[Data]:
 
 
 def get_onearch(path: Path) -> set[str]:
+    """Read single-architecture package names from a YAML file."""
     loader = YAML(typ="safe")
 
     try:

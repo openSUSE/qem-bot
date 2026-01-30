@@ -60,10 +60,12 @@ class JobStatus(IntEnum):
 
 
 def ms2str(sub: SubReq) -> str:
+    """Convert a SubReq to a human-readable string."""
     return f"{OBS_MAINT_PRJ}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
 def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
+    """Handle HTTP errors from OBS API."""
     if e.code == HTTPStatus.FORBIDDEN:
         log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, sub.req)
         return True
@@ -80,6 +82,7 @@ def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
 
 
 def sanitize_comment_text(text: str) -> str:
+    """Remove non-printable characters and newlines from comment text."""
     text = "".join(x for x in text if x in string.printable)
     text = text.replace("\r", " ").replace("\n", " ")
     return text.strip()

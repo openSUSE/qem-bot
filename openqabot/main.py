@@ -10,6 +10,7 @@ from .utils import create_logger
 
 
 def main() -> None:
+    """Run the main entry point of the bot."""
     log = create_logger("bot")
     parser = get_parser()
 
