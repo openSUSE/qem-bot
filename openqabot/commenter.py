@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Commenter class for commenting on submissions."""
+
 from __future__ import annotations
 
 from argparse import Namespace

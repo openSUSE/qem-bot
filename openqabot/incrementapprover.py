@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Increment Approver."""
+
 from __future__ import annotations
 
 import os

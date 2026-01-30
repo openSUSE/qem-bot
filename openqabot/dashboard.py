@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Dashboard API client."""
 
 from typing import Any
 

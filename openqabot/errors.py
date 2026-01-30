@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Custom exceptions."""
 
 
 class Error(Exception):

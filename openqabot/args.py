@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Command line arguments parsing."""
+
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from urllib.parse import urlparse

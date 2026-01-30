@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""AMQP listener for openQA events."""
+
 import contextlib
 import json
 import re

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync result base class."""
+
 from __future__ import annotations
 
 from argparse import Namespace

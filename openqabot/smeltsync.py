@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync SMELT incidents to dashboard."""
+
 from __future__ import annotations
 
 from argparse import Namespace

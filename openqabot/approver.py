@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Approver class for approving submissions."""
+
 from __future__ import annotations
 
 import re

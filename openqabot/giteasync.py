@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync Gitea pull requests to dashboard."""
+
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat

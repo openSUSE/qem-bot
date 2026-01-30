@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Entry point for the application."""
+
 import logging
 import sys
 

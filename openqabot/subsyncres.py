@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync submission results."""
+
 from argparse import Namespace
 from concurrent import futures
 from itertools import chain

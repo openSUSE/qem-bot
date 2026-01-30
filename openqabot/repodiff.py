@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Repository diff computation."""
+
 from __future__ import annotations
 
 import gzip

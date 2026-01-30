@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Main OpenQABot logic."""
+
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger

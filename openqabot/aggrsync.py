@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync aggregate results."""
+
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
