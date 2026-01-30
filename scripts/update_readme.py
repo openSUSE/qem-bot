@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Script to update Readme.md."""
+
 import logging
 import os
 import re
