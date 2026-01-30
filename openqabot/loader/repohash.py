@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Repository hash loader."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

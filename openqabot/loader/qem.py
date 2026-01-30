@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""QEM Dashboard loader."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""SMELT loader."""
+
 from __future__ import annotations
 
 from concurrent import futures

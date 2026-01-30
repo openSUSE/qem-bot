@@ -1,5 +1,9 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Increment configuration loader."""
+
+from __future__ import annotations
+
 import pprint
 from argparse import Namespace
 from collections.abc import Iterator
@@ -56,7 +60,7 @@ class IncrementConfig:
         return f"{self.distri} ({settings_str})"
 
     @staticmethod
-    def from_config_entry(entry: dict[str, Any]) -> "IncrementConfig":
+    def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
         return IncrementConfig(
             distri=entry["distri"],
             version=entry.get("version", "any"),
@@ -76,7 +80,7 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path) -> Iterator["IncrementConfig"]:
+    def from_config_file(file_path: Path) -> Iterator[IncrementConfig]:
         try:
             log.debug("Loading increment configuration from '%s'", file_path)
             return map(
@@ -91,11 +95,11 @@ class IncrementConfig:
             return iter(())
 
     @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator["IncrementConfig"]:
+    def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
         return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
 
     @staticmethod
-    def from_args(args: Namespace) -> list["IncrementConfig"]:
+    def from_args(args: Namespace) -> list[IncrementConfig]:
         if args.increment_config:
             return list(IncrementConfig.from_config_path(args.increment_config))
         # Create a dictionary from arguments for IncrementConfig
