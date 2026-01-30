@@ -61,6 +61,7 @@ class IncrementConfig:
         return f"{base_url}/{base_path}"
 
     def __str__(self) -> str:
+        """Return a string representation of the increment configuration."""
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
         return f"{self.distri} ({settings_str})"
 

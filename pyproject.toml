@@ -148,7 +148,6 @@ extend-select =[
 ]
 
 ignore = [
-    "D105",   # missing-magic-method-docstring
     "D203",   # incorrect-blank-line-before-class
     "PLC1802", # use-implicit-booleaness-not-len
     "D213", # multi-line-summary-second-line
