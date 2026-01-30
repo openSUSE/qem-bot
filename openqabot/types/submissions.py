@@ -28,8 +28,12 @@ from .baseconf import BaseConf, JobConfig
 from .submission import Submission
 from .types import ProdVer, Repos
 
+log = getLogger("bot.types.submissions")
+
 
 class SubContext(NamedTuple):
+    """Context for a submission."""
+
     sub: Submission
     arch: str
     flavor: str
@@ -37,15 +41,16 @@ class SubContext(NamedTuple):
 
 
 class SubConfig(NamedTuple):
+    """Configuration for a submission."""
+
     token: dict[str, str]
     ci_url: str | None
     ignore_onetime: bool
 
 
-log = getLogger("bot.types.submissions")
-
-
 class Submissions(BaseConf):
+    """Submissions job configuration and processing."""
+
     def __init__(self, config: JobConfig, extrasettings: set[str]) -> None:
         """Initialize the Submissions class."""
         super().__init__(config)

@@ -51,6 +51,8 @@ MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 @unique
 class JobStatus(IntEnum):
+    """Enumeration of possible job statuses."""
+
     PASSED = 0
     WAITING = 1
     STOPPED = 2
@@ -84,6 +86,8 @@ def sanitize_comment_text(text: str) -> str:
 
 
 class Approver:
+    """Approval logic for submissions."""
+
     def __init__(
         self,
         args: Namespace,

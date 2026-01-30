@@ -15,6 +15,8 @@ log = getLogger("bot.aggrsync")
 
 
 class AggregateResultsSync(SyncRes):
+    """Synchronization of aggregate results."""
+
     operation = "aggregate"
 
     def __init__(self, args: Namespace) -> None:

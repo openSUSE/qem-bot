@@ -29,6 +29,8 @@ from openqabot.utils import merge_dicts
 
 # define fake data
 class ReviewState(NamedTuple):
+    """Fake review state."""
+
     state: str
     by_group: str
 
@@ -39,6 +41,8 @@ obs_product_table_url = OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontab
 
 @dataclass
 class Action:
+    """Fake action."""
+
     tgt_project: str
     src_project: str
     src_package: str
@@ -46,6 +50,8 @@ class Action:
 
 @dataclass
 class Repo:
+    """Fake repo."""
+
     name: str
     arch: str
 

@@ -41,6 +41,8 @@ ScheduleParams = list[dict[str, str]]
 
 
 class BuildInfo(NamedTuple):
+    """Information about a build."""
+
     distri: str
     product: str
     version: str
@@ -60,6 +62,8 @@ class BuildInfo(NamedTuple):
 
 
 class ApprovalStatus(NamedTuple):
+    """Status of an approval request."""
+
     request: osc.core.Request
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
@@ -74,6 +78,8 @@ class ApprovalStatus(NamedTuple):
 
 
 class IncrementApprover:
+    """Logic for approving product increments."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the IncrementApprover class."""
         self.args = args

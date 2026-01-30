@@ -19,6 +19,8 @@ log = getLogger("bot.syncres")
 
 
 class SyncRes:
+    """Base class for results synchronization."""
+
     operation = "null"
 
     def __init__(self, args: Namespace) -> None:

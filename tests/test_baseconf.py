@@ -12,6 +12,8 @@ from openqabot.types.baseconf import BaseConf, JobConfig, Submission
 
 
 class FakeBaseConf(BaseConf):
+    """Fake implementation of BaseConf for testing."""
+
     def __call__(
         self,
         submissions: list[Submission],

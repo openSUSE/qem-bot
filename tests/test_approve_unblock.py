@@ -25,6 +25,8 @@ from .helpers import (
 
 @dataclass(frozen=True)
 class CommentFormatTestCase:
+    """Test case for comment format."""
+
     comment_text: str
     description: str
 

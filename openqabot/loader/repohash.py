@@ -23,6 +23,8 @@ log = getLogger("bot.loader.repohash")
 
 
 class RepoOptions(NamedTuple):
+    """Options for repository hash calculation."""
+
     product_name: str | None = None
     product_version: str | None = None
     submission_id: str | None = None

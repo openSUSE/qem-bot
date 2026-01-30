@@ -14,6 +14,8 @@ log = getLogger("bot.subsyncres")
 
 
 class SubResultsSync(SyncRes):
+    """Synchronization of submission results."""
+
     operation = "submission"
 
     def __init__(self, args: Namespace) -> None:

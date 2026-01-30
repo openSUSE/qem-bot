@@ -4,36 +4,36 @@
 
 
 class Error(Exception):
-    pass
+    """Base class for exceptions in this module."""
 
 
 class NoRepoFoundError(Error):
-    pass
+    """Raised when no repository is found."""
 
 
 class NoTestIssuesError(Error):
-    pass
+    """Raised when no test issues are found in configuration."""
 
 
 class EmptyChannelsError(Error):
-    pass
+    """Raised when no channels are found for a submission."""
 
 
 class EmptyPackagesError(Error):
-    pass
+    """Raised when no packages are found for a submission."""
 
 
 class SameBuildExistsError(Error):
-    pass
+    """Raised when a build with the same repohash already exists."""
 
 
 class NoResultsError(Error):
-    pass
+    """Raised when no test results are found."""
 
 
 class EmptySettingsError(Error):
-    pass
+    """Raised when settings are empty."""
 
 
 class PostOpenQAError(Error):
-    pass
+    """Raised when posting a job to openQA fails."""

@@ -14,6 +14,8 @@ log = getLogger("bot.giteasync")
 
 
 class GiteaSync:
+    """Synchronization of Gitea PRs to dashboard."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the GiteaSync class."""
         self.dry: bool = args.dry

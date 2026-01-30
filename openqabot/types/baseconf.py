@@ -13,6 +13,8 @@ from .submission import Submission
 
 @dataclass
 class JobConfig:
+    """Job configuration details."""
+
     product: str
     product_repo: list[str] | str | None
     product_version: str | None
@@ -21,6 +23,8 @@ class JobConfig:
 
 
 class BaseConf(ABC):
+    """Base class for bot configurations."""
+
     def __init__(self, config: JobConfig) -> None:
         """Initialize the BaseConf class."""
         self.product = config.product

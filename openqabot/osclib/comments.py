@@ -31,18 +31,24 @@ def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
 
 
 class OscCommentsValueError(ValueError):
+    """Raised when an invalid value is provided to OscComments."""
+
     def __init__(self) -> None:
         """Initialize the OscCommentsValueError class."""
         super().__init__("Please, set request_id, project_name or / and package_name to add a comment.")
 
 
 class OscCommentsEmptyError(ValueError):
+    """Raised when a comment is empty."""
+
     def __init__(self) -> None:
         """Initialize the OscCommentsEmptyError class."""
         super().__init__("Empty comment.")
 
 
 class CommentAPI:
+    """Interface to OSC comments API."""
+
     COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
 
     def __init__(self, apiurl: str) -> None:

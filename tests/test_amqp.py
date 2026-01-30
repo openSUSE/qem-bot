@@ -20,6 +20,8 @@ from openqabot.types.types import Data
 
 
 class FakeMethod(NamedTuple):
+    """Fake AMQP method."""
+
     routing_key: str
 
 

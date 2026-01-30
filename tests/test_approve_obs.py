@@ -29,15 +29,19 @@ def with_fake_qem(mode: str) -> Any:
 
 
 class ObsHTTPError(HTTPError):
+    """Fake OBS HTTP error."""
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Initialize the ObsHTTPError class."""
-        super().__init__("Fake OBS", *args, **kwargs)
+        super().__init__("http://obs.api", *args, **kwargs)
 
 
 class ArbitraryObsError(Exception):
+    """Fake arbitrary error."""
+
     def __init__(self) -> None:
         """Initialize the ArbitraryObsError class."""
-        super().__init__("Fake OBS exception")
+        super().__init__("Arbitrary error")
 
 
 @pytest.fixture

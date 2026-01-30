@@ -19,6 +19,8 @@ log = getLogger("bot.openqabot")
 
 
 class OpenQABot:
+    """Main OpenQABot logic."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the OpenQABot class."""
         log.info("Starting bot schedule")

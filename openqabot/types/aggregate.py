@@ -35,6 +35,8 @@ log = getLogger("bot.types.aggregate")
 
 
 class PostData(NamedTuple):
+    """Data to be posted to dashboard."""
+
     test_submissions: defaultdict[str, list[Submission]]
     test_repos: defaultdict[str, list[str]]
     repohash: str
@@ -42,6 +44,8 @@ class PostData(NamedTuple):
 
 
 class Aggregate(BaseConf):
+    """Aggregate job configuration and processing."""
+
     def __init__(self, config: JobConfig) -> None:
         """Initialize the Aggregate class."""
         super().__init__(config)

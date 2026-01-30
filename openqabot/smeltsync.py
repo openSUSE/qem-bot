@@ -18,6 +18,8 @@ log = getLogger("bot.smeltsync")
 
 
 class SMELTSync:
+    """Synchronization of SMELT incidents to dashboard."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the SMELTSync class."""
         self.dry: bool = args.dry

@@ -33,6 +33,8 @@ primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
 
 
 class Package(NamedTuple):
+    """Information about a package."""
+
     name: str
     epoch: str
     version: str
@@ -41,6 +43,8 @@ class Package(NamedTuple):
 
 
 class RepoDiff:
+    """Repository diff computation."""
+
     def __init__(self, args: Namespace | None) -> None:
         """Initialize the RepoDiff class."""
         self.args = args

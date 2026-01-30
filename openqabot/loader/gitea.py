@@ -40,6 +40,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 @dataclass
 class BuildResults:
+    """Results of a build."""
+
     projects: set[str] = field(default_factory=set)
     successful: set[str] = field(default_factory=set)
     unpublished: set[str] = field(default_factory=set)

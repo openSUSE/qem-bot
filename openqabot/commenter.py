@@ -24,6 +24,8 @@ log = getLogger("bot.commenter")
 
 
 class Commenter:
+    """Logic for commenting on submissions in IBS."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry

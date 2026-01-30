@@ -31,6 +31,8 @@ log = logging.getLogger("bot.openqa")
 
 
 class OpenQAInterface:
+    """Interface to openQA."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the OpenQAInterface class."""
         self.url: ParseResult = args.openqa_instance

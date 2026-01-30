@@ -24,6 +24,8 @@ log = getLogger("bot.loader.qem")
 
 
 class SubReq(NamedTuple):
+    """Submission and release request IDs."""
+
     sub: int
     req: int
     type: str | None = None
@@ -32,28 +34,31 @@ class SubReq(NamedTuple):
 
 
 class JobAggr(NamedTuple):
+    """Job and aggregate information."""
+
     id: int
     aggregate: bool
-    with_aggregate: bool
+    with_aggregate: bool = False
 
 
 class LoaderQemError(Exception):
-    pass
+    """Raised when an error occurs in QEM loader."""
 
 
 class NoSubmissionResultsError(NoResultsError):
+    """Raised when no submission results are found."""
+
     def __init__(self, sub: int) -> None:
         """Initialize the NoSubmissionResultsError class."""
-        super().__init__(
-            # ruff: noqa: E501 line-too-long
-            f"Submission {sub} does not have any job_settings. Consider adding package specific settings to the metadata repository."
-        )
+        super().__init__(f"No submission test results found for {sub}")
 
 
 class NoAggregateResultsError(NoResultsError):
+    """Raised when no aggregate results are found."""
+
     def __init__(self, sub: int) -> None:
         """Initialize the NoAggregateResultsError class."""
-        super().__init__(f"Submission {sub} does not have any aggregate settings")
+        super().__init__(f"No aggregate test results found for {sub}")
 
 
 def _get_submission(token: dict[str, str], submission_id: int, submission_type: str | None = None) -> dict:

@@ -26,6 +26,8 @@ DEFAULT_VERSION_REGEX = r"[\d.]+"
 
 @dataclass
 class IncrementConfig:
+    """Configuration for product increments."""
+
     distri: str
     version: str
     flavor: str
