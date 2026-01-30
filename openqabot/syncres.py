@@ -31,6 +31,7 @@ class SyncRes:
 
     @classmethod
     def normalize_data(cls, data: Data, job: dict[str, Any]) -> dict[str, Any]:
+        """Normalize openQA job data for the dashboard."""
         ret = {}
         ret["job_id"] = job["id"]
         ret["incident_settings"] = data.settings_id if cls.operation == "submission" else None
@@ -50,12 +51,14 @@ class SyncRes:
         return ret
 
     def normalize_data_safe(self, key: Data, job: dict[str, Any]) -> dict[str, Any] | None:
+        """Safely normalize data, returning None on failure."""
         try:
             return self.normalize_data(key, job)
         except KeyError:
             return None
 
     def is_in_devel_group(self, data: dict[str, Any]) -> bool:
+        """Check if a job belongs to a development group."""
         return not ALLOW_DEVELOPMENT_GROUPS and (
             "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
         )
@@ -76,6 +79,7 @@ class SyncRes:
         return True
 
     def post_result(self, result: dict[str, Any]) -> None:
+        """Post job results to the dashboard."""
         sub_id = ""
         if result.get("incident_settings"):
             sub_id = (

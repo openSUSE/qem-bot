@@ -22,11 +22,13 @@ class FakeBaseConf(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
+        """Mock __call__."""
         _ = (submissions, token, ci_url, ignore_onetime)
         return [{"foo": "bar"}]
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
+        """Mock normalize_repos."""
         _ = config
         return {}
 

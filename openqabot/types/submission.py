@@ -94,6 +94,7 @@ class Submission:
         self.livepatch: bool = self.is_livepatch(self.packages)
 
     def log_skipped(self) -> None:
+        """Log products that were skipped during channel initialization."""
         if self._logged_skipped:
             return
         for product in sorted(self.skipped_products):
@@ -102,6 +103,7 @@ class Submission:
 
     @classmethod
     def create(cls, data: dict) -> Submission | None:
+        """Create a Submission instance from a dictionary, handling errors."""
         sub_id = f"{data.get('type') or DEFAULT_SUBMISSION_TYPE}:{data.get('number')}"
         try:
             return cls(data)
@@ -118,6 +120,7 @@ class Submission:
         product_version: str | None,
         limit_archs: set[str] | None = None,
     ) -> bool:
+        """Calculate repohashes for all channels of this submission."""
         params = (product_repo, product_version, frozenset(limit_archs) if limit_archs else None)
         if self.rev_cache_params == params:
             return self.revisions is not None
@@ -145,6 +148,7 @@ class Submission:
             return True
 
     def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
+        """Return the repohash for a specific architecture and version, with fallback for SLE12."""
         if self.revisions is None:
             self.compute_revisions_for_product_repo(None, None)
         try:
@@ -168,6 +172,7 @@ class Submission:
         options: RepoOptions,
         limit_archs: set[str] | None = None,
     ) -> dict[ArchVer, int]:
+        """Calculate repohashes for a set of channels."""
         rev: dict[ArchVer, int] = {}
         tmpdict: dict[ArchVer, list[tuple[str, str, str]]] = defaultdict(list)
 
@@ -202,18 +207,22 @@ class Submission:
         return rev
 
     def __repr__(self) -> str:
+        """Return a representation of the Submission."""
         if self.rrid:
             return f"<Submission: {self.type}:{self.rrid}>"
         return f"<Submission: {self.type}:{self.project}>"
 
     def __str__(self) -> str:
+        """Return a string representation of the Submission."""
         return f"{self.type}:{self.id}"
 
     @staticmethod
     def is_livepatch(packages: list[str]) -> bool:
+        """Check if a list of packages contains livepatch related ones."""
         if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
             return False
         return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
+        """Check if the submission contains any of the required packages."""
         return any(p != "kernel-livepatch-tools" and p.startswith(tuple(requires)) for p in self.packages)

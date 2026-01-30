@@ -43,6 +43,7 @@ class GiteaSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         data = self.submissions
         log.debug("Data for %d submissions: %s", len(data), pformat(data))
         if self.dry:

@@ -51,9 +51,11 @@ class BuildInfo(NamedTuple):
     build: str
 
     def __str__(self) -> str:
+        """Return a string representation of the BuildInfo."""
         return f"{self.product}v{self.version} build {self.build}@{self.arch} of flavor {self.flavor}"
 
     def string_with_params(self, params: dict[str, str]) -> str:
+        """Return a string representation of the build with overridden parameters."""
         version = params.get("VERSION", self.version)
         flavor = params.get("FLAVOR", self.flavor)
         arch = params.get("ARCH", self.arch)
@@ -70,9 +72,11 @@ class ApprovalStatus(NamedTuple):
 
     @classmethod
     def create(cls, request: osc.core.Request) -> ApprovalStatus:
+        """Create a new ApprovalStatus instance."""
         return cls(request, set(), [])
 
     def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
+        """Add jobs and reasons to the status."""
         self.ok_jobs.update(ok_jobs)
         self.reasons_to_disapprove.extend(reasons_to_disapprove)
 
@@ -92,6 +96,7 @@ class IncrementApprover:
 
     @lru_cache(maxsize=128)
     def get_regex_match(self, pattern: str, string: str) -> re.Match | None:  # noqa: PLR6301
+        """Compile and match a regex pattern."""
         match = None
         try:
             match = re.search(pattern, string)
@@ -104,6 +109,7 @@ class IncrementApprover:
 
     @cache
     def find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
+        """Find a relevant product increment request on OBS."""
         args = self.args
         relevant_states = ["new", "review"]
         if args.accepted:
@@ -142,6 +148,7 @@ class IncrementApprover:
         arch: str,
         packages: defaultdict[str, set[Package]],
     ) -> None:
+        """Add packages from source reports of a project to the packages dictionary."""
         log.debug(
             "Finding source reports for package %s in project %s for repo/arch %s/%s",
             action.src_package,
@@ -178,6 +185,7 @@ class IncrementApprover:
     def compute_packages_of_request_from_source_report(
         self, request: osc.core.Request
     ) -> tuple[defaultdict[str, set[Package]], int]:
+        """Compute the package diff of a request based on source reports."""
         repo_a = defaultdict(set)
         repo_b = defaultdict(set)
         for action in request.actions:
@@ -190,9 +198,11 @@ class IncrementApprover:
 
     @cache
     def get_obs_request_list(self, project: str, req_state: tuple) -> list:  # noqa: PLR6301
+        """Get a list of requests from OBS."""
         return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
+        """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
         query_params = (
             {
@@ -209,6 +219,7 @@ class IncrementApprover:
         return res
 
     def check_openqa_jobs(self, results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:  # noqa: PLR6301
+        """Check if all openQA jobs are finished."""
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
@@ -232,12 +243,14 @@ class IncrementApprover:
         ok_jobs: set[int],
         not_ok_jobs: dict[str, set[str]],
     ) -> None:
+        """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
             destination = ok_jobs if result in ok_results else not_ok_jobs[result]
             destination.update(info["job_ids"])
 
     def evaluate_list_of_openqa_job_results(self, list_of_results: OpenQAResults) -> tuple[set[int], list[str]]:
+        """Evaluate a list of openQA job results."""
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         openqa_url = self.client.url.geturl()
@@ -251,11 +264,13 @@ class IncrementApprover:
         return (ok_jobs, reasons_to_disapprove)
 
     def approve_on_obs(self, reqid: str, msg: str) -> None:
+        """Change the review state of a request on OBS to accepted."""
         if self.args.dry:
             return
         osc.core.change_review_state(apiurl=OBS_URL, reqid=reqid, newstate="accepted", by_group=OBS_GROUP, message=msg)
 
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
+        """Process approval or disapproval based on job results."""
         reasons_to_disapprove = approval_status.reasons_to_disapprove
         reqid = approval_status.request.reqid
         id_msg = f"OBS request ID '{reqid}'"
@@ -275,6 +290,7 @@ class IncrementApprover:
         return 0
 
     def determine_build_info(self, config: IncrementConfig) -> set[BuildInfo]:
+        """Determine build information from the project's repository listing."""
         # deduce DISTRI, VERSION, FLAVOR, ARCH and BUILD from the spdx files in the repo listing similar to the sync
         # plugin
         build_project_url = config.build_project_url()
@@ -323,6 +339,7 @@ class IncrementApprover:
         config: IncrementConfig,
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
+        """Determine extra build parameters for a specific package."""
         for additional_build in config.additional_builds:
             package_name_regex = additional_build.get("package_name_regex") or additional_build.get("regex", "")
             if (package_name_match := self.get_regex_match(package_name_regex, package.name)) is None:
@@ -355,6 +372,7 @@ class IncrementApprover:
         config: IncrementConfig,
         build_info: BuildInfo,
     ) -> list[dict[str, str]]:
+        """Determine extra builds for all additional builds in the configuration."""
 
         def handle_package(p: Package) -> dict[str, str] | None:
             return self.extra_builds_for_package(p, config, build_info)
@@ -363,12 +381,14 @@ class IncrementApprover:
 
     @staticmethod
     def populate_params_from_env(params: dict[str, str], env_var: str) -> None:
+        """Populate parameters from an environment variable."""
         value = os.environ.get(env_var, "")
         if len(value) > 0:
             params["__" + env_var] = value
 
     @staticmethod
     def match_packages(package_diff: set[Package], packages_to_find: list[str]) -> bool:
+        """Check if any of the packages to find are present in the package diff."""
         if len(packages_to_find) == 0:
             return True
         names_of_changed_packages = {p.name for p in package_diff}
@@ -377,6 +397,7 @@ class IncrementApprover:
     def get_package_diff(
         self, request: osc.core.Request | None, config: IncrementConfig, repo_sub_path: str
     ) -> defaultdict[str, set[Package]]:
+        """Get the package diff for a configuration."""
         package_diff = defaultdict(set)
         diff_key = None
         if config.diff_project_suffix == "source-report":
@@ -406,6 +427,7 @@ class IncrementApprover:
     def make_scheduling_parameters(
         self, request: osc.core.Request | None, config: IncrementConfig, build_info: BuildInfo
     ) -> ScheduleParams:
+        """Prepare scheduling parameters for a build."""
         repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
@@ -433,6 +455,7 @@ class IncrementApprover:
         return [merge_dicts(base_params, p) for p in extra_params]
 
     def schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
+        """Schedule jobs on openQA."""
         error_count = 0
         for p in params:
             suffix = f": {p}" if self.args.dry else ""
@@ -452,6 +475,7 @@ class IncrementApprover:
         request: osc.core.Request,
         approval_status: ApprovalStatus,
     ) -> int:
+        """Process a single build and update its approval status."""
         error_count = 0
         params = self.make_scheduling_parameters(request, config, build_info)
         log.debug("Prepared scheduling parameters: %s", params)
@@ -481,6 +505,7 @@ class IncrementApprover:
         return error_count
 
     def process_request_for_config(self, request: osc.core.Request | None, config: IncrementConfig) -> int:
+        """Process an OBS request for a specific configuration."""
         error_count = 0
         if request is None:
             return error_count
@@ -506,6 +531,7 @@ class IncrementApprover:
         return error_count
 
     def __call__(self) -> int:
+        """Run the increment approval process."""
         error_count = 0
         for config in self.config:
             request = self.find_request_on_obs(config.build_project())

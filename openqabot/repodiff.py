@@ -50,14 +50,17 @@ class RepoDiff:
         self.args = args
 
     def make_repodata_url(self, project: str) -> str:  # noqa: PLR6301
+        """Construct the URL for repository metadata."""
         path = project.replace(":", ":/")
         return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
 
     def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
+        """Find the primary XML metadata file in a list of repository files."""
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 
     @staticmethod
     def decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
+        """Decompress repository metadata if it is compressed."""
         if repo_data_file.endswith(".gz"):
             return gzip.decompress(repo_data_raw)
         if repo_data_file.endswith(".zst"):
@@ -65,6 +68,7 @@ class RepoDiff:
         return repo_data_raw
 
     def request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
+        """Fetch data from a URL and optionally dump it to a file for fake data usage."""
         log.debug("Fetching repository data from %s", url)
         name = "responses/" + name.replace("/", "_")
         try:
@@ -85,6 +89,7 @@ class RepoDiff:
         return None
 
     def load_repodata(self, project: str) -> etree.Element | None:
+        """Load and parse repository primary metadata for an OBS project."""
         url = self.make_repodata_url(project)
         repo_data_listing = self.request_and_dump(
             url + "?jsontable=1",
@@ -108,6 +113,7 @@ class RepoDiff:
         return etree.fromstring(repo_data)
 
     def load_packages(self, project: str) -> defaultdict[str, set[Package]]:
+        """Load the list of packages from an OBS project repository."""
         repo_data = self.load_repodata(project)
         packages_by_arch = defaultdict(set)
         if repo_data is None or not hasattr(repo_data, "iterfind"):
@@ -133,6 +139,7 @@ class RepoDiff:
         repo_b: str,
         packages_by_arch_b: defaultdict[str, set[Package]],
     ) -> tuple[defaultdict[str, set[Package]], int]:
+        """Compute the difference between two sets of packages grouped by architecture."""
         diff_by_arch = defaultdict(set)
         count = 0
         for arch, packages_b in packages_by_arch_b.items():
@@ -145,6 +152,7 @@ class RepoDiff:
         return (diff_by_arch, count)
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
+        """Compute the package diff between two OBS projects."""
         try:
             packages_by_arch_a = self.load_packages(repo_a)
             packages_by_arch_b = self.load_packages(repo_b)
@@ -154,6 +162,7 @@ class RepoDiff:
             return defaultdict(set), 0
 
     def __call__(self) -> int:
+        """Run the repository diff computation."""
         args = self.args
         if args is None:
             log.error("RepoDiff called without arguments")

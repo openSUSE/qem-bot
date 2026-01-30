@@ -109,6 +109,7 @@ class Approver:
         self.client = OpenQAInterface(args)
 
     def __call__(self) -> int:
+        """Run the approval process."""
         log.info("Starting approving submissions in IBS or Gitea…")
         subreqs = (
             get_single_submission(self.token, self.single_submission, submission_type=self.submission_type)
@@ -133,6 +134,7 @@ class Approver:
         return 0 if overall_result else 1
 
     def approvable(self, sub: SubReq) -> bool:
+        """Check if a submission is ready for approval."""
         try:
             s_jobs = get_submission_settings(
                 sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
@@ -163,6 +165,7 @@ class Approver:
 
     @staticmethod
     def check_status(status: JobStatus, sub: SubReq, test_type: str) -> bool:
+        """Log status check results."""
         if status == JobStatus.PASSED:
             return True
 
@@ -180,6 +183,7 @@ class Approver:
         return False
 
     def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
+        """Mark a job as acceptable for a submission in the dashboard."""
         try:
             patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
         except RequestError as e:
@@ -193,6 +197,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
+        """Check if a job is marked as acceptable for a submission."""
         regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
@@ -202,6 +207,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def validate_job_qam(self, job: int) -> bool:
+        """Validate if a job is present and passed in dashboard."""
         # Check that valid test result is still present in the dashboard (see
         # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
         # request
@@ -224,6 +230,7 @@ class Approver:
         oldest_build_usable: datetime,
         regex: Pattern[str],
     ) -> bool | None:
+        """Check if an older job was successful and contains the submission."""
         job_build = job["build"][:-2]
         try:
             job_build_date = datetime.strptime(job_build, "%Y%m%d").astimezone(UTC)
@@ -270,6 +277,7 @@ class Approver:
 
     @lru_cache(maxsize=512)
     def was_ok_before(self, failed_job_id: int, sub: int) -> bool:
+        """Check if a similar job was successful before."""
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
         jobs = self.client.get_older_jobs(failed_job_id, 20)
         data = jobs.get("data", [])
@@ -298,9 +306,11 @@ class Approver:
         return False
 
     def is_job_passing(self, job_result: dict) -> bool:  # noqa: PLR6301
+        """Check if a job result status is passed."""
         return job_result["status"] == "passed"
 
     def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
+        """Mark failed jobs as acceptable if they have corresponding openQA comments."""
         for job_result in job_results:
             if self.is_job_passing(job_result):
                 continue
@@ -310,6 +320,7 @@ class Approver:
                 self.mark_job_as_acceptable_for_submission(job_id, sub)
 
     def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> JobStatus:
+        """Determine if a job result is acceptable for approval."""
         if self.is_job_passing(job_result):
             return JobStatus.PASSED
         job_id = job_result["job_id"]
@@ -359,6 +370,7 @@ class Approver:
 
     @lru_cache(maxsize=128)
     def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobStatus | None:
+        """Retrieve jobs for a specific aggregate or incident setting."""
         params = {}
         if submission_type:
             params["type"] = submission_type
@@ -377,6 +389,7 @@ class Approver:
     def get_submission_result(
         self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
     ) -> JobStatus:
+        """Summarize results for all jobs of a submission."""
         if not jobs:
             return JobStatus.FAILED
 
@@ -389,12 +402,14 @@ class Approver:
         return res if res is not None else JobStatus.FAILED
 
     def approve(self, sub: SubReq) -> bool:
+        """Approve a submission in OBS or Gitea."""
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
         log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod
     def osc_approve(sub: SubReq, msg: str) -> bool:
+        """Approve a submission in OBS."""
         try:
             osc.core.change_review_state(
                 apiurl=OBS_URL,
@@ -412,6 +427,7 @@ class Approver:
         return True
 
     def git_approve(self, sub: SubReq, msg: str) -> bool:
+        """Approve a submission in Gitea."""
         if not sub.url:
             log.error("Gitea API error: PR %s has no URL", sub.sub)
             return False

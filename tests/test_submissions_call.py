@@ -324,6 +324,7 @@ class LimitArchsSubmission(MockSubmission):
         product_version: str | None,  # noqa: ARG002
         limit_archs: set[str] | None = None,
     ) -> bool:
+        """Mock compute_revisions_for_product_repo."""
         self.revisions = {ArchVer("x86_64", "15-SP3"): 9999} if limit_archs else {ArchVer("x86_64", "15-SP3"): 12345}
         return True
 

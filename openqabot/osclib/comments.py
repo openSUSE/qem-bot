@@ -170,6 +170,7 @@ class CommentAPI:
 
     @staticmethod
     def truncate(comment: str, suffix: str = "...", length: int = 65535) -> str:
+        """Truncate a comment to a specific length, preserving markdown pre tags."""
         # Handle very short length by dropping suffix and just chopping comment.
         if length <= len(suffix) + len("\n</pre>"):
             return comment[:length]

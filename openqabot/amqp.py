@@ -53,6 +53,7 @@ class AMQP(SyncRes):
         self.channel.basic_consume(queue_name, self.on_message, auto_ack=True)
 
     def __call__(self) -> int:
+        """Start the AMQP listener."""
         log.info("Starting AMQP listener")
         if not self.channel:
             log.error("AMQP listener not started: No channel available")
@@ -63,6 +64,7 @@ class AMQP(SyncRes):
         return 0
 
     def stop(self) -> None:
+        """Stop the AMQP listener and close connection."""
         if self.connection:
             log.info("Stopping AMQP listener: Closing connection")
             self.connection.close()
@@ -74,6 +76,7 @@ class AMQP(SyncRes):
         __: pika.spec.BasicProperties,
         body: bytes,
     ) -> None:
+        """Handle incoming AMQP message."""
         message = json.loads(body)
         if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
@@ -90,12 +93,14 @@ class AMQP(SyncRes):
         return None
 
     def fetch_openqa_results(self, sub: Data, message: dict[str, Any]) -> None:
+        """Fetch results from openQA for a specific submission."""
         AMQP.operation = "submission"
         for job in self.client.get_jobs(sub):
             if self.filter_jobs(job) and (r := self.normalize_data_safe(sub, job)) and r["job_id"] == message["id"]:
                 self.post_result(r)
 
     def handle_submission(self, sub_nr: int, sub_type: str, message: dict[str, Any]) -> None:
+        """Handle results for a specific submission and trigger approval."""
         # Load Data about current submission from dashboard database
         try:
             settings: Sequence[Data] = get_submission_settings_data(self.token, sub_nr, submission_type=sub_type)

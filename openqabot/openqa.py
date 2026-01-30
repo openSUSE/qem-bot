@@ -50,6 +50,7 @@ class OpenQAInterface:
         return self.url.netloc == OPENQA_URL
 
     def post_job(self, settings: dict[str, Any]) -> None:
+        """Post a job to openQA with the given settings."""
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
@@ -66,10 +67,12 @@ class OpenQAInterface:
             raise PostOpenQAError from e
 
     def handle_job_not_found(self, job_id: int) -> None:
+        """Handle case where a job is not found on openQA."""
         log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
         update_job(self.qem_token, job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
+        """Fetch openQA jobs matching the given criteria."""
         log.info("Fetching openQA jobs for %s", pformat(data))
         param = {
             "scope": "relevant",
@@ -84,6 +87,7 @@ class OpenQAInterface:
 
     @lru_cache(maxsize=512)
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
+        """Fetch comments for a specific job."""
         try:
             ret = self.openqa.openqa_request("GET", f"jobs/{job_id}/comments", retries=self.retries)
             return [{"text": c.get("text", "")} for c in ret]
@@ -99,12 +103,14 @@ class OpenQAInterface:
 
     @lru_cache(maxsize=256)
     def is_devel_group(self, groupid: int) -> bool:
+        """Check if a job group is a development group."""
         ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
     @lru_cache(maxsize=256)
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:
+        """Fetch details for a single job."""
         try:
             return self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
         except RequestError:
@@ -113,6 +119,7 @@ class OpenQAInterface:
 
     @lru_cache(maxsize=256)
     def get_older_jobs(self, job_id: int, limit: int) -> dict:
+        """Fetch older jobs for a specific job."""
         try:
             return self.openqa.openqa_request(
                 "GET", f"/tests/{job_id}/ajax?previous_limit={limit}&next_limit=0", retries=self.retries
@@ -122,4 +129,5 @@ class OpenQAInterface:
         return {"data": []}
 
     def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Fetch scheduling statistics for a product."""
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)

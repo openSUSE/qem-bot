@@ -36,6 +36,7 @@ class Commenter:
         self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
+        """Run the commenting process."""
         log.info("Starting to comment SMELT incidents in IBS")
 
         for sub in self.submissions:
@@ -68,6 +69,7 @@ class Commenter:
         return 0
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
+        """Comment a submission in IBS."""
         if sub.rr is None:
             log.debug("Comment skipped for submission %s: No release request defined", sub)
             return
@@ -113,6 +115,7 @@ class Commenter:
             log.debug(pformat(msg))
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
+        """Summarize multiple openQA jobs into a single message."""
         groups: dict[str, dict[str, Any]] = {}
         for job in jobs:
             self._process_job(groups, job)
@@ -123,6 +126,7 @@ class Commenter:
         return msg.rstrip("\n")
 
     def _process_job(self, groups: dict[str, dict[str, Any]], job: dict[str, Any]) -> None:
+        """Process a single openQA job and update its group summary."""
         if "job_group" not in job:
             # workaround for experiments of some QAM devs
             log.warning("Job %s skipped: Missing 'job_group'", job["job_id"])
@@ -145,6 +149,7 @@ class Commenter:
         groups[gl]["failed"].append(job_summary)
 
     def _create_group_if_missing(self, groups: dict[str, dict[str, Any]], job: dict[str, Any], gl: str) -> None:
+        """Create a new group summary entry if it doesn't exist."""
         if gl not in groups:
             groupurl = osc.core.makeurl(
                 self.client.openqa.baseurl,
@@ -166,6 +171,7 @@ class Commenter:
 
     @staticmethod
     def _format_group_message(group_data: dict[str, Any]) -> str:
+        """Format a single group summary into a markdown string."""
         msg = "\n\n" + group_data["title"]
         infos = []
         if group_data["passed"]:
@@ -181,6 +187,7 @@ class Commenter:
 
     @staticmethod
     def escape_for_markdown(string: str) -> str:
+        """Escape underscores for markdown."""
         return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:

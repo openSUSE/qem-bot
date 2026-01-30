@@ -56,16 +56,19 @@ class Aggregate(BaseConf):
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
+        """Normalize repository configuration from settings."""
         try:
             return {key: ProdVer(*value.split(":")) for key, value in config["test_issues"].items()}
         except KeyError as e:
             raise NoTestIssuesError from e
 
     def __repr__(self) -> str:
+        """Return a string representation of the Aggregate."""
         return f"<Aggregate product: {self.product}>"
 
     @staticmethod
     def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
+        """Determine the next build number based on current date and repohash."""
         today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
 
         if build.startswith(today) and repohash == old_repohash:
@@ -75,6 +78,8 @@ class Aggregate(BaseConf):
         return f"{today}-{counter}"
 
     def filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
+        """Filter out submissions that are not suitable for aggregate tests."""
+
         def is_valid(submission: Submission) -> bool:
             if any((submission.livepatch, submission.staging)):
                 return False
@@ -88,6 +93,7 @@ class Aggregate(BaseConf):
     def get_test_submissions_and_repos(
         self, valid_submissions: list[Submission], issues_arch: str
     ) -> tuple[defaultdict[str, list[Submission]], defaultdict[str, list[str]]]:
+        """Group submissions and their repository URLs for testing."""
         test_submissions = defaultdict(list)
         test_repos = defaultdict(list)
 
@@ -102,12 +108,14 @@ class Aggregate(BaseConf):
         return test_submissions, test_repos
 
     def _get_repo_url(self, sub: Submission, issue: str, issues_arch: str) -> str:
+        """Construct the repository URL for a submission."""
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
         base_url = f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
     def _apply_public_cloud_settings(self, settings: dict[str, Any]) -> dict[str, Any] | None:
+        """Apply Public Cloud specific settings if present."""
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)
             if not settings or not settings.get("PUBLIC_CLOUD_TOOLS_IMAGE_BASE", False):
@@ -122,6 +130,7 @@ class Aggregate(BaseConf):
         return settings
 
     def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # noqa: PLR6301
+        """Add incident-specific data to the dashboard post."""
         for template, issues in data.test_submissions.items():
             full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
             full_post["qem"]["incidents"] += issues
@@ -138,6 +147,7 @@ class Aggregate(BaseConf):
         full_post["qem"]["incidents"] = unique_incidents
 
     def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
+        """Finalize the dashboard post with metadata and summary information."""
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
             f"{QEM_DASHBOARD}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
         )
@@ -160,6 +170,7 @@ class Aggregate(BaseConf):
         data: PostData,
         ci_url: str | None,
     ) -> dict[str, Any] | None:
+        """Create the full post data for the dashboard."""
         full_post: dict[str, Any] = {
             "openqa": {"REPOHASH": data.repohash, "BUILD": data.build},
             "qem": {"incidents": [], "settings": {}},
@@ -203,6 +214,7 @@ class Aggregate(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> dict[str, Any] | None:
+        """Process a specific architecture for aggregate jobs."""
         # Temporary workaround for applying the correct architecture on jobs, which use a helper VM
         issues_arch = self.settings.get("TEST_ISSUES_ARCH", arch)
 
@@ -263,6 +275,7 @@ class Aggregate(BaseConf):
         *,
         ignore_onetime: bool = False,
     ) -> list[dict[str, Any]]:
+        """Process all architectures and return a list of posts for the dashboard."""
         valid_submissions = self.filter_submissions(submissions)
 
         results = [

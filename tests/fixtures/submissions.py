@@ -41,10 +41,12 @@ class MockSubmission(Submission):
         product_version: str | None,
         limit_archs: set[str] | None = None,
     ) -> bool:
+        """Mock compute_revisions_for_product_repo."""
         _ = (product_repo, product_version, limit_archs)
         return self.compute_revisions_value
 
     def revisions_with_fallback(self, arch: str, ver: str) -> int | None:
+        """Mock revisions_with_fallback."""
         if self.rev_fallback_value is not None:
             return self.rev_fallback_value
         if isinstance(self.revisions, dict):
@@ -52,6 +54,7 @@ class MockSubmission(Submission):
         return None
 
     def contains_package(self, requires: list[str]) -> bool:
+        """Mock contains_package."""
         if self.contains_package_value is not None:
             return self.contains_package_value
         return any(p.startswith(tuple(requires)) for p in self.packages)

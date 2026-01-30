@@ -24,6 +24,7 @@ class SubResultsSync(SyncRes):
         self.active = get_active_submissions(self.token)
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         submissions = list(chain.from_iterable(get_submission_settings_data(self.token, sub) for sub in self.active))
         full = {}
         with futures.ThreadPoolExecutor() as executor:
