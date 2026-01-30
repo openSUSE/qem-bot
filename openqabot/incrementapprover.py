@@ -96,8 +96,9 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
+    @staticmethod
     @lru_cache(maxsize=128)
-    def get_regex_match(self, pattern: str, string: str) -> re.Match | None:  # noqa: PLR6301
+    def get_regex_match(pattern: str, string: str) -> re.Match | None:
         """Compile and match a regex pattern."""
         match = None
         try:
@@ -109,7 +110,7 @@ class IncrementApprover:
             )
         return match
 
-    @cache
+    @cache  # noqa: B019
     def find_request_on_obs(self, build_project: str) -> osc.core.Request | None:
         """Find a relevant product increment request on OBS."""
         args = self.args
@@ -198,10 +199,11 @@ class IncrementApprover:
             self.add_packages_for_action_project(action, action.src_project, "product", "local", repo_b)
         return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
 
+    @staticmethod
     @cache
-    def get_obs_request_list(self, project: str, req_state: tuple) -> list:  # noqa: PLR6301
+    def get_obs_request_list(project: str, req_state: tuple) -> list:
         """Get a list of requests from OBS."""
-        return osc.core.get_request_list(OBS_URL, project=project, req_state=req_state)
+        return osc.core.get_request_list(OBS_URL, project, req_state=req_state)
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""

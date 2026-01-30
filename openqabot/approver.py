@@ -201,7 +201,7 @@ class Approver:
                 e,
             )
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
         """Check if a job is marked as acceptable for a submission."""
         regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
@@ -211,7 +211,7 @@ class Approver:
         except RequestError:
             return False
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def validate_job_qam(self, job: int) -> bool:
         """Validate if a job is present and passed in dashboard."""
         # Check that valid test result is still present in the dashboard (see
@@ -281,7 +281,7 @@ class Approver:
         log.info("Ignoring failed aggregate %s and using instead %s for aggregate %s", failed_job_id, job["id"], sub)
         return True
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def was_ok_before(self, failed_job_id: int, sub: int) -> bool:
         """Check if a similar job was successful before."""
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
@@ -374,7 +374,7 @@ class Approver:
         )
         return JobStatus.FAILED
 
-    @lru_cache(maxsize=128)
+    @lru_cache(maxsize=128)  # noqa: B019
     def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobStatus | None:
         """Retrieve jobs for a specific aggregate or incident setting."""
         params = {}

@@ -86,7 +86,7 @@ class OpenQAInterface:
         }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         """Fetch comments for a specific job."""
         try:
@@ -102,14 +102,14 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching comments for job %s", job_id)
         return []
 
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=256)  # noqa: B019
     def is_devel_group(self, groupid: int) -> bool:
         """Check if a job group is a development group."""
         ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         # return True as safe option if ret = None
         return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
 
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=256)  # noqa: B019
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         """Fetch details for a single job."""
         try:
@@ -118,7 +118,7 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching job %s", job_id)
         return None
 
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=256)  # noqa: B019
     def get_older_jobs(self, job_id: int, limit: int) -> dict:
         """Fetch older jobs for a specific job."""
         try:
