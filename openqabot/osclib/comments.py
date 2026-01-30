@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: GPL-2.0+
+"""OSC comments handling."""
+
 from __future__ import annotations
 
 import re

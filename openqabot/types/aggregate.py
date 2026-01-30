@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Aggregate type definition."""
+
 from __future__ import annotations
 
 import datetime

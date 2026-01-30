@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Base configuration type."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

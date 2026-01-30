@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Submission type definition."""
+
 from __future__ import annotations
 
 import re

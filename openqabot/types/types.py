@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Common type definitions."""
+
 from typing import NamedTuple
 
 
