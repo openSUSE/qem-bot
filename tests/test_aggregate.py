@@ -362,8 +362,10 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     sub.embargoed = False
     sub.priority = None
     sub.__str__.side_effect = lambda: f"{sub.type}:{sub.id}"
+    sub.channels = [Repos("product", "version", "x86_64")]
 
-    repo_url = agg._get_repo_url(sub, "ISSUE", "x86_64")  # noqa: SLF001
+    _, test_repos = agg.get_test_submissions_and_repos([sub], "x86_64")
+    repo_url = test_repos["ISSUE"][0]
 
     assert "smelt:" not in repo_url
     assert "/42/" in repo_url
