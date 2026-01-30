@@ -6,6 +6,7 @@ import re
 import string
 from argparse import Namespace
 from datetime import datetime, timedelta
+from enum import IntEnum, unique
 from functools import lru_cache
 from http import HTTPStatus
 from logging import getLogger
@@ -44,6 +45,14 @@ log = getLogger("bot.approver")
 
 ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}:(.+?)(?:$|\s)"
 MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
+
+
+@unique
+class JobStatus(IntEnum):
+    PASSED = 0
+    WAITING = 1
+    STOPPED = 2
+    FAILED = 3
 
 
 def ms2str(sub: SubReq) -> str:
@@ -134,18 +143,35 @@ class Approver:
             log.info(e)
             a_jobs = []
 
-        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            log.info("%s has at least one failed job in submission tests", ms2str(sub))
+        status = self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type)
+        if not self.check_status(status, sub, "submission"):
             return False
 
-        if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
-            a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
-        ):
-            log.info("%s has at least one failed job in aggregate tests", ms2str(sub))
-            return False
+        if any(s.with_aggregate for s in s_jobs):
+            status = self.get_submission_result(a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type)
+            if not self.check_status(status, sub, "aggregate"):
+                return False
 
         # everything is green --> add submission to approve list
         return True
+
+    @staticmethod
+    def check_status(status: JobStatus, sub: SubReq, test_type: str) -> bool:
+        if status == JobStatus.PASSED:
+            return True
+
+        messages = {
+            JobStatus.FAILED: "at least one failed job",
+            JobStatus.STOPPED: "stopped jobs",
+            JobStatus.WAITING: "tests still in progress",
+        }
+        log.info(
+            "%s has %s in %s tests",
+            ms2str(sub),
+            messages.get(status, "unknown job status"),
+            test_type,
+        )
+        return False
 
     def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
         try:
@@ -277,9 +303,9 @@ class Approver:
                 job_result[f"acceptable_for_{sub}"] = True
                 self.mark_job_as_acceptable_for_submission(job_id, sub)
 
-    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> bool:
+    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> JobStatus:
         if self.is_job_passing(job_result):
-            return True
+            return JobStatus.PASSED
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
         if job_result.get(f"acceptable_for_{sub}"):
@@ -289,7 +315,7 @@ class Approver:
                 self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
-            return True
+            return JobStatus.PASSED
         if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
             log.info(
                 "Ignoring failed aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
@@ -297,17 +323,36 @@ class Approver:
                 self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
-            return True
+            return JobStatus.PASSED
+
+        status = job_result.get("status")
+        if status == "waiting":
+            log.info(
+                "Found unfinished job %s for submission %s:%s",
+                url,
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
+                sub,
+            )
+            return JobStatus.WAITING
+        if status == "stopped":
+            log.info(
+                "Found stopped job %s for submission %s:%s",
+                url,
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
+                sub,
+            )
+            return JobStatus.STOPPED
+
         log.info(
             "Found failed, not-ignored job %s for submission %s:%s",
             url,
             self.submission_type or DEFAULT_SUBMISSION_TYPE,
             sub,
         )
-        return False
+        return JobStatus.FAILED
 
     @lru_cache(maxsize=128)
-    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool | None:
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobStatus | None:
         params = {}
         if submission_type:
             params["type"] = submission_type
@@ -321,23 +366,21 @@ class Approver:
             )
             return None
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
-        return all(self.is_job_acceptable(sub, api, r) for r in job_results)
+        return max((self.is_job_acceptable(sub, api, r) for r in job_results), default=JobStatus.PASSED)
 
     def get_submission_result(
         self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
-    ) -> bool:
+    ) -> JobStatus:
         if not jobs:
-            return False
+            return JobStatus.FAILED
 
-        res = False
+        res = None
         for job_aggr in jobs:
-            success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
-            if success is False:
-                return False
-            if success is True:
-                res = True
+            status = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
+            if status is not None:
+                res = status if res is None else max(res, status)
 
-        return res
+        return res if res is not None else JobStatus.FAILED
 
     def approve(self, sub: SubReq) -> bool:
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"

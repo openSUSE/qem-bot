@@ -11,7 +11,7 @@ import pytest
 from openqa_client.exceptions import RequestError
 from pytest_mock import MockerFixture
 
-from openqabot.approver import Approver
+from openqabot.approver import Approver, JobStatus
 from openqabot.utc import UTC
 
 from .helpers import args
@@ -94,4 +94,4 @@ def test_was_ok_before_no_suitable_older_jobs(
 
 def test_get_submission_result_empty_jobs() -> None:
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is False
+    assert approver_instance.get_submission_result([], "api/", 1) == JobStatus.FAILED
