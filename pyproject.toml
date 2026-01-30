@@ -155,7 +155,6 @@ ignore = [
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
-    "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 from http import HTTPStatus
-from itertools import starmap
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
@@ -55,7 +54,7 @@ class OpenQAInterface:
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
-            " ".join(list(starmap("{}={}".format, settings.items()))),
+            " ".join(f"{k}={v}" for k, v in settings.items()),
         )
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
