@@ -7,13 +7,12 @@ from __future__ import annotations
 import os
 import re
 import tempfile
-from argparse import Namespace
 from collections import defaultdict
 from functools import cache, lru_cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import osc.conf
 import osc.core
@@ -27,6 +26,9 @@ from .loader.incrementconfig import IncrementConfig
 from .repodiff import Package, RepoDiff
 from .utils import merge_dicts
 from .utils import retry10 as retried_requests
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}

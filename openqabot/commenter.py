@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
@@ -18,7 +17,11 @@ from openqabot.errors import NoResultsError
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
-from .types.submission import Submission
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from .types.submission import Submission
 
 log = getLogger("bot.commenter")
 

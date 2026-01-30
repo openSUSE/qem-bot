@@ -3,12 +3,14 @@
 """Test SyncRes."""
 
 from argparse import Namespace
-from typing import cast
+from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
 from urllib.parse import urlparse
 
 from openqabot.syncres import SyncRes
-from openqabot.types.types import Data
+
+if TYPE_CHECKING:
+    from openqabot.types.types import Data
 
 
 def test_clone_dry() -> None:

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-from argparse import Namespace
 from functools import lru_cache
 from http import HTTPStatus
 from itertools import starmap
@@ -21,10 +20,12 @@ from openqabot.utils import number_of_retries
 
 from .errors import PostOpenQAError
 from .loader.qem import update_job
-from .types.types import Data
 
 if TYPE_CHECKING:
+    from argparse import Namespace
     from urllib.parse import ParseResult
+
+    from .types.types import Data
 
 
 log = logging.getLogger("bot.openqa")

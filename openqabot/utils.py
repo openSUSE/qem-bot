@@ -7,14 +7,16 @@ from __future__ import annotations
 import logging
 import os
 from copy import deepcopy
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .types.types import Data
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from .types.types import Data
 
 
 def create_logger(name: str) -> logging.Logger:

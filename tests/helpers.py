@@ -10,13 +10,11 @@ import re
 from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import osc.core
-import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import QEM_DASHBOARD
@@ -25,6 +23,10 @@ from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.utils import merge_dicts
+
+if TYPE_CHECKING:
+    import pytest
+    from pytest_mock import MockerFixture
 
 
 # define fake data

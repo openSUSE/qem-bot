@@ -156,9 +156,6 @@ ignore = [
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
-    "TC001", # typing-only-first-party-import
-    "TC002", # typing-only-third-party-import
-    "TC003", # typing-only-standard-library-import
     "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
 

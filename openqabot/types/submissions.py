@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from logging import getLogger
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
@@ -25,8 +25,10 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
-from .submission import Submission
 from .types import ProdVer, Repos
+
+if TYPE_CHECKING:
+    from .submission import Submission
 
 log = getLogger("bot.types.submissions")
 

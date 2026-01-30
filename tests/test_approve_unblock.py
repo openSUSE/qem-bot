@@ -8,10 +8,9 @@ import logging
 import re
 from argparse import Namespace
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import QEM_DASHBOARD, Approver
@@ -21,6 +20,9 @@ from .helpers import (
     assert_log_messages,
     openqa_instance_url,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @dataclass(frozen=True)

@@ -4,13 +4,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from http import HTTPStatus
 from itertools import chain
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
@@ -19,6 +18,9 @@ from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import Data
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 log = getLogger("bot.loader.qem")
 

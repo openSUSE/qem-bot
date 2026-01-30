@@ -6,16 +6,18 @@ from __future__ import annotations
 
 import logging
 from argparse import Namespace
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
-from pytest_mock import MockerFixture
 
 import openqabot.openqabot
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture

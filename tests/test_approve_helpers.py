@@ -7,16 +7,18 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
 from openqa_client.exceptions import RequestError
-from pytest_mock import MockerFixture
 
 from openqabot.approver import Approver, JobStatus
 from openqabot.utc import UTC
 
 from .helpers import args
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def test_is_job_marked_acceptable_for_submission_request_error(mocker: MockerFixture) -> None:

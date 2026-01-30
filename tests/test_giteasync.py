@@ -8,13 +8,12 @@ import logging
 import re
 from argparse import Namespace
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 
 import pytest
-from lxml import etree  # type: ignore[unresolved-import]
-from pytest_mock import MockerFixture
+from lxml import etree  # noqa: TC002  # type: ignore[unresolved-import]
 
 import responses
 from openqabot.config import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
@@ -33,6 +32,9 @@ from openqabot.loader.gitea import (
 )
 from openqabot.types.types import Repos
 from responses import GET, matchers
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture

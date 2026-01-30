@@ -4,12 +4,15 @@
 
 from __future__ import annotations
 
-import pytest
-from pytest_mock import MockerFixture
+from typing import TYPE_CHECKING
 
 from openqabot.loader.incrementconfig import IncrementConfig
 
 from .helpers import prepare_approver
+
+if TYPE_CHECKING:
+    import pytest
+    from pytest_mock import MockerFixture
 
 
 def testpackage_diff_repo(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:

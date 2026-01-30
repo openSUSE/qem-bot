@@ -5,15 +5,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.types.types import Data
 from openqabot.utils import compare_submission_data, get_yml_list, make_retry_session, normalize_results, walk
 from responses import registries
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def test_compare_submission_data() -> None:

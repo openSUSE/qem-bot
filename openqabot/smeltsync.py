@@ -4,15 +4,17 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .config import DEFAULT_SUBMISSION_TYPE
 from .loader.qem import update_submissions
 from .loader.smelt import get_active_submission_ids, get_submissions
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.smeltsync")
 

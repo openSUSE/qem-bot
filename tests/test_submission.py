@@ -5,17 +5,20 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Generator
 from copy import deepcopy
-from typing import Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, NoReturn, cast
 from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockerFixture
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer, Repos
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from pytest_mock import MockerFixture
 
 test_data = {
     "approved": False,

@@ -4,11 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from openqabot.types.baseconf import BaseConf, JobConfig, Submission
+from openqabot.types.baseconf import BaseConf, JobConfig
+
+if TYPE_CHECKING:
+    from openqabot.types.submission import Submission
 
 
 class FakeBaseConf(BaseConf):

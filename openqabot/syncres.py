@@ -4,16 +4,19 @@
 
 from __future__ import annotations
 
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .config import ALLOW_DEVELOPMENT_GROUPS, DEFAULT_SUBMISSION_TYPE
 from .loader.qem import post_job
 from .openqa import OpenQAInterface
-from .types.types import Data
 from .utils import normalize_results
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from .types.types import Data
 
 log = getLogger("bot.syncres")
 

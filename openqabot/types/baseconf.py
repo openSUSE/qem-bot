@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .submission import Submission
+if TYPE_CHECKING:
+    from .submission import Submission
 
 
 @dataclass

@@ -5,11 +5,11 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.loader.qem import (
@@ -31,6 +31,9 @@ from openqabot.loader.qem import (
     update_submissions,
 )
 from openqabot.types.types import Data
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture

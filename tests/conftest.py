@@ -5,10 +5,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import Approver
@@ -31,6 +30,9 @@ from .helpers import (
     obs_product_table_url,
     openqa_url,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture(autouse=True)

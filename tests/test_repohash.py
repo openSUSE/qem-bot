@@ -5,12 +5,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import ANY
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
 from requests import ConnectionError as RequestsConnectionError
 from requests import HTTPError as RequestsHTTPError
 
@@ -18,6 +17,9 @@ import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"

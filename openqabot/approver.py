@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import re
 import string
-from argparse import Namespace
 from datetime import datetime, timedelta
 from enum import IntEnum, unique
 from functools import lru_cache
 from http import HTTPStatus
 from logging import getLogger
 from re import Pattern
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -42,6 +42,9 @@ from .loader.qem import (
     get_submissions_approver,
 )
 from .utc import UTC
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = getLogger("bot.approver")
 

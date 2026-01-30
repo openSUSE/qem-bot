@@ -5,13 +5,15 @@
 from __future__ import annotations
 
 import logging
-
-import pytest
+from typing import TYPE_CHECKING
 
 from openqabot.approver import Approver
 from openqabot.loader.qem import SubReq
 
 from .helpers import args
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def test_git_approve_no_url(caplog: pytest.LogCaptureFixture) -> None:

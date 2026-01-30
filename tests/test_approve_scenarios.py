@@ -7,10 +7,9 @@ from __future__ import annotations
 import logging
 import re
 from argparse import Namespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import QEM_DASHBOARD, Approver
@@ -21,6 +20,9 @@ from .helpers import (
     assert_submission_not_approved,
     openqa_instance_url,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def with_fake_qem(mode: str) -> Any:

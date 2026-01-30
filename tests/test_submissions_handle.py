@@ -5,10 +5,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
@@ -18,6 +17,9 @@ from openqabot.types.submissions import SubConfig, SubContext, Submissions
 from openqabot.types.types import ArchVer, Repos
 
 from .fixtures.submissions import MockSubmission
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def _get_submissions_obj(
@@ -50,8 +52,8 @@ def test_get_submissions_obj_coverage() -> None:
 def test_handle_submission_rev_coverage(mocker: MockerFixture, *, rev_val: bool, fallback_val: int | None) -> None:
     submissions_obj = _get_submissions_obj()
     sub = MockSubmission()
-    mocker.patch("openqabot.types.submissions.Submission.compute_revisions_for_product_repo", return_value=rev_val)
-    mocker.patch("openqabot.types.submissions.Submission.revisions_with_fallback", return_value=fallback_val)
+    mocker.patch("openqabot.types.submission.Submission.compute_revisions_for_product_repo", return_value=rev_val)
+    mocker.patch("openqabot.types.submission.Submission.revisions_with_fallback", return_value=fallback_val)
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     assert submissions_obj.handle_submission(ctx, cfg) is None

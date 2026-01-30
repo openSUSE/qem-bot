@@ -7,16 +7,19 @@ from __future__ import annotations
 import json
 import logging
 from argparse import Namespace
-from typing import Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from urllib.parse import urlparse
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
-from openqabot.types.types import Data
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
+    from openqabot.types.types import Data
 
 
 class FakeMethod(NamedTuple):

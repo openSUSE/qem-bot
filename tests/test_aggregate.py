@@ -7,12 +7,10 @@ from __future__ import annotations
 import datetime
 import logging
 from collections import defaultdict
-from typing import Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
@@ -21,6 +19,11 @@ from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
 from openqabot.utc import UTC
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture

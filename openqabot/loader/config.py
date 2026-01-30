@@ -4,9 +4,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from logging import getLogger
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ruamel.yaml import YAML, YAMLError
 
@@ -16,6 +15,10 @@ from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
 from openqabot.utils import get_yml_list
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 log = getLogger("bot.loader.config")
 

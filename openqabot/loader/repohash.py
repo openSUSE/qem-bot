@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from hashlib import md5
 from logging import getLogger
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import requests
 from lxml import etree  # type: ignore[unresolved-import]
@@ -18,6 +17,9 @@ from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry5 as retried_requests
 
 from . import gitea
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 log = getLogger("bot.loader.repohash")
 

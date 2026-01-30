@@ -5,19 +5,21 @@
 from __future__ import annotations
 
 import pprint
-from argparse import Namespace
-from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import ruamel.yaml
 from ruamel.yaml import YAML
 
 from openqabot.config import OBS_DOWNLOAD_URL
 from openqabot.utils import get_yml_list
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from collections.abc import Iterator
+    from pathlib import Path
 
 log = getLogger("bot.increment_config")
 DEFAULT_FLAVOR_SUFFIX = "Increments"
