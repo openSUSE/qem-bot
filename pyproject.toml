@@ -148,7 +148,6 @@ extend-select =[
 ]
 
 ignore = [
-    "D100",   # missing-module-docstring
     "D101",   # missing-class-docstring
     "D102",   # missing-method-docstring
     "D103",   # missing-function-docstring
@@ -168,7 +167,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101"]
+"tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101", "S105", "S106", "PLR0917"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.
