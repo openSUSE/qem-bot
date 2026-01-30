@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader Gitea PRs."""
+
 import logging
 
 import pytest

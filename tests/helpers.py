@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106, PLR0917
+"""Helper functions for tests."""
+
 from __future__ import annotations
 
 import logging
@@ -141,7 +142,13 @@ def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) 
 
 
 def fake_get_binary_file(
-    url: str, prj: str, repo: str, arch: str, package: str, filename: str, target_filename: str
+    url: str,
+    prj: str,
+    repo: str,
+    arch: str,
+    package: str,
+    filename: str,
+    target_filename: str,
 ) -> None:
     assert url == OBS_URL
     assert package == "000productcompose:sles_aarch64"

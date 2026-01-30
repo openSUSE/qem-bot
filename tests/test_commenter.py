@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test commenter."""
+
 from __future__ import annotations
 
 import logging
@@ -55,7 +57,7 @@ def make_comment_api() -> Callable[..., MagicMock]:
 
 @pytest.fixture
 def mock_args() -> Namespace:
-    return Namespace(dry=True, token="test_token")  # noqa: S106
+    return Namespace(dry=True, token="test_token")
 
 
 @pytest.fixture

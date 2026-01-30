@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader Gitea helpers."""
+
 import json
 import logging
 from unittest.mock import MagicMock

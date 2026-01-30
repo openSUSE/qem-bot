@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test args."""
+
 from pytest_mock import MockerFixture
 
 import openqabot.args

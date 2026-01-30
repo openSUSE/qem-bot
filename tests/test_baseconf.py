@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test baseconf."""
+
 from __future__ import annotations
 
 from typing import Any

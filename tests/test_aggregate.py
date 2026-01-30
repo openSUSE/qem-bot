@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test aggregate."""
+
 from __future__ import annotations
 
 import datetime

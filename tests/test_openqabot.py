@@ -1,5 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test OpenQABot."""
 
 import logging
 import sys
@@ -48,7 +49,7 @@ def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
     mock_args = mocker.Mock()
     mock_args.configs = mock_configs_path
-    mock_args.token = "dummy_token"  # noqa: S105
+    mock_args.token = "dummy_token"
     mock_args.func = mocker.Mock(return_value=0)
     mock_args.debug = True
     mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)

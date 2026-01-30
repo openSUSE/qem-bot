@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test Readme."""
+
 import os
 import subprocess  # noqa: S404
 import sys

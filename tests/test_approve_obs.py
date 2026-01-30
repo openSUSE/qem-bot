@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from __future__ import annotations
+"""Test approve OBS."""
 
 import io
 import logging

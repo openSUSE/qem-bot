@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Submission fixtures."""
+
 from __future__ import annotations
 
 from typing import Any

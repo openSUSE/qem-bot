@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader Gitea submissions."""
+
 # ruff: noqa: ARG001
 import logging
 from typing import Any

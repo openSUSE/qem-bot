@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader QEM."""
+
 from __future__ import annotations
 
 import logging

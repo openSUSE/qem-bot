@@ -1,13 +1,15 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+"""Test Gitea sync."""
+
+from __future__ import annotations
 
 import logging
 import re
-import urllib.error
 from argparse import Namespace
 from pathlib import Path
 from typing import Any, cast
+from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 
 import pytest
@@ -97,7 +99,7 @@ def fake_osc_xml_parse(data: Any) -> Any:
 
 def fake_urllib_http_error(data: Any) -> Any:
     with Path("responses/empty-build-results.xml").open("rb") as fp:
-        raise urllib.error.HTTPError(data, 404, "Not found", cast("Any", {}), fp)
+        raise HTTPError(data, 404, "Not found", cast("Any", {}), fp)
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:

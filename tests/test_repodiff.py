@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test RepoDiff."""
+
 import json
 from argparse import Namespace
 from collections import defaultdict

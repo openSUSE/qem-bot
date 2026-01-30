@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: ARG001, ARG005
+"""Pytest configuration and fixtures."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -41,7 +42,7 @@ def _auto_clear_cache() -> None:
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
 
-    def f_sub_settins(sub: int, _token: str, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:
+    def f_sub_settins(sub: int, _token: str, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # noqa: ARG001
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -60,7 +61,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def f_aggr_settings(sub: int, _token: str, submission_type: str | None = None) -> list[JobAggr]:
+    def f_aggr_settings(sub: int, _token: str, submission_type: str | None = None) -> list[JobAggr]:  # noqa: ARG001
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -75,7 +76,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        side_effect=lambda _, i, submission_type=None: [f_sub_approver()[i - 1]],
+        side_effect=lambda _, i, submission_type=None: [f_sub_approver()[i - 1]],  # noqa: ARG005
     )
     mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)

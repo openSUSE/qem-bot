@@ -1,6 +1,8 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-import urllib.error
+"""Test loader Gitea archs."""
+
+from urllib.error import URLError
 
 import pytest
 from pytest_mock import MockerFixture
@@ -20,7 +22,7 @@ def test_determine_relevant_archs_from_multibuild_info_success(mocker: MockerFix
 
 def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="prod")
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=urllib.error.URLError("oops"))
+    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=URLError("oops"))
     res = gitea.determine_relevant_archs_from_multibuild_info("project", dry=False)
     assert res is None
     assert "Could not determine relevant architectures for project: <urlopen error oops>" in caplog.text

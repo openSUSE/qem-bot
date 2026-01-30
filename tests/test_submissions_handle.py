@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test Submissions handle."""
+
 from __future__ import annotations
 
 import logging

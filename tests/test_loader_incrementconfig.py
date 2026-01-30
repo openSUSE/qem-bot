@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader increment config."""
+
 import logging
 from argparse import Namespace
 from pathlib import Path

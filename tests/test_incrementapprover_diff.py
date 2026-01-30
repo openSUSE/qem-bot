@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test increment approver diff."""
+
 from __future__ import annotations
 
 import pytest

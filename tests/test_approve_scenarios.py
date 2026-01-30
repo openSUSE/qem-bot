@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106
+"""Test approve scenarios."""
+
 from __future__ import annotations
 
 import logging
