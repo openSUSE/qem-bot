@@ -24,7 +24,7 @@ def do_full_schedule(args: Namespace) -> int:
     args.disable_submissions = False
     args.disable_aggregates = False
     bot = OpenQABot(args)
-    return bot.run()
+    return bot()
 
 
 def do_submission_schedule(args: Namespace) -> int:
@@ -32,7 +32,7 @@ def do_submission_schedule(args: Namespace) -> int:
     args.disable_submissions = False
     args.disable_aggregates = True
     bot = OpenQABot(args)
-    return bot.run()
+    return bot()
 
 
 def do_aggregate_schedule(args: Namespace) -> int:
@@ -40,7 +40,7 @@ def do_aggregate_schedule(args: Namespace) -> int:
     args.disable_aggregates = False
     args.disable_submissions = True
     bot = OpenQABot(args)
-    return bot.run()
+    return bot()
 
 
 def do_sync_smelt(args: Namespace) -> int:

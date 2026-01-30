@@ -47,7 +47,12 @@ def _load_one_metadata(
     submissions: bool,
     extrasettings: set[str],
 ) -> Iterator[Aggregate | Submissions]:
-    """Parse a single metadata configuration dictionary."""
+    """Parse a single metadata configuration dictionary.
+
+    Yields:
+        Found job configurations.
+
+    """
     settings = data.get("settings")
     if not settings:
         log.info("Configuration skipped: Missing settings in '%s'", path)
@@ -95,7 +100,12 @@ def load_metadata(
 
 
 def _parse_product(path: Path, data: dict) -> Iterator[Data]:
-    """Parse product information from a configuration dictionary."""
+    """Parse product information from a configuration dictionary.
+
+    Yields:
+        Parsed product data.
+
+    """
     try:
         aggregate = data["aggregate"]
         flavor = aggregate["FLAVOR"]

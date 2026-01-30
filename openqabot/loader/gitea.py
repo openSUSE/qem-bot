@@ -171,7 +171,12 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
         return [pr]
 
     def iter_pr_pages() -> Any:  # noqa: ANN401
-        """Iterate through all pages of open PRs."""
+        """Iterate through all pages of open PRs.
+
+        Yields:
+            Lists of open PRs.
+
+        """
         page = 1
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests

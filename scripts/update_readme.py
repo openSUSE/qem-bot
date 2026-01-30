@@ -15,25 +15,28 @@ log = logging.getLogger(__name__)
 
 
 def get_help_output() -> str:
+    """Run qem-bot.py --help and return the output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
-    result = subprocess.run(  # noqa: S603
+    process = subprocess.run(  # noqa: S603
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
         text=True,
         check=True,
         env=env,
     )
-    return result.stdout
+    return process.stdout
 
 
 def format_block(help_text: str) -> str:
+    """Format help text as an indented block."""
     lines = help_text.splitlines()
     indented_lines = [("    " + line).rstrip() for line in lines]
     return "\n".join(indented_lines)
 
 
 def update_readme() -> None:
+    """Update the 'General Usage' section in Readme.md with current help output."""
     readme_path = Path("Readme.md")
     content = readme_path.read_text(encoding="utf-8")
     help_output = get_help_output()
