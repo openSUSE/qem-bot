@@ -74,6 +74,11 @@ updates information about submissions and related openQA tests.
 
 <!-- usage_end -->
 
+## Configuration
+
+The bot is configured primarily via YAML configuration files (see `-c` option).
+You can also configure global settings using environment variables. See [doc/config.md](doc/config.md#global-configuration-environment-variables) for details.
+
 ## Expected workflow
 
 * For every incident in SMELT or PR in Gitea an entry should show up in
