@@ -225,7 +225,17 @@ the example configuration above:
 
 In addition to the YAML configuration files, `qem-bot` can be configured via
 environment variables. These are useful for setting up connections to external
-services and tweaking global behavior.
+services and tweaking global behavior. For the current default values, please
+refer to [openqabot/config.py](../openqabot/config.py).
 
-For a full list of available environment variables and their default values, please
-refer to the source code in [openqabot/config.py](../openqabot/config.py).
+| Variable | Description |
+| :--- | :--- |
+| `QEM_DASHBOARD_URL` | URL of the QEM Dashboard |
+| `SMELT_URL` | URL of the SMELT instance |
+| `GITEA_URL` | URL of the Gitea instance |
+| `OBS_URL` | URL of the Open Build Service API |
+| `AMQP_URL` | URL of the AMQP server |
+| `MAIN_OPENQA_DOMAIN` | Domain of the main openQA instance (used for dashboard sync logic) |
+| `QEM_BOT_DEPRIORITIZE_LIMIT` | Threshold for job group size to trigger priority reduction |
+| `QEM_BOT_PRIORITY_SCALE` | Scaling factor for job priority calculation |
+| `GIT_REVIEW_BOT` | Username of the bot account for code reviews |
