@@ -11,7 +11,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.approver import QEM_DASHBOARD, Approver
+from openqabot.approver import Approver
+from openqabot.config import settings
 from responses import matchers
 
 from .helpers import (
@@ -59,7 +60,7 @@ def fake_responses_for_creating_pr_review() -> None:
         match=[
             matchers.json_params_matcher(
                 {
-                    "body": f"Request accepted for 'qam-openqa' based on data in {QEM_DASHBOARD}",
+                    "body": f"Request accepted for 'qam-openqa' based on data in {settings.qem_dashboard_url}",
                     "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
                     "comments": [],
                     "event": "APPROVED",
@@ -73,7 +74,7 @@ def fake_responses_for_creating_pr_review() -> None:
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
 def test_403_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.GIT_REVIEW_BOT", "")
+    mocker.patch("openqabot.config.settings.git_review_bot", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ObsHTTPError(403, "Not allowed", "sd", None))
     assert Approver(args)() == 0
@@ -116,7 +117,7 @@ def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerF
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.GIT_REVIEW_BOT", "")
+    mocker.patch("openqabot.config.settings.git_review_bot", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     mocker.patch("openqabot.approver.get_json", return_value=[{"job_id": 100000, "status": "passed"}])

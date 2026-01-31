@@ -10,16 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot.config import (
-    BASE_PRIO,
-    DOWNLOAD_BASE,
-    DOWNLOAD_MAINTENANCE,
-    GITEA,
-    OBSOLETE_PARAMS,
-    PRIORITY_SCALE,
-    QEM_DASHBOARD,
-    SMELT_URL,
-)
+from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
@@ -101,7 +92,7 @@ class Submissions(BaseConf):
         """Check if a job is already scheduled in the dashboard."""
         jobs = {}
         try:
-            url = f"{QEM_DASHBOARD}api/incident_settings/{ctx.sub.id}"
+            url = f"{settings.qem_dashboard_url}api/incident_settings/{ctx.sub.id}"
             params = {}
             if submission_type:
                 params["type"] = submission_type
@@ -129,9 +120,11 @@ class Submissions(BaseConf):
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
         return (
-            gitea.compute_repo_url_for_job_setting(DOWNLOAD_BASE, chan, self.product_repo, self.product_version)
+            gitea.compute_repo_url_for_job_setting(
+                settings.download_base_url, chan, self.product_repo, self.product_version
+            )
             if chan.product == "SUSE:SLFO"
-            else f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
+            else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
     def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
@@ -218,8 +211,8 @@ class Submissions(BaseConf):
             if sub.emu:
                 delta_prio = -20
             if sub.priority:
-                delta_prio -= sub.priority // PRIORITY_SCALE
-        return BASE_PRIO + delta_prio if delta_prio else None
+                delta_prio -= sub.priority // settings.priority_scale
+        return settings.base_prio + delta_prio if delta_prio else None
 
     def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:  # noqa: PLR6301
         """Apply 'params_expand' settings from metadata."""
@@ -232,15 +225,15 @@ class Submissions(BaseConf):
         settings.update(params)
         return True
 
-    def add_metadata_urls(self, settings: dict[str, Any], sub: Submission) -> None:  # noqa: PLR6301
+    def add_metadata_urls(self, settings_data: dict[str, Any], sub: Submission) -> None:  # noqa: PLR6301
         """Add source and dashboard URLs to settings."""
         url = (
-            f"{GITEA}/products/{sub.project}/pulls/{sub.id}"
+            f"{settings.gitea_url}/products/{sub.project}/pulls/{sub.id}"
             if sub.project == "SLFO"
-            else f"{SMELT_URL}/incident/{sub.id}"
+            else f"{settings.smelt_url}/incident/{sub.id}"
         )
-        settings["__SOURCE_CHANGE_URL"] = url
-        settings["__DASHBOARD_INCIDENT_URL"] = f"{QEM_DASHBOARD}incident/{sub.id}"
+        settings_data["__SOURCE_CHANGE_URL"] = url
+        settings_data["__DASHBOARD_INCIDENT_URL"] = f"{settings.qem_dashboard_url}incident/{sub.id}"
 
     def apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:  # noqa: PLR6301
         """Apply Public Cloud tools and PINT images to settings."""

@@ -10,7 +10,7 @@ from .aggrsync import AggregateResultsSync
 from .amqp import AMQP
 from .approver import Approver
 from .commenter import Commenter
-from .config import AMQP_URL, BUILD_REGEX, OBS_GROUP
+from .config import BUILD_REGEX, settings
 from .giteasync import GiteaSync
 from .incrementapprover import IncrementApprover
 from .openqabot import OpenQABot
@@ -229,7 +229,7 @@ def get_parser() -> ArgumentParser:  # noqa: PLR0914, PLR0915
     cmdgiteasync.add_argument(
         "--consider-unrequested-prs",
         action="store_true",
-        help=f"Consider PRs where no review from team {OBS_GROUP} was requested as well",
+        help=f"Consider PRs where no review from team {settings.obs_group} was requested as well",
     )
     cmdgiteasync.add_argument(
         "--pr-number",
@@ -411,7 +411,7 @@ def get_parser() -> ArgumentParser:  # noqa: PLR0914, PLR0915
     repodiff.set_defaults(func=do_repo_diff_computation, no_config=True)
 
     cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
-    cmdamqp.add_argument("--url", type=str, default=AMQP_URL, help="the URL of the AMQP server")
+    cmdamqp.add_argument("--url", type=str, default=settings.amqp_url, help="the URL of the AMQP server")
     cmdamqp.set_defaults(func=do_amqp)
 
     return parser

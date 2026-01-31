@@ -72,6 +72,45 @@ def test_add_packages_from_patchinfo_parse_error(mocker: MockerFixture, caplog: 
     assert "Failed to parse patchinfo from url: Start tag expected, '<' not found" in caplog.text
 
 
+def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) -> None:
+    gitea.get_product_version_from_repo_listing.cache_clear()
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "data": [
+            {"name": "SLES-15-SP4-x86_64"},
+            {"name": "other-pkg"},
+        ]
+    }
+    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
+    # product name 'SLES', prefix 'SLES-'
+    # _extract_version will be called with name 'SLES-15-SP4-x86_64' and prefix 'SLES-'
+    # remainder '15-SP4-x86_64', next(...) returns '15'
+    res = gitea.get_product_version_from_repo_listing("project", "SLES", "repo")
+    assert res == "15"
+
+
+def test_get_product_version_from_repo_listing_requests_json_error(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    gitea.get_product_version_from_repo_listing.cache_clear()
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
+    mock_response = MagicMock()
+    # Use a dummy exception that mimics requests.exceptions.JSONDecodeError if needed,
+    # but requests.exceptions.JSONDecodeError should work.
+    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
+    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
+    res = gitea.get_product_version_from_repo_listing("project_json", "product_json", "repo_json")
+    assert not res
+    assert "Invalid JSON document" in caplog.text
+
+
+def test_add_channel_for_build_result_local() -> None:
+    projects: set[str] = set()
+    res = gitea.add_channel_for_build_result("myproj", "local", "myprod", None, projects)
+    assert res == "myproj:local"
+    assert len(projects) == 0
+
+
 def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     incident = {"failed_or_unpublished_packages": ["pkg1"], "successful_packages": ["pkg2"]}
