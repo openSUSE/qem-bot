@@ -18,7 +18,7 @@ import osc.conf
 import osc.core
 from lxml import etree  # type: ignore[unresolved-import]
 
-from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
+from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.openqa import OpenQAInterface
 
 from .errors import PostOpenQAError
@@ -94,7 +94,7 @@ class IncrementApprover:
         self.package_diff = {}
         self.requests_to_approve = {}
         self.config = IncrementConfig.from_args(args)
-        osc.conf.get_config(override_apiurl=OBS_URL)
+        osc.conf.get_config(override_apiurl=settings.obs_url)
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -120,7 +120,7 @@ class IncrementApprover:
         if args.request_id is None:
             log.debug(
                 "Checking for product increment requests to be reviewed by %s on %s",
-                OBS_GROUP,
+                settings.obs_group,
                 build_project,
             )
             obs_requests = self.get_obs_request_list(project=build_project, req_state=tuple(relevant_states))
@@ -128,12 +128,12 @@ class IncrementApprover:
                 request
                 for request in sorted(obs_requests, reverse=True)
                 for review in request.reviews
-                if review.by_group == OBS_GROUP and review.state in relevant_states
+                if review.by_group == settings.obs_group and review.state in relevant_states
             )
             relevant_request = next(filtered_requests, None)
         else:
             log.debug("Checking specified request %i", args.request_id)
-            relevant_request = osc.core.Request.from_api(OBS_URL, args.request_id)
+            relevant_request = osc.core.Request.from_api(settings.obs_url, args.request_id)
         if relevant_request is None:
             states_str = "/".join(relevant_states)
             log.info("Skipping approval: %s: No relevant requests in states %s", build_project, states_str)
@@ -159,9 +159,11 @@ class IncrementApprover:
             repo,
             arch,
         )
-        repos = osc.core.get_repos_of_project(OBS_URL, prj=project)
+        repos = osc.core.get_repos_of_project(settings.obs_url, prj=project)
         binaries = [
-            osc.core.get_binarylist(OBS_URL, prj=project, repo=repo.name, arch=repo.arch, package=action.src_package)
+            osc.core.get_binarylist(
+                settings.obs_url, prj=project, repo=repo.name, arch=repo.arch, package=action.src_package
+            )
             for repo in repos
         ]
         source_reports = [b for binary_list in binaries for b in binary_list if b.endswith("Source.report")]
@@ -170,7 +172,7 @@ class IncrementApprover:
             with tempfile.TemporaryDirectory() as tmpdirname:
                 source_report_xml_path = f"{tmpdirname}/source-report-{project}-{repo}-{arch}.xml"
                 osc.core.get_binary_file(
-                    OBS_URL,
+                    settings.obs_url,
                     prj=project,
                     package=action.src_package,
                     repo=repo,
@@ -203,7 +205,7 @@ class IncrementApprover:
     @cache
     def get_obs_request_list(project: str, req_state: tuple) -> list:
         """Get a list of requests from OBS."""
-        return osc.core.get_request_list(OBS_URL, project, req_state=req_state)
+        return osc.core.get_request_list(settings.obs_url, project, req_state=req_state)
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
@@ -271,7 +273,9 @@ class IncrementApprover:
         """Change the review state of a request on OBS to accepted."""
         if self.args.dry:
             return
-        osc.core.change_review_state(apiurl=OBS_URL, reqid=reqid, newstate="accepted", by_group=OBS_GROUP, message=msg)
+        osc.core.change_review_state(
+            apiurl=settings.obs_url, reqid=reqid, newstate="accepted", by_group=settings.obs_group, message=msg
+        )
 
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
         """Process approval or disapproval based on job results."""
@@ -439,7 +443,7 @@ class IncrementApprover:
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
-            "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
+            "INCREMENT_REPO": config.build_project_url(settings.download_base_url) + repo_sub_path,
             **OBSOLETE_PARAMS,
         }
         IncrementApprover.populate_params_from_env(base_params, "CI_JOB_URL")

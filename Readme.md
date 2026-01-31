@@ -77,7 +77,9 @@ updates information about submissions and related openQA tests.
 ## Configuration
 
 The bot is configured primarily via YAML configuration files (see `-c` option).
-You can also configure global settings using environment variables. See [doc/config.md](doc/config.md#global-configuration-environment-variables) for details.
+You can also configure global settings using environment variables. See
+[doc/config.md](doc/config.md#global-configuration-environment-variables) for
+details.
 
 ## Expected workflow
 

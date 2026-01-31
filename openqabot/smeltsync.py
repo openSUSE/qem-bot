@@ -9,7 +9,7 @@ from operator import itemgetter
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
-from .config import DEFAULT_SUBMISSION_TYPE
+from .config import settings
 from .loader.qem import update_submissions
 from .loader.smelt import get_active_submission_ids, get_submissions
 
@@ -109,7 +109,7 @@ class SMELTSync:
         submission["inReviewQAM"] = in_review_qam
         submission["embargoed"] = bool(sub["crd"])
         submission["priority"] = sub["priority"]
-        submission["type"] = DEFAULT_SUBMISSION_TYPE
+        submission["type"] = settings.default_submission_type
 
         return submission
 

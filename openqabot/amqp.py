@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING, Any
 
 import pika
 import pika.channel
-import pika.spec
+from pika.spec import Basic, BasicProperties
 
 from .approver import Approver
-from .config import DEFAULT_SUBMISSION_TYPE
+from .config import settings
 from .loader.qem import get_submission_settings_data
 from .syncres import SyncRes
 from .types.types import Data
@@ -72,8 +72,8 @@ class AMQP(SyncRes):
     def on_message(
         self,
         _: pika.channel.Channel,
-        method: pika.spec.Basic.Deliver,
-        __: pika.spec.BasicProperties,
+        method: Basic.Deliver,
+        __: BasicProperties,
         body: bytes,
     ) -> None:
         """Handle incoming AMQP message."""
@@ -81,7 +81,7 @@ class AMQP(SyncRes):
         if method.routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
         if match := build_sub_regex.match(message["BUILD"]):
-            sub_type = match.group("type") or DEFAULT_SUBMISSION_TYPE
+            sub_type = match.group("type") or settings.default_submission_type
             sub_nr = match.group("id")
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Submission %s:%s: openQA job finished", sub_type, sub_nr)
