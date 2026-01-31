@@ -1,24 +1,30 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+"""Test AMQP."""
+
 from __future__ import annotations
 
 import json
 import logging
 from argparse import Namespace
-from typing import Any, NamedTuple, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 from urllib.parse import urlparse
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
-from openqabot.types.types import Data
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
+    from openqabot.types.types import Data
 
 
 class FakeMethod(NamedTuple):
+    """Fake AMQP method."""
+
     routing_key: str
 
 

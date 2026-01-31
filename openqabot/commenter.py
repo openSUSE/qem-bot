@@ -1,11 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Commenter class for commenting on submissions."""
+
 from __future__ import annotations
 
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
@@ -16,12 +17,18 @@ from openqabot.errors import NoResultsError
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
-from .types.submission import Submission
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+    from .types.submission import Submission
 
 log = getLogger("bot.commenter")
 
 
 class Commenter:
+    """Logic for commenting on submissions in IBS."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry
@@ -32,6 +39,7 @@ class Commenter:
         self.commentapi = CommentAPI(OBS_URL)
 
     def __call__(self) -> int:
+        """Run the commenting process."""
         log.info("Starting to comment SMELT incidents in IBS")
 
         for sub in self.submissions:
@@ -64,6 +72,7 @@ class Commenter:
         return 0
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
+        """Comment a submission in IBS."""
         if sub.rr is None:
             log.debug("Comment skipped for submission %s: No release request defined", sub)
             return
@@ -108,63 +117,80 @@ class Commenter:
             log.info("Dry run: Would write comment to request %s", sub)
             log.debug(pformat(msg))
 
-    def summarize_message(self, jobs: list[dict[str, Any]]) -> str:  # noqa: C901
-        groups = {}
+    def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
+        """Summarize multiple openQA jobs into a single message."""
+        groups: dict[str, dict[str, Any]] = {}
         for job in jobs:
-            if "job_group" not in job:
-                # workaround for experiments of some QAM devs
-                log.warning("Job %s skipped: Missing 'job_group'", job["job_id"])
-                continue
-            gl = f"{Commenter.escape_for_markdown(job['job_group'])}@{Commenter.escape_for_markdown(job['flavor'])}"
-            if gl not in groups:
-                groupurl = osc.core.makeurl(
-                    self.client.openqa.baseurl,
-                    ["tests", "overview"],
-                    {
-                        "version": job["version"],
-                        "groupid": job["group_id"],
-                        "flavor": job["flavor"],
-                        "distri": job["distri"],
-                        "build": job["build"],
-                    },
-                )
-                groups[gl] = {
-                    "title": f"__Group [{gl}]({groupurl})__\n",
-                    "passed": 0,
-                    "unfinished": 0,
-                    "failed": [],
-                }
-
-            job_summary = self.__summarize_one_openqa_job(job)
-            if job_summary is None:
-                groups[gl]["unfinished"] += 1
-                continue
-
-            # None vs ''
-            if not job_summary:
-                groups[gl]["passed"] += 1
-                continue
-
-            # if there is something to report, hold the request
-            groups[gl]["failed"].append(job_summary)
+            self._process_job(groups, job)
 
         msg = ""
         for group in sorted(groups.keys()):
-            msg += "\n\n" + groups[group]["title"]
-            infos = []
-            if groups[group]["passed"]:
-                infos.append("{:d} tests passed".format(groups[group]["passed"]))
-            if groups[group]["failed"]:
-                infos.append("{:d} tests failed".format(len(groups[group]["failed"])))
-            if groups[group]["unfinished"]:
-                infos.append("{:d} unfinished tests".format(groups[group]["unfinished"]))
-            msg += "(" + ", ".join(infos) + ")\n"
-            for fail in groups[group]["failed"]:
-                msg += fail
+            msg += self._format_group_message(groups[group])
         return msg.rstrip("\n")
+
+    def _process_job(self, groups: dict[str, dict[str, Any]], job: dict[str, Any]) -> None:
+        """Process a single openQA job and update its group summary."""
+        if "job_group" not in job:
+            # workaround for experiments of some QAM devs
+            log.warning("Job %s skipped: Missing 'job_group'", job["job_id"])
+            return
+
+        gl = f"{Commenter.escape_for_markdown(job['job_group'])}@{Commenter.escape_for_markdown(job['flavor'])}"
+        self._create_group_if_missing(groups, job, gl)
+
+        job_summary = self.__summarize_one_openqa_job(job)
+        if job_summary is None:
+            groups[gl]["unfinished"] += 1
+            return
+
+        # None vs ''
+        if not job_summary:
+            groups[gl]["passed"] += 1
+            return
+
+        # if there is something to report, hold the request
+        groups[gl]["failed"].append(job_summary)
+
+    def _create_group_if_missing(self, groups: dict[str, dict[str, Any]], job: dict[str, Any], gl: str) -> None:
+        """Create a new group summary entry if it doesn't exist."""
+        if gl not in groups:
+            groupurl = osc.core.makeurl(
+                self.client.openqa.baseurl,
+                ["tests", "overview"],
+                {
+                    "version": job["version"],
+                    "groupid": job["group_id"],
+                    "flavor": job["flavor"],
+                    "distri": job["distri"],
+                    "build": job["build"],
+                },
+            )
+            groups[gl] = {
+                "title": f"__Group [{gl}]({groupurl})__\n",
+                "passed": 0,
+                "unfinished": 0,
+                "failed": [],
+            }
+
+    @staticmethod
+    def _format_group_message(group_data: dict[str, Any]) -> str:
+        """Format a single group summary into a markdown string."""
+        msg = "\n\n" + group_data["title"]
+        infos = []
+        if group_data["passed"]:
+            infos.append(f"{group_data['passed']:d} tests passed")
+        if group_data["failed"]:
+            infos.append(f"{len(group_data['failed']):d} tests failed")
+        if group_data["unfinished"]:
+            infos.append(f"{group_data['unfinished']:d} unfinished tests")
+        msg += "(" + ", ".join(infos) + ")\n"
+        for fail in group_data["failed"]:
+            msg += fail
+        return msg
 
     @staticmethod
     def escape_for_markdown(string: str) -> str:
+        """Escape underscores for markdown."""
         return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:

@@ -1,20 +1,24 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test commenter."""
+
 from __future__ import annotations
 
 import logging
 from argparse import Namespace
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from pytest_mock import MockerFixture
 
 from openqabot.commenter import Commenter
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture
@@ -55,7 +59,7 @@ def make_comment_api() -> Callable[..., MagicMock]:
 
 @pytest.fixture
 def mock_args() -> Namespace:
-    return Namespace(dry=True, token="test_token")  # noqa: S106
+    return Namespace(dry=True, token="test_token")
 
 
 @pytest.fixture

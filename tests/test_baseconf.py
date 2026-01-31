@@ -1,15 +1,22 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test baseconf."""
+
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from openqabot.types.baseconf import BaseConf, JobConfig, Submission
+from openqabot.types.baseconf import BaseConf, JobConfig
+
+if TYPE_CHECKING:
+    from openqabot.types.submission import Submission
 
 
 class FakeBaseConf(BaseConf):
+    """Fake implementation of BaseConf for testing."""
+
     def __call__(
         self,
         submissions: list[Submission],
@@ -18,11 +25,13 @@ class FakeBaseConf(BaseConf):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
+        """Mock __call__."""
         _ = (submissions, token, ci_url, ignore_onetime)
         return [{"foo": "bar"}]
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
+        """Mock normalize_repos."""
         _ = config
         return {}
 

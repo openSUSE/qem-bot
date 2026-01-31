@@ -1,11 +1,12 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Repository hash loader."""
+
 from __future__ import annotations
 
-from collections.abc import Sequence
 from hashlib import md5
 from logging import getLogger
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import requests
 from lxml import etree  # type: ignore[unresolved-import]
@@ -17,10 +18,15 @@ from openqabot.utils import retry5 as retried_requests
 
 from . import gitea
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 log = getLogger("bot.loader.repohash")
 
 
 class RepoOptions(NamedTuple):
+    """Options for repository hash calculation."""
+
     product_name: str | None = None
     product_version: str | None = None
     submission_id: str | None = None
@@ -32,6 +38,7 @@ def get_max_revision(
     project: str,
     options: RepoOptions | None = None,
 ) -> int:
+    """Calculate the maximum repository revision for a submission."""
     max_rev = 0
     options = options or RepoOptions()
     sub_msg = (
@@ -83,4 +90,5 @@ def get_max_revision(
 
 
 def merge_repohash(hashes: list[str]) -> str:
+    """Merge multiple repohashes into a single MD5 hash."""
     return md5(b"start" + "".join(hashes).encode(), usedforsecurity=False).hexdigest()

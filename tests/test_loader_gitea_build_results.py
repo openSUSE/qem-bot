@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader Gitea build results."""
+
 import logging
 import urllib.error
 from io import BytesIO

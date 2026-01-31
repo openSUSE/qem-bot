@@ -1,16 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test aggregate."""
+
 from __future__ import annotations
 
 import datetime
 import logging
 from collections import defaultdict
-from typing import Any
-from unittest.mock import MagicMock
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
@@ -19,6 +19,11 @@ from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
 from openqabot.utc import UTC
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture
@@ -362,8 +367,10 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     sub.embargoed = False
     sub.priority = None
     sub.__str__.side_effect = lambda: f"{sub.type}:{sub.id}"
+    sub.channels = [Repos("product", "version", "x86_64")]
 
-    repo_url = agg._get_repo_url(sub, "ISSUE", "x86_64")  # noqa: SLF001
+    _, test_repos = agg.get_test_submissions_and_repos([sub], "x86_64")
+    repo_url = test_repos["ISSUE"][0]
 
     assert "smelt:" not in repo_url
     assert "/42/" in repo_url

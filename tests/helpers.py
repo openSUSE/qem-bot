@@ -1,6 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106, PLR0917
+"""Helper functions for tests."""
+
 from __future__ import annotations
 
 import logging
@@ -9,13 +10,11 @@ import re
 from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import osc.core
-import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import QEM_DASHBOARD
@@ -25,9 +24,15 @@ from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.utils import merge_dicts
 
+if TYPE_CHECKING:
+    import pytest
+    from pytest_mock import MockerFixture
+
 
 # define fake data
 class ReviewState(NamedTuple):
+    """Fake review state."""
+
     state: str
     by_group: str
 
@@ -38,6 +43,8 @@ obs_product_table_url = OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontab
 
 @dataclass
 class Action:
+    """Fake action."""
+
     tgt_project: str
     src_project: str
     src_package: str
@@ -45,6 +52,8 @@ class Action:
 
 @dataclass
 class Repo:
+    """Fake repo."""
+
     name: str
     arch: str
 
@@ -141,7 +150,13 @@ def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) 
 
 
 def fake_get_binary_file(
-    url: str, prj: str, repo: str, arch: str, package: str, filename: str, target_filename: str
+    url: str,
+    prj: str,
+    repo: str,
+    arch: str,
+    package: str,
+    filename: str,
+    target_filename: str,
 ) -> None:
     assert url == OBS_URL
     assert package == "000productcompose:sles_aarch64"

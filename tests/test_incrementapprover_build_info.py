@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from __future__ import annotations
+"""Test increment approver build info."""
 
 import pytest
 from pytest_mock import MockerFixture

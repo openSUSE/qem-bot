@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test OSCLib comments."""
+
 from datetime import datetime
 from io import BytesIO
 from typing import Any, cast

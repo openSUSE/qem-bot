@@ -1,21 +1,27 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync SMELT incidents to dashboard."""
+
 from __future__ import annotations
 
-from argparse import Namespace
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .config import DEFAULT_SUBMISSION_TYPE
 from .loader.qem import update_submissions
 from .loader.smelt import get_active_submission_ids, get_submissions
 
+if TYPE_CHECKING:
+    from argparse import Namespace
+
 log = getLogger("bot.smeltsync")
 
 
 class SMELTSync:
+    """Synchronization of SMELT incidents to dashboard."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the SMELTSync class."""
         self.dry: bool = args.dry
@@ -24,6 +30,7 @@ class SMELTSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         log.info("Syncing SMELT incidents to QEM Dashboard")
 
         data = self.create_list(self.submissions)
@@ -37,6 +44,7 @@ class SMELTSync:
 
     @staticmethod
     def review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """Find the latest relevant release request from a set of requests."""
         valid = ("new", "review", "accepted", "revoked")
         if not request_set:
             return None
@@ -45,18 +53,22 @@ class SMELTSync:
 
     @staticmethod
     def is_inreview(rr_number: dict[str, Any]) -> bool:
+        """Check if a release request is currently in review."""
         return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
 
     @staticmethod
     def is_revoked(rr_number: dict[str, Any]) -> bool:
+        """Check if a release request has been revoked."""
         return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
 
     @staticmethod
     def is_accepted(rr_number: dict[str, Any]) -> bool:
+        """Check if a release request has been accepted or is new."""
         return rr_number["status"]["name"] in {"accepted", "new"}
 
     @staticmethod
     def has_qam_review(rr_number: dict[str, Any]) -> bool:
+        """Check if a release request has an active QAM review."""
         if not rr_number["reviewSet"]:
             return False
         rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
@@ -65,6 +77,7 @@ class SMELTSync:
 
     @classmethod
     def create_record(cls, sub: dict[str, Any]) -> dict[str, Any]:
+        """Create a dashboard-compatible record from a SMELT incident."""
         submission = {}
         submission["isActive"] = True
 
@@ -102,4 +115,5 @@ class SMELTSync:
 
     @classmethod
     def create_list(cls, submissions: list[Any]) -> list[dict[str, Any]]:
+        """Create a list of dashboard-compatible records from SMELT incidents."""
         return [cls.create_record(sub) for sub in submissions]

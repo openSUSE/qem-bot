@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Main OpenQABot logic."""
+
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger
@@ -17,6 +19,8 @@ log = getLogger("bot.openqabot")
 
 
 class OpenQABot:
+    """Main OpenQABot logic."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the OpenQABot class."""
         log.info("Starting bot schedule")
@@ -43,6 +47,7 @@ class OpenQABot:
         self.ci = environ.get("CI_JOB_URL")
 
     def post_qem(self, data: dict[str, Any], api: str) -> None:
+        """Update dashboard database with job results."""
         if not self.openqa:
             log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
@@ -52,9 +57,11 @@ class OpenQABot:
         log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 
     def post_openqa(self, data: dict[str, Any]) -> None:
+        """Post a job to openQA."""
         self.openqa.post_job(data)
 
     def __call__(self) -> int:
+        """Run the bot schedule."""
         log.info("Entering bot main loop")
         post = [
             p

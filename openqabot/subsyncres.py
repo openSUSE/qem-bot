@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync submission results."""
+
 from argparse import Namespace
 from concurrent import futures
 from itertools import chain
@@ -12,6 +14,8 @@ log = getLogger("bot.subsyncres")
 
 
 class SubResultsSync(SyncRes):
+    """Synchronization of submission results."""
+
     operation = "submission"
 
     def __init__(self, args: Namespace) -> None:
@@ -20,6 +24,7 @@ class SubResultsSync(SyncRes):
         self.active = get_active_submissions(self.token)
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         submissions = list(chain.from_iterable(get_submission_settings_data(self.token, sub) for sub in self.active))
         full = {}
         with futures.ThreadPoolExecutor() as executor:

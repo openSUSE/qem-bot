@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync Gitea pull requests to dashboard."""
+
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
@@ -12,6 +14,8 @@ log = getLogger("bot.giteasync")
 
 
 class GiteaSync:
+    """Synchronization of Gitea PRs to dashboard."""
+
     def __init__(self, args: Namespace) -> None:
         """Initialize the GiteaSync class."""
         self.dry: bool = args.dry
@@ -39,6 +43,7 @@ class GiteaSync:
         self.retry = args.retry
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         data = self.submissions
         log.debug("Data for %d submissions: %s", len(data), pformat(data))
         if self.dry:

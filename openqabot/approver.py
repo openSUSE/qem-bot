@@ -1,15 +1,18 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Approver class for approving submissions."""
+
 from __future__ import annotations
 
 import re
 import string
-from argparse import Namespace
 from datetime import datetime, timedelta
+from enum import IntEnum, unique
 from functools import lru_cache
 from http import HTTPStatus
 from logging import getLogger
 from re import Pattern
+from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 from urllib.parse import urlparse
 
@@ -40,17 +43,32 @@ from .loader.qem import (
 )
 from .utc import UTC
 
+if TYPE_CHECKING:
+    from argparse import Namespace
+
 log = getLogger("bot.approver")
 
 ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}:(.+?)(?:$|\s)"
 MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 
+@unique
+class JobStatus(IntEnum):
+    """Enumeration of possible job statuses."""
+
+    PASSED = 0
+    WAITING = 1
+    STOPPED = 2
+    FAILED = 3
+
+
 def ms2str(sub: SubReq) -> str:
+    """Convert a SubReq to a human-readable string."""
     return f"{OBS_MAINT_PRJ}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
 def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
+    """Handle HTTP errors from OBS API."""
     if e.code == HTTPStatus.FORBIDDEN:
         log.info("Received '%s'. Request %s likely already approved, ignoring", e.reason, sub.req)
         return True
@@ -67,12 +85,15 @@ def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
 
 
 def sanitize_comment_text(text: str) -> str:
+    """Remove non-printable characters and newlines from comment text."""
     text = "".join(x for x in text if x in string.printable)
     text = text.replace("\r", " ").replace("\n", " ")
     return text.strip()
 
 
 class Approver:
+    """Approval logic for submissions."""
+
     def __init__(
         self,
         args: Namespace,
@@ -94,6 +115,7 @@ class Approver:
         self.client = OpenQAInterface(args)
 
     def __call__(self) -> int:
+        """Run the approval process."""
         log.info("Starting approving submissions in IBS or Gitea…")
         subreqs = (
             get_single_submission(self.token, self.single_submission, submission_type=self.submission_type)
@@ -118,6 +140,7 @@ class Approver:
         return 0 if overall_result else 1
 
     def approvable(self, sub: SubReq) -> bool:
+        """Check if a submission is ready for approval."""
         try:
             s_jobs = get_submission_settings(
                 sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
@@ -134,20 +157,39 @@ class Approver:
             log.info(e)
             a_jobs = []
 
-        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            log.info("%s has at least one failed job in submission tests", ms2str(sub))
+        status = self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type)
+        if not self.check_status(status, sub, "submission"):
             return False
 
-        if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
-            a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
-        ):
-            log.info("%s has at least one failed job in aggregate tests", ms2str(sub))
-            return False
+        if any(s.with_aggregate for s in s_jobs):
+            status = self.get_submission_result(a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type)
+            if not self.check_status(status, sub, "aggregate"):
+                return False
 
         # everything is green --> add submission to approve list
         return True
 
+    @staticmethod
+    def check_status(status: JobStatus, sub: SubReq, test_type: str) -> bool:
+        """Log status check results."""
+        if status == JobStatus.PASSED:
+            return True
+
+        messages = {
+            JobStatus.FAILED: "at least one failed job",
+            JobStatus.STOPPED: "stopped jobs",
+            JobStatus.WAITING: "tests still in progress",
+        }
+        log.info(
+            "%s has %s in %s tests",
+            ms2str(sub),
+            messages.get(status, "unknown job status"),
+            test_type,
+        )
+        return False
+
     def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
+        """Mark a job as acceptable for a submission in the dashboard."""
         try:
             patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
         except RequestError as e:
@@ -159,8 +201,9 @@ class Approver:
                 e,
             )
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
+        """Check if a job is marked as acceptable for a submission."""
         regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
@@ -168,8 +211,9 @@ class Approver:
         except RequestError:
             return False
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def validate_job_qam(self, job: int) -> bool:
+        """Validate if a job is present and passed in dashboard."""
         # Check that valid test result is still present in the dashboard (see
         # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
         # request
@@ -192,6 +236,7 @@ class Approver:
         oldest_build_usable: datetime,
         regex: Pattern[str],
     ) -> bool | None:
+        """Check if an older job was successful and contains the submission."""
         job_build = job["build"][:-2]
         try:
             job_build_date = datetime.strptime(job_build, "%Y%m%d").astimezone(UTC)
@@ -236,8 +281,9 @@ class Approver:
         log.info("Ignoring failed aggregate %s and using instead %s for aggregate %s", failed_job_id, job["id"], sub)
         return True
 
-    @lru_cache(maxsize=512)
+    @lru_cache(maxsize=512)  # noqa: B019
     def was_ok_before(self, failed_job_id: int, sub: int) -> bool:
+        """Check if a similar job was successful before."""
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
         jobs = self.client.get_older_jobs(failed_job_id, 20)
         data = jobs.get("data", [])
@@ -266,9 +312,11 @@ class Approver:
         return False
 
     def is_job_passing(self, job_result: dict) -> bool:  # noqa: PLR6301
+        """Check if a job result status is passed."""
         return job_result["status"] == "passed"
 
     def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
+        """Mark failed jobs as acceptable if they have corresponding openQA comments."""
         for job_result in job_results:
             if self.is_job_passing(job_result):
                 continue
@@ -277,9 +325,10 @@ class Approver:
                 job_result[f"acceptable_for_{sub}"] = True
                 self.mark_job_as_acceptable_for_submission(job_id, sub)
 
-    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> bool:
+    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> JobStatus:
+        """Determine if a job result is acceptable for approval."""
         if self.is_job_passing(job_result):
-            return True
+            return JobStatus.PASSED
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
         if job_result.get(f"acceptable_for_{sub}"):
@@ -289,7 +338,7 @@ class Approver:
                 self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
-            return True
+            return JobStatus.PASSED
         if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
             log.info(
                 "Ignoring failed aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
@@ -297,17 +346,37 @@ class Approver:
                 self.submission_type or DEFAULT_SUBMISSION_TYPE,
                 sub,
             )
-            return True
+            return JobStatus.PASSED
+
+        status = job_result.get("status")
+        if status == "waiting":
+            log.info(
+                "Found unfinished job %s for submission %s:%s",
+                url,
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
+                sub,
+            )
+            return JobStatus.WAITING
+        if status == "stopped":
+            log.info(
+                "Found stopped job %s for submission %s:%s",
+                url,
+                self.submission_type or DEFAULT_SUBMISSION_TYPE,
+                sub,
+            )
+            return JobStatus.STOPPED
+
         log.info(
             "Found failed, not-ignored job %s for submission %s:%s",
             url,
             self.submission_type or DEFAULT_SUBMISSION_TYPE,
             sub,
         )
-        return False
+        return JobStatus.FAILED
 
-    @lru_cache(maxsize=128)
-    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool | None:
+    @lru_cache(maxsize=128)  # noqa: B019
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobStatus | None:
+        """Retrieve jobs for a specific aggregate or incident setting."""
         params = {}
         if submission_type:
             params["type"] = submission_type
@@ -321,31 +390,32 @@ class Approver:
             )
             return None
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
-        return all(self.is_job_acceptable(sub, api, r) for r in job_results)
+        return max((self.is_job_acceptable(sub, api, r) for r in job_results), default=JobStatus.PASSED)
 
     def get_submission_result(
         self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
-    ) -> bool:
+    ) -> JobStatus:
+        """Summarize results for all jobs of a submission."""
         if not jobs:
-            return False
+            return JobStatus.FAILED
 
-        res = False
+        res = None
         for job_aggr in jobs:
-            success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
-            if success is False:
-                return False
-            if success is True:
-                res = True
+            status = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
+            if status is not None:
+                res = status if res is None else max(res, status)
 
-        return res
+        return res if res is not None else JobStatus.FAILED
 
     def approve(self, sub: SubReq) -> bool:
+        """Approve a submission in OBS or Gitea."""
         msg = f"Request accepted for '{OBS_GROUP}' based on data in {QEM_DASHBOARD}"
         log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod
     def osc_approve(sub: SubReq, msg: str) -> bool:
+        """Approve a submission in OBS."""
         try:
             osc.core.change_review_state(
                 apiurl=OBS_URL,
@@ -363,6 +433,7 @@ class Approver:
         return True
 
     def git_approve(self, sub: SubReq, msg: str) -> bool:
+        """Approve a submission in Gitea."""
         if not sub.url:
             log.error("Gitea API error: PR %s has no URL", sub.sub)
             return False

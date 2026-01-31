@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test OpenQA Client."""
+
 import logging
 import re
 from argparse import Namespace

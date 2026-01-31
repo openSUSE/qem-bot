@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test loader SMELT."""
+
 from unittest.mock import patch
 
 import pytest

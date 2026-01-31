@@ -1,10 +1,11 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Configuration loader."""
+
 from __future__ import annotations
 
-from collections.abc import Iterator
 from logging import getLogger
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ruamel.yaml import YAML, YAMLError
 
@@ -15,10 +16,15 @@ from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
 from openqabot.utils import get_yml_list
 
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
 log = getLogger("bot.loader.config")
 
 
 def _try_load(loader: YAML, path: Path) -> dict | None:
+    """Try to load a YAML file and return its content as a dictionary."""
     try:
         data = loader.load(path)
     except YAMLError:
@@ -44,6 +50,12 @@ def _load_one_metadata(
     submissions: bool,
     extrasettings: set[str],
 ) -> Iterator[Aggregate | Submissions]:
+    """Parse a single metadata configuration dictionary.
+
+    Yields:
+        Found job configurations.
+
+    """
     settings = data.get("settings")
     if not settings:
         log.info("Configuration skipped: Missing settings in '%s'", path)
@@ -76,6 +88,7 @@ def load_metadata(
     submissions: bool,
     extrasettings: set[str],
 ) -> list[Aggregate | Submissions]:
+    """Load metadata configurations from a directory of YAML files."""
     loader = YAML(typ="safe")
     log.debug("Loading metadata from %s: Submissions=%s, Aggregates=%s", path, not submissions, not aggregate)
 
@@ -90,6 +103,12 @@ def load_metadata(
 
 
 def _parse_product(path: Path, data: dict) -> Iterator[Data]:
+    """Parse product information from a configuration dictionary.
+
+    Yields:
+        Parsed product data.
+
+    """
     try:
         aggregate = data["aggregate"]
         flavor = aggregate["FLAVOR"]
@@ -106,6 +125,7 @@ def _parse_product(path: Path, data: dict) -> Iterator[Data]:
 
 
 def read_products(path: Path) -> list[Data]:
+    """Read product definitions from a directory of YAML files."""
     loader = YAML(typ="safe")
     log.debug("Loading product definitions from %s", path)
 
@@ -113,6 +133,7 @@ def read_products(path: Path) -> list[Data]:
 
 
 def get_onearch(path: Path) -> set[str]:
+    """Read single-architecture package names from a YAML file."""
     loader = YAML(typ="safe")
 
     try:

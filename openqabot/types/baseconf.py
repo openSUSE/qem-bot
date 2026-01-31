@@ -1,16 +1,21 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Base configuration type."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .submission import Submission
+if TYPE_CHECKING:
+    from .submission import Submission
 
 
 @dataclass
 class JobConfig:
+    """Job configuration details."""
+
     product: str
     product_repo: list[str] | str | None
     product_version: str | None
@@ -19,6 +24,8 @@ class JobConfig:
 
 
 class BaseConf(ABC):
+    """Base class for bot configurations."""
+
     def __init__(self, config: JobConfig) -> None:
         """Initialize the BaseConf class."""
         self.product = config.product
@@ -35,14 +42,17 @@ class BaseConf(ABC):
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
-        pass  # pragma: no cover
+        """Run the configuration's main processing logic."""
+        # pragma: no cover
 
     @staticmethod
     @abstractmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        pass  # pragma: no cover
+        """Normalize repository configuration."""
+        # pragma: no cover
 
     def filter_embargoed(self, flavor: str) -> bool:
+        """Check if embargoed submissions should be filtered out for a given flavor."""
         return any(k.startswith("PUBLIC") for k in self.settings) or any(
             flavor.startswith(s) for s in ("Azure", "EC2", "GCE")
         )

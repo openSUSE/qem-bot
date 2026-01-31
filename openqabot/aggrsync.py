@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Sync aggregate results."""
+
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
@@ -13,6 +15,8 @@ log = getLogger("bot.aggrsync")
 
 
 class AggregateResultsSync(SyncRes):
+    """Synchronization of aggregate results."""
+
     operation = "aggregate"
 
     def __init__(self, args: Namespace) -> None:
@@ -21,6 +25,7 @@ class AggregateResultsSync(SyncRes):
         self.product = read_products(args.configs)
 
     def __call__(self) -> int:
+        """Run the synchronization process."""
         update_setting = list(
             chain.from_iterable(get_aggregate_settings_data(self.token, product) for product in self.product)
         )

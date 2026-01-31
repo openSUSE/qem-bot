@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106 "Possible hardcoded password assigned to argument"
+"""Test SMELT sync."""
 
 import logging
 import re

@@ -1,15 +1,21 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test increment approver helpers."""
+
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.errors import PostOpenQAError
 from openqabot.incrementapprover import BuildInfo
 
 from .helpers import prepare_approver
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @responses.activate

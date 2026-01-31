@@ -1,20 +1,24 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test approve helpers."""
+
 from __future__ import annotations
 
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
 from openqa_client.exceptions import RequestError
-from pytest_mock import MockerFixture
 
-from openqabot.approver import Approver
+from openqabot.approver import Approver, JobStatus
 from openqabot.utc import UTC
 
 from .helpers import args
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def test_is_job_marked_acceptable_for_submission_request_error(mocker: MockerFixture) -> None:
@@ -94,4 +98,4 @@ def test_was_ok_before_no_suitable_older_jobs(
 
 def test_get_submission_result_empty_jobs() -> None:
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is False
+    assert approver_instance.get_submission_result([], "api/", 1) == JobStatus.FAILED

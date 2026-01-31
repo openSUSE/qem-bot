@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Entry point for the application."""
+
 import logging
 import sys
 
@@ -8,6 +10,7 @@ from .utils import create_logger
 
 
 def main() -> None:
+    """Run the main entry point of the bot."""
     log = create_logger("bot")
     parser = get_parser()
 

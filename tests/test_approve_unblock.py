@@ -1,16 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106
+"""Test approve unblock."""
+
 from __future__ import annotations
 
 import logging
 import re
 from argparse import Namespace
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.approver import QEM_DASHBOARD, Approver
@@ -21,9 +21,14 @@ from .helpers import (
     openqa_instance_url,
 )
 
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
 
 @dataclass(frozen=True)
 class CommentFormatTestCase:
+    """Test case for comment format."""
+
     comment_text: str
     description: str
 

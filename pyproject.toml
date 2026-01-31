@@ -148,27 +148,17 @@ extend-select =[
 ]
 
 ignore = [
-    "D100",   # missing-module-docstring
-    "D101",   # missing-class-docstring
-    "D102",   # missing-method-docstring
-    "D103",   # missing-function-docstring
-    "D105",   # missing-magic-method-docstring
     "D203",   # incorrect-blank-line-before-class
     "PLC1802", # use-implicit-booleaness-not-len
     "D213", # multi-line-summary-second-line
-    "B019",
     "PLR0904", # too-many-public-methods
     "DOC201", # docstring-missing-returns
     "DOC501", # docstring-missing-exception
     "COM812", # missing-trailing-comma
-    "TC001", # typing-only-first-party-import
-    "TC002", # typing-only-third-party-import
-    "TC003", # typing-only-standard-library-import
-    "FURB140", # reimplemented-starmap: less efficient than comprehensions https://github.com/astral-sh/ruff/issues/7771
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101"]
+"tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101", "S105", "S106", "PLR0917", "D103"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

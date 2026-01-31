@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Public Cloud helper functions."""
+
 from __future__ import annotations
 
 import json

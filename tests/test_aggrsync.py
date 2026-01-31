@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test aggregate sync."""
+
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
@@ -13,7 +15,7 @@ from openqabot.aggrsync import AggregateResultsSync
 def args(mocker: MockerFixture) -> MagicMock:
     args = mocker.Mock()
     args.configs = "configs"
-    args.token = "token"  # noqa: S105
+    args.token = "token"
     args.dry = False
     args.openqa_instance = urlparse("http://instance.qa")
     return args

@@ -1,6 +1,6 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-from __future__ import annotations
+"""Test Submissions."""
 
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions

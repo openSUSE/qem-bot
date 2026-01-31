@@ -1,5 +1,7 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
+"""Test mock submission coverage."""
+
 from .fixtures.submissions import MockSubmission
 
 

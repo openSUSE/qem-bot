@@ -1,15 +1,16 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-# ruff: noqa: S106
+"""Test increment approver OBS."""
+
 from __future__ import annotations
 
 import logging
 from argparse import Namespace
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import osc.core
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import BUILD_REGEX, OBS_GROUP, OBS_URL
@@ -22,6 +23,9 @@ from .helpers import (
     prepare_approver,
     run_approver,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @responses.activate
