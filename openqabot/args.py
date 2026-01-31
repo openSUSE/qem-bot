@@ -6,18 +6,20 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 from types import SimpleNamespace
 from typing import Annotated
 from urllib.parse import urlparse
 
 import typer
 
+import openqabot.config as config_module
+
 from .aggrsync import AggregateResultsSync
 from .amqp import AMQP
 from .approver import Approver
 from .commenter import Commenter
-from .config import BUILD_REGEX, settings
+from .config import BUILD_REGEX
 from .giteasync import GiteaSync
 from .incrementapprover import IncrementApprover
 from .openqabot import OpenQABot
@@ -36,11 +38,11 @@ log = logging.getLogger("bot")
 
 
 @app.callback()
-def main(  # noqa: PLR0913
+def main(
     ctx: typer.Context,
     *,
-    configs: Annotated[
-        Path,
+    _configs: Annotated[
+        Path | None,
         typer.Option(
             "-c",
             "--configs",
@@ -49,71 +51,74 @@ def main(  # noqa: PLR0913
             dir_okay=True,
             readable=True,
         ),
-    ] = Path("/etc/openqabot"),
-    dry: Annotated[bool, typer.Option("--dry", help="Dry run, do not post any data")] = False,
-    fake_data: Annotated[
-        bool,
-        typer.Option("--fake-data", help="Use fake data, do not query data from real services"),
-    ] = False,
-    dump_data: Annotated[
-        bool,
-        typer.Option("--dump-data", help="Dump requested data for later use via --fake-data"),
-    ] = False,
-    debug: Annotated[bool, typer.Option("-d", "--debug", help="Enable debug output")] = False,
-    token: Annotated[
-        str | None,
-        typer.Option("-t", "--token", envvar="QEM_BOT_TOKEN", help="Token for qem dashboard api"),
     ] = None,
-    gitea_token: Annotated[
+    _dry: Annotated[bool | None, typer.Option("--dry", help="Dry run, do not post any data")] = None,
+    _fake_data: Annotated[
+        bool | None,
+        typer.Option("--fake-data", help="Use fake data, do not query data from real services"),
+    ] = None,
+    _dump_data: Annotated[
+        bool | None,
+        typer.Option("--dump-data", help="Dump requested data for later use via --fake-data"),
+    ] = None,
+    _debug: Annotated[bool | None, typer.Option("-d", "--debug", help="Enable debug output")] = None,
+    _token: Annotated[
+        str | None,
+        typer.Option("-t", "--token", help="Token for qem dashboard api"),
+    ] = None,
+    _gitea_token: Annotated[
         str | None,
         typer.Option("-g", "--gitea-token", help="Token for Gitea api"),
     ] = None,
-    openqa_instance: Annotated[
-        str,
+    _openqa_instance: Annotated[
+        str | None,
         typer.Option(
             "-i",
             "--openqa-instance",
             help="The openQA instance to use\n Other instances than OSD do not update dashboard database",
         ),
-    ] = "https://openqa.suse.de",
-    singlearch: Annotated[
-        Path,
+    ] = None,
+    _singlearch: Annotated[
+        Path | None,
         typer.Option(
             "-s",
             "--singlearch",
             help="Yaml config with list of singlearch packages for submissions run",
         ),
-    ] = Path("/etc/openqabot/singlearch.yml"),
-    retry: Annotated[int, typer.Option("-r", "--retry", help="Number of retries")] = 2,
+    ] = None,
+    _retry: Annotated[int | None, typer.Option("-r", "--retry", help="Number of retries")] = None,
 ) -> None:
     """QEM-Dashboard, SMELT, Gitea and openQA connector."""
+    # Merge CLI arguments into settings
+    # Pydantic priority: explicit init args > env vars > defaults
+    # Use names without leading underscore for Settings
+    overrides = {k.lstrip("_"): v for k, v in ctx.params.items() if v is not None}
+
+    # Update global settings
+    overrides = {k.lstrip("_"): v for k, v in ctx.params.items() if v is not None}
+    for k, v in overrides.items():
+        setattr(config_module.settings, k, v)
+    settings = config_module.settings
+
     # Configure logging
     log_obj = create_logger("bot")
-    if debug:
+    if settings.debug:
         log_obj.setLevel(logging.DEBUG)
 
     # Allow missing token if help was requested
-    if token is None and not ctx.resilient_parsing:
-        # Check if help is in the arguments
-        if any(arg in sys.argv for arg in ctx.help_option_names):
+    if settings.token is None:
+        # Check if help is in the arguments or resilient parsing is on
+        if ctx.resilient_parsing or any(arg in sys.argv for arg in ctx.help_option_names):
             return
 
         print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
         sys.exit(1)
 
-    # Store global options in context
-    ctx.obj = SimpleNamespace(
-        configs=configs,
-        dry=dry,
-        fake_data=fake_data,
-        dump_data=dump_data,
-        debug=debug,
-        token=token,
-        gitea_token=gitea_token,
-        openqa_instance=urlparse(openqa_instance),
-        singlearch=singlearch,
-        retry=retry,
-    )
+    # Store global options in context for subcommands
+    # We use model_dump() to get all settings including defaults and env vars
+    ctx.obj = SimpleNamespace(**settings.model_dump())
+    # Ensure openqa_instance is a ParseResult object as expected by existing code
+    ctx.obj.openqa_instance = urlparse(str(settings.openqa_instance))
 
 
 @app.command()
@@ -252,7 +257,7 @@ def gitea_sync(
         bool,
         typer.Option(
             "--consider-unrequested-prs",
-            help=f"Consider PRs where no review from team {settings.obs_group} was requested as well",
+            help="Consider PRs where no review from team team was requested as well",
         ),
     ] = False,
     pr_number: Annotated[
@@ -519,11 +524,15 @@ def repo_diff(
 def amqp_cmd(
     ctx: typer.Context,
     *,
-    url: Annotated[str, typer.Option("--url", help="the URL of the AMQP server")] = settings.amqp_url,
+    url: Annotated[str | None, typer.Option("--url", help="the URL of the AMQP server")] = None,
 ) -> None:
     """AMQP listener daemon."""
     args = ctx.obj
-    args.url = url
+    if url is not None:
+        args.url = url
+    else:
+        # Default from settings (which was already loaded in main callback)
+        args.url = config_module.settings.amqp_url
 
     if not args.configs.is_dir():
         log.error("Configuration error: %s is not a valid directory", args.configs)

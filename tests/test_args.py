@@ -122,9 +122,18 @@ def test_repo_diff(mocker: MockerFixture) -> None:
 def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
     amqp = mocker.patch("openqabot.args.AMQP")
     amqp.return_value.return_value = 0
+    # Test with explicit URL
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "amqp", "--url", "amqp://host"])
+    assert result.exit_code == 0
+    amqp.assert_called_once()
+    assert amqp.call_args[0][0].url == "amqp://host"
+
+    # Test with default URL (covers line 532 in args.py)
+    amqp.reset_mock()
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "amqp"])
     assert result.exit_code == 0
     amqp.assert_called_once()
+    assert amqp.call_args[0][0].url == "amqps://suse:suse@rabbit.suse.de"
 
 
 def test_incidents_run(mocker: MockerFixture, tmp_path: Path) -> None:

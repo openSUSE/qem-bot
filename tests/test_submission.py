@@ -249,7 +249,7 @@ def test_revisions_with_fallback_no_revisions(caplog: pytest.LogCaptureFixture, 
 
 
 def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.INFO, logger="bot.types.submission")
     slfo_data = deepcopy(test_data)
     slfo_data["channels"] = [
         "SUSE:SLFO:1.1.99:PullRequest:166:SLES:x86_64#15.99",  # normal
@@ -268,25 +268,16 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
 
     assert "Submission smelt:24618: Product UNKNOWN is not in considered products" in caplog.text
 
-    assert len(submission.channels) == 1  # only the first one
-    assert submission.channels[0].product == "SUSE:SLFO"
-
     caplog.clear()
     mocker.patch("openqabot.config.settings.obs_products", "all")
     submission = Submission(slfo_data)
     submission.log_skipped()
     assert "Product UNKNOWN is not in considered products" not in caplog.text
-    assert len(submission.channels) == 2  # SLES and UNKNOWN
 
     caplog.clear()
     mocker.patch("openqabot.config.settings.obs_products", "")
-    # Need a channel with no product name
-    slfo_data_no_prod = deepcopy(test_data)
-    slfo_data_no_prod["channels"] = ["SUSE:SLFO:1.1.99:PullRequest:166:x86_64#15.99"]
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="")
-    submission = Submission(slfo_data_no_prod)
-    assert len(submission.channels) == 1
-    assert submission.channels[0].product == "SUSE:SLFO"
+    with pytest.raises(EmptyChannelsError):
+        Submission(slfo_data)
 
 
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:

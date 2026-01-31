@@ -25,7 +25,7 @@ from lxml import etree  # type: ignore[unresolved-import]
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -61,13 +61,15 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: dict[str, str], host: str = settings.gitea_url) -> Any:  # noqa: ANN401
+def get_json(query: str, token: dict[str, str], host: str | None = None) -> Any:  # noqa: ANN401
     """Fetch JSON data from Gitea API."""
+    host = host or config.settings.gitea_url
     return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
 
 
-def post_json(query: str, token: dict[str, str], post_data: Any, host: str = settings.gitea_url) -> Any:  # noqa: ANN401
+def post_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> Any:  # noqa: ANN401
     """Post JSON data to Gitea API."""
+    host = host or config.settings.gitea_url
     url = host + "/api/v1/" + query
     res = retried_requests.post(url, verify=False, headers=token, json=post_data)
     if not res.ok:
@@ -128,7 +130,7 @@ def compute_repo_url(
 ) -> str:
     """Construct the repository URL for a Gitea submission."""
     # return codestream repo if product name is empty
-    start = f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{settings.obs_repo_type}"
+    start = f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{config.settings.obs_repo_type}"
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
@@ -148,7 +150,7 @@ def compute_repo_url_for_job_setting(
     product_repo: list[str] | str | None,
     product_version: str | None,
 ) -> str:
-    """Construct repository URLs for openQA job settings."""
+    """Construct repository URLs for openQA job config.settings."""
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     product_list = product_names if isinstance(product_names, list) else [product_names]
@@ -206,9 +208,9 @@ def review_pr(  # noqa: PLR0913
     approve: bool = True,
 ) -> None:
     """Post a review or comment on a Gitea PR."""
-    if settings.git_review_bot_user:
+    if config.settings.git_review_bot_user:
         review_url = comments_url(repo_name, pr_number)
-        review_cmd = f"@{settings.git_review_bot_user}: "
+        review_cmd = f"@{config.settings.git_review_bot_user}: "
         review_cmd += "approved" if approve else "decline"
         review_data = {"body": f"{review_cmd}\n{msg}\nTested commit: {commit_id}"}
     else:
@@ -230,9 +232,11 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
 
 def is_review_requested_by(
     review: dict[str, Any],
-    users: tuple[str | None, ...] = (settings.obs_group, settings.git_review_bot_user),
+    users: tuple[str | None, ...] | None = None,
 ) -> bool:
     """Check if a review was requested by specific users or groups."""
+    if users is None:
+        users = (config.settings.obs_group, config.settings.git_review_bot_user)
     user_specifications = (
         get_name(review, "user", "login"),  # review via our bot account or review bot
         get_name(review, "team", "name"),  # review request for team bot is part of
@@ -265,7 +269,7 @@ def _extract_version(name: str, prefix: str) -> str:
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
-    url = f"{settings.obs_download_url}/{project_path}/{repository}/repo?jsontable"
+    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
     try:
         r = retried_requests.get(url)
@@ -310,7 +314,7 @@ def add_channel_for_build_result(
     if (
         len(product_name) != 0
         and len(product_version) == 0
-        and ("all" in settings.obs_products_set or product_name in settings.obs_products_set)
+        and ("all" in config.settings.obs_products_set or product_name in config.settings.obs_products_set)
     ):
         product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
 
@@ -341,7 +345,7 @@ def add_build_result(
             continue
         submission[scm_key] = found
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
-    if "all" not in settings.obs_products_set and product not in settings.obs_products_set:
+    if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
         return
     if res.get("state") != "published":
         results.unpublished.add(channel)
@@ -353,7 +357,7 @@ def add_build_result(
 
 def get_multibuild_data(obs_project: str) -> str:
     """Fetch multibuild configuration data for an OBS project."""
-    r = MultibuildFlavorResolver(settings.obs_url, obs_project, "000productcompose")
+    r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, "000productcompose")
     return r.get_multibuild_data()
 
 
@@ -390,7 +394,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
 
 def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
     """Check if a build result is relevant for the current product and architecture."""
-    if settings.obs_repo_type and res.get("repository") != settings.obs_repo_type:
+    if config.settings.obs_repo_type and res.get("repository") != config.settings.obs_repo_type:
         return False
     arch = res.get("arch")
     return arch == "local" or relevant_archs is None or arch in relevant_archs
@@ -398,7 +402,7 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
 
 def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[Any]:
     """Fetch build results for an OBS project."""
-    build_info_url = osc.core.makeurl(settings.obs_url, ["build", obs_project, "_result"])
+    build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
     if dry:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
     try:
@@ -450,8 +454,12 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         "successful_packages": sorted(results.successful),
     })
 
-    if "scminfo" not in submission and len(settings.obs_products_set) == 1 and "all" not in settings.obs_products_set:
-        submission["scminfo"] = submission.get("scminfo_" + next(iter(settings.obs_products_set)), "")
+    if (
+        "scminfo" not in submission
+        and len(config.settings.obs_products_set) == 1
+        and "all" not in config.settings.obs_products_set
+    ):
+        submission["scminfo"] = submission.get("scminfo_" + next(iter(config.settings.obs_products_set)), "")
 
 
 def add_comments_and_referenced_build_results(
@@ -560,7 +568,7 @@ def make_submission_from_gitea_pr(
             comments = get_json(comments_url(repo_name, number), token)
             files = get_json(changed_files_url(repo_name, number), token)
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
-            log.info("PR git:%s skipped: No reviews by %s", number, settings.obs_group)
+            log.info("PR git:%s skipped: No reviews by %s", number, config.settings.obs_group)
             return None
         add_comments_and_referenced_build_results(submission, comments, dry=dry)
         if not submission["channels"]:
@@ -591,7 +599,7 @@ def get_submissions_from_open_prs(
     submissions = []
 
     # configure osc to be able to request build info from OBS
-    osc.conf.get_config(override_apiurl=settings.obs_url)
+    osc.conf.get_config(override_apiurl=config.settings.obs_url)
 
     with futures.ThreadPoolExecutor() as executor:
         future_sub = [

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 import ruamel.yaml
 from ruamel.yaml import YAML
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.utils import get_yml_list
 
 if TYPE_CHECKING:
@@ -60,7 +60,7 @@ class IncrementConfig:
     def build_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the build project."""
         base_path = self.build_project().replace(":", ":/")
-        return f"{base_url or settings.obs_download_url}/{base_path}"
+        return f"{base_url or config.settings.obs_download_url}/{base_path}"
 
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""

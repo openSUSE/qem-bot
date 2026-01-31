@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 import osc.conf
 import osc.core
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.errors import NoResultsError
 
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
@@ -35,15 +35,15 @@ class Commenter:
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)
         self.submissions = get_submissions(self.token)
-        osc.conf.get_config(override_apiurl=settings.obs_url)
-        self.commentapi = CommentAPI(settings.obs_url)
+        osc.conf.get_config(override_apiurl=config.settings.obs_url)
+        self.commentapi = CommentAPI(config.settings.obs_url)
 
     def __call__(self) -> int:
         """Run the commenting process."""
         log.info("Starting to comment SMELT incidents in IBS")
 
         for sub in self.submissions:
-            if sub.type != settings.default_submission_type:
+            if sub.type != config.settings.default_submission_type:
                 log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub, sub.type)
                 continue
             try:

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.dashboard import get_json, patch, put
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
@@ -145,21 +145,26 @@ def get_submission_settings_data(
     token: dict[str, str], number: int, submission_type: str | None = None
 ) -> Sequence[Data]:
     """Fetch job settings data for a submission and wrap them in Data objects."""
-    log.info("Fetching settings for submission %s:%s", submission_type or settings.default_submission_type, number)
+    log.info(
+        "Fetching settings for submission %s:%s", submission_type or config.settings.default_submission_type, number
+    )
     params = {}
     if submission_type:
         params["type"] = submission_type
     data = get_json("api/incident_settings/" + f"{number}", headers=token, params=params)
     if "error" in data:
         log.warning(
-            "Submission %s:%s error: %s", submission_type or settings.default_submission_type, number, data["error"]
+            "Submission %s:%s error: %s",
+            submission_type or config.settings.default_submission_type,
+            number,
+            data["error"],
         )
         return []
 
     return [
         Data(
             number,
-            submission_type or settings.default_submission_type,
+            submission_type or config.settings.default_submission_type,
             d["id"],
             d["flavor"],
             d["arch"],
