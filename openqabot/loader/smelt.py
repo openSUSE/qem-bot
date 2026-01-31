@@ -12,7 +12,7 @@ import urllib3
 import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.utils import retry10 as retried_requests
 from openqabot.utils import walk
 
@@ -128,7 +128,7 @@ INCIDENT_SCHEMA = {
 }
 
 
-def get_json(query: str, host: str = settings.smelt_graphql) -> dict[str, Any]:
+def get_json(query: str, host: str = config.settings.smelt_graphql) -> dict[str, Any]:
     """Fetch JSON data from SMELT using a GraphQL query."""
     return retried_requests.get(host, params={"query": query}, verify=False).json()
 

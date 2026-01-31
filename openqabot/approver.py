@@ -19,7 +19,7 @@ import osc.conf
 import osc.core
 from openqa_client.exceptions import RequestError
 
-from openqabot.config import settings
+from openqabot import config
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import OpenQAInterface
@@ -46,7 +46,7 @@ MAINTENANCE_INCIDENT_TEMPLATE = r"(.*)Maintenance:/{sub}/(.*)"
 
 def ms2str(sub: SubReq) -> str:
     """Convert a SubReq to a human-readable string."""
-    return f"{settings.obs_maint_prj}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
+    return f"{config.settings.obs_maint_prj}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
 def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
@@ -113,7 +113,7 @@ class Approver:
             log.info("* %s", ms2str(sub))
 
         if not self.dry:
-            osc.conf.get_config(override_apiurl=settings.obs_url)
+            osc.conf.get_config(override_apiurl=config.settings.obs_url)
             for sub in submissions_to_approve:
                 overall_result &= self.approve(sub)
 
@@ -160,7 +160,7 @@ class Approver:
             log.info(
                 "Unable to mark job %i as acceptable for submission %s:%i: %s",
                 job_id,
-                self.submission_type or settings.default_submission_type,
+                self.submission_type or config.settings.default_submission_type,
                 sub,
                 e,
             )
@@ -264,7 +264,7 @@ class Approver:
             return False
 
         # Use at most X days old build. Don't go back in time too much to reduce risk of using invalid tests
-        oldest_build_usable = current_build_date - timedelta(days=settings.oldest_approval_job_days)
+        oldest_build_usable = current_build_date - timedelta(days=config.settings.oldest_approval_job_days)
 
         regex = re.compile(MAINTENANCE_INCIDENT_TEMPLATE.format(sub=sub))
         for job in older_jobs:
@@ -299,7 +299,7 @@ class Approver:
             log.info(
                 "Ignoring failed job %s for submission %s:%s (manually marked as acceptable)",
                 url,
-                self.submission_type or settings.default_submission_type,
+                self.submission_type or config.settings.default_submission_type,
                 sub,
             )
             return True
@@ -307,14 +307,14 @@ class Approver:
             log.info(
                 "Ignoring failed aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
                 url,
-                self.submission_type or settings.default_submission_type,
+                self.submission_type or config.settings.default_submission_type,
                 sub,
             )
             return True
         log.info(
             "Found failed, not-ignored job %s for submission %s:%s",
             url,
-            self.submission_type or settings.default_submission_type,
+            self.submission_type or config.settings.default_submission_type,
             sub,
         )
         return False
@@ -330,7 +330,7 @@ class Approver:
             log.info(
                 "Job setting %s not found for submission %s:%s",
                 job_aggr.id,
-                submission_type or settings.default_submission_type,
+                submission_type or config.settings.default_submission_type,
                 sub,
             )
             return None
@@ -356,7 +356,7 @@ class Approver:
 
     def approve(self, sub: SubReq) -> bool:
         """Approve a submission in OBS or Gitea."""
-        msg = f"Request accepted for '{settings.obs_group}' based on data in {settings.qem_dashboard_url}"
+        msg = f"Request accepted for '{config.settings.obs_group}' based on data in {config.settings.qem_dashboard_url}"
         log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
@@ -365,10 +365,10 @@ class Approver:
         """Approve a submission in OBS."""
         try:
             osc.core.change_review_state(
-                apiurl=settings.obs_url,
+                apiurl=config.settings.obs_url,
                 reqid=str(sub.req),
                 newstate="accepted",
-                by_group=settings.obs_group,
+                by_group=config.settings.obs_group,
                 message=msg,
             )
         except HTTPError as e:

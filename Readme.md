@@ -27,7 +27,6 @@ updates information about submissions and related openQA tests.
     ╭─ Options ────────────────────────────────────────────────────────────────────╮
     │ --configs          -c      PATH     Directory or single file with openqabot  │
     │                                     configuration metadata                   │
-    │                                     [default: /etc/openqabot]                │
     │ --dry                               Dry run, do not post any data            │
     │ --fake-data                         Use fake data, do not query data from    │
     │                                     real services                            │
@@ -35,16 +34,13 @@ updates information about submissions and related openQA tests.
     │                                     --fake-data                              │
     │ --debug            -d               Enable debug output                      │
     │ --token            -t      TEXT     Token for qem dashboard api              │
-    │                                     [env var: QEM_BOT_TOKEN]                 │
     │ --gitea-token      -g      TEXT     Token for Gitea api                      │
     │ --openqa-instance  -i      TEXT     The openQA instance to use Other         │
     │                                     instances than OSD do not update         │
     │                                     dashboard database                       │
-    │                                     [default: https://openqa.suse.de]        │
     │ --singlearch       -s      PATH     Yaml config with list of singlearch      │
     │                                     packages for submissions run             │
-    │                                     [default: /etc/openqabot/singlearch.yml] │
-    │ --retry            -r      INTEGER  Number of retries [default: 2]           │
+    │ --retry            -r      INTEGER  Number of retries                        │
     │ --help                              Show this message and exit.              │
     ╰──────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────╮
