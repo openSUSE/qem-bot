@@ -71,7 +71,7 @@ test: only-test checkstyle ## Run all tests and style checks
 .PHONY: test-with-coverage
 test-with-coverage: only-test-with-coverage checkstyle ## Run tests with coverage and style checks
 
-BOT_COMMANDS ?= $(shell python3 ./qem-bot.py --help | grep '{.*}' | head -n 1 | sed -n 's/.*{\(.*\)}.*/\1/p' | tr ',' ' ')
+BOT_COMMANDS ?= $(shell python3 -c "from openqabot.args import app; from typer.main import get_command_name; print(' '.join(get_command_name(c.name or c.callback.__name__) for c in app.registered_commands if not c.hidden))")
 TIMEOUT ?= 30
 
 .PHONY: test-all-commands-unstable

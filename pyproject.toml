@@ -24,6 +24,7 @@ dependencies = [
     "lxml",
     "PyYAML",
     "pydantic-settings",
+    "typer",
 ]
 
 [project.urls]
