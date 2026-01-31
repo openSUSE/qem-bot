@@ -208,3 +208,12 @@ the example configuration above:
       look good and accept the increment request.
 5. `qem-bot` will then go back to step 1 but this time check whatever OBS
    project has been specified for `sle`.
+
+## Global Configuration (Environment Variables)
+
+In addition to the YAML configuration files, `qem-bot` can be configured via
+environment variables. These are useful for setting up connections to external
+services and tweaking global behavior.
+
+For a full list of available environment variables and their default values, please
+refer to the source code in [openqabot/config.py](../openqabot/config.py).
