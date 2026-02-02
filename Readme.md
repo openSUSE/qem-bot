@@ -19,10 +19,11 @@ updates information about submissions and related openQA tests.
 <!-- usage_start -->
 
     >>> qem-bot.py --help
-    usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
-                   -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
+    usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d] -t
+                   TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
                    [-r RETRY]
-                   {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
+                   {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
+                   ...
 
     QEM-Dashboard, SMELT, Gitea and openQA connector
 
@@ -54,23 +55,25 @@ updates information about submissions and related openQA tests.
 
     options:
       -h, --help            show this help message and exit
-      -c, --configs CONFIGS
+      -c CONFIGS, --configs CONFIGS
                             Directory or single file with openqabot configuration
                             metadata
       --dry                 Dry run, do not post any data
       --fake-data           Use fake data, do not query data from real services
       --dump-data           Dump requested data for later use via --fake-data
       -d, --debug           Enable debug output
-      -t, --token TOKEN     Token for qem dashboard api
-      -g, --gitea-token GITEA_TOKEN
+      -t TOKEN, --token TOKEN
+                            Token for qem dashboard api
+      -g GITEA_TOKEN, --gitea-token GITEA_TOKEN
                             Token for Gitea api
-      -i, --openqa-instance OPENQA_INSTANCE
+      -i OPENQA_INSTANCE, --openqa-instance OPENQA_INSTANCE
                             The openQA instance to use Other instances than OSD do
                             not update dashboard database
-      -s, --singlearch SINGLEARCH
+      -s SINGLEARCH, --singlearch SINGLEARCH
                             Yaml config with list of singlearch packages for
                             submissions run
-      -r, --retry RETRY     Number of retries
+      -r RETRY, --retry RETRY
+                            Number of retries
 
 <!-- usage_end -->
 
