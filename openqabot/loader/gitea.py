@@ -26,6 +26,7 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.types.types import ProdVer
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -124,24 +125,24 @@ def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, st
 def compute_repo_url(
     base: str,
     product_name: str,
-    repo: tuple[str, ...],
+    repo: ProdVer,
     arch: str,
     path: str = "repodata/repomd.xml",
 ) -> str:
     """Construct the repository URL for a Gitea submission."""
     # return codestream repo if product name is empty
-    start = f"{base}/{repo[0].replace(':', ':/')}:/{repo[1].replace(':', ':/')}/{config.settings.obs_repo_type}"
+    product = repo.product.replace(":", ":/")
+    version = repo.version.replace(":", ":/")
+    start = f"{base}/{product}:/{version}/{config.settings.obs_repo_type}"
     # for empty product assign something like `http://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166/standard/repodata/repomd.xml`
     # otherwise return product repo for specified product
     # assing something like `https://download.suse.de/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/repodata/repomd.xml`
     if not product_name:
         return f"{start}/{path}"
-
-    msg = f"Product version must be provided for {product_name}"
-    if len(repo) <= 2 or not repo[2]:  # noqa: PLR2004
+    if not repo.product_version:
+        msg = f"Product version must be provided for {product_name}"
         raise ValueError(msg)
-    product_version = repo[2]
-    return f"{start}/repo/{product_name}-{product_version}-{arch}/{path}"
+    return f"{start}/repo/{product_name}-{repo.product_version}-{arch}/{path}"
 
 
 def compute_repo_url_for_job_setting(
@@ -154,7 +155,7 @@ def compute_repo_url_for_job_setting(
     product_names = get_product_name(repo.version) if product_repo is None else product_repo
     product_version = repo.product_version if product_version is None else product_version
     product_list = product_names if isinstance(product_names, list) else [product_names]
-    repo_tuple = (repo.product, repo.version, product_version)
+    repo_tuple = ProdVer(repo.product, repo.version, product_version or "")
     return ",".join(compute_repo_url(base, p, repo_tuple, repo.arch, "") for p in product_list)
 
 
