@@ -17,6 +17,7 @@ import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
+from openqabot.types.types import ProdVer
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -176,15 +177,15 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     opts = RepoOptions(product_version=product_version)
     ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99", product_version), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", product_version), arch)
 
     # Call without product_version
     ret = rp.get_max_revision(repos, arch, project)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", ""), arch)
 
     # Call with product_name set
     opts = RepoOptions(product_name="SLES")
     ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", ""), arch)

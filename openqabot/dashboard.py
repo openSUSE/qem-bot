@@ -6,7 +6,7 @@ from typing import Any
 
 import requests
 
-from .config import QEM_DASHBOARD
+from .config import settings
 from .utils import retry5 as retried_requests
 
 _GET_CACHE: dict[str, Any] = {}
@@ -24,7 +24,7 @@ def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
     if cache_key in _GET_CACHE:
         return _GET_CACHE[cache_key]
 
-    data = retried_requests.get(QEM_DASHBOARD + route, **kwargs).json()
+    data = retried_requests.get(settings.qem_dashboard_url + route, **kwargs).json()
     _GET_CACHE[cache_key] = data
     return data
 
@@ -33,9 +33,9 @@ def patch(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
     """Perform a PATCH request to the dashboard."""
     # openqabot/loader/qem.py originally used req.patch so we will just use that here without retry. Can potentially be
     # changed to used retry5 as requests as well
-    return requests.patch(QEM_DASHBOARD + route, timeout=10, **kwargs)
+    return requests.patch(settings.qem_dashboard_url + route, timeout=10, **kwargs)
 
 
 def put(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
     """Perform a PUT request to the dashboard."""
-    return retried_requests.put(QEM_DASHBOARD + route, **kwargs)
+    return retried_requests.put(settings.qem_dashboard_url + route, **kwargs)
