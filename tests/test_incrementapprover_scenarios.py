@@ -149,7 +149,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = IncrementConfig.from_config_file(path)
+    configs = IncrementConfig.from_config_file(path, load_defaults=False)
     (errors, jobs) = run_approver(
         mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=next(configs)
     )
@@ -168,7 +168,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = IncrementConfig.from_config_file(path)
+    configs = IncrementConfig.from_config_file(path, load_defaults=False)
     mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
     mocker.patch("osc.core.get_binarylist", side_effect=fake_get_binarylist)
     mocker.patch("osc.core.get_binary_file", side_effect=fake_get_binary_file)

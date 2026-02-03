@@ -89,20 +89,29 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path) -> Iterator[IncrementConfig]:
+    def from_config_file(file_path: Path, *, load_defaults: bool = True) -> Iterator[IncrementConfig]:
         """Load increment configurations from a YAML file."""
         try:
             log.debug("Loading increment configuration from '%s'", file_path)
-            return map(
-                IncrementConfig.from_config_entry,
-                YAML(typ="safe").load(file_path).get("product_increments", []),
+            yaml = YAML(typ="safe").load(file_path)
+            items = list(
+                map(
+                    IncrementConfig.from_config_entry,
+                    yaml.get("product_increments", []),
+                )
             )
+            # Apply default settings to all items
+            if load_defaults:
+                defaults = yaml.get("settings", {})
+                [item.settings.update({**defaults, **item.settings}) for item in items]
         except AttributeError:
             log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
             return iter(())
         except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
             log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
             return iter(())
+        else:
+            return iter(items)
 
     @staticmethod
     def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
