@@ -313,3 +313,30 @@ def test_single_submission_stopped(caplog: pytest.LogCaptureFixture, mocker: Moc
         "SUSE:Maintenance:1:100 has stopped jobs in submission tests",
     )
     assert "Found stopped job http://instance.qa/t100001 for submission smelt:1" in caplog.messages
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+def test_single_submission_mixed_statuses(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(_url: str, **_kwargs: Any) -> Any:
+        return [
+            {"submission_settings": 1000, "job_id": 100000, "status": "passed"},
+            {"submission_settings": 1000, "job_id": 100001, "status": "failed"},
+            {"submission_settings": 1000, "job_id": 100002, "status": "waiting"},
+            {"submission_settings": 1000, "job_id": 100003, "status": "stopped"},
+        ]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+
+    approver(submission=1)
+    assert_submission_not_approved(
+        caplog.messages,
+        "SUSE:Maintenance:1:100",
+        "SUSE:Maintenance:1:100 has at least one failed job in submission tests",
+    )
+    assert "Found failed, not-ignored job http://instance.qa/t100001 for submission smelt:1" in caplog.messages
+    assert "Found unfinished job http://instance.qa/t100002 for submission smelt:1" in caplog.messages
+    assert "Found stopped job http://instance.qa/t100003 for submission smelt:1" in caplog.messages
