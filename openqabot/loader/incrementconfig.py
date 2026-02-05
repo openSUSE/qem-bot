@@ -103,7 +103,8 @@ class IncrementConfig:
             # Apply default settings to all items
             if load_defaults:
                 defaults = yaml.get("settings", {})
-                [item.settings.update({**defaults, **item.settings}) for item in items]
+                for item in items:
+                    item.settings = defaults | item.settings
         except AttributeError:
             log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
             return iter(())
