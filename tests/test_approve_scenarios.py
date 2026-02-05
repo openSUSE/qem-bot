@@ -182,7 +182,7 @@ def test_sub_passed_aggr_without_results(caplog: pytest.LogCaptureFixture, mocke
         "No aggregate test results found for SUSE:Maintenance:1:100",
         "No aggregate test results found for SUSE:Maintenance:2:200",
         "No aggregate test results found for SUSE:Maintenance:3:300",
-        "Starting approving submissions in IBS or Gitea…",
+        "Starting approving submissions in OBS or Gitea…",
         "Submissions to approve:",
         "* SUSE:Maintenance:4:400",
         "Submission approval process finished",
@@ -200,7 +200,7 @@ def test_sub_without_results(caplog: pytest.LogCaptureFixture, mocker: MockerFix
 
     assert approver() == 0
     expected = [
-        "Starting approving submissions in IBS or Gitea…",
+        "Starting approving submissions in OBS or Gitea…",
         "Submissions to approve:",
         "Submission approval process finished",
     ]

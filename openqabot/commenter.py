@@ -27,7 +27,7 @@ log = getLogger("bot.commenter")
 
 
 class Commenter:
-    """Logic for commenting on submissions in IBS."""
+    """Logic for commenting on submissions in OBS."""
 
     def __init__(self, args: Namespace) -> None:
         """Initialize the Commenter class."""
@@ -40,7 +40,7 @@ class Commenter:
 
     def __call__(self) -> int:
         """Run the commenting process."""
-        log.info("Starting to comment SMELT incidents in IBS")
+        log.info("Starting to comment SMELT incidents in OBS")
 
         for sub in self.submissions:
             if sub.type != DEFAULT_SUBMISSION_TYPE:
@@ -72,7 +72,7 @@ class Commenter:
         return 0
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
-        """Comment a submission in IBS."""
+        """Comment a submission in OBS."""
         if sub.rr is None:
             log.debug("Comment skipped for submission %s: No release request defined", sub)
             return

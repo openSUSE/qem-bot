@@ -70,7 +70,7 @@ Example:
 * `aggregate` - self-explanatory, mapping containing all needed settings for the aggregate schedule of a given *product*
 * `FLAVOR` - flavor used by the schedule, can be only once per product, mandatory
 * `archs` - list of scheduled architectures, mandatory
-* `test_issues` - mandatory, contains a mapping of `*_TEST_ISSUES`, which are used to decide which submissions to be scheduled in aggregate jobs. Values are `PRODUCT-IDENTIFICATION:VERSION`. `PRODUCT-IDENTIFICATION` as defined in OBS/IBS. `VERSION` same as `PRODUCT-IDENTIFICATION`, could use different versions for different `*_TEST_ISSUES`.
+* `test_issues` - mandatory, contains a mapping of `*_TEST_ISSUES`, which are used to decide which submissions to be scheduled in aggregate jobs. Values are `PRODUCT-IDENTIFICATION:VERSION`. `PRODUCT-IDENTIFICATION` as defined in OBS. `VERSION` same as `PRODUCT-IDENTIFICATION`, could use different versions for different `*_TEST_ISSUES`.
   * `OS_TEST_ISSUES` variable is implicit, always used by *os-autoinst-distri-opensuse*, contains identification of the base product.
   * All others contain modules, addons, and extensions used in this aggregate. First part of the key name must be the same (uppercase, os-autoinst-distri-opensuse will convert it to lowercase) as an addon, extension or module identification in `SCC_ADDONS` variable defined in the job template inside the openQA instance.
 * `onetime` - optional key, boolean. By default, qem-bot sets it to `False`. When set to `True`, it limits the bot from scheduling this aggregate to only once per day.

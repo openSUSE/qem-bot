@@ -105,7 +105,7 @@ class Approver:
 
     def __call__(self) -> int:
         """Run the approval process."""
-        log.info("Starting approving submissions in IBS or Gitea…")
+        log.info("Starting approving submissions in OBS or Gitea…")
         subreqs = (
             get_single_submission(self.token, self.single_submission, submission_type=self.submission_type)
             if self.single_submission

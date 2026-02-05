@@ -83,7 +83,7 @@ updates information about submissions and related openQA tests.
 * Results from submission + aggregate tests show up on the dashboard
   (`sub-sync-results`, `aggr-sync-results`)
 * If there is a non-zero amount of related openQA jobs *and* none of them
-  failed then qem-bot approves in IBS/OBS or Gitea (`sub-approve`)
+  failed then qem-bot approves in OBS or Gitea (`sub-approve`)
 * For product increments, qem-bot can also trigger tests and approve them
   (`increment-approve`)
 
@@ -98,9 +98,9 @@ SUSE-internal CI setup.
 **Token** is required, but if it isn't used https://openqa.suse.de or is invoked with
 `--dry` argument any string is sufficient. See [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
 
-## Commenting in IBS
+## Commenting in OBS
 
-Action `sub-comment` can be used to add comments to release requests inside IBS (like [qa-maintenance/openQABot](https://gitlab.suse.de/qa-maintenance/openQABot) did).
+Action `sub-comment` can be used to add comments to release requests inside OBS (like [qa-maintenance/openQABot](https://gitlab.suse.de/qa-maintenance/openQABot) did).
 
 An example of such comment:
 
