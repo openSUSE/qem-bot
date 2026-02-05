@@ -1,3 +1,7 @@
+settings:
+  ADDITIONAL_SETTING1: 'present'
+  ADDITIONAL_SETTING2: 'also here'
+
 product_increments:
 - distri: foo
   project_base: FOO

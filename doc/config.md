@@ -19,6 +19,7 @@ Example of `singlearch.yml`:
 - packageone
 - packagetwo
 - onlyppcle
+```
 
 If an incident has a package from this list, a job is automatically marked as not requiring **aggregate**. That means the Incident can be approved without existing aggregate jobs.
 Other YAML files contain the definition of **product** and data for either or both **aggregate** and **submissions**
