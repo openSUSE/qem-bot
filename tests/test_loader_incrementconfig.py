@@ -69,19 +69,17 @@ def test_config_parsing_from_args() -> None:
     assert config[0].settings == {}
 
 
-def test_config_parsing_from_args_with_path() -> None:
+@pytest.mark.parametrize(("config_index", "expected_distri"), [(0, "foo"), (1, "bar")])
+def test_config_parsing_from_args_with_path(config_index: int, expected_distri: str) -> None:
     path = Path("tests/fixtures/config-increment-approver")
     configs = IncrementConfig.from_args(
         Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 2
-    assert configs[0].distri == "foo"
-    assert configs[1].distri == "bar"
-
+    config = configs[config_index]
+    assert config.distri == expected_distri
     additional_settings = {
         "ADDITIONAL_SETTING1": "present",
         "ADDITIONAL_SETTING2": "also here",
     }
-    for config in configs:
-        assert additional_settings.items() <= config.settings.items()
-        assert additional_settings.items() <= config.settings.items()
+    assert additional_settings.items() <= config.settings.items()
