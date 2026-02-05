@@ -46,8 +46,8 @@ def _load_one_metadata(
     path: Path,
     data: dict,
     *,
-    aggregate: bool,
-    submissions: bool,
+    disable_aggregate: bool,
+    disable_submissions: bool,
     extrasettings: set[str],
 ) -> Iterator[Aggregate | Submissions]:
     """Parse a single metadata configuration dictionary.
@@ -70,11 +70,11 @@ def _load_one_metadata(
     product_version = data.get("product_version")
 
     for key in data:
-        if key == "incidents" and not submissions:
+        if key == "incidents" and not disable_submissions:
             yield Submissions(
                 JobConfig(product, product_repo, product_version, settings, data["incidents"]), extrasettings
             )
-        elif key == "aggregate" and not aggregate:
+        elif key == "aggregate" and not disable_aggregate:
             try:
                 yield Aggregate(JobConfig(product, product_repo, product_version, settings, data["aggregate"]))
             except NoTestIssuesError:
@@ -97,7 +97,7 @@ def load_metadata(
         for p in get_yml_list(path)
         if (data := _try_load(loader, p))
         for item in _load_one_metadata(
-            p, data, aggregate=aggregate, submissions=submissions, extrasettings=extrasettings
+            p, data, disable_aggregate=aggregate, disable_submissions=submissions, extrasettings=extrasettings
         )
     ]
 

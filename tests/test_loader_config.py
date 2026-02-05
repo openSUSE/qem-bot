@@ -27,7 +27,7 @@ def test_get_onearch_not_found() -> None:
     assert res == set()
 
 
-def test_load_metadata_aggregate(caplog: pytest.LogCaptureFixture) -> None:
+def test_load_metadata_aggregate_all_files_in_folder(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
     result = load_metadata(__root__, aggregate=False, submissions=True, extrasettings=set())
 
@@ -37,14 +37,14 @@ def test_load_metadata_aggregate(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_load_metadata_aggregate_file(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
-    file_path = Path(__file__).parent / "fixtures/config/05_normal.yml"
+    file_path = __root__ / "05_normal.yml"
     result = load_metadata(file_path, aggregate=False, submissions=True, extrasettings=set())
 
     assert len(result) == 1
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
 
 
-def test_load_metadata_incidents(caplog: pytest.LogCaptureFixture) -> None:
+def test_load_metadata_incidents_all_files_in_folder(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
     result = load_metadata(__root__, aggregate=True, submissions=False, extrasettings=set())
@@ -63,6 +63,11 @@ def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
     # In 05_normal.yml, 'aggregate' comes before 'incidents'.
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
     assert str(result[1]) == "<Submissions product: SOME15SP3>"
+
+
+def test_load_metadata_exclude_all() -> None:
+    result = load_metadata(__root__, aggregate=True, submissions=True, extrasettings=set())
+    assert len(result) == 0
 
 
 def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
@@ -104,7 +109,7 @@ def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
 def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 
-    result = read_products(Path(__file__).parent / "fixtures/config/05_normal.yml")
+    result = read_products(__root__ / "05_normal.yml")
 
     assert len(result) == 2
     assert (
@@ -140,7 +145,7 @@ def test_read_products_file(caplog: pytest.LogCaptureFixture) -> None:
 def test_invalid_yaml_file_is_skipped(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mock_yaml_class = mocker.patch("openqabot.loader.config.YAML")
     mock_yaml_class.return_value.load.side_effect = YAMLError("Simulated YAML error")
-    file_path = Path(__file__).parent / "fixtures/config/simulated_invalid.yml"
+    file_path = __root__ / "simulated_invalid.yml"
     load_metadata(file_path, aggregate=False, submissions=True, extrasettings=set())
     assert "YAML load failed" in caplog.text
 
