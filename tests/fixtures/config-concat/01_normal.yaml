@@ -1,0 +1,24 @@
+.list1: &list1
+  - kernel-source
+  - kernel-livepatch
+
+.list2: &list2
+  - kernel-azure
+
+product: SOME15SP3
+settings:
+  VARIABLE: foo
+aggregate:
+  FLAVOR: Server-DVD-Updates
+  archs:
+    - x86_64
+  test_issues:
+    BASE_TEST_ISSUES: Module:15-SP3
+incidents:
+  FLAVOR:
+    Server-DVD-Incidents-Kernel:
+      archs:
+        - x86_64
+      packages: !concat [*list1, *list2]
+empty_key:
+  - empty
