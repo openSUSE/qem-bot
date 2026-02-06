@@ -14,7 +14,7 @@ import requests
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
-from openqabot.config import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+from openqabot import config
 from openqabot.utils import number_of_retries
 
 from .errors import PostOpenQAError
@@ -47,7 +47,7 @@ class OpenQAInterface:
 
         This is used for decide if the dashboard database should be updated or not
         """
-        return self.url.netloc == OPENQA_URL
+        return self.url.netloc == config.settings.main_openqa_domain
 
     def post_job(self, settings: dict[str, Any]) -> None:
         """Post a job to openQA with the given settings."""
@@ -106,7 +106,9 @@ class OpenQAInterface:
         """Check if a job group is a development group."""
         ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
         # return True as safe option if ret = None
-        return ret[0]["parent_id"] == DEVELOPMENT_PARENT_GROUP_ID if ret else True  # ID of Development Group
+        return (
+            ret[0]["parent_id"] == config.settings.development_parent_group_id if ret else True
+        )  # ID of Development Group
 
     @lru_cache(maxsize=256)  # noqa: B019
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:

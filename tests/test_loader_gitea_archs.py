@@ -7,6 +7,7 @@ from urllib.error import URLError
 import pytest
 from pytest_mock import MockerFixture
 
+from openqabot.config import settings
 from openqabot.loader import gitea
 
 
@@ -37,4 +38,4 @@ def test_get_multibuild_data(mocker: MockerFixture) -> None:
     mock_resolver = mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver")
     mock_resolver.return_value.get_multibuild_data.return_value = "data"
     assert gitea.get_multibuild_data("proj") == "data"
-    mock_resolver.assert_called_with(gitea.OBS_URL, "proj", "000productcompose")
+    mock_resolver.assert_called_with(settings.obs_url, "proj", "000productcompose")

@@ -262,7 +262,7 @@ def test_process_arch_onetime_skip(aggregate_factory: Any, config: dict, mocker:
 
 def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
-    mocker.patch("openqabot.types.aggregate.DEPRIORITIZE_LIMIT", 10)
+    mocker.patch("openqabot.config.settings.deprioritize_limit", 10)
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
 

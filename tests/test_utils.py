@@ -11,7 +11,14 @@ import pytest
 
 import responses
 from openqabot.types.types import Data
-from openqabot.utils import compare_submission_data, get_yml_list, make_retry_session, normalize_results, walk
+from openqabot.utils import (
+    compare_submission_data,
+    create_logger,
+    get_yml_list,
+    make_retry_session,
+    normalize_results,
+    walk,
+)
 from responses import registries
 
 if TYPE_CHECKING:
@@ -163,3 +170,15 @@ def test_get_yml_list_folder_with_multiple_files(tmp_path: Path) -> None:
     res = get_yml_list(Path(d))
     # only 5 yml + 5 yaml files over 15 total files
     assert len(res) == 10
+
+
+def test_create_logger_duplicate_handlers() -> None:
+
+    name = "test_duplicate_logger"
+    log = create_logger(name)
+    assert len(log.handlers) == 1
+
+    # second call should not add handler
+    log2 = create_logger(name)
+    assert log is log2
+    assert len(log.handlers) == 1
