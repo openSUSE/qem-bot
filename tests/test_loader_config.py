@@ -10,6 +10,7 @@ from pytest_mock import MockerFixture
 from ruamel.yaml import YAMLError
 
 from openqabot.loader.config import get_onearch, load_metadata, read_products
+from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
 
 __root__ = Path(__file__).parent / "fixtures/config"
@@ -63,6 +64,15 @@ def test_load_metadata_all(caplog: pytest.LogCaptureFixture) -> None:
     # In 05_normal.yml, 'aggregate' comes before 'incidents'.
     assert str(result[0]) == "<Aggregate product: SOME15SP3>"
     assert str(result[1]) == "<Submissions product: SOME15SP3>"
+
+
+def test_load_metadata_concat() -> None:
+    result = load_metadata(
+        Path(__file__).parent / "fixtures/config-concat", aggregate=False, submissions=False, extrasettings=set()
+    )
+    assert len(result) == 2
+    assert isinstance(result[1], Submissions)
+    assert len(result[1].flavors["Server-DVD-Incidents-Kernel"]["packages"]) == 3
 
 
 def test_read_products(caplog: pytest.LogCaptureFixture) -> None:

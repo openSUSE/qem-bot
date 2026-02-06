@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML, YAMLError
 
@@ -19,6 +19,9 @@ from openqabot.utils import get_yml_list
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
+
+    from ruamel.yaml.constructor import SafeConstructor
+    from ruamel.yaml.nodes import SequenceNode
 
 log = getLogger("bot.loader.config")
 
@@ -81,6 +84,13 @@ def _load_one_metadata(
                 log.info("Aggregate configuration skipped: Missing 'test_issues' for product %s", product)
 
 
+def _concat(constructor: SafeConstructor, node: SequenceNode) -> list[Any]:
+    # Iterate over the children of the !concat node
+    # construct_object is used here (in place of construct_sequence) because
+    # it handles aliases (*list1) and resolves them to their underlying Python objects (lists).
+    return [item for child in node.value for item in constructor.construct_object(child, deep=True)]
+
+
 def load_metadata(
     path: Path,
     *,
@@ -90,6 +100,7 @@ def load_metadata(
 ) -> list[Aggregate | Submissions]:
     """Load metadata configurations from a directory of YAML files."""
     loader = YAML(typ="safe")
+    loader.constructor.add_constructor("!concat", _concat)
     log.debug("Loading metadata from %s: Submissions=%s, Aggregates=%s", path, not submissions, not aggregate)
 
     return [
