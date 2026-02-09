@@ -154,6 +154,9 @@ product_increments:
   archs:
   - aarch64
   - x86_64
+  reference_repos:
+    SLES: SUSE/Products/SLE-Product-SLES/16.0/product
+    SLES-SAP: SUSE/Products/SLE-Product-SLES-SAP/16.0/product
   packages:
   - foo
   - bar
@@ -176,6 +179,15 @@ specify multiple increment definitions, each with their own project on OBS to
 monitor for new increment requests. The fields `archs` and `packages` allow
 filtering similar to what is possible for incidents.
 
+* `reference_repos` - optional mapping of code stream names (derived from the openQA `FLAVOR` parameter) to OBS project/repository paths. When specified, the bot will use these repositories as the base for computing the package diff for that code stream instead of the default `project_base : diff_project_suffix`. For product increments following a directory-based structure (like SLFO), the bot automatically augments both the build and reference paths with the channel name (original flavor), version, repository suffix, and architecture. This is particularly useful for cases where the base might differ per code stream.
+
+### Filtering logic for product increments
+When computing package diffs and determining additional builds, the following packages are automatically skipped:
+* Initial livepatches (version matching `1` or `1.*`).
+* Debuginfo packages (name containing `-debuginfo`).
+* Source and NoSource architectures (`src` or `nosrc`).
+
+### Behavior of `increment-approve` command
 `qem-bot` will go through all listed product increments. This is the sequence for
 the example configuration above:
 
