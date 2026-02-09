@@ -17,7 +17,7 @@ import pyzstd
 import requests
 from lxml import etree  # type: ignore[unresolved-import]
 
-from .config import OBS_DOWNLOAD_URL
+from .config import settings
 from .utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ class RepoDiff:
     def make_repodata_url(self, project: str) -> str:  # noqa: PLR6301
         """Construct the URL for repository metadata."""
         path = project.replace(":", ":/")
-        return f"{OBS_DOWNLOAD_URL}/{path}/repodata/"
+        return f"{settings.obs_download_url}/{path}/repodata/"
 
     def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
         """Find the primary XML metadata file in a list of repository files."""

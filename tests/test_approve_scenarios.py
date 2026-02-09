@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import responses
-from openqabot.approver import QEM_DASHBOARD, Approver
+from openqabot.approver import Approver
+from openqabot.config import settings
 
 from .helpers import (
     assert_log_messages,
@@ -37,7 +38,7 @@ def with_fake_qem(mode: str) -> Any:
 def fake_single_submission_mocks() -> None:
     responses.add(
         responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/submission/.*"),
+        re.compile(f"{settings.qem_dashboard_url}api/submission/.*"),
         json={
             "approved": False,
             "inReview": True,
@@ -49,12 +50,12 @@ def fake_single_submission_mocks() -> None:
     )
     responses.add(
         responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/jobs/incident/100"),
+        re.compile(f"{settings.qem_dashboard_url}api/jobs/incident/100"),
         json=[{"submission_settings": 1000, "job_id": 100001, "status": "failed"}],
     )
     responses.add(
         responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/jobs/incident/400"),
+        re.compile(f"{settings.qem_dashboard_url}api/jobs/incident/400"),
         json=[{"submission_settings": 1000, "job_id": 100000, "status": "passed"}],
     )
     responses.add(
@@ -84,7 +85,7 @@ def fake_openqa_comment_api() -> None:
 
 @pytest.fixture
 def fake_responses_updating_job() -> None:
-    responses.add(responses.PATCH, f"{QEM_DASHBOARD}api/jobs/100001")
+    responses.add(responses.PATCH, f"{settings.qem_dashboard_url}api/jobs/100001")
 
 
 def approver(submission: int = 0) -> int:

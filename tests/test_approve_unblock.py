@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import responses
-from openqabot.approver import QEM_DASHBOARD, Approver
+from openqabot.approver import Approver
+from openqabot.config import settings
 
 from .helpers import (
     add_two_passed_response,
@@ -47,7 +48,7 @@ def fake_responses_for_unblocking_submissions_via_older_ok_result(
 ) -> None:
     responses.add(
         responses.GET,
-        f"{QEM_DASHBOARD}api/jobs/update/20005",
+        f"{settings.qem_dashboard_url}api/jobs/update/20005",
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},
@@ -110,7 +111,7 @@ def fake_responses_for_unblocking_submissions_via_openqa_comments(
     submission = params["submission"]
     responses.add(
         responses.GET,
-        f"{QEM_DASHBOARD}api/jobs/update/20005",
+        f"{settings.qem_dashboard_url}api/jobs/update/20005",
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},
@@ -297,7 +298,7 @@ def test_approval_via_openqa_older_ok_job(
     def mock_get_json(url: str, **_kwargs: Any) -> Any:
         if "update/2000" in url:
             return [{"job_id": 100002, "status": "failed"}]
-        if url in {f"{QEM_DASHBOARD}api/jobs/100005", "api/jobs/100005"}:
+        if url in {f"{settings.qem_dashboard_url}api/jobs/100005", "api/jobs/100005"}:
             return mock_json
         return [{"job_id": 100000, "status": "passed"}]
 
@@ -334,7 +335,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
     def mock_get_json(url: str, **_kwargs: Any) -> Any:
         if "update/2000" in url:
             return [{"job_id": 100002, "status": "failed"}]
-        if url in {f"{QEM_DASHBOARD}api/jobs/100005", "api/jobs/100005"}:
+        if url in {f"{settings.qem_dashboard_url}api/jobs/100005", "api/jobs/100005"}:
             return {"error": "Job not found"}
         return [{"job_id": 100000, "status": "passed"}]
 

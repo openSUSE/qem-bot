@@ -109,8 +109,9 @@ def test_commenter_call(
     mocker: MockerFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission = mocker.MagicMock(spec=Submission)
+
     mock_submission.id = 1
     mock_submission.type = "maintenance"
     mock_submission.__str__.return_value = "maintenance:1"
@@ -128,8 +129,9 @@ def test_commenter_call_value_error_submission_results(
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
+
     mocker.patch("openqabot.commenter.get_submission_results", side_effect=ValueError("get_submission_results error"))
 
     c = Commenter(mock_args)
@@ -144,7 +146,7 @@ def test_commenter_call_value_error_aggregate_results(
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     mocker.patch("openqabot.commenter.get_submission_results", return_value=0)
     mocker.patch("openqabot.commenter.get_aggregate_results", side_effect=ValueError("get_aggregate_results error"))
@@ -161,7 +163,7 @@ def test_commenter_call_no_results_error_submission_results(
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     mocker.patch("openqabot.commenter.get_submission_results", side_effect=NoResultsError("No submission results"))
 
@@ -179,7 +181,7 @@ def test_commenter_call_running_jobs(
     *,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.INFO, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
@@ -204,7 +206,7 @@ def test_commenter_call_failed_jobs(
     *,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.INFO, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
@@ -246,7 +248,7 @@ def test_osc_comment_no_request(
     mock_submission_smelt: Mock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt.rr = None
     c = Commenter(mock_args)
     c.osc_comment(mock_submission_smelt, "Test message", "passed")
@@ -259,7 +261,7 @@ def test_osc_comment_no_msg(
     mock_submission_smelt: Mock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     c = Commenter(mock_args)
     c.osc_comment(mock_submission_smelt, "", "")
@@ -273,7 +275,7 @@ def test_osc_comment_dry_run(
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
     commenter_setup["comment_api"].return_value = comment_api
@@ -291,7 +293,7 @@ def test_osc_comment_with_revision(
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt_with_revisions.rr = 274060
     comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
     commenter_setup["comment_api"].return_value = comment_api
@@ -309,7 +311,7 @@ def test_osc_comment_no_comment(
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     commenter_setup["comment_api"].return_value = make_comment_api(comment_find_results=[(None, None), (None, None)])
 
@@ -326,7 +328,7 @@ def test_osc_comment_similar_exists(
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     existing_comment = {"id": 42, "comment": "comment 1\ncomment 2\ncomment 3"}
     commenter_setup["comment_api"].return_value = make_comment_api(
@@ -384,7 +386,7 @@ def test_osc_comment_replace_dry_run(
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
-    caplog.set_level(logging.INFO)
+    caplog.set_level(logging.INFO, logger="bot.commenter")
     mock_submission_smelt.rr = 274060
     existing_comment = {"id": 42, "comment": "Old comment"}
     comment_api = make_comment_api(

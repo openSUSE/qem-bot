@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 def create_logger(name: str) -> logging.Logger:
     """Create and configure a logger with a stream handler."""
     log = logging.getLogger(name)
+    log.setLevel(logging.INFO)
+    if log.handlers:
+        return log
     handler = logging.StreamHandler()
     formatter = logging.Formatter(fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
