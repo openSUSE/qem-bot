@@ -45,9 +45,14 @@ class IncrementConfig:
     archs: set[str] = field(default_factory=set)
     settings: dict[str, str] = field(default_factory=dict)
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
+    reference_repos: dict[str, str] = field(default_factory=dict)
 
     def _concat_project(self, project: str) -> str:
-        return project if not self.project_base else f"{self.project_base}:{project}"
+        if not self.project_base:
+            return project
+        if not project:
+            return self.project_base
+        return f"{self.project_base}:{project}"
 
     def build_project(self) -> str:
         """Return the build project name."""
@@ -86,6 +91,7 @@ class IncrementConfig:
             archs=set(entry.get("archs", [])),
             settings=entry.get("settings", {}),
             additional_builds=entry.get("additional_builds", []),
+            reference_repos=entry.get("reference_repos", {}),
         )
 
     @staticmethod
@@ -143,6 +149,7 @@ class IncrementConfig:
                 "archs",
                 "settings",
                 "additional_builds",
+                "reference_repos",
             ]
             if hasattr(args, field_name)
         }

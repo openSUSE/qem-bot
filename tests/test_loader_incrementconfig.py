@@ -83,3 +83,18 @@ def test_config_parsing_from_args_with_path(config_index: int, expected_distri: 
         "ADDITIONAL_SETTING2": "also here",
     }
     assert additional_settings.items() <= config.settings.items()
+
+
+def test_config_parsing_reference_repos() -> None:
+    entry = {
+        "distri": "sle",
+        "project_base": "BASE",
+        "build_project_suffix": "BUILD",
+        "diff_project_suffix": "DIFF",
+        "build_listing_sub_path": "path",
+        "build_regex": "regex",
+        "product_regex": "pregex",
+        "reference_repos": {"SLES": "REPO1", "SLES-SAP": "REPO2"},
+    }
+    config = IncrementConfig.from_config_entry(entry)
+    assert config.reference_repos == {"SLES": "REPO1", "SLES-SAP": "REPO2"}
