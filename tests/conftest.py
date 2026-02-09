@@ -13,11 +13,11 @@ import responses
 from openqabot.approver import Approver
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
-from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.gitea import read_json
 from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
+from openqabot.requests import find_request_on_obs, get_obs_request_list
 
 from .helpers import (
     add_two_passed_response,
@@ -150,8 +150,8 @@ def fakeget_package_diff(mocker: MockerFixture) -> None:
 def mock_osc(mocker: MockerFixture) -> None:
     # Clear caches to ensure isolation between tests
 
-    IncrementApprover.find_request_on_obs.cache_clear()
-    IncrementApprover.get_obs_request_list.cache_clear()
+    find_request_on_obs.cache_clear()  # type: ignore[attr-defined]
+    get_obs_request_list.cache_clear()
 
     mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
     mocker.patch("osc.core.change_review_state", side_effect=fake_change_review_state)

@@ -186,6 +186,8 @@ def prepare_approver(
 ) -> IncrementApprover:
     os.environ["CI_JOB_URL"] = test_env_var
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
+    caplog.set_level(logging.DEBUG, logger="bot.requests")
+    caplog.set_level(logging.DEBUG, logger="bot.loader.buildinfo")
 
     args = Namespace(
         dry=False,

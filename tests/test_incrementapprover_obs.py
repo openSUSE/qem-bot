@@ -15,6 +15,7 @@ import pytest
 import responses
 from openqabot.config import BUILD_REGEX, OBS_GROUP, OBS_URL
 from openqabot.incrementapprover import ApprovalStatus, IncrementApprover
+from openqabot.requests import find_request_on_obs, get_obs_request_list
 
 from .helpers import (
     ReviewState,
@@ -59,7 +60,7 @@ def test_specified_obs_request_found_renders_request(mocker: MockerFixture, capl
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     approver = prepare_approver(caplog, request_id=43)
-    approver.find_request_on_obs("foo")
+    find_request_on_obs(approver.args, "foo")
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
 
@@ -80,7 +81,7 @@ def testfind_request_on_obs_with_request_id(mocker: MockerFixture, caplog: pytes
 
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     approver = prepare_approver(caplog, request_id=43)
-    approver.find_request_on_obs("foo")
+    find_request_on_obs(approver.args, "foo")
     assert "Checking specified request 43" in caplog.text
     assert "<request />" in caplog.text
 
@@ -93,17 +94,18 @@ def testfind_request_on_obs_caching(mocker: MockerFixture, caplog: pytest.LogCap
 
     approver = prepare_approver(caplog)
 
-    res1 = approver.find_request_on_obs("OBS:PROJECT:TEST")
+    res1 = find_request_on_obs(approver.args, "OBS:PROJECT:TEST")
     assert mock_get_requests.call_count == 1
     assert res1
     assert res1.reqid == 42
 
-    res2 = approver.find_request_on_obs("OBS:PROJECT:TEST")
+    res2 = find_request_on_obs(approver.args, "OBS:PROJECT:TEST")
     assert mock_get_requests.call_count == 1
     assert res1 == res2
 
     mock_get_requests.return_value = []
-    approver.find_request_on_obs("OBS:PROJECT:OTHER")
+    get_obs_request_list.cache_clear()
+    find_request_on_obs(approver.args, "OBS:PROJECT:OTHER")
     assert mock_get_requests.call_count == 2
 
 
@@ -169,6 +171,6 @@ def testhandle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mock
 def testfind_request_on_obs_not_accepted(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     approver.args.accepted = False
-    mock_get_list = mocker.patch("openqabot.incrementapprover.IncrementApprover.get_obs_request_list", return_value=[])
-    approver.find_request_on_obs("project")
-    assert mock_get_list.call_args[1]["req_state"] == ("new", "review")
+    mock_get_list = mocker.patch("openqabot.requests.get_obs_request_list", return_value=[])
+    find_request_on_obs(approver.args, "project")
+    assert mock_get_list.call_args[0][1] == ("new", "review")

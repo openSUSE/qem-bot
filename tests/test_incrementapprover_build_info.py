@@ -7,9 +7,10 @@ from pytest_mock import MockerFixture
 
 import responses
 from openqabot.config import BUILD_REGEX
-from openqabot.incrementapprover import BuildInfo
+from openqabot.loader.buildinfo import load_build_info
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.repodiff import Package
+from openqabot.types.increment import BuildInfo
 from responses import GET
 
 from .helpers import (
@@ -54,7 +55,7 @@ def test_no_approval_if_one_of_two_configs_has_no_builds(caplog: pytest.LogCaptu
     assert "All 1 openQA jobs have passed/softfailed" not in caplog.text
 
 
-def testdetermine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testload_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="other",
@@ -65,16 +66,20 @@ def testdetermine_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: 
         product_regex="NOMATCH",
         build_regex=BUILD_REGEX,
     )
-    mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver.determine_build_info(config)
+    res = load_build_info(
+        config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
+    )
     assert res == set()
     config.product_regex = "SLES"
-    mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-brokenversion-Online-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver.determine_build_info(config)
+    res = load_build_info(
+        config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
+    )
     assert res == set()
 
 
@@ -92,7 +97,7 @@ def test_extra_builds_no_match(caplog: pytest.LogCaptureFixture) -> None:
     assert res is None
 
 
-def testdetermine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testload_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle",
@@ -102,15 +107,17 @@ def testdetermine_build_info_missing_flavor_group(caplog: pytest.LogCaptureFixtu
         build_project_suffix="TEST",
         build_regex=r"(?P<product>SLES)-(?P<version>.*)-(?P<arch>.*)-Build(?P<build>.*)-Source.report.spdx.json",
     )
-    mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-x86_64-Build1.1-Source.report.spdx.json"}]
     }
-    res = approver.determine_build_info(config)
+    res = load_build_info(
+        config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
+    )
     assert len(res) == 1
     assert next(iter(res)).flavor == "Online-Increments"
 
 
-def testdetermine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testload_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle",
@@ -120,10 +127,12 @@ def testdetermine_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, m
         build_project_suffix="TEST",
         build_regex=BUILD_REGEX,
     )
-    mocker.patch("openqabot.incrementapprover.retried_requests.get").return_value.json.return_value = {
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
         "data": [{"name": "SLES-16.0-Online-x86_64-Build1.1.spdx.json"}]
     }
-    res = approver.determine_build_info(config)
+    res = load_build_info(
+        config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
+    )
     assert res == set()
 
 
