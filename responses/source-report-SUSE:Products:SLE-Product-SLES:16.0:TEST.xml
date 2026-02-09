@@ -7,19 +7,19 @@
   </binary>
   <!-- will be considered a new livepatch -->
   <binary
-    name="kernel-livepatch-6_12_0-160000_5-default" version="1" release="160000.4.3" binaryarch="ppc64le"
+    name="kernel-livepatch-6_12_0-160000_5-default" version="2" release="160000.4.3" binaryarch="ppc64le"
     package="kernel-livepatch-default" repository="standard" arch="ppc64le">
     obs://SUSE:SLFO:1.2/standard/ppc64le/kernel-livepatch-6_12_0-160000_5-default.rpm
   </binary>
   <!-- will be considered a new livepatch -->
   <binary
-    name="kernel-livepatch-6_12_0-160000_5-rt" version="1" release="160000.4.3" binaryarch="ppc64le"
+    name="kernel-livepatch-6_12_0-160000_5-rt" version="2" release="160000.4.3" binaryarch="ppc64le"
     package="kernel-livepatch-rt" repository="standard" arch="ppc64le">
     obs://SUSE:SLFO:1.2/standard/ppc64le/kernel-livepatch-6_12_0-160000_5-rt.rpm
   </binary>
   <!-- will be ignored as the same version is also in foo-primary.xml -->
   <binary
-    name="kernel-livepatch-6_12_0-160000_5-rt" version="1" release="160000.4.3" binaryarch="aarch64"
+    name="kernel-livepatch-6_12_0-160000_5-rt" version="2" release="160000.4.3" binaryarch="aarch64"
     package="kernel-livepatch" repository="standard" arch="aarch64">
     obs://SUSE:SLFO:1.2/standard/aarch64/kernel-livepatch-6_12_0-160000_5-rt.rpm
   </binary>
