@@ -24,7 +24,19 @@ def parse_source_report(
     source_report: str,
     packages: defaultdict[str, set[Package]],
 ) -> None:
-    """Parse a single source report XML file."""
+    """Fetch and parse a single source report XML file from OBS.
+
+    Downloads the specified source report from the Build Service, parses the XML
+    content to identify all binary packages associated with the source package,
+    and updates the provided 'packages' dictionary. Packages are added to both
+    their specific architecture and the 'noarch' category.
+
+    Args:
+        binary: The OBS coordinates (project, package, repo, arch) for the report.
+        source_report: The filename of the source report to be processed.
+        packages: The target dictionary to store discovered packages, grouped by arch.
+
+    """
     log.debug("Processing source report %s for %s", source_report, binary)
     with tempfile.TemporaryDirectory() as tmpdirname:
         source_report_xml_path = f"{tmpdirname}/source-report-{binary.project}-{binary.repo}-{binary.arch}.xml"
