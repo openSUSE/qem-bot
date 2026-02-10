@@ -88,31 +88,15 @@ class IncrementApprover:
         return res
 
     @staticmethod
-    def _log_no_jobs(build_info: BuildInfo, params: ScheduleParams) -> None:
-        """Log that no relevant jobs were found."""
-        log.info(
-            "Skipping approval: There are no relevant jobs on openQA for %s",
-            (" or ".join([build_info.string_with_params(param) for param in params]) if len(params) > 0 else {}),
-        )
-
-    @staticmethod
-    def _log_pending_jobs(build_info: BuildInfo, pending_states: set[str]) -> None:
-        """Log that some jobs are still pending."""
-        log.info(
-            "Skipping approval: Some jobs on openQA for %s are in pending states (%s)",
-            build_info,
-            ", ".join(sorted(pending_states)),
-        )
-
-    def check_openqa_jobs(self, results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
+    def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
         """Check if all openQA jobs are finished."""
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
-            self._log_no_jobs(build_info, params)
+            build_info.log_no_jobs(params)
             return None
         if len(pending_states):
-            self._log_pending_jobs(build_info, pending_states)
+            build_info.log_pending_jobs(pending_states)
             return False
         return True
 

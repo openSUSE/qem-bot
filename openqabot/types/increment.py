@@ -4,10 +4,13 @@
 
 from __future__ import annotations
 
+from logging import getLogger
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     import osc.core
+
+log = getLogger("bot.increment_approver")
 
 
 class BuildInfo(NamedTuple):
@@ -31,6 +34,21 @@ class BuildInfo(NamedTuple):
         arch = params.get("ARCH", self.arch)
         build = params.get("BUILD", self.build)
         return f"{self.product}v{version} build {build}@{arch} of flavor {flavor}"
+
+    def log_no_jobs(self, params: list[dict[str, str]]) -> None:
+        """Log that no relevant jobs were found."""
+        log.info(
+            "Skipping approval: There are no relevant jobs on openQA for %s",
+            (" or ".join([self.string_with_params(param) for param in params]) if len(params) > 0 else {}),
+        )
+
+    def log_pending_jobs(self, pending_states: set[str]) -> None:
+        """Log that some jobs are still pending."""
+        log.info(
+            "Skipping approval: Some jobs on openQA for %s are in pending states (%s)",
+            self,
+            ", ".join(sorted(pending_states)),
+        )
 
 
 class ApprovalStatus(NamedTuple):
