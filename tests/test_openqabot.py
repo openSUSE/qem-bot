@@ -89,3 +89,31 @@ def test_main_no_func(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -
         main()
     sys_exit_spy.assert_called_once_with(1)
     assert "Command is required" in caplog.text
+
+
+def test_main_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    mock_args = MagicMock()
+    mock_args.configs.is_dir.return_value = True
+    mock_args.debug = False
+    mock_args.func.side_effect = Exception("Test exception")
+    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
+    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+    mock_exit = mocker.patch("sys.exit")
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+    with caplog.at_level(logging.ERROR, logger="bot"):
+        main()
+    mock_exit.assert_called_with(1)
+    assert "Test exception" in caplog.text
+
+
+def test_main_exception_debug(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.main.create_logger")
+    mock_args = MagicMock()
+    mock_args.configs.is_dir.return_value = True
+    mock_args.debug = True
+    mock_args.func.side_effect = RuntimeError("Debug exception")
+    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
+    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+    with pytest.raises(RuntimeError, match="Debug exception"):
+        main()

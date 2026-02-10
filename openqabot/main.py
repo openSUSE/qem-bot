@@ -37,3 +37,8 @@ def main() -> None:
     except KeyboardInterrupt:
         log.info("Interrupted by user")
         sys.exit(1)
+    except Exception as e:
+        if cfg.debug:
+            raise
+        log.error(e)  # noqa: TRY400
+        sys.exit(1)
