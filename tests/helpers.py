@@ -7,6 +7,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import hashlib
 from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,7 @@ import osc.core
 import responses
 from openqabot.approver import QEM_DASHBOARD
 from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
-from openqabot.incrementapprover import IncrementApprover
+from openqabot.incrementapprover import IncrementApprover, OpenQAResults, ScheduleParams
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.utils import merge_dicts
@@ -115,21 +116,36 @@ def assert_log_messages(messages: list[str], expected_messages: list[str]) -> No
 def fake_osc_get_config(override_apiurl: str) -> None:
     assert override_apiurl == OBS_URL
 
+def fake_request_openqa_job_results(params: ScheduleParams, info_str: str) -> OpenQAResults:
+    passed_id , failed_id = get_deterministic_integers(params)
+    return [{"done": {"passed": {"job_ids": [passed_id]}, "failed": {"job_ids": [failed_id]}}}]
+
+def get_deterministic_integers(params: ScheduleParams):
+    input_string = str(sorted(params[0].items())).encode('utf-8')
+    hex_digest = hashlib.sha256(input_string).hexdigest()
+    return int(hex_digest[:32], 16), int(hex_digest[32:], 16)
+
 
 def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
     assert url == OBS_URL
-    assert "OBS:PROJECT" in project
     req = osc.core.Request()
-    req.reqid = 42
-    req.state = "review"
-    req.reviews = [ReviewState("review", OBS_GROUP)]
-    req.actions = [
-        Action(
+    if 'SL-Micro' in project:
+        req.reqid = 24
+        single_action = Action(
+            tgt_project="SUSE:Products:SL-Micro:6.2",
+            src_project="SUSE:Products:SL-Micro:6.2:TEST",
+            src_package="000productcompose:slem_aarch64",
+        )
+    else:
+        req.reqid = 42
+        single_action = Action(
             tgt_project="SUSE:Products:SLE-Product-SLES:16.0",
             src_project="SUSE:Products:SLE-Product-SLES:16.0:TEST",
             src_package="000productcompose:sles_aarch64",
         )
-    ]
+    req.state = "review"
+    req.reviews = [ReviewState("review", OBS_GROUP)]
+    req.actions = [ single_action]
     return [req]
 
 

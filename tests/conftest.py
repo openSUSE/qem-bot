@@ -137,6 +137,8 @@ def fake_ok_jobs() -> None:
 @pytest.fixture
 def fake_product_repo() -> None:
     responses.add(responses.GET, obs_product_table_url, json=read_json("test-product-repo"))
+    responses.add(responses.GET, "http://download.suse.de/ibs/SUSE:/SLFO:/Products:/SL-Micro:/6.2:/ToTest/product/iso/?jsontable=1", json=read_json("test-product-repo"))
+    responses.add(responses.GET, "http://download.suse.de/ibs/SUSE:/SLFO:/Products:/SLES:/16.0:/TEST/product/?jsontable=1", json=read_json("test-product-repo"))
 
 
 @pytest.fixture

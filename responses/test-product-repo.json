@@ -7,6 +7,11 @@
       {"name": "SLES-SAP-16.0-Online-x86_64-Build139.1.spdx.json"},
       {"name": "SLES-SAP-16.0-Online-aarch64-Build139.1.spdx.json"},
       {"name": "SLES-SAP-16.0-Online-s390x-Build139.1.spdx.json"},
-      {"name": "SLES-SAP-16.0-Online-ppc64le-Build139.1.spdx.json"}
+      {"name": "SLES-SAP-16.0-Online-ppc64le-Build139.1.spdx.json"},
+      {"name": "SL-Micro-6.2-x86_64-Build28.6.spdx.json"},
+      {"name": "SL-Micro-Extras-6.2-aarch64-Build28.6.spdx.json"},
+      {"name": "SL-Micro-Extras-6.2-ppc64le-Build28.6.spdx.json"},
+      {"name": "SL-Micro-Extras-6.2-x86_64-Build28.6.spdx.json"},
+      {"name": "SL-Micro-Extras-6.2-s390x-Build28.6.spdx.json"}
    ]
 }

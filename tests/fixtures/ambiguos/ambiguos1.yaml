@@ -1,0 +1,21 @@
+product_increments:
+  - distri: sle
+    project_base: SUSE:SLFO:Products:SLES:16.0
+    build_project_suffix: TEST
+    diff_project_suffix: source-report
+    build_listing_sub_path: product
+    build_regex: >-
+      (?P<product>[^\-]*)-(?P<version>[^\-]*?)-(?P<flavor>(Full|Online))?-(?P<arch>[^\-]*?)-Build(?P<build>.*?)\.spdx.json
+    product_regex: '^SLE[^\-]*'
+    additional_builds:
+      - build_suffix: kernel-livepatch
+        regex: >-
+          kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>.*)
+        settings:
+          FLAVOR: 'Online-Increments'
+          KGRAFT: '1'
+          _GROUP_ID: '666'
+        archs:
+          - s390x
+          - ppc64le
+          - x86_64
