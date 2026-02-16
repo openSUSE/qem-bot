@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from itertools import chain
 import logging
 from functools import lru_cache
 from http import HTTPStatus
@@ -15,6 +16,7 @@ from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
 from openqabot.config import DEVELOPMENT_PARENT_GROUP_ID, OPENQA_URL
+from openqabot.types.increment import BuildInfo
 from openqabot.utils import number_of_retries
 
 from .errors import PostOpenQAError
@@ -28,6 +30,64 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger("bot.openqa")
+ScheduleParams = list[dict[str, str]]
+
+
+class OpenQAResults:
+
+    final_states = {"done", "cancelled"}
+    ok_results = {"passed", "softfailed"}
+
+    def __init__(self, results: list[dict[str, dict[str, dict[str, Any]]]]) -> None:
+        log.debug("Job statistics:\n%s", pformat(results))
+        self.actual_states = {state for result in results for state in result}
+        self.pending_states = self.actual_states - OpenQAResults.final_states
+        self.ok_jobs = set()
+        self.not_ok_jobs = set()
+
+        for openqa_result in results:
+            all_final_results = chain.from_iterable(openqa_result.get(s, {}).items() for s in OpenQAResults.final_states)
+            for result_name, all_jobs_ids in all_final_results:
+                if result_name in OpenQAResults.ok_results:
+                    self.ok_jobs.update(all_jobs_ids["job_ids"])
+                else:
+                    self.not_ok_jobs.update(all_jobs_ids["job_ids"])
+
+
+    def check_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
+        """Check if all openQA jobs are finished.
+
+        Args:
+            build_info: BuildInfo object containing build-related information and logging methods.
+            params: ScheduleParams object containing scheduling parameters.
+        Returns:
+            bool | None: True if all jobs are finished, False if there are pending jobs,
+                         None if there are no jobs to check.
+        Note: 
+            - no actual interaction with openQA will happen. method will just returns what being
+              calculated during object creation
+            - all input data needed for logging purposes only
+        """
+        if len(self.actual_states) == 0:
+            build_info.log_no_jobs(params)
+            return None
+        if len(self.pending_states):
+            build_info.log_pending_jobs(self.pending_states)
+            return False
+        return True
+
+    def generate_reasons_to_disapprove(self):
+        return [
+            f"The following openQA jobs ended up with result '{result}':\n"
+            + "\n".join(f" - {OPENQA_URL}/tests/{i}" for i in job_ids)
+            for result, job_ids in self.not_ok_jobs
+        ]
+
+    @property
+    def all_jobs(self) -> list[int]:
+        """Return a list of all job IDs, both ok and not ok."""
+        return list(self.ok_jobs | self.not_ok_jobs)
+
 
 
 class OpenQAInterface:
