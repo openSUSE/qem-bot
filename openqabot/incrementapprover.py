@@ -19,7 +19,7 @@ import osc.core
 from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
 from openqabot.openqa import OpenQAInterface
 
-from .errors import PostOpenQAError
+from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
 from .loader.incrementconfig import IncrementConfig
 from .loader.sourcereport import compute_packages_of_request_from_source_report
@@ -53,8 +53,28 @@ class IncrementApprover:
         self.client = OpenQAInterface(args)
         self.package_diff = {}
         self.requests_to_approve = {}
+        # safeguard us from using same job ID for 2 requests
+        self.unique_jobid_request_pair = {}
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
+
+    def check_unique_jobid_request_pair(self, jobids: list[int], request: osc.core.Request) -> None:
+        """Check if certain openQA job was already used to verify certain request ID.
+
+           By design it should not happen and means some bug needs investigation.
+
+        Args:
+            jobids (list[int]): list of openQA job IDs
+            request (_type_): OBS request
+
+        Raises:
+            AmbiguousApprovalStatusError: raised when some job is used second time for different request ID
+
+        """
+        for jobid in jobids:
+            self.unique_jobid_request_pair.setdefault(jobid, request.reqid)
+            if self.unique_jobid_request_pair[jobid] != request.reqid:
+                raise AmbiguousApprovalStatusError
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -100,25 +120,25 @@ class IncrementApprover:
             return False
         return True
 
-    def evaluate_openqa_job_results(  # noqa: PLR6301
-        self,
-        results: OpenQAResult,
-        ok_jobs: set[int],
-        not_ok_jobs: dict[str, set[str]],
+    def evaluate_openqa_job_results(
+        self, results: OpenQAResult, ok_jobs: set[int], not_ok_jobs: dict[str, set[str]], request: osc.core.Request
     ) -> None:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
             destination = ok_jobs if result in ok_results else not_ok_jobs[result]
+            self.check_unique_jobid_request_pair(info["job_ids"], request)
             destination.update(info["job_ids"])
 
-    def evaluate_list_of_openqa_job_results(self, list_of_results: OpenQAResults) -> tuple[set[int], list[str]]:
+    def evaluate_list_of_openqa_job_results(
+        self, list_of_results: OpenQAResults, request: osc.core.Request
+    ) -> tuple[set[int], list[str]]:
         """Evaluate a list of openQA job results."""
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         openqa_url = self.client.url.geturl()
         for results in list_of_results:
-            self.evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs)
+            self.evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs, request)
         reasons_to_disapprove = [
             f"The following openQA jobs ended up with result '{result}':\n"
             + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
@@ -386,7 +406,7 @@ class IncrementApprover:
 
         openqa_jobs_ready = self.check_openqa_jobs(res, build_info, params)
         if openqa_jobs_ready:
-            approval_status.add(*(self.evaluate_list_of_openqa_job_results(res)))
+            approval_status.add(*(self.evaluate_list_of_openqa_job_results(res, request)))
         else:
             error_count += self._handle_not_ready_jobs(
                 build_info,

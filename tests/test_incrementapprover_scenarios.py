@@ -10,6 +10,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
+from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import ApprovalStatus
 from openqabot.loader.incrementconfig import IncrementConfig
 
@@ -21,6 +22,13 @@ from .helpers import (
     prepare_approver_with_additional_config,
     run_approver,
 )
+
+
+@pytest.fixture
+def fake_osc_request(mocker: MockerFixture) -> osc.core.Request:
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = "42"
+    return req
 
 
 @responses.activate
@@ -196,32 +204,47 @@ def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCap
     assert "http://openqa-instance/tests/20" not in last_message
 
 
-def testevaluate_list_of_openqa_job_results(caplog: pytest.LogCaptureFixture) -> None:
+def testevaluate_list_of_openqa_job_results(
+    caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
+) -> None:
     approver = prepare_approver(caplog)
     results = [
         {"done": {"passed": {"job_ids": [1]}, "failed": {"job_ids": [2]}}},
         {"done": {"softfailed": {"job_ids": [3]}, "incomplete": {"job_ids": [4]}}},
     ]
-    ok_jobs, reasons = approver.evaluate_list_of_openqa_job_results(results)
+    ok_jobs, reasons = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
     assert ok_jobs == {1, 3}
     assert any("result 'failed':\n - http://openqa-instance/tests/2" in r for r in reasons)
     assert any("result 'incomplete':\n - http://openqa-instance/tests/4" in r for r in reasons)
 
 
-def testhandle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def test_check_unique_jobid_request_pair_all_jobs_unique(
+    caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
+) -> None:
     approver = prepare_approver(caplog)
-    req = mocker.Mock(spec=osc.core.Request)
-    req.reqid = "42"
-    status = ApprovalStatus(req, ok_jobs={1, 2}, reasons_to_disapprove=[])
+    approver.unique_jobid_request_pair[1] = 43
+    approver.check_unique_jobid_request_pair([2], fake_osc_request)
+
+
+def test_check_unique_jobid_request_pair_ambiguity_found(
+    caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
+) -> None:
+    approver = prepare_approver(caplog)
+    approver.unique_jobid_request_pair[1] = 43
+    with pytest.raises(AmbiguousApprovalStatusError):
+        approver.check_unique_jobid_request_pair([1], fake_osc_request)
+
+
+def testhandle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
+    approver = prepare_approver(caplog)
+    status = ApprovalStatus(fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[])
     approver.handle_approval(status)
     assert "Approving OBS request ID '42': All 2 openQA jobs have passed/softfailed" in caplog.text
 
 
-def testhandle_approval_disapprove(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def testhandle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
-    req = mocker.Mock(spec=osc.core.Request)
-    req.reqid = "42"
-    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=["failed jobs"])
+    status = ApprovalStatus(fake_osc_request, ok_jobs=set(), reasons_to_disapprove=["failed jobs"])
     approver.handle_approval(status)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.text
     assert "failed jobs" in caplog.text
