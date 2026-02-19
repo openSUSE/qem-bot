@@ -22,6 +22,7 @@ from .approver import Approver
 from .commenter import Commenter
 from .config import BUILD_REGEX
 from .giteasync import GiteaSync
+from .giteatrigger import GiteaTrigger
 from .incrementapprover import IncrementApprover
 from .openqabot import OpenQABot
 from .repodiff import RepoDiff
@@ -290,6 +291,35 @@ def gitea_sync(
         sys.exit(1)
 
     syncer = GiteaSync(args)
+    sys.exit(syncer())
+
+
+@app.command("gitea-trigger")
+def gitea_trigger(
+    ctx: typer.Context,
+    *,
+    gitea_repo: Annotated[
+        str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")
+    ] = "products/SLFO",
+    pr_label: Annotated[
+        str,
+        typer.Option("--pr-label", help="Gitea PRs label for which trigger tests"),
+    ] = "staging/In Progress",
+    pr_number: Annotated[
+        int | None,
+        typer.Option(
+            "--pr-number",
+            help="Only consider the specified PR (for manual debugging)",
+        ),
+    ] = None,
+) -> None:
+    """Trigger testing for PR(s) with certain label."""
+    args = ctx.obj
+    args.gitea_repo = gitea_repo
+    args.pr_number = pr_number
+    args.pr_label = pr_label
+
+    syncer = GiteaTrigger(args)
     sys.exit(syncer())
 
 

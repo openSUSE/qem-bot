@@ -50,3 +50,25 @@ def test_get_open_prs_request_error(mocker: MockerFixture, caplog: pytest.LogCap
     res = gitea.get_open_prs({}, "repo", dry=False, number=None)
     assert res == []
     assert "Gitea API error: Could not fetch open PRs" in caplog.text
+
+
+def test_get_open_prs_specific_number_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Cover JSONDecodeError when fetching a specific PR number."""
+    caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
+    mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.JSONDecodeError("msg", "doc", 0))
+
+    res = gitea.get_open_prs({}, "repo", dry=False, number=124)
+
+    assert res == []
+    assert "PR git:124 ignored: Could not read PR metadata" in caplog.text
+
+
+def test_get_open_prs_specific_number_key_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Cover KeyError (e.g. missing expected fields in API response)."""
+    caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
+    mocker.patch("openqabot.loader.gitea.get_json", side_effect=KeyError("missing_field"))
+
+    res = gitea.get_open_prs({}, "repo", dry=False, number=124)
+
+    assert res == []
+    assert "PR git:124 ignored: Could not read PR metadata" in caplog.text

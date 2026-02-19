@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from logging import getLogger
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
     import osc.core
@@ -62,3 +63,24 @@ class ApprovalStatus(NamedTuple):
         """Add jobs and reasons to the status."""
         self.ok_jobs.update(ok_jobs)
         self.reasons_to_disapprove.extend(reasons_to_disapprove)
+
+
+@dataclass
+class PullRequest:
+    """Represent all information to operate Gitea pull requests."""
+
+    number: int
+    repo_name: str
+    branch: str
+    product: str
+    raw_labels: list[dict[str, Any]] = field(repr=False)
+
+    labels: list[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        """Extract names from the raw label dictionaries."""
+        self.labels = [label["name"] for label in self.raw_labels]
+
+    def has_label(self, label: str) -> bool:
+        """Check if pull request is labeled with certain label."""
+        return label in self.labels
