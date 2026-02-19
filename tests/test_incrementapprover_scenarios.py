@@ -224,6 +224,7 @@ def test_check_unique_jobid_request_pair_all_jobs_unique(
     approver = prepare_approver(caplog)
     approver.unique_jobid_request_pair[1] = 43
     approver.check_unique_jobid_request_pair([2], fake_osc_request)
+    assert approver.unique_jobid_request_pair[2] == fake_osc_request.reqid
 
 
 def test_check_unique_jobid_request_pair_ambiguity_found(
