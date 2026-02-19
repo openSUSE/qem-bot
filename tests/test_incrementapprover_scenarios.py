@@ -204,7 +204,7 @@ def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCap
     assert "http://openqa-instance/tests/20" not in last_message
 
 
-def testevaluate_list_of_openqa_job_results(
+def test_evaluate_list_of_openqa_job_results(
     caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
 ) -> None:
     approver = prepare_approver(caplog)
@@ -236,14 +236,14 @@ def test_check_unique_jobid_request_pair_ambiguity_found(
         approver.check_unique_jobid_request_pair([1], fake_osc_request)
 
 
-def testhandle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
+def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
     status = ApprovalStatus(fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[])
     approver.handle_approval(status)
     assert "Approving OBS request ID '42': All 2 openQA jobs have passed/softfailed" in caplog.text
 
 
-def testhandle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
+def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
     status = ApprovalStatus(fake_osc_request, ok_jobs=set(), reasons_to_disapprove=["failed jobs"])
     approver.handle_approval(status)
