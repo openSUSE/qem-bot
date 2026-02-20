@@ -442,7 +442,10 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         "successful_packages": sorted(results.successful),
     })
 
-    for result in results.projects:
+    if "channels" not in submission:
+        submission["channels"] = []
+
+    for result in sorted(results.projects):
         if result not in submission["channels"]:
             submission["channels"].append(result)
 
