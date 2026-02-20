@@ -8,7 +8,6 @@ import os
 import re
 from collections import defaultdict
 from functools import lru_cache
-from itertools import chain
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any, cast
@@ -17,7 +16,7 @@ import osc.conf
 import osc.core
 
 from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
-from openqabot.openqa import OpenQAInterface
+from openqabot.openqa import OpenQAInterface, OpenQAResults
 
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
@@ -32,14 +31,10 @@ if TYPE_CHECKING:
     from argparse import Namespace
 
 log = getLogger("bot.increment_approver")
-ok_results = {"passed", "softfailed"}
-final_states = {"done", "cancelled"}
 default_flavor_suffix = "Increments"
 default_flavor = "Online"
 
 
-OpenQAResult = dict[str, dict[str, dict[str, Any]]]
-OpenQAResults = list[OpenQAResult]
 ScheduleParams = list[dict[str, str]]
 
 
@@ -58,7 +53,7 @@ class IncrementApprover:
         self.config = IncrementConfig.from_args(args)
         osc.conf.get_config(override_apiurl=OBS_URL)
 
-    def check_unique_jobid_request_pair(self, jobids: list[int], request: osc.core.Request) -> None:
+    def check_unique_jobid_request_pair(self, results: OpenQAResults, request: osc.core.Request) -> None:
         """Check if certain openQA job was already used to verify certain request ID.
 
            By design it should not happen and means some bug needs investigation.
@@ -71,7 +66,7 @@ class IncrementApprover:
             AmbiguousApprovalStatusError: raised when some job is used second time for different request ID
 
         """
-        for jobid in jobids:
+        for jobid in results.all_jobs:
             self.unique_jobid_request_pair.setdefault(jobid, request.reqid)
             if self.unique_jobid_request_pair[jobid] != request.reqid:
                 raise AmbiguousApprovalStatusError
@@ -103,48 +98,7 @@ class IncrementApprover:
             }
             for p in params
         )
-        res = [self.client.get_scheduled_product_stats(p) for p in query_params]
-        log.debug("Job statistics:\n%s", pformat(res))
-        return res
-
-    @staticmethod
-    def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
-        """Check if all openQA jobs are finished."""
-        actual_states = {state for result in results for state in result}
-        pending_states = actual_states - final_states
-        if len(actual_states) == 0:
-            build_info.log_no_jobs(params)
-            return None
-        if len(pending_states):
-            build_info.log_pending_jobs(pending_states)
-            return False
-        return True
-
-    def evaluate_openqa_job_results(
-        self, results: OpenQAResult, ok_jobs: set[int], not_ok_jobs: dict[str, set[str]], request: osc.core.Request
-    ) -> None:
-        """Evaluate openQA job results and sort them into ok and not_ok sets."""
-        all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
-        for result, info in all_items:
-            destination = ok_jobs if result in ok_results else not_ok_jobs[result]
-            self.check_unique_jobid_request_pair(info["job_ids"], request)
-            destination.update(info["job_ids"])
-
-    def evaluate_list_of_openqa_job_results(
-        self, list_of_results: OpenQAResults, request: osc.core.Request
-    ) -> tuple[set[int], list[str]]:
-        """Evaluate a list of openQA job results."""
-        ok_jobs = set()  # keep track of ok jobs
-        not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
-        openqa_url = self.client.url.geturl()
-        for results in list_of_results:
-            self.evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs, request)
-        reasons_to_disapprove = [
-            f"The following openQA jobs ended up with result '{result}':\n"
-            + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            for result, job_ids in not_ok_jobs.items()
-        ]
-        return (ok_jobs, reasons_to_disapprove)
+        return OpenQAResults([self.client.get_scheduled_product_stats(p) for p in query_params])
 
     def approve_on_obs(self, reqid: str, msg: str) -> None:
         """Change the review state of a request on OBS to accepted."""
@@ -162,7 +116,7 @@ class IncrementApprover:
             reasons_to_disapprove.append("No openQA jobs were found/checked for this request.")
 
         if len(reasons_to_disapprove) == 0:
-            results_str = "/".join(sorted(ok_results))
+            results_str = "/".join(sorted(OpenQAResults.ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
             self.approve_on_obs(str(reqid), message)
             log.info("Approving %s: %s", id_msg, message)
@@ -399,14 +353,15 @@ class IncrementApprover:
         info_str = "or".join([build_info.string_with_params(p) for p in params])
         log.debug("Requesting openQA job results for OBS request ID '%s' for %s", request.reqid, info_str)
         res = self.request_openqa_job_results(params, info_str)
+        self.check_unique_jobid_request_pair(res, request)
 
         if self.args.reschedule:
             approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)
             return self.schedule_openqa_jobs(build_info, params)
 
-        openqa_jobs_ready = self.check_openqa_jobs(res, build_info, params)
+        openqa_jobs_ready = res.check_openqa_jobs(build_info, params)
         if openqa_jobs_ready:
-            approval_status.add(*(self.evaluate_list_of_openqa_job_results(res, request)))
+            approval_status.add(res)
         else:
             error_count += self._handle_not_ready_jobs(
                 build_info,

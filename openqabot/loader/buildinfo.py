@@ -44,7 +44,6 @@ def load_build_info(
         if not get_regex_match(product_regex, product):
             return None
 
-        distri = config.distri
         version = m.group("version")
         if not get_regex_match(version_regex, version):
             log.info("Skipping version string '%s' not matching version regex '%s'", version, version_regex)
@@ -57,8 +56,8 @@ def load_build_info(
             flavor = default_flavor
         flavor = f"{flavor}-{config.flavor_suffix}"
 
-        if config.distri in {"any", distri} and config.flavor in {"any", flavor} and config.version in {"any", version}:
-            return BuildInfo(distri, product, version, flavor, arch, build)
+        if config.flavor in {"any", flavor} and config.version in {"any", version}:
+            return BuildInfo(config.distri, product, version, flavor, arch, build)
         return None
 
     return {build_info for row in rows if (build_info := get_build_info_from_row(row))}

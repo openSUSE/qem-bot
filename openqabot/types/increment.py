@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
     import osc.core
+    from openqabot.openqa import OpenQAResults
 
 log = getLogger("bot.increment_approver")
 
@@ -58,7 +59,7 @@ class ApprovalStatus(NamedTuple):
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
 
-    def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
+    def add(self, results: OpenQAResults) -> None:
         """Add jobs and reasons to the status."""
-        self.ok_jobs.update(ok_jobs)
-        self.reasons_to_disapprove.extend(reasons_to_disapprove)
+        self.ok_jobs.update(results.ok_jobs)
+        self.reasons_to_disapprove.extend(results.generate_reasons_to_disapprove())
