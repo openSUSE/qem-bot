@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -102,7 +103,7 @@ def fake_two_passed_jobs() -> None:
 
 @pytest.fixture
 def fake_no_jobs() -> None:
-    responses.add(responses.GET, openqa_url, json={})
+    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json={})
 
 
 @pytest.fixture
@@ -117,19 +118,19 @@ def fake_only_jobs_of_additional_builds_with_param_matching() -> list[responses.
 
 @pytest.fixture
 def fake_pending_jobs() -> None:
-    responses.add(responses.GET, openqa_url, json={"scheduled": {}, "running": {}})
+    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json={"scheduled": {}, "running": {}})
 
 
 @pytest.fixture
 def fake_not_ok_jobs() -> None:
-    responses.add(responses.GET, openqa_url, json=make_passing_and_failing_job())
+    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json=make_passing_and_failing_job())
 
 
 @pytest.fixture
 def fake_ok_jobs() -> None:
     responses.add(
         responses.GET,
-        openqa_url,
+        re.compile(f"{openqa_url}.*"),
         json={"done": {"passed": {"job_ids": [22]}, "softfailed": {"job_ids": [24]}}},
     )
 

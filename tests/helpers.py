@@ -277,13 +277,13 @@ def make_passing_and_failing_job() -> dict:
 
 def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> list[responses.BaseResponse]:
     list_of_params = []
-    base_params = {"distri": "sle", "version": "16.0", "build": "139.1"}
+    base_params = {"distri": "sle", "version": "16.0", "build": "139.1", "product": "SLES"}
     json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
     for flavor in ("Online-Increments", "Foo-Increments"):
         for arch, json in json_by_arch.items():
             list_of_params.append(({"arch": arch, "flavor": flavor}, json))
     list_of_params.append((
-        {"arch": "x86_64", "flavor": "Additional-Foo-Increments", "build": "139.1-additional-build"},
+        {"arch": "x86_64", "flavor": "Additional-Foo-Increments", "build": "139.1-additional-build", "product": "SLES"},
         additional_builds_json,
     ))
     return [
