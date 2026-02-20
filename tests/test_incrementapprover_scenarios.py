@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Test increment approver scenarios."""
 
+import logging
 import re
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import osc.core
 import pytest
@@ -13,8 +16,11 @@ import responses
 from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import ApprovalStatus
 from openqabot.loader.incrementconfig import IncrementConfig
+from openqabot.types.increment import BuildInfo
 
 from .helpers import (
+    Action,
+    ReviewState,
     fake_get_binary_file,
     fake_get_binarylist,
     fake_get_repos_of_project,
@@ -112,6 +118,7 @@ def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.Lo
             "FLAVOR": "Online-Increments",
             "BUILD": "139.1",
             "ARCH": arch,
+            "PRODUCT": "SLES",
             "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
             "__CI_JOB_URL": ci_job_url,
             "_ONLY_OBSOLETE_SAME_BUILD": "1",
@@ -128,6 +135,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         "VERSION": "16.0",
         "FLAVOR": "Online-Increments",
         "BUILD": "139.1",
+        "PRODUCT": "SLES",
         "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "FOO": "bar",
         "_OBSOLETE": "1",
@@ -249,3 +257,150 @@ def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_r
     approver.handle_approval(status)
     assert "Not approving OBS request ID '42' for the following reasons:" in caplog.text
     assert "failed jobs" in caplog.text
+
+
+def make_test_config(suffix: str, product: str, arch: str) -> IncrementConfig:
+    test_build_regex = (
+        r"(?P<product>.*?)-(?P<version>[\d\.]+)-(?P<flavor>\D+[^\-]*?)-(?P<arch>[^\-]*?)-Build(?P<build>.*?)\.spdx.json"
+    )
+    return IncrementConfig(
+        distri="any",
+        version="any",
+        flavor="any",
+        project_base="",
+        build_project_suffix=suffix,
+        build_listing_sub_path="product",
+        build_regex=test_build_regex,
+        product_regex=f"^{product}$",
+        flavor_suffix="Increments",
+        version_regex=r"[\d.]+",
+        archs={arch},
+    )
+
+
+@pytest.fixture
+def mock_osc_requests(mocker: MockerFixture) -> None:
+    def fake_get_request_list(_url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
+        req = osc.core.Request()
+        req.state = "review"
+        req.reviews = [ReviewState("review", "qam-openqa")]
+        if "SL-Micro" in project:
+            req.reqid = "399766"
+        else:
+            req.reqid = "399799"
+        req.actions = [Action(tgt_project="TGT", src_project=project, src_package="PKG")]
+        return [req]
+
+    mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
+    mocker.patch("osc.core.change_review_state")
+    mocker.patch("osc.conf.get_config")
+
+    def fake_from_api(_url: str, reqid: int) -> osc.core.Request:
+        req = osc.core.Request()
+        req.reqid = str(reqid)
+        if str(reqid) == "399766":
+            prj = "SUSE:SLFO:Products:SL-Micro:6.2:ToTest"
+        else:
+            prj = "SUSE:SLFO:Products:SLES:16.0:TEST"
+        req.actions = [Action(tgt_project="TGT", src_project=prj, src_package="PKG")]
+        return req
+
+    mocker.patch("osc.core.Request.from_api", side_effect=fake_from_api)
+
+
+@pytest.mark.usefixtures("mock_osc_requests")
+def test_issue_194074_repro(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    config_sl_micro = make_test_config("SUSE:SLFO:Products:SL-Micro:6.2:ToTest", "SL-Micro", "x86_64")
+    config_sles = make_test_config("SUSE:SLFO:Products:SLES:16.0:TEST", "SLES", "aarch64")
+
+    build_info_sl_micro = BuildInfo("any", "SL-Micro", "6.2", "Default-qcow-Increments", "x86_64", "61.24")
+    build_info_sles = BuildInfo("any", "SLES", "16.0", "Minimal-VM-Increments", "aarch64", "180.15")
+
+    with (
+        patch("openqabot.incrementapprover.load_build_info") as mock_load,
+        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+    ):
+        mock_load.side_effect = lambda config, *_: (
+            {build_info_sl_micro} if "SL-Micro" in config.product_regex else {build_info_sles}
+        )
+        mock_stats.side_effect = lambda p: {
+            "done": {"failed": {"job_ids": [20724745 if p["product"] == "SL-Micro" else 20753853]}}
+        }
+
+        increment_approver = prepare_approver(caplog)
+        increment_approver.config = [config_sl_micro, config_sles]
+        increment_approver()
+
+    log_399766 = [m for m in caplog.messages if "OBS request ID '399766'" in m and "Not approving" in m]
+    assert len(log_399766) == 1
+    assert "20724745" in log_399766[0]
+    assert "20753853" not in log_399766[0]
+
+    log_399799 = [m for m in caplog.messages if "OBS request ID '399799'" in m and "Not approving" in m]
+    assert len(log_399799) == 1
+    assert "20753853" in log_399799[0]
+    assert "20724745" not in log_399799[0]
+
+
+@pytest.mark.usefixtures("mock_osc_requests")
+def test_issue_194074_specific_request(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    config_sl_micro = make_test_config("SUSE:SLFO:Products:SL-Micro:6.2:ToTest", "SL-Micro", "x86_64")
+    config_sles = make_test_config("SUSE:SLFO:Products:SLES:16.0:TEST", "SLES", "aarch64")
+
+    build_info_sl_micro = BuildInfo("any", "SL-Micro", "6.2", "Default-qcow-Increments", "x86_64", "61.24")
+
+    with (
+        patch("openqabot.incrementapprover.load_build_info") as mock_load,
+        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+    ):
+        mock_load.return_value = {build_info_sl_micro}
+        mock_stats.return_value = {"done": {"passed": {"job_ids": [20724745]}}}
+
+        increment_approver = prepare_approver(caplog, request_id=399766)
+        increment_approver.config = [config_sl_micro, config_sles]
+        increment_approver()
+
+    assert "Found product increment request on SUSE:SLFO:Products:SL-Micro:6.2:ToTest: 399766" in caplog.messages
+    assert "Approving OBS request ID '399766': All 1 openQA jobs have passed/softfailed" in caplog.messages
+    assert any(
+        "Skipping config SUSE:SLFO:Products:SLES:16.0:TEST as it does not match request 399766" in m
+        for m in caplog.messages
+    )
+
+
+@pytest.mark.usefixtures("mock_osc_requests")
+def test_issue_194074_specific_request_sles(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+
+    config_sl_micro = make_test_config("SUSE:SLFO:Products:SL-Micro:6.2:ToTest", "SL-Micro", "x86_64")
+    config_sles = make_test_config("SUSE:SLFO:Products:SLES:16.0:TEST", "SLES", "aarch64")
+
+    build_info_sles = BuildInfo("any", "SLES", "16.0", "Minimal-VM-Increments", "aarch64", "180.15")
+
+    with (
+        patch("openqabot.incrementapprover.load_build_info") as mock_load,
+        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+    ):
+        mock_load.return_value = {build_info_sles}
+        mock_stats.return_value = {"done": {"passed": {"job_ids": [20753853]}}}
+
+        increment_approver = prepare_approver(caplog, request_id=399799)
+        increment_approver.config = [config_sl_micro, config_sles]
+        increment_approver()
+
+    assert "Found product increment request on SUSE:SLFO:Products:SLES:16.0:TEST: 399799" in caplog.messages
+    assert "Approving OBS request ID '399799': All 1 openQA jobs have passed/softfailed" in caplog.messages
+    assert any(
+        "Skipping config SUSE:SLFO:Products:SL-Micro:6.2:ToTest as it does not match request 399799" in m
+        for m in caplog.messages
+    )

@@ -74,7 +74,11 @@ class IncrementApprover:
         for jobid in jobids:
             self.unique_jobid_request_pair.setdefault(jobid, request.reqid)
             if self.unique_jobid_request_pair[jobid] != request.reqid:
-                raise AmbiguousApprovalStatusError
+                msg = (
+                    f"Job ID {jobid} already used for request "
+                    f"{self.unique_jobid_request_pair[jobid]}, but now requested for {request.reqid}"
+                )
+                raise AmbiguousApprovalStatusError(msg)
 
     @staticmethod
     @lru_cache(maxsize=128)
@@ -100,6 +104,7 @@ class IncrementApprover:
                 "flavor": p["FLAVOR"],
                 "arch": p["ARCH"],
                 "build": p["BUILD"],
+                "product": p.get("PRODUCT"),
             }
             for p in params
         )
@@ -329,6 +334,7 @@ class IncrementApprover:
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
+            "PRODUCT": build_info.product,
             "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
             **OBSOLETE_PARAMS,
         }
@@ -457,7 +463,19 @@ class IncrementApprover:
     def __call__(self) -> int:
         """Run the increment approval process."""
         error_count = 0
+        req = None
+        if self.args.request_id:
+            req = osc.core.Request.from_api(OBS_URL, self.args.request_id)
+
         for config in self.config:
+            if req and req.actions[0].src_project != config.build_project():
+                log.debug(
+                    "Skipping config %s as it does not match request %s project %s",
+                    config.build_project(),
+                    self.args.request_id,
+                    req.actions[0].src_project,
+                )
+                continue
             request = find_request_on_obs(self.args, config.build_project())
             error_count += self.process_request_for_config(request, config)
         for request in self.requests_to_approve.values():
