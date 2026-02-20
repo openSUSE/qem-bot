@@ -14,10 +14,10 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
       - uses: astral-sh/setup-uv@v7
-      - name: Install commitizen
-        run: uv tool install commitizen
+      - name: Install gitlint
+        run: uv tool install gitlint-core
       - name: Check commit messages
-        run: cz check --rev-range origin/${{ github.base_ref }}..HEAD
+        run: gitlint --commits origin/${{ github.base_ref }}..HEAD
 
   test:
     runs-on: ubuntu-latest
