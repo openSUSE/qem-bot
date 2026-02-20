@@ -110,3 +110,38 @@ def test_add_build_results_dry_124(mocker: MockerFixture) -> None:
     incident = {"number": 124}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=True)
     mock_read_xml.assert_called_once_with("build-results-124-proj")
+
+
+def test_add_build_results_scminfo(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
+    mock_read_xml = mocker.patch("openqabot.loader.gitea.read_xml")
+    mock_read_xml.return_value.getroot.return_value.findall.return_value = []
+    incident = {"number": 124, "scminfo_SLES": "123"}
+    gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=True)
+    assert incident["scminfo"] == "123"
+
+
+def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
+
+    def mock_add_channel(_project: str, _arch: str, _product: str, _res: Any, projects: set[str]) -> str:
+        projects.add("chan")
+        return "chan"
+
+    mocker.patch("openqabot.loader.gitea.add_channel_for_build_result", side_effect=mock_add_channel)
+    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
+
+    xml_data = """
+    <buildresults>
+        <result project="proj" repository="product" arch="x86_64" state="published">
+            <status package="pkg1" code="succeeded"/>
+        </result>
+    </buildresults>
+    """
+    mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
+
+    submission = {"channels": ["chan"], "number": 123}
+    gitea.add_build_results(submission, ["http://obs/project/show/proj"], dry=False)
+    assert submission["channels"] == ["chan"]

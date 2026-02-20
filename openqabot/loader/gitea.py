@@ -438,10 +438,16 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results.failed))
 
     submission.update({
-        "channels": sorted(results.projects),
         "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),
         "successful_packages": sorted(results.successful),
     })
+
+    if "channels" not in submission:
+        submission["channels"] = []
+
+    for result in sorted(results.projects):
+        if result not in submission["channels"]:
+            submission["channels"].append(result)
 
     if "scminfo" not in submission and len(OBS_PRODUCTS) == 1 and "all" not in OBS_PRODUCTS:
         submission["scminfo"] = submission.get("scminfo_" + next(iter(OBS_PRODUCTS)), "")
