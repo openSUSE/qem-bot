@@ -30,7 +30,7 @@ from openqabot.loader.gitea import (
     read_xml,
     review_pr,
 )
-from openqabot.types.types import Repos
+from openqabot.types.types import ProdVer, Repos
 from responses import GET, matchers
 
 if TYPE_CHECKING:
@@ -296,7 +296,7 @@ def test_computing_repo_url() -> None:
 
 
 def test_computing_repo_url_empty_product() -> None:
-    repo = ("product", "1.2")
+    repo = ProdVer("product", "1.2")
     url = compute_repo_url("base", "", repo, "x86_64")
     assert url == "base/product:/1.2/product/repodata/repomd.xml"
 
