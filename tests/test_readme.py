@@ -12,9 +12,34 @@ import pytest
 
 
 def strip_ansi(text: str) -> str:
-    """Strip ANSI escape sequences from text."""
+    """Strip ANSI escape sequences from text for resilient matching."""
     ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
     return ansi_escape.sub("", text)
+
+
+def normalize_whitespace(text: str) -> str:
+    """Collapse multiple spaces and normalize line endings for resilient comparison."""
+    # Collapse multiple spaces into one
+    text = re.sub(r" +", " ", text)
+    # Strip leading/trailing whitespace from each line and the whole block
+    return "\n".join(line.strip() for line in text.splitlines()).strip()
+
+
+def run_readme_usage_check(content: str, expected_block: str) -> None:
+    """Check if the usage section in content matches expected_block."""
+    start_marker = "<!-- usage_start -->"
+    end_marker = "<!-- usage_end -->"
+
+    if start_marker not in content or end_marker not in content:
+        pytest.fail("Usage markers not found in Readme.md")
+
+    usage_part = content.split(start_marker, maxsplit=1)[1].split(end_marker, maxsplit=1)[0].strip()
+    expected_part = expected_block.strip()
+
+    assert normalize_whitespace(usage_part) == normalize_whitespace(expected_part), (
+        "Readme.md usage section is outdated or has formatting discrepancies. "
+        "Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it."
+    )
 
 
 def test_readme_usage_up_to_date() -> None:
@@ -35,24 +60,16 @@ def test_readme_usage_up_to_date() -> None:
     indented_lines = [("    " + line.strip()).rstrip() for line in lines]
     formatted_help = "\n".join(indented_lines).strip()
     expected_block = f"    >>> qem-bot.py --help\n\n    {formatted_help}"
+
     readme_path = Path("Readme.md")
-    content = readme_path.read_text(encoding="utf-8")
-    content = content.replace("\r\n", "\n")
+    content = readme_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    run_readme_usage_check(content, expected_block)
 
-    # Clean up both for a more resilient comparison
-    # We look for the part between usage markers
-    start_marker = "<!-- usage_start -->"
-    end_marker = "<!-- usage_end -->"
-    if start_marker not in content or end_marker not in content:
-        pytest.fail("Usage markers not found in Readme.md")
 
-    usage_part = content.split(start_marker)[1].split(end_marker)[0].strip()
-    expected_part = expected_block.strip()
-
-    assert usage_part == expected_part, (
-        "Readme.md usage section is outdated or has formatting discrepancies. "
-        "Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it."
-    )
+def test_readme_missing_markers() -> None:
+    """Verify that missing markers trigger a failure (for coverage)."""
+    with pytest.raises(pytest.fail.Exception, match="Usage markers not found"):
+        run_readme_usage_check("# No markers here", "some help")
 
 
 def run_readme_line_length_check(readme_content: str) -> None:

@@ -26,7 +26,6 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
-from openqabot.types.types import ProdVer
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
