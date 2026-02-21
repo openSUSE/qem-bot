@@ -17,6 +17,7 @@ import openqabot.loader.repohash as rp
 import responses
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
+from openqabot.types.types import ProdVer
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -176,15 +177,33 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     opts = RepoOptions(product_version=product_version)
     ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99", product_version), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", product_version), arch)
 
     # Call without product_version
     ret = rp.get_max_revision(repos, arch, project)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", ""), arch)
 
     # Call with product_name set
     opts = RepoOptions(product_name="SLES")
     ret = rp.get_max_revision(repos, arch, project, options=opts)
     assert ret == 123
-    mock_compute_url.assert_called_with(ANY, "SLES", ("SLFO-Module", "1.1.99"), arch)
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", ""), arch)
+
+
+@responses.activate
+def test_get_max_revision_slfo_with_repo_version(mocker: MockerFixture) -> None:
+    # repo with 4 elements: (product, version, arch, product_version)
+    repos = [("SLFO-Module", "1.1.99", "x86_64", "15.99")]
+    arch = "x86_64"
+    project = "SLFO"
+
+    mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
+    url = "http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml"
+    mock_compute_url = mocker.patch("openqabot.loader.repohash.gitea.compute_repo_url", return_value=url)
+    responses.add(responses.GET, url=url, body=BASE_XML % "456")
+
+    # Call without product_version in options, should take it from repo[3]
+    ret = rp.get_max_revision(repos, arch, project)
+    assert ret == 456
+    mock_compute_url.assert_called_with(ANY, "SLES", ProdVer("SLFO-Module", "1.1.99", "15.99"), arch)

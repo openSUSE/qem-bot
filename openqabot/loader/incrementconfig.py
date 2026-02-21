@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 import ruamel.yaml
 from ruamel.yaml import YAML
 
-from openqabot.config import OBS_DOWNLOAD_URL
+from openqabot import config
 from openqabot.utils import get_yml_list
 
 if TYPE_CHECKING:
@@ -62,10 +62,10 @@ class IncrementConfig:
         """Return the project name to compute diff against."""
         return self._concat_project(self.diff_project_suffix)
 
-    def build_project_url(self, base_url: str = OBS_DOWNLOAD_URL) -> str:
+    def build_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the build project."""
         base_path = self.build_project().replace(":", ":/")
-        return f"{base_url}/{base_path}"
+        return f"{base_url or config.settings.obs_download_url}/{base_path}"
 
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""

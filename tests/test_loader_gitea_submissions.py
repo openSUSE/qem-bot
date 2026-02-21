@@ -93,3 +93,9 @@ def test_make_submission_from_gitea_pr_exception(caplog: pytest.LogCaptureFixtur
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
     assert res is None
     assert "Gitea API error: Unable to process PR git:123" in caplog.text
+
+
+def test_is_review_requested_by_explicit_users() -> None:
+    review = {"user": {"login": "user1"}}
+    assert gitea.is_review_requested_by(review, users=("user1",))
+    assert not gitea.is_review_requested_by(review, users=("user2",))

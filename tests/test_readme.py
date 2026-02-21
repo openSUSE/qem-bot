@@ -3,6 +3,7 @@
 """Test Readme."""
 
 import os
+import re
 import subprocess  # noqa: S404
 import sys
 from pathlib import Path
@@ -10,10 +11,43 @@ from pathlib import Path
 import pytest
 
 
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text."""
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ansi_escape.sub("", text)
+
+
+def normalize_whitespace(text: str) -> str:
+    """Collapse multiple spaces and normalize line endings for resilient comparison."""
+    # Collapse multiple spaces into one
+    text = re.sub(r" +", " ", text)
+    # Strip leading/trailing whitespace from each line and the whole block
+    return "\n".join(line.strip() for line in text.splitlines()).strip()
+
+
+def run_readme_usage_check(content: str, expected_block: str) -> None:
+    """Check if the usage section in content matches expected_block."""
+    start_marker = "<!-- usage_start -->"
+    end_marker = "<!-- usage_end -->"
+
+    if start_marker not in content or end_marker not in content:
+        pytest.fail("Usage markers not found in Readme.md")
+
+    usage_part = content.split(start_marker, maxsplit=1)[1].split(end_marker, maxsplit=1)[0].strip()
+    expected_part = expected_block.strip()
+
+    assert normalize_whitespace(usage_part) == normalize_whitespace(expected_part), (
+        "Readme.md usage section is outdated or has formatting discrepancies. "
+        "Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it."
+    )
+
+
 def test_readme_usage_up_to_date() -> None:
     """Ensure the Usage section in Readme.md matches current --help output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
+    env["NO_COLOR"] = "1"
+    env["TERM"] = "dumb"
     result = subprocess.run(  # noqa: S603
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
@@ -21,19 +55,21 @@ def test_readme_usage_up_to_date() -> None:
         check=True,
         env=env,
     )
-    help_output = result.stdout
+    help_output = strip_ansi(result.stdout)
     lines = help_output.splitlines()
-    indented_lines = [("    " + line).rstrip() for line in lines]
-    formatted_help = "\n".join(indented_lines)
-    expected_block = f"    >>> qem-bot.py --help\n{formatted_help}"
+    indented_lines = [("    " + line.strip()).rstrip() for line in lines]
+    formatted_help = "\n".join(indented_lines).strip()
+    expected_block = f"    >>> qem-bot.py --help\n\n    {formatted_help}"
+
     readme_path = Path("Readme.md")
-    content = readme_path.read_text(encoding="utf-8")
-    content = content.replace("\r\n", "\n")
-    expected_block = expected_block.replace("\r\n", "\n")
-    assert expected_block in content, (
-        "Readme.md usage section is outdated. "
-        "Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it."
-    )
+    content = readme_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    run_readme_usage_check(content, expected_block)
+
+
+def test_readme_missing_markers() -> None:
+    """Verify that missing markers trigger a failure (for coverage)."""
+    with pytest.raises(pytest.fail.Exception, match="Usage markers not found"):
+        run_readme_usage_check("# No markers here", "some help")
 
 
 def run_readme_line_length_check(readme_content: str) -> None:

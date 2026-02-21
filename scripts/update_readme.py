@@ -14,10 +14,18 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
 
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text."""
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    return ansi_escape.sub("", text)
+
+
 def get_help_output() -> str:
     """Run qem-bot.py --help and return the output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
+    env["NO_COLOR"] = "1"
+    env["TERM"] = "dumb"
     process = subprocess.run(  # noqa: S603
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
@@ -25,13 +33,13 @@ def get_help_output() -> str:
         check=True,
         env=env,
     )
-    return process.stdout
+    return strip_ansi(process.stdout)
 
 
 def format_block(help_text: str) -> str:
     """Format help text as an indented block."""
     lines = help_text.splitlines()
-    indented_lines = [("    " + line).rstrip() for line in lines]
+    indented_lines = [("    " + line.strip()).rstrip() for line in lines]
     return "\n".join(indented_lines)
 
 

@@ -12,15 +12,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot.config import (
-    BASE_PRIO,
-    DEFAULT_SUBMISSION_TYPE,
-    DEPRIORITIZE_LIMIT,
-    DOWNLOAD_MAINTENANCE,
-    PRIORITY_SCALE,
-    QEM_DASHBOARD,
-    SMELT_URL,
-)
+from openqabot import config
 from openqabot.dashboard import get_json
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
@@ -58,7 +50,7 @@ class Aggregate(BaseConf):
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
-        """Normalize repository configuration from settings."""
+        """Normalize repository configuration from config.settings."""
         try:
             return {key: ProdVer(*value.split(":")) for key, value in config["test_issues"].items()}
         except KeyError as e:
@@ -113,7 +105,7 @@ class Aggregate(BaseConf):
         """Construct the repository URL for a submission."""
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
-        base_url = f"{DOWNLOAD_MAINTENANCE}{sub.id}/SUSE_Updates_{product}_{version}"
+        base_url = f"{config.settings.download_maintenance}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
 
     def _apply_public_cloud_settings(self, settings: dict[str, Any]) -> dict[str, Any] | None:
@@ -151,12 +143,12 @@ class Aggregate(BaseConf):
     def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
         """Finalize the dashboard post with metadata and summary information."""
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{QEM_DASHBOARD}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
+            f"{config.settings.qem_dashboard_url}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
-            f"{SMELT_URL}/incident/{sub.id}"
+            f"{config.settings.smelt_url}/incident/{sub.id}"
             for sub in full_post["qem"]["incidents"]
-            if sub.type == DEFAULT_SUBMISSION_TYPE
+            if sub.type == config.settings.default_submission_type
         )
 
         full_post["qem"]["settings"] = full_post["openqa"]
@@ -181,17 +173,17 @@ class Aggregate(BaseConf):
         if ci_url:
             full_post["openqa"]["__CI_JOB_URL"] = ci_url
 
-        settings = self._apply_public_cloud_settings(self.settings.copy())
-        if settings is None:
+        settings_data = self._apply_public_cloud_settings(self.settings.copy())
+        if settings_data is None:
             return None
 
-        full_post["openqa"].update(settings)
+        full_post["openqa"].update(settings_data)
         full_post["openqa"]["FLAVOR"] = self.flavor
         full_post["openqa"]["ARCH"] = arch
         full_post["openqa"]["_DEPRIORITIZEBUILD"] = 1
 
-        if DEPRIORITIZE_LIMIT is not None:
-            full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = DEPRIORITIZE_LIMIT
+        if config.settings.deprioritize_limit is not None:
+            full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = config.settings.deprioritize_limit
 
         self._add_incident_data(full_post, data)
 
@@ -202,7 +194,7 @@ class Aggregate(BaseConf):
             (s.priority for s in chain.from_iterable(data.test_submissions.values()) if s.priority is not None),
             default=0,
         ):
-            full_post["openqa"]["_PRIORITY"] = BASE_PRIO - (max_prio // PRIORITY_SCALE)
+            full_post["openqa"]["_PRIORITY"] = config.settings.base_prio - (max_prio // config.settings.priority_scale)
 
         self._finalize_post(full_post, arch)
         return full_post
