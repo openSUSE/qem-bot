@@ -12,7 +12,7 @@ import requests
 from lxml import etree  # type: ignore[unresolved-import]
 from requests.exceptions import RetryError
 
-from openqabot.config import OBS_DOWNLOAD_URL
+from openqabot import config
 from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry5 as retried_requests
 
@@ -53,7 +53,7 @@ def get_max_revision(
         product_name = options.product_name or gitea.get_product_name(repo.version)
         product_version = options.product_version or repo.product_version
         repo_with_opts = repo._replace(product_version=product_version)
-        url = repo_with_opts.compute_url(OBS_DOWNLOAD_URL, product_name, arch, project=project)
+        url = repo_with_opts.compute_url(config.settings.obs_download_url, product_name, arch, project=project)
         log.debug("Computing RepoHash for %s from %s", repo.version, url)
 
         try:

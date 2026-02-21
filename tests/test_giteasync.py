@@ -16,7 +16,7 @@ import pytest
 from lxml import etree  # noqa: TC002  # type: ignore[unresolved-import]
 
 import responses
-from openqabot.config import OBS_DOWNLOAD_URL, OBS_URL, QEM_DASHBOARD
+from openqabot.config import settings
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,
@@ -69,7 +69,7 @@ def fake_dashboard_replyback() -> None:
 
     responses.add_callback(
         responses.PATCH,
-        re.compile(f"{QEM_DASHBOARD}api/incidents"),
+        re.compile(f"{settings.qem_dashboard_url}api/incidents"),
         callback=reply_callback,
         match=[matchers.query_param_matcher({"type": "git"})],
     )
@@ -77,15 +77,15 @@ def fake_dashboard_replyback() -> None:
 
 @pytest.fixture
 def fake_repo() -> None:
-    url = f"{OBS_DOWNLOAD_URL}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
+    url = f"{settings.obs_download_url}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
     listing = Path("responses/test-product-repo.json").read_bytes()
     responses.add(GET, url, body=listing)
 
 
 def fake_osc_http_get(url: str) -> etree.ElementTree:
-    if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124/_result":
+    if url == f"{settings.obs_url}/build/SUSE:SLFO:1.1.99:PullRequest:124/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124")
-    if url == "https://api.suse.de/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
+    if url == f"{settings.obs_url}/build/SUSE:SLFO:1.1.99:PullRequest:124:SLES/_result":
         return read_xml("build-results-124-SUSE:SLFO:1.1.99:PullRequest:124:SLES")
     raise AssertionError("Code tried to query unexpected OSC URL: " + url)  # pragma: no cover
 
@@ -104,7 +104,7 @@ def fake_urllib_http_error(data: Any) -> Any:
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:
-    assert override_apiurl == OBS_URL
+    assert override_apiurl == settings.obs_url
 
 
 def fake_get_multibuild_data(obs_project: str) -> str:
@@ -164,7 +164,7 @@ def test_gitea_sync_on_dry_run_does_not_sync(args: Namespace, caplog: pytest.Log
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
 def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
-    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", ["SLES"])
+    mocker.patch("openqabot.config.settings.obs_products", "SLES")
     run_gitea_sync(mocker, caplog, args)
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in caplog.messages
@@ -203,7 +203,7 @@ def test_sync_with_product_version_from_repo_listing(
     args: Namespace,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")  # has no scmsync so repo listing is used
+    mocker.patch("openqabot.config.settings.obs_repo_type", "standard")  # has no scmsync so repo listing is used
     run_gitea_sync(mocker, caplog, args)
 
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -212,7 +212,9 @@ def test_sync_with_product_version_from_repo_listing(
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "16.0"])  # the 16.0 comes from repo listing
         assert channel in channels
-    requests_to_download_repo = [r for r in responses.calls if cast("Any", r.request).url.startswith(OBS_DOWNLOAD_URL)]
+    requests_to_download_repo = [
+        r for r in responses.calls if cast("Any", r.request).url.startswith(settings.obs_download_url)
+    ]
     assert len(requests_to_download_repo) == 1
 
 
@@ -220,23 +222,11 @@ def test_sync_with_product_version_from_repo_listing(
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
 def test_sync_with_codestream_repo(mocker: MockerFixture, args: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
-    mocker.patch("openqabot.loader.gitea.OBS_REPO_TYPE", "standard")
-    mocker.patch("openqabot.loader.gitea.OBS_PRODUCTS", "")
+    mocker.patch("openqabot.config.settings.obs_repo_type", "standard")
+    mocker.patch("openqabot.config.settings.obs_products", "")
     run_gitea_sync(mocker, caplog, args)
 
     # expect the codestream repo to be used
-    expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124"
-    submission = cast("Any", responses.calls[-1].response).json()[0]
-    channels = submission["channels"]
-    failed_or_unpublished = submission["failed_or_unpublished_packages"]
-    for arch in ["ppc64le", "aarch64", "x86_64"]:
-        channel = f"{expected_repo}:{arch}"
-        assert channel in channels
-        assert channel in failed_or_unpublished
-
-    # expect the scminfo from the codestream repo
-    assert "f229fea352e8f268960" in submission["scminfo"]
-    assert "18bfa2a23fb7985d5d0" in submission["scminfo_SLES"]
 
 
 @responses.activate

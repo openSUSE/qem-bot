@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import openqabot.config as config_module
 import responses
 from openqabot.approver import Approver
+from openqabot.config import Settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json
@@ -38,6 +40,11 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def _auto_clear_cache() -> None:
     clear_cache()
+
+
+@pytest.fixture(autouse=True)
+def _reset_settings() -> None:
+    config_module.settings = Settings()
 
 
 @pytest.fixture

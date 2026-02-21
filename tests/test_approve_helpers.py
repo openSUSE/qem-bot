@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, NoReturn
 
@@ -63,10 +62,9 @@ def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) ->
 def testwas_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
     approver_instance = Approver(args)
     oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
-    regex = re.compile(r".*")
 
     caplog.set_level(logging.INFO)
-    assert not approver_instance.was_older_job_ok(1, 1, job, oldest_build_usable, regex)
+    assert not approver_instance.was_older_job_ok(1, 1, job, oldest_build_usable)
     assert any(log_message in m for m in caplog.messages)
 
 
@@ -99,3 +97,9 @@ def test_was_ok_before_no_suitable_older_jobs(
 def test_get_submission_result_empty_jobs() -> None:
     approver_instance = Approver(args)
     assert approver_instance.get_submission_result([], "api/", 1) is False
+
+
+def test_job_contains_submission_no_job_settings(mocker: MockerFixture) -> None:
+    approver_instance = Approver(args)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_single_job", return_value=None)
+    assert not approver_instance.job_contains_submission(1, 1)

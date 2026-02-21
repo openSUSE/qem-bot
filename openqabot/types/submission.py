@@ -9,7 +9,7 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any, cast
 
-from openqabot.config import DEFAULT_SUBMISSION_TYPE, OBS_PRODUCTS
+from openqabot import config
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.loader.repohash import RepoOptions, get_max_revision
@@ -33,7 +33,7 @@ class Submission:
         self.ongoing: bool = submission["isActive"] and submission["inReviewQAM"] and not submission["approved"]
         self.embargoed: bool = submission["embargoed"]
         self.priority: int | None = submission.get("priority")
-        self.type: str = submission.get("type") or DEFAULT_SUBMISSION_TYPE
+        self.type: str = submission.get("type") or config.settings.default_submission_type
 
         self.channels: list[Repos] = [
             Repos(p, v, a)
@@ -66,7 +66,7 @@ class Submission:
                 continue
             obs_project = ":".join(val[2:-1])
             product = gitea.get_product_name(obs_project)
-            if "all" in OBS_PRODUCTS or product in OBS_PRODUCTS:
+            if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
             else:
                 self.skipped_products.add(product)
@@ -104,7 +104,7 @@ class Submission:
     @classmethod
     def create(cls, data: dict) -> Submission | None:
         """Create a Submission instance from a dictionary, handling errors."""
-        sub_id = f"{data.get('type') or DEFAULT_SUBMISSION_TYPE}:{data.get('number')}"
+        sub_id = f"{data.get('type') or config.settings.default_submission_type}:{data.get('number')}"
         try:
             return cls(data)
         except EmptyChannelsError:

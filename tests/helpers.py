@@ -17,8 +17,7 @@ from urllib.parse import urlparse
 import osc.core
 
 import responses
-from openqabot.approver import QEM_DASHBOARD
-from openqabot.config import BUILD_REGEX, OBS_DOWNLOAD_URL, OBS_GROUP, OBS_URL
+from openqabot.config import BUILD_REGEX, settings
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
@@ -38,7 +37,7 @@ class ReviewState(NamedTuple):
 
 
 openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
-obs_product_table_url = OBS_DOWNLOAD_URL + "/OBS:/PROJECT:/TEST/product/?jsontable=1"
+obs_product_table_url = settings.obs_download_url + "/OBS:/PROJECT:/TEST/product/?jsontable=1"
 
 
 @dataclass
@@ -88,7 +87,7 @@ args = Namespace(
 def add_two_passed_response() -> None:
     responses.add(
         responses.GET,
-        re.compile(f"{QEM_DASHBOARD}api/jobs/.*/.*"),
+        re.compile(f"{settings.qem_dashboard_url}api/jobs/.*/.*"),
         json=[{"status": "passed"}, {"status": "passed"}],
     )
 
@@ -113,16 +112,16 @@ def assert_log_messages(messages: list[str], expected_messages: list[str]) -> No
 
 
 def fake_osc_get_config(override_apiurl: str) -> None:
-    assert override_apiurl == OBS_URL
+    assert override_apiurl == settings.obs_url
 
 
 def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
-    assert url == OBS_URL
+    assert url == settings.obs_url
     assert "OBS:PROJECT" in project
     req = osc.core.Request()
     req.reqid = 42
     req.state = "review"
-    req.reviews = [ReviewState("review", OBS_GROUP)]
+    req.reviews = [ReviewState("review", settings.obs_group)]
     req.actions = [
         Action(
             tgt_project="SUSE:Products:SLE-Product-SLES:16.0",
@@ -134,14 +133,14 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
 
 
 def fake_get_repos_of_project(url: str, prj: str) -> list[Repo]:
-    assert url == OBS_URL
+    assert url == settings.obs_url
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST":
         return [Repo("product", "local")]
     return [Repo("images", "local")]
 
 
 def fake_get_binarylist(url: str, prj: str, repo: str, arch: str, package: str) -> list[str]:
-    assert url == OBS_URL
+    assert url == settings.obs_url
     assert package == "000productcompose:sles_aarch64"
     assert arch == "local"
     if prj == "SUSE:Products:SLE-Product-SLES:16.0:TEST" and repo == "product":
@@ -158,7 +157,7 @@ def fake_get_binary_file(
     filename: str,
     target_filename: str,
 ) -> None:
-    assert url == OBS_URL
+    assert url == settings.obs_url
     assert package == "000productcompose:sles_aarch64"
     assert arch == "local"
     assert repo in {"images", "product"}
@@ -167,10 +166,10 @@ def fake_get_binary_file(
 
 
 def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str) -> None:
-    assert apiurl == OBS_URL
+    assert apiurl == settings.obs_url
     assert reqid == "42"
     assert newstate == "accepted"
-    assert by_group == OBS_GROUP
+    assert by_group == settings.obs_group
     assert message == "All 2 openQA jobs have passed/softfailed"
 
 

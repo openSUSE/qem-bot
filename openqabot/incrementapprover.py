@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING, Any, cast
 import osc.conf
 import osc.core
 
-from openqabot.config import DOWNLOAD_BASE, OBS_GROUP, OBS_URL, OBSOLETE_PARAMS
+from openqabot import config
+from openqabot.config import OBSOLETE_PARAMS
 from openqabot.openqa import OpenQAInterface
 
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
@@ -56,7 +57,7 @@ class IncrementApprover:
         # safeguard us from using same job ID for 2 requests
         self.unique_jobid_request_pair = {}
         self.config = IncrementConfig.from_args(args)
-        osc.conf.get_config(override_apiurl=OBS_URL)
+        osc.conf.get_config(override_apiurl=config.settings.obs_url)
 
     def check_unique_jobid_request_pair(self, jobids: list[int], request: osc.core.Request) -> None:
         """Check if certain openQA job was already used to verify certain request ID.
@@ -150,7 +151,13 @@ class IncrementApprover:
         """Change the review state of a request on OBS to accepted."""
         if self.args.dry:
             return
-        osc.core.change_review_state(apiurl=OBS_URL, reqid=reqid, newstate="accepted", by_group=OBS_GROUP, message=msg)
+        osc.core.change_review_state(
+            apiurl=config.settings.obs_url,
+            reqid=reqid,
+            newstate="accepted",
+            by_group=config.settings.obs_group,
+            message=msg,
+        )
 
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
         """Process approval or disapproval based on job results."""
@@ -213,7 +220,7 @@ class IncrementApprover:
     def extra_builds_for_package(
         self,
         package: Package,
-        config: IncrementConfig,
+        config_inc: IncrementConfig,
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
@@ -222,7 +229,7 @@ class IncrementApprover:
         if "-debuginfo" in package.name or package.arch in {"src", "nosrc"}:
             return None
 
-        for additional_build in config.additional_builds:
+        for additional_build in config_inc.additional_builds:
             if (res := self._match_additional_build(package, additional_build, build_info)) is not None:
                 return res
         return None
@@ -230,13 +237,13 @@ class IncrementApprover:
     def extra_builds_for_additional_builds(
         self,
         package_diff: set[Package],
-        config: IncrementConfig,
+        config_inc: IncrementConfig,
         build_info: BuildInfo,
     ) -> list[dict[str, str]]:
         """Determine extra builds for all additional builds in the configuration."""
 
         def handle_package(p: Package) -> dict[str, str] | None:
-            return self.extra_builds_for_package(p, config, build_info)
+            return self.extra_builds_for_package(p, config_inc, build_info)
 
         return [b for p in package_diff if (b := handle_package(p)) is not None]
 
@@ -267,24 +274,24 @@ class IncrementApprover:
         return package_diff
 
     @staticmethod
-    def _get_diff_project(config: IncrementConfig, build_info: BuildInfo | None) -> tuple[str, bool]:
+    def _get_diff_project(config_inc: IncrementConfig, build_info: BuildInfo | None) -> tuple[str, bool]:
         """Return the project to compute diff against and whether it is a reference repo."""
-        diff_project = config.diff_project()
-        if build_info and build_info.flavor in config.reference_repos:
-            return config.reference_repos[build_info.flavor], True
+        diff_project = config_inc.diff_project()
+        if build_info and build_info.flavor in config_inc.reference_repos:
+            return config_inc.reference_repos[build_info.flavor], True
         return diff_project, False
 
     def get_package_diff_from_repo(
-        self, config: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
+        self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
     ) -> defaultdict[str, set[Package]]:
         """Compute package diff by comparing repositories."""
-        build_project = config.build_project() + repo_sub_path
-        diff_project, is_reference_repo = self._get_diff_project(config, build_info)
+        build_project = config_inc.build_project() + repo_sub_path
+        diff_project, is_reference_repo = self._get_diff_project(config_inc, build_info)
 
         if build_info and is_reference_repo:
-            channel = build_info.flavor.removesuffix(f"-{config.flavor_suffix}")
+            channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
             build_project = f"{build_project}/{channel}/{build_info.arch}"
-            diff_project = f"{diff_project}/{build_info.version}/{config.diff_project_suffix}/{build_info.arch}"
+            diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
 
         if not is_reference_repo and any(s in diff_project for s in ("-Debug", "-Source")):
             log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_project)
@@ -302,24 +309,24 @@ class IncrementApprover:
     def get_package_diff(
         self,
         request: osc.core.Request | None,
-        config: IncrementConfig,
+        config_inc: IncrementConfig,
         repo_sub_path: str,
         build_info: BuildInfo | None = None,
     ) -> defaultdict[str, set[Package]]:
         """Get the package diff for a configuration."""
-        if config.diff_project_suffix == "source-report":
+        if config_inc.diff_project_suffix == "source-report":
             if not request:
                 log.error("Source report diff requested but no request found")
                 return defaultdict(set)
             return self.get_package_diff_from_source_report(request)
 
-        if config.diff_project_suffix != "none":
-            return self.get_package_diff_from_repo(config, repo_sub_path, build_info)
+        if config_inc.diff_project_suffix != "none":
+            return self.get_package_diff_from_repo(config_inc, repo_sub_path, build_info)
 
         return defaultdict(set)
 
     def make_scheduling_parameters(
-        self, request: osc.core.Request | None, config: IncrementConfig, build_info: BuildInfo
+        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_info: BuildInfo
     ) -> ScheduleParams:
         """Prepare scheduling parameters for a build."""
         repo_sub_path = "/product"
@@ -329,20 +336,20 @@ class IncrementApprover:
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
             "BUILD": build_info.build,
-            "INCREMENT_REPO": config.build_project_url(DOWNLOAD_BASE) + repo_sub_path,
+            "INCREMENT_REPO": config_inc.build_project_url(config.settings.download_base_url) + repo_sub_path,
             **OBSOLETE_PARAMS,
         }
         IncrementApprover.populate_params_from_env(base_params, "CI_JOB_URL")
-        base_params.update(config.settings)
+        base_params.update(config_inc.settings)
         extra_params = []
-        if config.diff_project_suffix != "none":
-            package_diff = self.get_package_diff(request, config, repo_sub_path, build_info)
+        if config_inc.diff_project_suffix != "none":
+            package_diff = self.get_package_diff(request, config_inc, repo_sub_path, build_info)
             relevant_diff = package_diff[build_info.arch] | package_diff["noarch"]
             # schedule base params if package filter is empty for matching
-            if IncrementApprover.match_packages(relevant_diff, config.packages):
+            if IncrementApprover.match_packages(relevant_diff, config_inc.packages):
                 extra_params.append({})
             # schedule additional builds based on changed packages
-            extra_params.extend(self.extra_builds_for_additional_builds(relevant_diff, config, build_info))
+            extra_params.extend(self.extra_builds_for_additional_builds(relevant_diff, config_inc, build_info))
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
@@ -383,17 +390,17 @@ class IncrementApprover:
 
     def process_build_info(
         self,
-        config: IncrementConfig,
+        config_inc: IncrementConfig,
         build_info: BuildInfo,
         request: osc.core.Request,
         approval_status: ApprovalStatus,
     ) -> int:
         """Process a single build and update its approval status."""
         error_count = 0
-        params = self.make_scheduling_parameters(request, config, build_info)
+        params = self.make_scheduling_parameters(request, config_inc, build_info)
         log.debug("Prepared scheduling parameters: %s", params)
         if len(params) < 1:
-            log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config, build_info)
+            log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
             return error_count
 
         info_str = "or".join([build_info.string_with_params(p) for p in params])
@@ -428,7 +435,7 @@ class IncrementApprover:
         self.requests_to_approve[request_id] = status
         return status
 
-    def process_request_for_config(self, request: osc.core.Request | None, config: IncrementConfig) -> int:
+    def process_request_for_config(self, request: osc.core.Request | None, config_inc: IncrementConfig) -> int:
         """Process an OBS request for a specific configuration."""
         if request is None:
             return 0
@@ -437,29 +444,29 @@ class IncrementApprover:
         error_count = 0
         found_relevant_build = False
         for build_info in load_build_info(
-            config,
-            config.build_regex,
-            config.product_regex,
-            config.version_regex,
+            config_inc,
+            config_inc.build_regex,
+            config_inc.product_regex,
+            config_inc.version_regex,
             self.get_regex_match,
         ):
-            if len(config.archs) > 0 and build_info.arch not in config.archs:
+            if len(config_inc.archs) > 0 and build_info.arch not in config_inc.archs:
                 continue
             found_relevant_build = True
-            error_count += self.process_build_info(config, build_info, request, approval_status)
+            error_count += self.process_build_info(config_inc, build_info, request, approval_status)
 
         if not found_relevant_build:
             approval_status.reasons_to_disapprove.append(
-                f"No builds found for config {config} in {config.build_project()}"
+                f"No builds found for config {config_inc} in {config_inc.build_project()}"
             )
         return error_count
 
     def __call__(self) -> int:
         """Run the increment approval process."""
         error_count = 0
-        for config in self.config:
-            request = find_request_on_obs(self.args, config.build_project())
-            error_count += self.process_request_for_config(request, config)
+        for config_inc in self.config:
+            request = find_request_on_obs(self.args, config_inc.build_project())
+            error_count += self.process_request_for_config(request, config_inc)
         for request in self.requests_to_approve.values():
             error_count += self.handle_approval(request)
         return error_count

@@ -2,118 +2,112 @@
 # SPDX-License-Identifier: MIT
 """Test OpenQABot."""
 
+from __future__ import annotations
+
 import logging
-import sys
-from unittest.mock import MagicMock
+import os
+from typing import TYPE_CHECKING
 
-import pytest
-from pytest_mock import MockerFixture
+from typer.testing import CliRunner
 
-from openqabot.main import main  # SUT
+from openqabot.args import app
+from openqabot.main import main
+
+if TYPE_CHECKING:
+    import pytest
+    from pytest_mock import MockerFixture
+
+runner = CliRunner()
 
 
-def test_help(mocker: MockerFixture) -> None:
-    mocker.patch.object(sys, "argv", ["--help"])
-    with pytest.raises(SystemExit):
-        main()
-
-
-def test_no_args_prints_help(mocker: MockerFixture) -> None:
-    mocker.patch.object(sys, "argv", [])
-    mocker.patch("openqabot.args.ArgumentParser.print_help")
-    with pytest.raises(SystemExit):
-        main()
+def test_no_args_prints_help() -> None:
+    result = runner.invoke(app, [])
+    # Typer/Click might exit with non-zero when showing help due to no args
+    assert "Usage: " in result.stdout
 
 
 def test_main_configs_not_dir_triggers_error_and_exit(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    mock_configs_path = mocker.Mock()
-    mock_configs_path.is_dir.return_value = False
-    mock_args = mocker.Mock()
-    mock_args.configs = mock_configs_path
-    del mock_args.no_config
-    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
-    sys_exit_spy = mocker.spy(sys, "exit")
-    with pytest.raises(SystemExit):
-        main()
-    sys_exit_spy.assert_called_once_with(1)
+    mocker.patch("openqabot.args.OpenQABot")
+    mocker.patch("pathlib.Path.is_dir", return_value=False)
+
+    # We need to capture logs
+    with caplog.at_level(logging.ERROR):
+        # running full-run which requires config
+        result = runner.invoke(app, ["--token", "foo", "full-run"])
+
+    assert result.exit_code == 1
+    # Check caplog for the error message
     assert "Configuration error" in caplog.text
-    assert "is not a valid directory" in caplog.text
 
 
 def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
-    mock_configs_path = mocker.Mock()
-    mock_configs_path.is_dir.return_value = True
-
     mock_logger = mocker.Mock()
     mock_logger.setLevel = mocker.Mock()
-    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
-    mock_args = mocker.Mock()
-    mock_args.configs = mock_configs_path
-    mock_args.token = "dummy_token"
-    mock_args.func = mocker.Mock(return_value=0)
-    mock_args.debug = True
-    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
-    with pytest.raises(SystemExit):
-        main()
-    mock_logger.setLevel.assert_called_once_with(logging.DEBUG)
-    mock_args.debug = False
-    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
-    with pytest.raises(SystemExit):
-        main()
+    mocker.patch("openqabot.args.create_logger", return_value=mock_logger)
+    mocker.patch("pathlib.Path.is_dir", return_value=True)
+    mocker.patch("openqabot.args.OpenQABot").return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--debug", "full-run"])
+    assert result.exit_code == 0
+    mock_logger.setLevel.assert_called_with(logging.DEBUG)
 
 
 def test_main_keyboard_interrupt(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.main.create_logger")
-    mock_args = MagicMock()
-    mock_args.configs.is_dir.return_value = True
-    mock_args.debug = False
-    mock_args.func.side_effect = KeyboardInterrupt
-    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
-    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+    # We need to run main() and mock app() to raise KeyboardInterrupt
+    mocker.patch("openqabot.main.app", side_effect=KeyboardInterrupt)
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
     mock_exit = mocker.patch("sys.exit")
-    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+
     main()
+
+    mock_logger.info.assert_called_with("Interrupted by user")
     mock_exit.assert_called_with(1)
 
 
-def test_main_no_func(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    mock_configs_path = mocker.Mock()
-    mock_configs_path.is_dir.return_value = True
-    mock_args = mocker.Mock()
-    mock_args.configs = mock_configs_path
-    del mock_args.func
-    del mock_args.no_config
-    mocker.patch("openqabot.args.ArgumentParser.parse_args", return_value=mock_args)
-    sys_exit_spy = mocker.spy(sys, "exit")
-    with pytest.raises(SystemExit):
-        main()
-    sys_exit_spy.assert_called_once_with(1)
-    assert "Command is required" in caplog.text
-
-
-def test_main_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    mock_args = MagicMock()
-    mock_args.configs.is_dir.return_value = True
-    mock_args.debug = False
-    mock_args.func.side_effect = Exception("Test exception")
-    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
-    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
+def test_main_exception(mocker: MockerFixture) -> None:
+    # We need to run main() and mock app() to raise an Exception
+    mocker.patch("openqabot.main.app", side_effect=Exception("something went wrong"))
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
     mock_exit = mocker.patch("sys.exit")
-    mocker.patch("sys.argv", ["qem-bot", "full-run"])
-    with caplog.at_level(logging.ERROR, logger="bot"):
-        main()
+
+    main()
+
+    # The exception object itself is logged
+    args, _ = mock_logger.error.call_args
+    assert "something went wrong" in str(args[0])
     mock_exit.assert_called_with(1)
-    assert "Test exception" in caplog.text
 
 
-def test_main_exception_debug(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.main.create_logger")
-    mock_args = MagicMock()
-    mock_args.configs.is_dir.return_value = True
-    mock_args.debug = True
-    mock_args.func.side_effect = RuntimeError("Debug exception")
-    mock_parser = MagicMock(parse_args=MagicMock(return_value=mock_args))
-    mocker.patch("openqabot.main.get_parser", return_value=mock_parser)
-    mocker.patch("sys.argv", ["qem-bot", "full-run"])
-    with pytest.raises(RuntimeError, match="Debug exception"):
-        main()
+def test_main_missing_token_exits(mocker: MockerFixture) -> None:
+    # Use CliRunner to test main app execution with missing token
+    # We must NOT provide --token and not have it in env
+    mocker.patch.dict(os.environ, {}, clear=True)
+    # Mock configs dir to be True to avoid unrelated Configuration error if it fails later
+    mocker.patch("pathlib.Path.is_dir", return_value=True)
+
+    result = runner.invoke(app, ["full-run"])
+    assert result.exit_code == 1
+    assert (
+        "Error: Missing option '--token' / '-t'." in result.stdout
+        or "Error: Missing option '--token' / '-t'." in result.stderr
+    )
+
+
+def test_main_help_no_token(mocker: MockerFixture) -> None:
+    # Test that --help works even without token
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("sys.argv", ["qem-bot", "--help"])
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "Usage: " in result.stdout
+
+
+def test_main_help_subcommand_no_token(mocker: MockerFixture) -> None:
+    # Test that full-run --help works even without token
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("sys.argv", ["qem-bot", "full-run", "--help"])
+    result = runner.invoke(app, ["full-run", "--help"])
+    assert result.exit_code == 0
+    assert "Usage: " in result.stdout
