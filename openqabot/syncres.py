@@ -8,7 +8,7 @@ from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
-from .config import ALLOW_DEVELOPMENT_GROUPS, DEFAULT_SUBMISSION_TYPE
+from .config import settings
 from .loader.qem import post_job
 from .openqa import OpenQAInterface
 from .utils import normalize_results
@@ -62,7 +62,7 @@ class SyncRes:
 
     def is_in_devel_group(self, data: dict[str, Any]) -> bool:
         """Check if a job belongs to a development group."""
-        return not ALLOW_DEVELOPMENT_GROUPS and (
+        return not settings.allow_development_groups and (
             "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
         )
 
@@ -86,7 +86,7 @@ class SyncRes:
         sub_id = ""
         if result.get("incident_settings"):
             sub_id = (
-                f" for submission {result.get('submission_type', DEFAULT_SUBMISSION_TYPE)}:"
+                f" for submission {result.get('submission_type', settings.default_submission_type)}:"
                 f"{result.get('submission_id', 'unknown')}"
             )
         elif result.get("update_settings"):

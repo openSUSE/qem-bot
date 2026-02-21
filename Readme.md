@@ -19,67 +19,61 @@ updates information about submissions and related openQA tests.
 <!-- usage_start -->
 
     >>> qem-bot.py --help
-    usage: qem-bot [-h] [-c CONFIGS] [--dry] [--fake-data] [--dump-data] [-d]
-                   -t TOKEN [-g GITEA_TOKEN] [-i OPENQA_INSTANCE] [-s SINGLEARCH]
-                   [-r RETRY]
-                   {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp} ...
 
-    QEM-Dashboard, SMELT, Gitea and openQA connector
+     Usage: qem-bot.py [OPTIONS] COMMAND [ARGS]...
 
-    positional arguments:
-      {full-run,submissions-run,incidents-run,updates-run,smelt-sync,gitea-sync,sub-approve,inc-approve,sub-comment,inc-comment,sub-sync-results,inc-sync-results,aggr-sync-results,increment-approve,repo-diff,amqp}
-        full-run            Full schedule for Maintenance Submissions in openQA
-        submissions-run     Submissions only schedule for Maintenance Submissions
-                            in openQA
-        incidents-run       DEPRECATED: Submissions only schedule for Maintenance
-                            Submissions in openQA (use submissions-run)
-        updates-run         Aggregates only schedule for Maintenance Submissions
-                            in openQA
-        smelt-sync          Sync data from SMELT into QEM Dashboard
-        gitea-sync          Sync data from Gitea into QEM Dashboard
-        sub-approve         Approve submissions which passed tests
-        inc-approve         DEPRECATED: Approve submissions which passed tests
-                            (use sub-approve)
-        sub-comment         Comment submissions in BuildService
-        inc-comment         DEPRECATED: Comment submissions in BuildService (use
-                            sub-comment)
-        sub-sync-results    Sync results of openQA submission jobs to Dashboard
-        inc-sync-results    DEPRECATED: Sync results of openQA submission jobs to
-                            Dashboard (use sub-sync-results)
-        aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard
-        increment-approve   Approve the most recent product increment for an OBS
-                            project if tests passed
-        repo-diff           Computes the diff between two repositories
-        amqp                AMQP listener daemon
+     QEM-Dashboard, SMELT, Gitea and openQA connector
 
-    options:
-      -h, --help            show this help message and exit
-      -c, --configs CONFIGS
-                            Directory or single file with openqabot configuration
-                            metadata
-      --dry                 Dry run, do not post any data
-      --fake-data           Use fake data, do not query data from real services
-      --dump-data           Dump requested data for later use via --fake-data
-      -d, --debug           Enable debug output
-      -t, --token TOKEN     Token for qem dashboard api
-      -g, --gitea-token GITEA_TOKEN
-                            Token for Gitea api
-      -i, --openqa-instance OPENQA_INSTANCE
-                            The openQA instance to use Other instances than OSD do
-                            not update dashboard database
-      -s, --singlearch SINGLEARCH
-                            Yaml config with list of singlearch packages for
-                            submissions run
-      -r, --retry RETRY     Number of retries
+    ╭─ Options ────────────────────────────────────────────────────────────────────╮
+    │ --configs          -c      PATH     Directory or single file with openqabot  │
+    │                                     configuration metadata                   │
+    │                                     [default: /etc/openqabot]                │
+    │ --dry                               Dry run, do not post any data            │
+    │ --fake-data                         Use fake data, do not query data from    │
+    │                                     real services                            │
+    │ --dump-data                         Dump requested data for later use via    │
+    │                                     --fake-data                              │
+    │ --debug            -d               Enable debug output                      │
+    │ --token            -t      TEXT     Token for qem dashboard api              │
+    │                                     [env var: QEM_BOT_TOKEN]                 │
+    │ --gitea-token      -g      TEXT     Token for Gitea api                      │
+    │ --openqa-instance  -i      TEXT     The openQA instance to use Other         │
+    │                                     instances than OSD do not update         │
+    │                                     dashboard database                       │
+    │                                     [default: https://openqa.suse.de]        │
+    │ --singlearch       -s      PATH     Yaml config with list of singlearch      │
+    │                                     packages for submissions run             │
+    │                                     [default: /etc/openqabot/singlearch.yml] │
+    │ --retry            -r      INTEGER  Number of retries [default: 2]           │
+    │ --help                              Show this message and exit.              │
+    ╰──────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Commands ───────────────────────────────────────────────────────────────────╮
+    │ full-run            Full schedule for Maintenance Submissions in openQA.     │
+    │ submissions-run     Submissions only schedule for Maintenance Submissions in │
+    │                     openQA.                                                  │
+    │ updates-run         Aggregates only schedule for Maintenance Submissions in  │
+    │                     openQA.                                                  │
+    │ smelt-sync          Sync data from SMELT into QEM Dashboard.                 │
+    │ gitea-sync          Sync data from Gitea into QEM Dashboard.                 │
+    │ sub-approve         Approve submissions which passed tests.                  │
+    │ sub-comment         Comment submissions in BuildService.                     │
+    │ sub-sync-results    Sync results of openQA submission jobs to Dashboard.     │
+    │ aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard.      │
+    │ increment-approve   Approve the most recent product increment for an OBS     │
+    │                     project if tests passed.                                 │
+    │ repo-diff           Computes the diff between two repositories.              │
+    │ amqp                AMQP listener daemon.                                    │
+    ╰──────────────────────────────────────────────────────────────────────────────╯
+
 
 <!-- usage_end -->
 
 ## Configuration
 
-The bot is configured primarily via YAML configuration files (see `-c`
-option). You can also configure global settings using environment variables.
-See [doc/config.md](doc/config.md#global-configuration-environment-variables)
-for details.
+The bot is configured primarily via YAML configuration files (see `-c` option).
+You can also configure global settings using environment variables. See
+[doc/config.md](doc/config.md#global-configuration-environment-variables) for
+details.
 
 ## Expected workflow
 

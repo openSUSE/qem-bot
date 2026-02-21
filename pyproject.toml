@@ -23,6 +23,8 @@ dependencies = [
     "jsonschema",
     "lxml",
     "PyYAML",
+    "pydantic-settings",
+    "typer",
 ]
 
 [project.urls]

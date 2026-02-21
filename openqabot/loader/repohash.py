@@ -12,7 +12,7 @@ import requests
 from lxml import etree  # type: ignore[unresolved-import]
 from requests.exceptions import RetryError
 
-from openqabot.config import OBS_DOWNLOAD_URL
+from openqabot import config
 from openqabot.errors import NoRepoFoundError
 from openqabot.types.types import ProdVer
 from openqabot.utils import retry5 as retried_requests
@@ -48,7 +48,7 @@ def get_max_revision(
         else f"Submission for project {project} skipped"
     )
 
-    url_base = f"{OBS_DOWNLOAD_URL}/{project.replace(':', ':/')}"
+    url_base = f"{config.settings.obs_download_url}/{project.replace(':', ':/')}"
     # Repos object is a tuple of (product, version, arch, product_version)
     expected_repos_len = 4
 
@@ -60,7 +60,10 @@ def get_max_revision(
                 p_ver = repo[3]
             repo_tuple = ProdVer(repo[0], repo[1], p_ver or "")
             url = gitea.compute_repo_url(
-                OBS_DOWNLOAD_URL, options.product_name or gitea.get_product_name(repo[1]), repo_tuple, arch
+                config.settings.obs_download_url,
+                options.product_name or gitea.get_product_name(repo[1]),
+                repo_tuple,
+                arch,
             )
             log.debug("Computing RepoHash for %s from %s", repo[1], url)
         # openSUSE and SLE submissions have different handling of architecture

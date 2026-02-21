@@ -2,416 +2,538 @@
 # SPDX-License-Identifier: MIT
 """Command line arguments parsing."""
 
-from argparse import ArgumentParser, Namespace
+from __future__ import annotations
+
+import logging
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Annotated
 from urllib.parse import urlparse
+
+import typer
+
+import openqabot.config as config_module
 
 from .aggrsync import AggregateResultsSync
 from .amqp import AMQP
 from .approver import Approver
 from .commenter import Commenter
-from .config import AMQP_URL, BUILD_REGEX, OBS_GROUP
+from .config import BUILD_REGEX
 from .giteasync import GiteaSync
 from .incrementapprover import IncrementApprover
 from .openqabot import OpenQABot
 from .repodiff import RepoDiff
 from .smeltsync import SMELTSync
 from .subsyncres import SubResultsSync
+from .utils import create_logger
+
+app = typer.Typer(
+    name="qem-bot",
+    help="QEM-Dashboard, SMELT, Gitea and openQA connector",
+    no_args_is_help=True,
+    add_completion=False,
+)
+log = logging.getLogger("bot")
 
 
-def do_full_schedule(args: Namespace) -> int:
-    """Run both submission and aggregate scheduling."""
+@app.callback()
+def main(  # noqa: PLR0913
+    ctx: typer.Context,
+    *,
+    configs: Annotated[
+        Path,
+        typer.Option(
+            "-c",
+            "--configs",
+            help="Directory or single file with openqabot configuration metadata",
+            file_okay=True,
+            dir_okay=True,
+            readable=True,
+        ),
+    ] = Path("/etc/openqabot"),
+    dry: Annotated[bool, typer.Option("--dry", help="Dry run, do not post any data")] = False,
+    fake_data: Annotated[
+        bool,
+        typer.Option("--fake-data", help="Use fake data, do not query data from real services"),
+    ] = False,
+    dump_data: Annotated[
+        bool,
+        typer.Option("--dump-data", help="Dump requested data for later use via --fake-data"),
+    ] = False,
+    debug: Annotated[bool, typer.Option("-d", "--debug", help="Enable debug output")] = False,
+    token: Annotated[
+        str | None,
+        typer.Option("-t", "--token", envvar="QEM_BOT_TOKEN", help="Token for qem dashboard api"),
+    ] = None,
+    gitea_token: Annotated[
+        str | None,
+        typer.Option("-g", "--gitea-token", help="Token for Gitea api"),
+    ] = None,
+    openqa_instance: Annotated[
+        str,
+        typer.Option(
+            "-i",
+            "--openqa-instance",
+            help="The openQA instance to use\n Other instances than OSD do not update dashboard database",
+        ),
+    ] = "https://openqa.suse.de",
+    singlearch: Annotated[
+        Path,
+        typer.Option(
+            "-s",
+            "--singlearch",
+            help="Yaml config with list of singlearch packages for submissions run",
+        ),
+    ] = Path("/etc/openqabot/singlearch.yml"),
+    retry: Annotated[int, typer.Option("-r", "--retry", help="Number of retries")] = 2,
+) -> None:
+    """QEM-Dashboard, SMELT, Gitea and openQA connector."""
+    # Configure logging
+    log_obj = create_logger("bot")
+    if debug:
+        log_obj.setLevel(logging.DEBUG)
+
+    # Allow missing token if help was requested
+    if token is None and not ctx.resilient_parsing:
+        # Check if help is in the arguments
+        if any(arg in sys.argv for arg in ctx.help_option_names):
+            return
+
+        print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
+        sys.exit(1)
+
+    # Store global options in context
+    ctx.obj = SimpleNamespace(
+        configs=configs,
+        dry=dry,
+        fake_data=fake_data,
+        dump_data=dump_data,
+        debug=debug,
+        token=token,
+        gitea_token=gitea_token,
+        openqa_instance=urlparse(openqa_instance),
+        singlearch=singlearch,
+        retry=retry,
+    )
+
+
+@app.command()
+def full_run(
+    ctx: typer.Context,
+    *,
+    ignore_onetime: Annotated[
+        bool,
+        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
+    ] = False,
+    submission: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--submission",
+            help="Submission ID (to process only a single submission)",
+        ),
+    ] = None,
+) -> None:
+    """Full schedule for Maintenance Submissions in openQA."""
+    args = ctx.obj
+    args.ignore_onetime = ignore_onetime
+    args.submission = submission
     args.disable_submissions = False
     args.disable_aggregates = False
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     bot = OpenQABot(args)
-    return bot()
+    sys.exit(bot())
 
 
-def do_submission_schedule(args: Namespace) -> int:
-    """Run only submission scheduling."""
+@app.command("submissions-run")
+def submissions_run(
+    ctx: typer.Context,
+    *,
+    ignore_onetime: Annotated[
+        bool,
+        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
+    ] = False,
+    submission: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--submission",
+            help="Submission ID (to process only a single submission)",
+        ),
+    ] = None,
+) -> None:
+    """Submissions only schedule for Maintenance Submissions in openQA."""
+    args = ctx.obj
+    args.ignore_onetime = ignore_onetime
+    args.submission = submission
     args.disable_submissions = False
     args.disable_aggregates = True
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     bot = OpenQABot(args)
-    return bot()
+    sys.exit(bot())
 
 
-def do_aggregate_schedule(args: Namespace) -> int:
-    """Run only aggregate scheduling."""
+@app.command("incidents-run", hidden=True)
+def incidents_run(
+    ctx: typer.Context,
+    *,
+    ignore_onetime: Annotated[
+        bool,
+        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
+    ] = False,
+    submission: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--submission",
+            help="Submission ID (to process only a single submission)",
+        ),
+    ] = None,
+) -> None:
+    """DEPRECATED: Submissions only schedule for Maintenance Submissions in openQA (use submissions-run)."""  # noqa: D401
+    submissions_run(ctx, ignore_onetime=ignore_onetime, submission=submission)
+
+
+@app.command("updates-run")
+def updates_run(
+    ctx: typer.Context,
+    *,
+    ignore_onetime: Annotated[
+        bool,
+        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
+    ] = False,
+) -> None:
+    """Aggregates only schedule for Maintenance Submissions in openQA."""  # noqa: D401
+    args = ctx.obj
+    args.ignore_onetime = ignore_onetime
     args.disable_aggregates = False
     args.disable_submissions = True
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     bot = OpenQABot(args)
-    return bot()
+    sys.exit(bot())
 
 
-def do_sync_smelt(args: Namespace) -> int:
-    """Synchronize data from SMELT to the dashboard."""
+@app.command("smelt-sync")
+def smelt_sync(ctx: typer.Context) -> None:
+    """Sync data from SMELT into QEM Dashboard."""
+    args = ctx.obj
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     syncer = SMELTSync(args)
-    return syncer()
+    sys.exit(syncer())
 
 
-def do_sync_gitea(args: Namespace) -> int:
-    """Synchronize data from Gitea to the dashboard."""
+@app.command("gitea-sync")
+def gitea_sync(
+    ctx: typer.Context,
+    *,
+    gitea_repo: Annotated[
+        str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")
+    ] = "products/SLFO",
+    allow_build_failures: Annotated[
+        bool,
+        typer.Option("--allow-build-failures", help="Sync data from PRs despite failing packages"),
+    ] = False,
+    consider_unrequested_prs: Annotated[
+        bool,
+        typer.Option(
+            "--consider-unrequested-prs",
+            help=f"Consider PRs where no review from team {config_module.settings.obs_group} was requested as well",
+        ),
+    ] = False,
+    pr_number: Annotated[
+        int | None,
+        typer.Option(
+            "--pr-number",
+            help="Only consider the specified PR (for manual debugging)",
+        ),
+    ] = None,
+) -> None:
+    """Sync data from Gitea into QEM Dashboard."""
+    args = ctx.obj
+    args.gitea_repo = gitea_repo
+    args.allow_build_failures = allow_build_failures
+    args.consider_unrequested_prs = consider_unrequested_prs
+    args.pr_number = pr_number
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     syncer = GiteaSync(args)
-    return syncer()
+    sys.exit(syncer())
 
 
-def do_approve(args: Namespace) -> int:
-    """Approve submissions that passed all tests."""
+@app.command("sub-approve")
+def sub_approve(
+    ctx: typer.Context,
+    *,
+    all_submissions: Annotated[
+        bool,
+        typer.Option("--all-submissions", help="use all submissions without care about rrid"),
+    ] = False,
+    submission: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--submission",
+            help="Submission ID (to approve only a single submission)",
+        ),
+    ] = None,
+) -> None:
+    """Approve submissions which passed tests."""
+    args = ctx.obj
+    args.all_submissions = all_submissions
+    args.submission = submission
+    args.incident = submission
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     approve = Approver(args)
-    return approve()
+    sys.exit(approve())
 
 
-def do_comment(args: Namespace) -> int:
-    """Comment on submissions with test results."""
+@app.command("inc-approve", hidden=True)
+def inc_approve(
+    ctx: typer.Context,
+    *,
+    all_submissions: Annotated[
+        bool,
+        typer.Option("--all-submissions", help="use all submissions without care about rrid"),
+    ] = False,
+    incident: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--incident",
+            help="Submission ID (to approve only a single submission)",
+        ),
+    ] = None,
+) -> None:
+    """DEPRECATED: Approve submissions which passed tests (use sub-approve)."""  # noqa: D401
+    sub_approve(ctx, all_submissions=all_submissions, submission=incident)
+
+
+@app.command("sub-comment")
+def sub_comment(ctx: typer.Context) -> None:
+    """Comment submissions in BuildService."""
+    args = ctx.obj
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     comment = Commenter(args)
-    return comment()
+    sys.exit(comment())
 
 
-def do_sync_sub_results(args: Namespace) -> int:
-    """Synchronize submission results from openQA to the dashboard."""
+@app.command("inc-comment", hidden=True)
+def inc_comment(ctx: typer.Context) -> None:
+    """DEPRECATED: Comment submissions in BuildService (use sub-comment)."""  # noqa: D401
+    sub_comment(ctx)
+
+
+@app.command("sub-sync-results")
+def sub_sync_results(ctx: typer.Context) -> None:
+    """Sync results of openQA submission jobs to Dashboard."""
+    args = ctx.obj
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     syncer = SubResultsSync(args)
-    return syncer()
+    sys.exit(syncer())
 
 
-def do_sync_aggregate_results(args: Namespace) -> int:
-    """Synchronize aggregate results from openQA to the dashboard."""
+@app.command("inc-sync-results", hidden=True)
+def inc_sync_results(ctx: typer.Context) -> None:
+    """DEPRECATED: Sync results of openQA submission jobs to Dashboard (use sub-sync-results)."""  # noqa: D401
+    sub_sync_results(ctx)
+
+
+@app.command("aggr-sync-results")
+def aggr_sync_results(ctx: typer.Context) -> None:
+    """Sync results of openQA aggregate jobs to Dashboard."""
+    args = ctx.obj
+
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
+
     syncer = AggregateResultsSync(args)
-    return syncer()
+    sys.exit(syncer())
 
 
-def do_increment_approve(args: Namespace) -> int:
-    """Approve product increments based on test results."""
+@app.command("increment-approve")
+def increment_approve(  # noqa: PLR0913
+    ctx: typer.Context,
+    *,
+    project_base: Annotated[
+        str, typer.Option("--project-base", help="The base for projects on OBS")
+    ] = "SUSE:SLFO:Products:SLES:16.0",
+    build_project_suffix: Annotated[
+        str,
+        typer.Option(
+            "--build-project-suffix",
+            help="The project on OBS to monitor. Schedule jobs for (if --schedule is specified) and approve (if all tests passed)",  # noqa: E501
+        ),
+    ] = "TEST",
+    diff_project_suffix: Annotated[
+        str,
+        typer.Option(
+            "--diff-project-suffix",
+            help="The project on OBS to compute a package diff to",
+        ),
+    ] = "PUBLISH/product",
+    distri: Annotated[
+        str,
+        typer.Option(
+            "--distri",
+            help="Monitor and schedule only products with the specified DISTRI parameter",
+        ),
+    ] = "sle",
+    version: Annotated[
+        str,
+        typer.Option(
+            "--version",
+            help="Monitor and schedule only products with the specified VERSION parameter",
+        ),
+    ] = "any",
+    flavor: Annotated[
+        str,
+        typer.Option(
+            "--flavor",
+            help="Monitor and schedule only products with the specified FLAVOR parameter",
+        ),
+    ] = "any",
+    schedule: Annotated[
+        bool,
+        typer.Option(
+            "--schedule",
+            help="Schedule a new product (if none exists or if the most recent product has no jobs)",
+        ),
+    ] = False,
+    reschedule: Annotated[
+        bool,
+        typer.Option(
+            "--reschedule",
+            help="Always schedule a new product (even if one already exists)",
+        ),
+    ] = False,
+    accepted: Annotated[
+        bool,
+        typer.Option("--accepted", help="Consider accepted product increment requests as well"),
+    ] = False,
+    request_id: Annotated[
+        int | None,
+        typer.Option(
+            "--request-id",
+            help="Check/approve the specified request (instead of the most recent one)",
+        ),
+    ] = None,
+    build_listing_sub_path: Annotated[
+        str,
+        typer.Option(
+            "--build-listing-sub-path",
+            help="The sub path of the file listing used to determine BUILD and other parameters",
+        ),
+    ] = "product",
+    build_regex: Annotated[
+        str,
+        typer.Option(
+            "--build-regex",
+            help="The regex used to determine BUILD and other parameters from the file listing",
+        ),
+    ] = BUILD_REGEX,
+    product_regex: Annotated[
+        str,
+        typer.Option("--product-regex", help="The regex used to determine what products are relevant"),
+    ] = "^SLE.*",
+    increment_config: Annotated[
+        Path | None,
+        typer.Option(
+            "--increment-config",
+            help="Use configuration from the specified YAML document instead of arguments",
+        ),
+    ] = None,
+) -> None:
+    """Approve the most recent product increment for an OBS project if tests passed."""
+    args = ctx.obj
+    args.project_base = project_base
+    args.build_project_suffix = build_project_suffix
+    args.diff_project_suffix = diff_project_suffix
+    args.distri = distri
+    args.version = version
+    args.flavor = flavor
+    args.schedule = schedule
+    args.reschedule = reschedule
+    args.accepted = accepted
+    args.request_id = request_id
+    args.build_listing_sub_path = build_listing_sub_path
+    args.build_regex = build_regex
+    args.product_regex = product_regex
+    args.increment_config = increment_config
+
     approve = IncrementApprover(args)
-    return approve()
+    sys.exit(approve())
 
 
-def do_repo_diff_computation(args: Namespace) -> int:
-    """Compute differences between two OBS repositories."""
-    repo_diff = RepoDiff(args)
-    return repo_diff()
+@app.command("repo-diff")
+def repo_diff(
+    ctx: typer.Context,
+    *,
+    repo_a: Annotated[
+        str, typer.Option("--repo-a", help="The first repository")
+    ] = "SUSE:SLFO:Products:SLES:16.0:TEST/product",
+    repo_b: Annotated[
+        str, typer.Option("--repo-b", help="The second repository")
+    ] = "SUSE:SLFO:Products:SLES:16.0:PUBLISH/product",
+) -> None:
+    """Computes the diff between two repositories."""  # noqa: D401
+    args = ctx.obj
+    args.repo_a = repo_a
+    args.repo_b = repo_b
+
+    repo_diff_obj = RepoDiff(args)
+    sys.exit(repo_diff_obj())
 
 
-def do_amqp(args: Namespace) -> int:
-    """Start the AMQP listener."""
-    amqp = AMQP(args)
-    return amqp()
+@app.command("amqp")
+def amqp_cmd(
+    ctx: typer.Context,
+    *,
+    url: Annotated[str | None, typer.Option("--url", help="the URL of the AMQP server")] = None,
+) -> None:
+    """AMQP listener daemon."""
+    args = ctx.obj
+    if url is not None:
+        args.url = url
+    else:
+        # Default from settings (which was already loaded in main callback)
+        args.url = config_module.settings.amqp_url
 
+    if not args.configs.is_dir():
+        log.error("Configuration error: %s is not a valid directory", args.configs)
+        sys.exit(1)
 
-def get_parser() -> ArgumentParser:  # noqa: PLR0914, PLR0915
-    """Construct the command-line argument parser."""
-    parser = ArgumentParser(description="QEM-Dashboard, SMELT, Gitea and openQA connector", prog="qem-bot")
-
-    parser.add_argument(
-        "-c",
-        "--configs",
-        type=Path,
-        default=Path("/etc/openqabot"),
-        help="Directory or single file with openqabot configuration metadata",
-    )
-
-    parser.add_argument("--dry", action="store_true", help="Dry run, do not post any data")
-    parser.add_argument(
-        "--fake-data",
-        action="store_true",
-        help="Use fake data, do not query data from real services",
-    )
-    parser.add_argument(
-        "--dump-data",
-        action="store_true",
-        help="Dump requested data for later use via --fake-data",
-    )
-
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug output")
-
-    parser.add_argument("-t", "--token", required=True, type=str, help="Token for qem dashboard api")
-    parser.add_argument("-g", "--gitea-token", required=False, type=str, help="Token for Gitea api")
-
-    parser.add_argument(
-        "-i",
-        "--openqa-instance",
-        type=urlparse,
-        default=urlparse("https://openqa.suse.de"),
-        help="The openQA instance to use\n Other instances than OSD do not update dashboard database",
-    )
-
-    parser.add_argument(
-        "-s",
-        "--singlearch",
-        type=Path,
-        default=Path("/etc/openqabot/singlearch.yml"),
-        help="Yaml config with list of singlearch packages for submissions run",
-    )
-
-    parser.add_argument("-r", "--retry", type=int, default=2, help="Number of retries")
-
-    commands = parser.add_subparsers()
-
-    cmdfull = commands.add_parser("full-run", help="Full schedule for Maintenance Submissions in openQA")
-    cmdfull.add_argument(
-        "-i",
-        "--ignore-onetime",
-        action="store_true",
-        help="Ignore onetime and schedule those test runs",
-    )
-    cmdfull.add_argument(
-        "-I",
-        "--submission",
-        required=False,
-        type=str,
-        default=None,
-        help="Submission ID (to process only a single submission)",
-    )
-    cmdfull.set_defaults(func=do_full_schedule)
-
-    cmdsub = commands.add_parser(
-        "submissions-run",
-        help="Submissions only schedule for Maintenance Submissions in openQA",
-    )
-    cmdsub.add_argument(
-        "-i",
-        "--ignore-onetime",
-        action="store_true",
-        help="Ignore onetime and schedule those test runs",
-    )
-    cmdsub.add_argument(
-        "-I",
-        "--submission",
-        required=False,
-        type=str,
-        help="Submission ID (to process only a single submission)",
-    )
-    cmdsub.set_defaults(func=do_submission_schedule)
-
-    cmdinc = commands.add_parser(
-        "incidents-run",
-        help="DEPRECATED: Submissions only schedule for Maintenance Submissions in openQA (use submissions-run)",
-    )
-    cmdinc.add_argument(
-        "-i",
-        "--ignore-onetime",
-        action="store_true",
-        help="Ignore onetime and schedule those test runs",
-    )
-    cmdinc.add_argument(
-        "-I",
-        "--submission",
-        required=False,
-        type=str,
-        help="Submission ID (to process only a single submission)",
-    )
-    cmdinc.set_defaults(func=do_submission_schedule)
-
-    cmdupd = commands.add_parser("updates-run", help="Aggregates only schedule for Maintenance Submissions in openQA")
-    cmdupd.add_argument(
-        "-i",
-        "--ignore-onetime",
-        action="store_true",
-        help="Ignore onetime and schedule those test runs",
-    )
-    cmdupd.set_defaults(func=do_aggregate_schedule)
-
-    cmdsync = commands.add_parser("smelt-sync", help="Sync data from SMELT into QEM Dashboard")
-    cmdsync.set_defaults(func=do_sync_smelt)
-
-    cmdgiteasync = commands.add_parser("gitea-sync", help="Sync data from Gitea into QEM Dashboard")
-    cmdgiteasync.add_argument(
-        "--gitea-repo",
-        required=False,
-        type=str,
-        default="products/SLFO",
-        help="Repository on Gitea to check for PRs",
-    )
-    cmdgiteasync.add_argument(
-        "--allow-build-failures",
-        action="store_true",
-        help="Sync data from PRs despite failing packages",
-    )
-    cmdgiteasync.add_argument(
-        "--consider-unrequested-prs",
-        action="store_true",
-        help=f"Consider PRs where no review from team {OBS_GROUP} was requested as well",
-    )
-    cmdgiteasync.add_argument(
-        "--pr-number",
-        required=False,
-        type=int,
-        default=None,
-        help="Only consider the specified PR (for manual debugging)",
-    )
-    cmdgiteasync.set_defaults(func=do_sync_gitea)
-
-    cmdappr = commands.add_parser("sub-approve", help="Approve submissions which passed tests")
-    cmdappr.add_argument(
-        "--all-submissions",
-        action="store_true",
-        help="use all submissions without care about rrid",
-    )
-    cmdappr.add_argument(
-        "-I",
-        "--submission",
-        required=False,
-        type=str,
-        help="Submission ID (to approve only a single submission)",
-    )
-    cmdappr.set_defaults(func=do_approve)
-
-    cmdappr_deprecated = commands.add_parser(
-        "inc-approve", help="DEPRECATED: Approve submissions which passed tests (use sub-approve)"
-    )
-    cmdappr_deprecated.add_argument(
-        "--all-submissions",
-        action="store_true",
-        help="use all submissions without care about rrid",
-    )
-    cmdappr_deprecated.add_argument(
-        "-I",
-        "--incident",
-        required=False,
-        type=str,
-        help="Submission ID (to approve only a single submission)",
-    )
-    cmdappr_deprecated.set_defaults(func=do_approve)
-
-    cmdcomment = commands.add_parser("sub-comment", help="Comment submissions in BuildService")
-    cmdcomment.set_defaults(func=do_comment)
-
-    cmdcomment_deprecated = commands.add_parser(
-        "inc-comment", help="DEPRECATED: Comment submissions in BuildService (use sub-comment)"
-    )
-    cmdcomment_deprecated.set_defaults(func=do_comment)
-
-    cmdsubsync = commands.add_parser("sub-sync-results", help="Sync results of openQA submission jobs to Dashboard")
-    cmdsubsync.set_defaults(func=do_sync_sub_results)
-
-    cmdsubsync_deprecated = commands.add_parser(
-        "inc-sync-results",
-        help="DEPRECATED: Sync results of openQA submission jobs to Dashboard (use sub-sync-results)",
-    )
-    cmdsubsync_deprecated.set_defaults(func=do_sync_sub_results)
-
-    cmdaggrsync = commands.add_parser("aggr-sync-results", help="Sync results of openQA aggregate jobs to Dashboard")
-    cmdaggrsync.set_defaults(func=do_sync_aggregate_results)
-
-    cmdincrementapprove = commands.add_parser(
-        "increment-approve",
-        help="Approve the most recent product increment for an OBS project if tests passed",
-    )
-    cmdincrementapprove.add_argument(
-        "--project-base",
-        required=False,
-        type=str,
-        default="SUSE:SLFO:Products:SLES:16.0",
-        help="The base for projects on OBS",
-    )
-    cmdincrementapprove.add_argument(
-        "--build-project-suffix",
-        required=False,
-        type=str,
-        default="TEST",
-        help="""The project on OBS to monitor.
-        Schedule jobs for (if --schedule is specified) and approve (if all tests passed)""",
-    )
-    cmdincrementapprove.add_argument(
-        "--diff-project-suffix",
-        required=False,
-        type=str,
-        default="PUBLISH/product",
-        help="The project on OBS to compute a package diff to",
-    )
-    cmdincrementapprove.add_argument(
-        "--distri",
-        required=False,
-        type=str,
-        default="sle",
-        help="Monitor and schedule only products with the specified DISTRI parameter",
-    )
-    cmdincrementapprove.add_argument(
-        "--version",
-        required=False,
-        type=str,
-        default="any",
-        help="Monitor and schedule only products with the specified VERSION parameter",
-    )
-    cmdincrementapprove.add_argument(
-        "--flavor",
-        required=False,
-        type=str,
-        default="any",
-        help="Monitor and schedule only products with the specified FLAVOR parameter",
-    )
-    cmdincrementapprove.add_argument(
-        "--schedule",
-        action="store_true",
-        help="Schedule a new product (if none exists or if the most recent product has no jobs)",
-    )
-    cmdincrementapprove.add_argument(
-        "--reschedule",
-        action="store_true",
-        help="Always schedule a new product (even if one already exists)",
-    )
-    cmdincrementapprove.add_argument(
-        "--accepted",
-        action="store_true",
-        help="Consider accepted product increment requests as well",
-    )
-    cmdincrementapprove.add_argument(
-        "--request-id",
-        required=False,
-        type=int,
-        help="Check/approve the specified request (instead of the most recent one)",
-    )
-    cmdincrementapprove.add_argument(
-        "--build-listing-sub-path",
-        required=False,
-        type=str,
-        default="product",
-        help="The sub path of the file listing used to determine BUILD and other parameters",
-    )
-    cmdincrementapprove.add_argument(
-        "--build-regex",
-        required=False,
-        type=str,
-        default=BUILD_REGEX,
-        help="The regex used to determine BUILD and other parameters from the file listing",
-    )
-    cmdincrementapprove.add_argument(
-        "--product-regex",
-        required=False,
-        type=str,
-        default="^SLE.*",
-        help="The regex used to determine what products are relevant",
-    )
-    cmdincrementapprove.add_argument(
-        "--increment-config",
-        required=False,
-        type=Path,
-        default=None,
-        help="Use configuration from the specified YAML document instead of arguments",
-    )
-    cmdincrementapprove.set_defaults(func=do_increment_approve, no_config=True)
-
-    repodiff = commands.add_parser(
-        "repo-diff",
-        help="Computes the diff between two repositories",
-    )
-    repodiff.add_argument(
-        "--repo-a",
-        required=False,
-        type=str,
-        default="SUSE:SLFO:Products:SLES:16.0:TEST/product",
-        help="The first repository",
-    )
-    repodiff.add_argument(
-        "--repo-b",
-        required=False,
-        type=str,
-        default="SUSE:SLFO:Products:SLES:16.0:PUBLISH/product",
-        help="The second repository",
-    )
-    repodiff.set_defaults(func=do_repo_diff_computation, no_config=True)
-
-    cmdamqp = commands.add_parser("amqp", help="AMQP listener daemon")
-    cmdamqp.add_argument("--url", type=str, default=AMQP_URL, help="the URL of the AMQP server")
-    cmdamqp.set_defaults(func=do_amqp)
-
-    return parser
+    amqp_obj = AMQP(args)
+    sys.exit(amqp_obj())
