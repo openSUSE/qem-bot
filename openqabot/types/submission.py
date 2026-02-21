@@ -83,7 +83,7 @@ class Submission:
         if not self.channels:
             raise EmptyChannelsError(self.project)
 
-        self.packages: list[str] = sorted(submission["packages"], key=len)
+        self.packages: list[str] = sorted(submission["packages"], key=len)  # type: ignore[assignment]
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
