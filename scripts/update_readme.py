@@ -18,6 +18,7 @@ def get_help_output() -> str:
     """Run qem-bot.py --help and return the output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
+    env["NO_COLOR"] = "1"
     process = subprocess.run(  # noqa: S603
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,

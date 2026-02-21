@@ -14,6 +14,7 @@ def test_readme_usage_up_to_date() -> None:
     """Ensure the Usage section in Readme.md matches current --help output."""
     env = os.environ.copy()
     env["COLUMNS"] = "80"
+    env["NO_COLOR"] = "1"
     result = subprocess.run(  # noqa: S603
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
