@@ -20,9 +20,9 @@ updates information about submissions and related openQA tests.
 
     >>> qem-bot.py --help
 
-     Usage: qem-bot.py [OPTIONS] COMMAND [ARGS]...
+    Usage: qem-bot.py [OPTIONS] COMMAND [ARGS]...
 
-     QEM-Dashboard, SMELT, Gitea and openQA connector
+    QEM-Dashboard, SMELT, Gitea and openQA connector
 
     ╭─ Options ────────────────────────────────────────────────────────────────────╮
     │ --configs          -c      PATH     Directory or single file with openqabot  │
