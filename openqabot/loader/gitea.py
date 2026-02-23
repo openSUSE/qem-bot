@@ -318,6 +318,11 @@ def add_channel_for_build_result(
     return channel
 
 
+def add_new_method(){
+    ###ddddd
+}
+
+
 def add_build_result(
     submission: dict[str, Any],
     res: Any,  # noqa: ANN401
