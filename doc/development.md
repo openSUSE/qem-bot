@@ -106,7 +106,7 @@ python3 ./qem-bot.py --configs metadata -t 1234 --dry sub-approve
 This should walk over the list of current submissions pending approval.
 
 It is possible to run qem-bot inside a container, please see
-[docs/containers](https://github.com/openSUSE/qem-bot/tree/main/doc/containers.md).
+[docs/containers](containers.md).
 
 ### Local integration testing with qem-dashboard and openQA
 Check out [qem-dashboard](https://github.com/openSUSE/qem-dashboard) and follow
@@ -189,7 +189,7 @@ python3 ./qem-bot.py --debug --dry -t not-secret -i 'http://[::1]:9526' incremen
 ```
 
 In production you should specify the config via `--config`, though. Check out
-[the config documentation](doc/config.md) for details. It also explains what
+[the config documentation](config.md) for details. It also explains what
 this command does step by step.
 
 The parameter `--request-id 391430` is useful to skip the expensive OBS query
