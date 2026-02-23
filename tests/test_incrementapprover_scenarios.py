@@ -2,15 +2,16 @@
 # SPDX-License-Identifier: MIT
 """Test increment approver scenarios."""
 
+from __future__ import annotations
+
 import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import osc.core
 import pytest
-from pytest_mock import MockerFixture
 
 import responses
 from openqabot.errors import AmbiguousApprovalStatusError
@@ -24,10 +25,14 @@ from .helpers import (
     fake_get_binary_file,
     fake_get_binarylist,
     fake_get_repos_of_project,
+    openqa_url,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
 )
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 @pytest.fixture
@@ -429,4 +434,78 @@ def test_issue_194074_specific_request_sles(
     assert any(
         "Skipping config SUSE:SLFO:Products:SL-Micro:6.2:ToTest as it does not match request 399799" in m
         for m in caplog.messages
+    )
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_approval_if_failing_jobs_are_in_development_group(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    # 1. Setup: a failed job exists in job_stats
+    responses.add(
+        responses.GET,
+        openqa_url,
+        json={"done": {"failed": {"job_ids": [123]}}},
+    )
+
+    # 2. Mock OpenQAInterface.get_single_job to return job details
+    # and OpenQAInterface.is_devel_group to return True for its group_id
+    mock_job = {
+        "id": 123,
+        "group": "Development Group",
+        "group_id": 9,
+        "result": "failed",
+    }
+    # 3. Run IncrementApprover
+    increment_approver = prepare_approver(caplog)
+    increment_approver.client.get_single_job = mocker.Mock(return_value=mock_job)
+    increment_approver.client.is_devel_group = mocker.Mock(return_value=True)
+    increment_approver()
+
+    # 4. Verification:
+    # Since the only job was in a development group, it should be ignored.
+    # The IncrementApprover should report "No openQA jobs were found/checked for this request"
+    # because the failed job was filtered out.
+    assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
+    assert "No openQA jobs were found/checked for this request." in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_approval_with_mixed_jobs_development_ignored(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    # 1. Setup: one failed (devel) and one passed (prod) job
+    responses.add(
+        responses.GET,
+        openqa_url,
+        json={"done": {"failed": {"job_ids": [123]}, "passed": {"job_ids": [456]}}},
+    )
+
+    def mock_get_single_job(job_id: int) -> dict[str, Any]:
+        if job_id == 123:
+            return {"id": 123, "group": "Development", "group_id": 9, "result": "failed"}
+        return {"id": 456, "group": "Production", "group_id": 1, "result": "passed"}
+
+    def mock_is_devel_group(group_id: int) -> bool:
+        return group_id == 9
+
+    mock_osc_approve = mocker.patch("osc.core.change_review_state")
+
+    # 3. Run IncrementApprover
+    increment_approver = prepare_approver(caplog)
+    increment_approver.client.get_single_job = mocker.Mock(side_effect=mock_get_single_job)
+    increment_approver.client.is_devel_group = mocker.Mock(side_effect=mock_is_devel_group)
+    increment_approver()
+
+    # 4. Verification:
+    # Job 123 (failed) is ignored. Job 456 (passed) is counted.
+    # The request should be approved because all RELEVANT jobs passed.
+    mock_osc_approve.assert_called()
+    # The message should say "All 1 openQA jobs have passed/softfailed"
+    # because only one job (456) was considered relevant.
+    _, kwargs = mock_osc_approve.call_args
+    assert "All 1 openQA jobs have passed/softfailed" in kwargs["message"]
+    assert (
+        "Approving OBS request https://build.suse.de/request/show/42: All 1 openQA jobs have passed/softfailed"
+        in caplog.text
     )

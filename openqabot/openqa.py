@@ -119,6 +119,19 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching job %s", job_id)
         return None
 
+    def is_in_devel_group(self, job: dict[str, Any]) -> bool:
+        """Check if a job belongs to a development group."""
+        if config.settings.allow_development_groups:
+            return False
+
+        group_name = job.get("group", "")
+        group_id = job.get("group_id")
+
+        if "Devel" in group_name or "Test" in group_name:
+            return True
+
+        return self.is_devel_group(group_id) if group_id else False
+
     @lru_cache(maxsize=256)  # noqa: B019
     def get_older_jobs(self, job_id: int, limit: int) -> dict:
         """Fetch older jobs for a specific job."""

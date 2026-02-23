@@ -115,3 +115,23 @@ def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) ->
     ):
         assert client.get_job_comments(42) == []
     assert "openQA API error when fetching comments for job 42" in caplog.text
+
+
+def test_is_in_devel_group_allow_development_groups() -> None:
+    """Test is_in_devel_group when allow_development_groups is True."""
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    # Settings expects a string or None
+    with patch("openqabot.config.settings.allow_development_groups", "1"):
+        # Should return False regardless of group name if allowed
+        assert not client.is_in_devel_group({"group": "Devel Group"})
+        assert not client.is_in_devel_group({"group": "Production"})
+
+
+def test_is_in_devel_group_no_group_id() -> None:
+    """Test is_in_devel_group when no group_id is present and not matching name."""
+    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    with patch("openqabot.config.settings.allow_development_groups", None):
+        # No group_id and no "Devel"/"Test" in name -> should return False
+        assert not client.is_in_devel_group({"group": "Production"})
+        # No group_id but "Devel" in name -> should return True
+        assert client.is_in_devel_group({"group": "Devel Group"})

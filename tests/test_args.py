@@ -5,15 +5,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
+import typer
 from typer.testing import CliRunner
 
-from openqabot.args import app
+from openqabot.args import app, main
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     import pytest
     from pytest_mock import MockerFixture
 
@@ -199,3 +200,28 @@ def test_command_help(mocker: MockerFixture) -> None:
     result = runner.invoke(app, ["full-run", "--help"])
     assert result.exit_code == 0
     assert "Full schedule for Maintenance Submissions" in result.stdout
+
+
+def test_args_help_no_token(mocker: MockerFixture) -> None:
+    """Test the help check in main callback when no token is provided."""
+    ctx = MagicMock(spec=typer.Context)
+    ctx.resilient_parsing = False
+    ctx.help_option_names = ["--help"]
+    mocker.patch("sys.argv", ["qem-bot", "--help"])
+
+    # We call main directly with token=None
+    # Need to match the parameters of main()
+    main(
+        ctx,
+        configs=Path("/etc/openqabot"),
+        dry=False,
+        fake_data=False,
+        dump_data=False,
+        debug=False,
+        token=None,
+        gitea_token=None,
+        openqa_instance="https://openqa.suse.de",
+        singlearch=Path("/etc/openqabot/singlearch.yml"),
+        retry=2,
+    )
+    # If we reached this point without sys.exit(1), it means it returned (line 112)

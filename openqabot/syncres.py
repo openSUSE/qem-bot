@@ -60,12 +60,6 @@ class SyncRes:
         except KeyError:
             return None
 
-    def is_in_devel_group(self, data: dict[str, Any]) -> bool:
-        """Check if a job belongs to a development group."""
-        return not settings.allow_development_groups and (
-            "Devel" in data["group"] or "Test" in data["group"] or self.client.is_devel_group(data["group_id"])
-        )
-
     def filter_jobs(self, data: dict[str, Any]) -> bool:
         """Filter out invalid/development jobs from results."""
         if "group" not in data:
@@ -75,7 +69,7 @@ class SyncRes:
             log.debug("Skipping job %s: Already has a clone %s", data["id"], data["clone_id"])
             return False
 
-        if self.is_in_devel_group(data):
+        if self.client.is_in_devel_group(data):
             log.debug("Skipping job %s: Belongs to development group '%s'", data["id"], data["group"])
             return False
 

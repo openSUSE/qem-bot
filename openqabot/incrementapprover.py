@@ -127,15 +127,25 @@ class IncrementApprover:
             return False
         return True
 
+    def is_in_devel_group(self, job_id: int) -> bool:
+        """Fetch job details and check if it belongs to a development group."""
+        job = self.client.get_single_job(job_id)
+        return self.client.is_in_devel_group(job) if job else False
+
     def evaluate_openqa_job_results(
         self, results: OpenQAResult, ok_jobs: set[int], not_ok_jobs: dict[str, set[str]], request: osc.core.Request
     ) -> None:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
+            # Filter out jobs that belong to a development group
+            relevant_job_ids = [job_id for job_id in info["job_ids"] if not self.is_in_devel_group(job_id)]
+            if not relevant_job_ids:
+                continue
+
             destination = ok_jobs if result in ok_results else not_ok_jobs[result]
-            self.check_unique_jobid_request_pair(info["job_ids"], request)
-            destination.update(info["job_ids"])
+            self.check_unique_jobid_request_pair(relevant_job_ids, request)
+            destination.update(relevant_job_ids)
 
     def evaluate_list_of_openqa_job_results(
         self, list_of_results: OpenQAResults, request: osc.core.Request

@@ -217,7 +217,12 @@ def prepare_approver(
         patch("osc.conf.get_config", side_effect=fake_osc_get_config),
         patch("openqabot.config.settings.obs_url", "https://api.suse.de"),
     ):
-        return IncrementApprover(args)
+        approver = IncrementApprover(args)
+        approver.client.get_single_job = MagicMock(  # type: ignore[invalid-assignment]
+            side_effect=lambda job_id: {"id": job_id, "group": "Production", "group_id": 1}
+        )
+        approver.client.is_devel_group = MagicMock(return_value=False)  # type: ignore[invalid-assignment]
+        return approver
 
 
 def prepare_approver_with_additional_config(caplog: pytest.LogCaptureFixture) -> IncrementApprover:
