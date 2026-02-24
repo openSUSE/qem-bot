@@ -356,5 +356,27 @@ def test_submissions_call_reproduction_of_repeated_schedule(mocker: MockerFixtur
         }
     ]
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = mock_jobs
-    res = sub_obj(submissions=[sub], token={}, ci_url="", ignore_onetime=False)
+    res = sub_obj(submissions=[sub], token={"Authorization": "fake"}, ci_url="", ignore_onetime=False)
     assert res == []
+
+
+@pytest.mark.usefixtures("request_mock")
+def test_submissions_call_with_token_invokes_is_scheduled() -> None:
+    test_config = {"FLAVOR": {"AAA": {"archs": [""], "issues": {"1234": ":"}}}}
+    sub = Submissions(
+        JobConfig(
+            product="",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "", "DISTRI": None},
+            config=test_config,
+        ),
+        extrasettings=set(),
+    )
+    res = sub(
+        submissions=[MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345)],
+        token={"Authorization": "fake"},
+        ci_url="",
+        ignore_onetime=False,
+    )
+    assert len(res) == 1

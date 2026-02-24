@@ -90,6 +90,8 @@ class Submissions(BaseConf):
     @staticmethod
     def is_scheduled_job(token: dict[str, str], ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
         """Check if a job is already scheduled in the dashboard."""
+        if not token:
+            return False
         jobs = {}
         try:
             url = f"{settings.qem_dashboard_url}api/incident_settings/{ctx.sub.id}"
@@ -119,13 +121,14 @@ class Submissions(BaseConf):
 
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
-        return (
-            gitea.compute_repo_url_for_job_setting(
+        if chan.product == "SUSE:SLFO":
+            return gitea.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-            if chan.product == "SUSE:SLFO"
-            else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
-        )
+        if chan.product == "openSUSE:Backports":
+            full_project = f"{chan.product}:{chan.version}"
+            return f"{settings.download_base_url}/{full_project.replace(':', ':/')}"
+        return f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
 
     def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
         """Find channels in a submission matching the given product and architecture."""
@@ -139,6 +142,14 @@ class Submissions(BaseConf):
                     if channel.product_version
                     else ic.version.startswith(channel.version)
                 )
+            ]
+        if channel.product == "Backports":
+            return [
+                ic
+                for ic in sub.channels
+                if ic.product == "openSUSE:Backports"
+                and ic.arch == arch
+                and ic.version.startswith(channel.version)
             ]
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
         return [f_channel] if f_channel in sub.channels else []
@@ -229,7 +240,7 @@ class Submissions(BaseConf):
         """Add source and dashboard URLs to settings."""
         url = (
             f"{settings.gitea_url}/products/{sub.project}/pulls/{sub.id}"
-            if sub.project == "SLFO"
+            if sub.type == "git"
             else f"{settings.smelt_url}/incident/{sub.id}"
         )
         settings_data["__SOURCE_CHANGE_URL"] = url

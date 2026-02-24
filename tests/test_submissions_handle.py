@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
+import requests
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
@@ -148,6 +149,47 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
     ctx = SubContext(sub, "arch", "flavor", {})
     assert not Submissions.is_scheduled_job({}, ctx, "ver")
+
+
+def test_is_scheduled_job_error_with_token(mocker: MockerFixture) -> None:
+    sub = MockSubmission()
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job({"Authorization": "fake"}, ctx, "ver")
+
+
+def test_is_scheduled_job_empty_jobs(mocker: MockerFixture) -> None:
+    sub = MockSubmission()
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job({"Authorization": "fake"}, ctx, "ver")
+
+
+def test_is_scheduled_job_no_revs_with_token(mocker: MockerFixture) -> None:
+    sub = MockSubmission()
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
+    mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job({"Authorization": "fake"}, ctx, "ver")
+
+
+def test_is_scheduled_job_request_exception(mocker: MockerFixture) -> None:
+    sub = MockSubmission()
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get", side_effect=requests.exceptions.RequestException)
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job({"Authorization": "fake"}, ctx, "ver")
+
+
+def test_is_scheduled_job_no_submission_type(mocker: MockerFixture) -> None:
+    sub = MockSubmission()
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job({"Authorization": "fake"}, ctx, "ver", submission_type=None)
 
 
 def test_handle_submission_embargoed_skip() -> None:
