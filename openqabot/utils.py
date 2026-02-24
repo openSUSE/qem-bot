@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from .types.types import Data
+
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 def create_logger(name: str) -> logging.Logger:
@@ -31,6 +34,19 @@ def create_logger(name: str) -> logging.Logger:
     log.addHandler(handler)
     log.setLevel(logging.INFO)
     return log
+
+
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text for resilient matching."""
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
+def normalize_whitespace(text: str) -> str:
+    """Collapse multiple spaces and normalize line endings for resilient comparison."""
+    # Collapse multiple spaces into one
+    text = re.sub(r" +", " ", text)
+    # Strip leading/trailing whitespace from each line and the whole block
+    return "\n".join(line.strip() for line in text.splitlines()).strip()
 
 
 def get_yml_list(path: Path) -> list[Path]:

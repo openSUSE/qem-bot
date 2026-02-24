@@ -3,26 +3,13 @@
 """Test Readme."""
 
 import os
-import re
 import subprocess  # noqa: S404
 import sys
 from pathlib import Path
 
 import pytest
 
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape sequences from text for resilient matching."""
-    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    return ansi_escape.sub("", text)
-
-
-def normalize_whitespace(text: str) -> str:
-    """Collapse multiple spaces and normalize line endings for resilient comparison."""
-    # Collapse multiple spaces into one
-    text = re.sub(r" +", " ", text)
-    # Strip leading/trailing whitespace from each line and the whole block
-    return "\n".join(line.strip() for line in text.splitlines()).strip()
+from openqabot.utils import normalize_whitespace, strip_ansi
 
 
 def run_readme_usage_check(content: str, expected_block: str) -> None:

@@ -10,14 +10,13 @@ import subprocess  # noqa: S404
 import sys
 from pathlib import Path
 
+# Add project root to sys.path to allow imports from openqabot
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from openqabot.utils import strip_ansi
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape sequences from text."""
-    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    return ansi_escape.sub("", text)
 
 
 def get_help_output() -> str:
