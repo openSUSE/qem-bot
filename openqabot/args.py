@@ -107,14 +107,13 @@ def main(  # noqa: PLR0913
     if debug:
         log_obj.setLevel(logging.DEBUG)
 
-    # Allow missing token if help was requested
+    # Allow missing token if help was requested or dashboard-free mode (--gitea-repo) is used
     if token is None and not ctx.resilient_parsing:
-        # Check if help is in the arguments
         if any(arg in sys.argv for arg in ctx.help_option_names):
             return
-
-        print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
-        sys.exit(1)
+        if "--gitea-repo" not in sys.argv:
+            print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
+            sys.exit(1)
 
     # Store global options in context
     ctx.obj = SimpleNamespace(
@@ -164,7 +163,7 @@ def full_run(
 
 
 @app.command("submissions-run")
-def submissions_run(
+def submissions_run(  # noqa: PLR0913
     ctx: typer.Context,
     *,
     ignore_onetime: Annotated[
@@ -179,11 +178,33 @@ def submissions_run(
             help="Submission ID (to process only a single submission)",
         ),
     ] = None,
+    gitea_repo: Annotated[
+        str | None,
+        typer.Option("--gitea-repo", help="Gitea repository, e.g. for openSUSE products. Enables dashboard-free mode"),
+    ] = None,
+    consider_unrequested_prs: Annotated[
+        bool,
+        typer.Option(
+            "--consider-unrequested-prs", help="Include PRs without {config_module.settings.obs_group} review request"
+        ),
+    ] = False,
+    allow_build_failures: Annotated[
+        bool,
+        typer.Option("--allow-build-failures", help="Include PRs with failing OBS builds"),
+    ] = False,
+    pr_number: Annotated[
+        int | None,
+        typer.Option("--pr-number", help="Only consider the specified PR (for manual debugging)"),
+    ] = None,
 ) -> None:
     """Submissions only schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
     args.ignore_onetime = ignore_onetime
     args.submission = submission
+    args.gitea_repo = gitea_repo
+    args.consider_unrequested_prs = consider_unrequested_prs
+    args.allow_build_failures = allow_build_failures
+    args.pr_number = pr_number
     args.disable_submissions = False
     args.disable_aggregates = True
 

@@ -43,6 +43,16 @@ def test_submission_schedule(mocker: MockerFixture, tmp_path: Path) -> None:
     assert not args.disable_submissions
 
 
+def test_submission_schedule_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(app, ["--configs", str(tmp_path), "submissions-run", "--gitea-repo", "products/PackageHub"])
+    assert result.exit_code == 0
+    bot.assert_called_once()
+    args = bot.call_args[0][0]
+    assert args.gitea_repo == "products/PackageHub"
+
+
 def test_updates_run(mocker: MockerFixture, tmp_path: Path) -> None:
     bot = mocker.patch("openqabot.args.OpenQABot")
     bot.return_value.return_value = 0
