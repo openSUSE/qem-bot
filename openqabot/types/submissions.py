@@ -59,6 +59,8 @@ class Submissions(BaseConf):
     def product_version_from_issue_channel(issue: str) -> ProdVer:
         """Extract product and version from an issue channel string."""
         channel_parts = issue.split(":")
+        if len(channel_parts) < 2:  # noqa: PLR2004
+            return ProdVer(issue, "")
         version_parts = channel_parts[1].split("#")
         return ProdVer(channel_parts[0], *version_parts)
 
@@ -125,7 +127,7 @@ class Submissions(BaseConf):
             return gitea.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-        if chan.product == "openSUSE:Backports":
+        if chan.product.startswith("openSUSE:"):
             full_project = f"{chan.product}:{chan.version}"
             return f"{settings.download_base_url}/{full_project.replace(':', ':/')}"
         return f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
@@ -148,6 +150,15 @@ class Submissions(BaseConf):
                 ic
                 for ic in sub.channels
                 if ic.product == "openSUSE:Backports" and ic.arch == arch and ic.version.startswith(channel.version)
+            ]
+        if channel.product.startswith("openSUSE/"):
+            obs_product = channel.product.replace("/", ":")
+            return [
+                ic
+                for ic in sub.channels
+                if ic.product == obs_product
+                and ic.arch == arch
+                and (not channel.version or ic.version.startswith(channel.version))
             ]
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
         return [f_channel] if f_channel in sub.channels else []

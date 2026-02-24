@@ -57,7 +57,6 @@ class OpenQABot:
             sub.log_skipped()
 
         extrasettings = get_onearch(args.singlearch)
-
         self.workers = load_metadata(
             args.configs,
             aggregate=args.disable_aggregates,

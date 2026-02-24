@@ -65,13 +65,13 @@ class Submission:
         # add channels for Gitea-based submissions
         self.skipped_products = set()
         for r in submission["channels"]:
-            if not r.startswith(("SUSE:SLFO", "openSUSE:Backports")):
+            if not r.startswith(("SUSE:SLFO", "openSUSE:Backports", "openSUSE:Leap")):
                 continue
             val = r.split(":")
             if len(val) <= 3:  # noqa: PLR2004
                 continue
             obs_project = ":".join(val[2:-1])
-            if r.startswith("openSUSE:Backports"):
+            if r.startswith(("openSUSE:Backports", "openSUSE:Leap")):
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
                 continue
             product = gitea.get_product_name(obs_project)
