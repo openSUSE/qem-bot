@@ -52,8 +52,10 @@ class BuildResults:
 PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
 VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
-OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/(.*)")
-URL_FINDALL_REGEX = re.compile(r"https://[^ \n]*")
+OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
+# Regex to find all HTTPS URLs, excluding common trailing punctuation like dots or parentheses
+# that are likely part of the surrounding text (e.g. at the end of a sentence or in Markdown).
+URL_FINDALL_REGEX = re.compile(r"https?://[^\s\?\#\)]*[^\s\?\#\)\.]")
 
 
 def make_token_header(token: str) -> dict[str, str]:
@@ -455,12 +457,22 @@ def add_comments_and_referenced_build_results(
     dry: bool,
 ) -> None:
     """Find and process build result URLs from bot comments on a PR."""
-    bot_comment = next(
-        (comment for comment in reversed(comments) if comment["user"]["username"] == "autogits_obs_staging_bot"),
-        None,
-    )
-    if bot_comment:
-        add_build_results(submission, URL_FINDALL_REGEX.findall(bot_comment["body"]), dry=dry)
+    bot_comments = [
+        comment for comment in comments if comment["user"]["username"] == config.settings.git_obs_staging_bot_user
+    ]
+    if not bot_comments:
+        return
+
+    obs_urls = {url for comment in bot_comments for url in URL_FINDALL_REGEX.findall(comment["body"])}
+
+    if obs_urls:
+        add_build_results(submission, sorted(obs_urls), dry=dry)
+    else:
+        log.warning(
+            "PR git:%s: No OBS URLs found in comments from %s",
+            submission["number"],
+            config.settings.git_obs_staging_bot_user,
+        )
 
 
 def add_packages_from_patchinfo(
