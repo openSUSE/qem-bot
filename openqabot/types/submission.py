@@ -24,7 +24,13 @@ class Submission:
     """Information about a submission."""
 
     def __init__(self, submission: dict[str, Any]) -> None:
-        """Initialize the Submission class."""
+        """Parse a submission dict to prepare for scheduling.
+
+        Accepts channels from all supported submission sources (SUSE
+        maintenance, Gitea SLFO and openSUSE PRs).
+        Raises EmptyChannelsError if no discoverable channels are found, or
+        EmptyPackagesError if the submission lists no packages to test.
+        """
         self.rr: int | None = submission["rr_number"]
         self.project: str = submission["project"]
         self.id: int = submission["number"]
@@ -59,12 +65,15 @@ class Submission:
         # add channels for Gitea-based submissions
         self.skipped_products = set()
         for r in submission["channels"]:
-            if not r.startswith("SUSE:SLFO"):
+            if not r.startswith(("SUSE:SLFO", "openSUSE:Backports")):
                 continue
             val = r.split(":")
             if len(val) <= 3:  # noqa: PLR2004
                 continue
             obs_project = ":".join(val[2:-1])
+            if r.startswith("openSUSE:Backports"):
+                self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
+                continue
             product = gitea.get_product_name(obs_project)
             if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))

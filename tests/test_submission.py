@@ -285,6 +285,13 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
     assert submission.channels[0].product == "SUSE:SLFO"
 
 
+def test_backports_channel_parsing() -> None:
+    data = deepcopy(test_data)
+    data["channels"] = ["openSUSE:Backports:SLE-16.0:PullRequest:397:x86_64"]
+    sub = Submission(data)
+    assert Repos("openSUSE:Backports", "SLE-16.0:PullRequest:397", "x86_64") in sub.channels
+
+
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
     submission.rev_cache_params = (None, None, None)
