@@ -1,0 +1,3 @@
+paths:
+  "pyproject.toml":
+    - If dependencies change keep in mind to update https://build.suse.de/package/show/QA:Maintenance:tw/qem-bot-container as well
