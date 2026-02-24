@@ -12,8 +12,10 @@ from openqabot.dashboard import put
 
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
+from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_token_header
 from .loader.qem import get_submissions
 from .openqa import OpenQAInterface
+from .types.submission import Submission
 
 log = getLogger("bot.openqabot")
 
@@ -26,10 +28,30 @@ class OpenQABot:
         log.info("Starting bot schedule")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
-        self.token = {"Authorization": "Token " + args.token}
         self.submission_arg = args.submission if hasattr(args, "submission") else None
-        self.submissions = get_submissions(self.token, self.submission_arg)
-        log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
+
+        if args.gitea_repo:
+            self.token: dict[str, str] = {}
+            gitea_token = make_token_header(args.gitea_token) if args.gitea_token else {}
+            open_prs = get_open_prs(
+                gitea_token,
+                args.gitea_repo,
+                dry=False,
+                number=args.pr_number,
+            )
+            open_submissions_raw = get_submissions_from_open_prs(
+                open_prs,
+                gitea_token,
+                only_successful_builds=not args.allow_build_failures,
+                only_requested_prs=not args.consider_unrequested_prs,
+                dry=False,
+            )
+            self.submissions = [s for s in (Submission.create(r) for r in open_submissions_raw) if s is not None]
+            log.info("Loaded %s submissions directly from Gitea", len(self.submissions))
+        else:
+            self.token = {"Authorization": "Token " + args.token}
+            self.submissions = get_submissions(self.token, self.submission_arg)
+            log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
 
         for sub in self.submissions:
             sub.log_skipped()
@@ -48,6 +70,8 @@ class OpenQABot:
 
     def post_qem(self, data: dict[str, Any], api: str) -> None:
         """Update dashboard database with job results."""
+        if not self.token:
+            return
         if not self.openqa:
             log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return

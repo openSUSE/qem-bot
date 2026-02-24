@@ -87,6 +87,7 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_submissions=False,
         submission=None,
+        gitea_repo=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -112,6 +113,7 @@ def test_dry(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_submissions=False,
         submission=None,
+        gitea_repo=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -137,6 +139,7 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_submissions=False,
         submission=None,
+        gitea_repo=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -163,6 +166,7 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
         disable_aggregates=False,
         disable_submissions=False,
         submission=None,
+        gitea_repo=None,
     )
     bot = openqabot.openqabot.OpenQABot(args)
 
@@ -173,3 +177,52 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
     assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
     assert "Triggering 1 products in openQA" in caplog.messages
     assert "Skipping dashboard update: Job post failed" in caplog.messages
+
+
+@pytest.mark.usefixtures("mock_openqa_passed")
+def test_gitea_source(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mocker.patch("openqabot.openqabot.get_open_prs", return_value=[])
+    mocker.patch("openqabot.openqabot.get_submissions_from_open_prs", return_value=[])
+    mocker.patch("openqabot.openqabot.load_metadata", return_value=[])
+    mocker.patch("openqabot.openqabot.get_onearch", return_value=set())
+    args = Namespace(
+        dry=False,
+        ignore_onetime=False,
+        token="",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.opensuse.org"),
+        configs=None,
+        disable_aggregates=True,
+        disable_submissions=False,
+        submission=None,
+        gitea_repo="products/PackageHub",
+        gitea_token=None,
+        pr_number=None,
+        allow_build_failures=False,
+        consider_unrequested_prs=False,
+    )
+    bot = openqabot.openqabot.OpenQABot(args)
+    assert bot.token == {}
+    assert "Loaded 0 submissions directly from Gitea" in caplog.text
+
+
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_empty_token(mocker: MockerFixture) -> None:
+    put_mock = mocker.patch("openqabot.openqabot.put")
+    args = Namespace(
+        dry=False,
+        ignore_onetime=False,
+        token="token",
+        singlearch="single",
+        openqa_instance=urlparse("https://openqa.suse.de"),
+        configs=None,
+        disable_aggregates=False,
+        disable_submissions=False,
+        submission=None,
+        gitea_repo=None,
+    )
+    bot = openqabot.openqabot.OpenQABot(args)
+    bot.token = {}
+    bot.post_qem({"some": "data"}, "api/test")
+    put_mock.assert_not_called()

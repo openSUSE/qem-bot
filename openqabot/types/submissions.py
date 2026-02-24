@@ -147,9 +147,7 @@ class Submissions(BaseConf):
             return [
                 ic
                 for ic in sub.channels
-                if ic.product == "openSUSE:Backports"
-                and ic.arch == arch
-                and ic.version.startswith(channel.version)
+                if ic.product == "openSUSE:Backports" and ic.arch == arch and ic.version.startswith(channel.version)
             ]
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
         return [f_channel] if f_channel in sub.channels else []
