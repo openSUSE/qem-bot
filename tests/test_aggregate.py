@@ -44,10 +44,16 @@ def aggregate_factory() -> Any:
 @pytest.fixture
 def submission_mock(mocker: MockerFixture) -> Any:
     def _func(
-        product: str = "P", version: str = "V", arch: str = "A", *, embargoed: bool = False, staging: bool = False
+        product: str = "P",
+        version: str = "V",
+        arch: str = "A",
+        *,
+        embargoed: bool = False,
+        staging: bool = False,
+        sub_id: int = 123,
     ) -> MagicMock:
         sub = mocker.MagicMock(spec=Submission)
-        sub.id = 123
+        sub.id = sub_id
         sub.livepatch = None
         sub.staging = staging
         sub.channels = [Repos(product=product, version=version, arch=arch)]
@@ -96,12 +102,17 @@ def test_aggregate_call_with_test_issues(
     aggregate_factory: Any, config: dict, submission_mock: Any, mocker: MockerFixture
 ) -> None:
     """Test with a valid submission."""
-    config["test_issues"] = {"AAAAAAA": "BBBBBBBBB:CCCCCCCC"}
+    config["test_issues"] = {"BASE_TEST_ISSUES": "BBBBBBBBB:CCCCCCCC", "OS_TEST_ISSUES": "EEEEEEEEE:FFFFFFFF"}
     acc = aggregate_factory(product="product", config=config)
     sub = submission_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
+    sub2 = submission_mock(product="EEEEEEEEE", version="FFFFFFFF", arch="ciao", sub_id=42)
     mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    res = acc(submissions=[sub], token={}, ci_url=None)
+    res = acc(submissions=[sub, sub2], token={}, ci_url=None)
     assert len(res) == 1
+    settings = res[0]["openqa"]
+    assert settings["BASE_TEST_ISSUES"] == "123", "BASE_TEST_ISSUES present"
+    assert settings["OS_TEST_ISSUES"] == "42", "OS_TEST_ISSUES present"
+    assert settings["TEST_ISSUES[]"] == "123,42", "TEST_ISSUES[] contains list of other …_TEST_ISSUES settings"
 
 
 @pytest.mark.usefixtures("request_mock")

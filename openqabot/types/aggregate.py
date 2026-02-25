@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 
 log = getLogger("bot.types.aggregate")
 
+ALL_ISSUES_KEY = "TEST_ISSUES[]"
+
 
 class PostData(NamedTuple):
     """Data to be posted to dashboard."""
@@ -95,8 +97,11 @@ class Aggregate(BaseConf):
             for issue, template in self.test_issues.items():
                 if Repos(template.product, template.version, issues_arch) in sub.channels:
                     test_submissions[issue].append(sub)
+                    test_submissions[ALL_ISSUES_KEY].append(sub)
 
         for issue, subs in test_submissions.items():
+            if issue == ALL_ISSUES_KEY:
+                continue
             tmpl = issue.replace("ISSUES", "REPOS")
             test_repos[tmpl].extend(self._get_repo_url(sub, issue, issues_arch) for sub in subs)
         return test_submissions, test_repos
