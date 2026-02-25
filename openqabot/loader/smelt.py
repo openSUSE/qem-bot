@@ -26,11 +26,18 @@ ACTIVE_FST = '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo \
 ACTIVE_NEXT = '{ incidents(status_Name_Iexact:"active", first: 100, \
 after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { incidentId}}}}'
 
-INCIDENT = "{incidents(incidentId: %(incident)s) { edges { node {emu project \
-repositories { edges { node { name } } } requestSet(kind: RR) { edges { node \
-{ requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
-status { name } } } } } } } packages { edges { node { name } } } \
-    crd priority } } } }"
+
+def get_incident_query(incident: int, kind: str) -> str:
+    """Generate a GraphQL query for a single incident with a specific kind format."""
+    return (
+        f"{{incidents(incidentId: {incident}) {{ edges {{ node {{emu project "
+        "repositories { edges { node { name } } } "
+        f"requestSet(kind: {kind}) {{ edges {{ node "
+        "{ requestId status { name } reviewSet { edges { node { assignedByGroup { name } "
+        "status { name } } } } } } } packages { edges { node { name } } } "
+        "crd priority } } } }"
+    )
+
 
 ACTIVE_INC_SCHEMA = {
     "type": "object",
@@ -160,12 +167,24 @@ def get_active_submission_ids() -> set[int]:
     return active
 
 
-def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
+def discover_kind(incident: int) -> str:
+    """Discover whether SMELT GraphQL expects Enum or String for the kind argument."""
+    for kind in ("RR", '"RR"'):
+        query = get_incident_query(incident, kind)
+        res = get_json(query)
+        if "errors" not in res:
+            return kind
+    log.error("Could not discover a valid kind format for SMELT GraphQL API")
+    return "RR"
+
+
+def get_submission_from_smelt(incident: int, kind: str) -> dict[str, Any] | None:
     """Fetch detailed information for a single submission from SMELT."""
-    query = INCIDENT % {"incident": incident}
+    query = get_incident_query(incident, kind)
 
     log.info("Fetching details for SMELT incident smelt:%s", incident)
     inc_result = get_json(query)
+
     try:
         validate(instance=inc_result, schema=INCIDENT_SCHEMA)
         inc_result = cast("dict[str, Any]", walk(inc_result["data"]["incidents"]["edges"][0]["node"]))
@@ -181,7 +200,13 @@ def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
 
 def get_submissions(active: set[int]) -> list[dict[str, Any]]:
     """Fetch detailed information for a set of submissions from SMELT in parallel."""
+    if not active:
+        return []
+
+    # Discover format using the first incident ID
+    kind = discover_kind(next(iter(active)))
+
     with futures.ThreadPoolExecutor() as executor:
-        future_sub = [executor.submit(get_submission_from_smelt, inc) for inc in active]
+        future_sub = [executor.submit(get_submission_from_smelt, inc, kind) for inc in active]
         submissions = (future.result() for future in futures.as_completed(future_sub))
         return [sub for sub in submissions if sub]

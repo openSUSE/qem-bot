@@ -70,6 +70,7 @@ def fake_smelt_api(request: pytest.FixtureRequest) -> None:
 @pytest.fixture
 def fake_qem(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.smeltsync.get_active_submission_ids", return_value=["100"])
+    mocker.patch("openqabot.loader.smelt.discover_kind", return_value="RR")
 
 
 @pytest.fixture
