@@ -116,4 +116,4 @@ class SMELTSync:
     @classmethod
     def create_list(cls, submissions: list[Any]) -> list[dict[str, Any]]:
         """Create a list of dashboard-compatible records from SMELT incidents."""
-        return [cls.create_record(sub) for sub in submissions]
+        return [r for r in (cls.create_record(sub) for sub in submissions) if r["packages"]]

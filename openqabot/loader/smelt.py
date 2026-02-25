@@ -26,11 +26,11 @@ ACTIVE_FST = '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo \
 ACTIVE_NEXT = '{ incidents(status_Name_Iexact:"active", first: 100, \
 after: "%(cursor)s" ) { pageInfo { hasNextPage endCursor} edges { node { incidentId}}}}'
 
-INCIDENT = '{incidents(incidentId: %(incident)s) { edges { node {emu project \
-repositories { edges { node { name } } } requestSet(kind: "RR") { edges { node \
+INCIDENT = "{incidents(incidentId: %(incident)s) { edges { node {emu project \
+repositories { edges { node { name } } } requestSet(kind: RR) { edges { node \
 { requestId status { name } reviewSet { edges { node { assignedByGroup { name } \
-status { name } } } } } } } packages { edges { node { name } } } } } \
-    edges{ node { crd priority } } } }'
+status { name } } } } } } } packages { edges { node { name } } } \
+    crd priority } } } }"
 
 ACTIVE_INC_SCHEMA = {
     "type": "object",
