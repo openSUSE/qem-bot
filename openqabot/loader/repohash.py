@@ -53,7 +53,12 @@ def get_max_revision(
         product_name = options.product_name or gitea.get_product_name(repo.version)
         product_version = options.product_version or repo.product_version
         repo_with_opts = repo._replace(product_version=product_version)
-        url = repo_with_opts.compute_url(config.settings.obs_download_url, product_name, arch, project=project)
+        base_url = (
+            config.settings.download_base_url
+            if repo.product.startswith("openSUSE:")
+            else config.settings.obs_download_url
+        )
+        url = repo_with_opts.compute_url(base_url, product_name, arch, project=project)
         log.debug("Computing RepoHash for %s from %s", repo.version, url)
 
         try:

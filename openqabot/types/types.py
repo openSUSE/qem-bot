@@ -27,9 +27,9 @@ class Repos(NamedTuple):
     ) -> str:
         """Construct the repository URL."""
         arch = arch or self.arch
+        product = self.product.replace(":", ":/")
+        version = self.version.replace(":", ":/")
         if project == "SLFO" or self.product.startswith("SUSE:SLFO"):
-            product = self.product.replace(":", ":/")
-            version = self.version.replace(":", ":/")
             start = f"{base}/{product}:/{version}/{OBS_REPO_TYPE}"
             if not product_name:
                 return f"{start}/{path}"
@@ -38,6 +38,8 @@ class Repos(NamedTuple):
                 raise ValueError(msg)
             return f"{start}/repo/{product_name}-{self.product_version}-{arch}/{path}"
 
+        if self.product.startswith("openSUSE:"):
+            return f"{base}/{product}:/{version}/{OBS_REPO_TYPE}/{path}"
         url_base = f"{base}/{project.replace(':', ':/')}" if project else base
         if self.product.startswith("openSUSE"):
             return f"{url_base}/SUSE_Updates_{self.product}_{self.version}/{path}"
