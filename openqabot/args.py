@@ -107,14 +107,6 @@ def main(  # noqa: PLR0913
     if debug:
         log_obj.setLevel(logging.DEBUG)
 
-    # Allow missing token if help was requested or dashboard-free mode (--gitea-repo) is used
-    if token is None and not ctx.resilient_parsing:
-        if any(arg in sys.argv for arg in ctx.help_option_names):
-            return
-        if "--gitea-repo" not in sys.argv:
-            print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
-            sys.exit(1)
-
     # Store global options in context
     ctx.obj = SimpleNamespace(
         configs=configs,
@@ -128,6 +120,19 @@ def main(  # noqa: PLR0913
         singlearch=singlearch,
         retry=retry,
     )
+
+
+def _require_token(args: SimpleNamespace) -> None:
+    """Enforce that a qem-dashboard token is present before entering a command.
+
+    Call this guard at the start of every command that does need the dashboard.
+    Used in the most `qem-bot` subcommands which use the qem-dashboard API,
+    which requires Bearer token authentication. The token
+    is intentionally optional, in case of dashboard-free commands.
+    """
+    if args.token is None:
+        typer.echo("Error: Missing option '--token' / '-t'.", err=True)
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -149,6 +154,7 @@ def full_run(
 ) -> None:
     """Full schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
+    _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.submission = submission
     args.disable_submissions = False
@@ -199,6 +205,8 @@ def submissions_run(  # noqa: PLR0913
 ) -> None:
     """Submissions only schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
+    if not gitea_repo:
+        _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.submission = submission
     args.gitea_repo = gitea_repo
@@ -248,6 +256,7 @@ def updates_run(
 ) -> None:
     """Aggregates only schedule for Maintenance Submissions in openQA."""  # noqa: D401
     args = ctx.obj
+    _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.disable_aggregates = False
     args.disable_submissions = True
@@ -264,6 +273,7 @@ def updates_run(
 def smelt_sync(ctx: typer.Context) -> None:
     """Sync data from SMELT into QEM Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     if not args.configs.is_dir():
         log.error("Configuration error: %s is not a valid directory", args.configs)
@@ -333,6 +343,7 @@ def sub_approve(
 ) -> None:
     """Approve submissions which passed tests."""
     args = ctx.obj
+    _require_token(args)
     args.all_submissions = all_submissions
     args.submission = submission
     args.incident = submission
@@ -370,6 +381,7 @@ def inc_approve(
 def sub_comment(ctx: typer.Context) -> None:
     """Comment submissions in BuildService."""
     args = ctx.obj
+    _require_token(args)
 
     if not args.configs.is_dir():
         log.error("Configuration error: %s is not a valid directory", args.configs)
@@ -389,6 +401,7 @@ def inc_comment(ctx: typer.Context) -> None:
 def sub_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA submission jobs to Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     if not args.configs.is_dir():
         log.error("Configuration error: %s is not a valid directory", args.configs)
@@ -408,6 +421,7 @@ def inc_sync_results(ctx: typer.Context) -> None:
 def aggr_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA aggregate jobs to Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     if not args.configs.is_dir():
         log.error("Configuration error: %s is not a valid directory", args.configs)
