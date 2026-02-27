@@ -95,7 +95,7 @@ class SyncRes:
         )
         log.debug("Full post data: %s", pformat(result))
 
-        if not self.dry and self.client:
-            post_job(self.token, result)
-        else:
+        if self.dry or not self.client:
             log.debug("Dry run: Skipping dashboard update")
+            return
+        post_job(self.token, result)
