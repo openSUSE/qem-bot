@@ -26,6 +26,7 @@ class AggregateResultsSync(SyncRes):
 
     def __call__(self) -> int:
         """Run the synchronization process."""
+        log.info("Synchronizing results for %s products...", len(self.product))
         update_setting = list(
             chain.from_iterable(get_aggregate_settings_data(self.token, product) for product in self.product)
         )
@@ -36,6 +37,9 @@ class AggregateResultsSync(SyncRes):
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
 
+        total_jobs = sum(len(v) for v in job_results.values())
+        log.info("Fetched %s total jobs from openQA.", total_jobs)
+
         results = [
             r
             for key, values in job_results.items()
@@ -45,7 +49,6 @@ class AggregateResultsSync(SyncRes):
 
         for r in results:
             self.post_result(r)
-
-        log.info("Aggregate results sync completed")
+        log.info("Aggregate results sync completed: Synced %s job results to the dashboard", len(results))
 
         return 0

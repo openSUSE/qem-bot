@@ -72,14 +72,10 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     ret = syncer()
     assert ret == 0
     assert caplog.messages == [
+        "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
-        (
-            f"Fetching openQA jobs for Data(submission=100, "
-            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
-            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-            "build='123', product='')"
-        ),
-        "Submission results sync completed",
+        "Fetched 1 total jobs from openQA.",
+        "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
 
 
@@ -105,14 +101,10 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     ret = syncer()
     assert ret == 0
     assert caplog.messages == [
+        "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
-        (
-            f"Fetching openQA jobs for Data(submission=100, "
-            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
-            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-            "build='123', product='')"
-        ),
-        "Submission results sync completed",
+        "Fetched 1 total jobs from openQA.",
+        "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
 
 
@@ -143,14 +135,10 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
     ret = syncer()
     assert ret == 0
     assert caplog.messages == [
+        "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
-        (
-            f"Fetching openQA jobs for Data(submission=100, "
-            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
-            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-            "build='123', product='')"
-        ),
-        "Submission results sync completed",
+        "Fetched 1 total jobs from openQA.",
+        "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
 
 
@@ -179,14 +167,10 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     ret = syncer()
     assert ret == 0
     assert caplog.messages == [
+        "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
-        (
-            f"Fetching openQA jobs for Data(submission=100, "
-            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
-            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-            "build='123', product='')"
-        ),
-        "Submission results sync completed",
+        "Fetched 1 total jobs from openQA.",
+        "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
 
 
@@ -215,14 +199,8 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     ret = syncer()
     assert ret == 0
     assert caplog.messages == [
+        "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
-        (
-            f"Fetching openQA jobs for Data(submission=100, "
-            f"submission_type='{DEFAULT_SUBMISSION_TYPE}', settings_id=110, "
-            "flavor='FakeFlavor', arch='arch', distri='linux', version='13.3', "
-            "build='123', product='')"
-        ),
-        f"Syncing submission job 1234 for submission {DEFAULT_SUBMISSION_TYPE}:100: Status passed",
-        "Dry run: Skipping dashboard update",
-        "Submission results sync completed",
+        "Fetched 1 total jobs from openQA.",
+        "Submission results sync completed: Synced 1 job results to the dashboard",
     ]

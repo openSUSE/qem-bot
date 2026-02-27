@@ -25,12 +25,17 @@ class SubResultsSync(SyncRes):
 
     def __call__(self) -> int:
         """Run the synchronization process."""
+        log.info("Synchronizing results for %s active submissions...", len(self.active))
         submissions = list(chain.from_iterable(get_submission_settings_data(self.token, sub) for sub in self.active))
         full = {}
         with futures.ThreadPoolExecutor() as executor:
             future_result = {executor.submit(self.client.get_jobs, f): f for f in submissions}
             for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()
+
+        total_jobs = sum(len(v) for v in full.values())
+        log.info("Fetched %s total jobs from openQA.", total_jobs)
+
         results = [
             r
             for key, value in full.items()
@@ -39,5 +44,5 @@ class SubResultsSync(SyncRes):
         ]
         for r in results:
             self.post_result(r)
-        log.info("Submission results sync completed")
+        log.info("Submission results sync completed: Synced %s job results to the dashboard", len(results))
         return 0

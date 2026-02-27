@@ -86,7 +86,7 @@ class SyncRes:
         elif result.get("update_settings"):
             sub_id = " for aggregate"
 
-        log.info(
+        log.debug(
             "Syncing %s job %s%s: Status %s",
             self.operation,
             result["job_id"],
@@ -98,4 +98,4 @@ class SyncRes:
         if not self.dry and self.client:
             post_job(self.token, result)
         else:
-            log.info("Dry run: Skipping dashboard update")
+            log.debug("Dry run: Skipping dashboard update")

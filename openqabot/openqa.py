@@ -73,7 +73,7 @@ class OpenQAInterface:
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         """Fetch openQA jobs matching the given criteria."""
-        log.info("Fetching openQA jobs for %s", pformat(data))
+        log.debug("Fetching openQA jobs for %s", pformat(data))
         param = {
             "scope": "relevant",
             "latest": "1",
