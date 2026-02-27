@@ -10,6 +10,7 @@ from logging import getLogger
 from typing import Any, cast
 
 from openqabot import config
+from openqabot.config import GITEA_CHANNEL_PREFIXES, OPENSUSE_CHANNEL_PREFIXES
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.loader.repohash import RepoOptions, get_max_revision
@@ -65,13 +66,13 @@ class Submission:
         # add channels for Gitea-based submissions
         self.skipped_products = set()
         for r in submission["channels"]:
-            if not r.startswith(("SUSE:SLFO", "openSUSE:Backports", "openSUSE:Leap")):
+            if not r.startswith(GITEA_CHANNEL_PREFIXES):
                 continue
             val = r.split(":")
             if len(val) <= 3:  # noqa: PLR2004
                 continue
             obs_project = ":".join(val[2:-1])
-            if r.startswith(("openSUSE:Backports", "openSUSE:Leap")):
+            if r.startswith(OPENSUSE_CHANNEL_PREFIXES):
                 self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
                 continue
             product = gitea.get_product_name(obs_project)

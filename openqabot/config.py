@@ -105,6 +105,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+GITEA_CHANNEL_PREFIXES: tuple[str, ...] = ("SUSE:SLFO", "openSUSE:Backports", "openSUSE:Leap")
+OPENSUSE_CHANNEL_PREFIXES: tuple[str, ...] = ("openSUSE:Backports", "openSUSE:Leap")
 
 
 def __getattr__(name: str) -> Any:  # noqa: ANN401

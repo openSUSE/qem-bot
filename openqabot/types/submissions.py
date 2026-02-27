@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot.config import OBSOLETE_PARAMS, settings
+from openqabot.config import OBSOLETE_PARAMS, OPENSUSE_CHANNEL_PREFIXES, settings
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
@@ -58,11 +58,9 @@ class Submissions(BaseConf):
     @staticmethod
     def product_version_from_issue_channel(issue: str) -> ProdVer:
         """Extract product and version from an issue channel string."""
-        channel_parts = issue.split(":")
-        if len(channel_parts) < 2:  # noqa: PLR2004
-            return ProdVer(issue, "")
-        version_parts = channel_parts[1].split("#")
-        return ProdVer(channel_parts[0], *version_parts)
+        product, _, channel_parts = issue.partition(":")
+        version, *version_parts = channel_parts.split("#")
+        return ProdVer(product, version, *version_parts)
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
@@ -145,14 +143,10 @@ class Submissions(BaseConf):
                     else ic.version.startswith(channel.version)
                 )
             ]
-        if channel.product == "Backports":
-            return [
-                ic
-                for ic in sub.channels
-                if ic.product == "openSUSE:Backports" and ic.arch == arch and ic.version.startswith(channel.version)
-            ]
-        if channel.product.startswith("openSUSE/"):
-            obs_product = channel.product.replace("/", ":")
+        obs_product = (
+            f"openSUSE:{channel.product}" if channel.product == "Backports" else channel.product.replace("/", ":")
+        )
+        if obs_product in OPENSUSE_CHANNEL_PREFIXES:
             return [
                 ic
                 for ic in sub.channels
