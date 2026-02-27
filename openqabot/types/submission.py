@@ -137,8 +137,8 @@ class Submission:
 
         self.rev_cache_params = params
         product_name = product_repo[-1] if isinstance(product_repo, list) else product_repo
-        opts = RepoOptions(product_name, product_version, str(self))
-
+        repo_url = config.settings.download_base_url if self.type == "git" else config.settings.obs_download_url
+        opts = RepoOptions(product_name, product_version, str(self), repo_url)
         try:
             self.revisions = self.rev(
                 self.channels,

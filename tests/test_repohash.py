@@ -15,6 +15,7 @@ from requests import HTTPError as RequestsHTTPError
 
 import openqabot.loader.repohash as rp
 import responses
+from openqabot.config import OBS_REPO_TYPE
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
 from openqabot.types.types import Repos
@@ -46,6 +47,18 @@ def test_get_max_revision_opensuse() -> None:
     responses.add(responses.GET, url=url, body=opensuse)
     ret = rp.get_max_revision(repos, arch, PROJECT)
     assert ret == 256
+
+
+@responses.activate
+def test_get_max_revision_opensuse_colon() -> None:
+    arch = "x86_64"
+    repos = [Repos("openSUSE:Backports", "SLE-16.0:PullRequest:397", arch)]
+    xml = BASE_XML % "512"
+    url = f"http://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-16.0:/PullRequest:/397/{OBS_REPO_TYPE}/repodata/repomd.xml"
+    responses.add(responses.GET, url=url, body=xml)
+    opts = RepoOptions(download_repo_url="http://download.opensuse.org/repositories")
+    ret = rp.get_max_revision(repos, arch, "openSUSE:Backports", opts)
+    assert ret == 512
 
 
 arch = "x86_64"

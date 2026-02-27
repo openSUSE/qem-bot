@@ -237,6 +237,7 @@ def test_sub_rev_empty_channels() -> None:
     sub.project = "project"
     sub.compute_revisions_for_product_repo = Submission.compute_revisions_for_product_repo.__get__(sub, Submission)
     sub.rev = Submission.rev
+    sub.type = "git"
     assert not sub.compute_revisions_for_product_repo(None, None)
 
 

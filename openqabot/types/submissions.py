@@ -119,16 +119,27 @@ class Submissions(BaseConf):
             for job in jobs
         )
 
-    def make_repo_url(self, sub: Submission, chan: Repos) -> str:
-        """Construct the repository URL for a submission channel."""
+    def _make_gitea_repo_url(self, chan: Repos) -> str:
         if chan.product == "SUSE:SLFO":
             return gitea.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-        if chan.product.startswith("openSUSE:"):
-            full_project = f"{chan.product}:{chan.version}"
-            return f"{settings.download_base_url}/{full_project.replace(':', ':/')}"
+        full_project = f"{chan.product}:{chan.version}"
+        return f"{settings.download_base_url}/{full_project.replace(':', ':/')}"
+
+    def _make_maintenance_repo_url(self, sub: Submission, chan: Repos) -> str:
         return f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
+
+    def make_repo_url(self, sub: Submission, chan: Repos) -> str:
+        """Construct the INCIDENT_REPO URL for a submission channel.
+
+        Gitea-sourced submissions (type "git") point at the configured
+        download mirror, while SUSE maintenance submissions point at the IBS
+        maintenance update path.
+        """
+        if sub.type == "git":
+            return self._make_gitea_repo_url(chan)
+        return self._make_maintenance_repo_url(sub, chan)
 
     def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
         """Find channels in a submission matching the given product and architecture."""

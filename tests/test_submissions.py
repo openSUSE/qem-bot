@@ -62,7 +62,11 @@ def test_making_repo_url() -> None:
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE_15.7_x86_64"
     repo = subs.make_repo_url(sub, Repos("openSUSE-SLE", "15.7", "x86_64"))
     assert repo == exp_repo_start + "SUSE_Updates_openSUSE-SLE_15.7"
+    sub_git = MockSubmission(id=42, type="git")
     slfo_chan = Repos("SUSE:SLFO", "SUSE:SLFO:1.1.99:PullRequest:166:SLES", "x86_64", "15.99")
-    repo = subs.make_repo_url(sub, slfo_chan)
+    repo = subs.make_repo_url(sub_git, slfo_chan)
     exp_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/"
     assert repo == exp_repo
+    backports_chan = Repos("openSUSE:Backports", "SLE-16.0:PullRequest:397", "x86_64")
+    repo = subs.make_repo_url(sub_git, backports_chan)
+    assert repo == "http://%REPO_MIRROR_HOST%/ibs/openSUSE:/Backports:/SLE-16.0:/PullRequest:/397"
