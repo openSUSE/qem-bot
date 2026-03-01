@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import operator
 import re
 import string
 from datetime import datetime, timedelta
@@ -46,6 +47,30 @@ MAINTENANCE_INCIDENT_IDENTIFIER = "Maintenance:/"
 def ms2str(sub: SubReq) -> str:
     """Convert a SubReq to a human-readable string."""
     return f"{config.settings.obs_maint_prj}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
+
+
+def deduplicate_jobs_by_scenario(job_results: list[dict]) -> list[dict]:
+    """Keep only the most recent job (highest job_id) per scenario name.
+
+    When a job is cloned in openQA, both the original (failed) and clone (passed)
+    may exist in the dashboard. We only care about the most recent job for each
+    unique scenario (identified by the 'name' field).
+
+    Jobs without a 'name' field are not deduplicated since we cannot determine
+    if they belong to different scenarios.
+    """
+    named_jobs = [j for j in job_results if j.get("name")]
+    unnamed_jobs = [j for j in job_results if j.get("name") is None]
+
+    if not named_jobs:
+        return unnamed_jobs
+
+    unique_names = {j["name"] for j in named_jobs if "job_id" in j}
+    latest = [
+        max((j for j in named_jobs if j["name"] == name), key=operator.itemgetter("job_id")) for name in unique_names
+    ]
+
+    return latest + unnamed_jobs
 
 
 def handle_http_error(e: HTTPError, sub: SubReq) -> bool:
@@ -326,7 +351,13 @@ class Approver:
 
     @lru_cache(maxsize=128)  # noqa: B019
     def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> bool | None:
-        """Retrieve jobs for a specific aggregate or incident setting."""
+        """Retrieve jobs for a specific aggregate or incident setting.
+
+        Note: Results are cached. If new job clones are created in openQA after
+        caching, the stale cached result may be returned. Cache is keyed by
+        (job_aggr.id, api, sub, submission_type). Consider manual cache_clear()
+        if fresh data is needed.
+        """
         params = {}
         if submission_type:
             params["type"] = submission_type
@@ -339,6 +370,18 @@ class Approver:
                 sub,
             )
             return None
+        if not isinstance(job_results, list):
+            log.warning("Unexpected job results format for job_aggr %s: %s", job_aggr.id, job_results)
+            return None
+        original_count = len(job_results)
+        job_results = deduplicate_jobs_by_scenario(job_results)
+        if len(job_results) < original_count:
+            log.debug(
+                "Deduplicated %d jobs to %d for job_aggr %s",
+                original_count,
+                len(job_results),
+                job_aggr.id,
+            )
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
         return all(self.is_job_acceptable(sub, api, r) for r in job_results)
 

@@ -304,3 +304,15 @@ def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> l
         )
         for (params, json) in list_of_params
     ]
+
+
+def make_approver_args(**kwargs: Any) -> Namespace:
+    defaults = {
+        "gitea_token": None,
+        "token": "dummy_token",
+        "dry": False,
+        "openqa_instance": urlparse("http://openqa.example.com"),
+        "all_submissions": False,
+    }
+    defaults.update(kwargs)
+    return Namespace(**defaults)
