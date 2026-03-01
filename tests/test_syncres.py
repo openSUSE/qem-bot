@@ -30,9 +30,13 @@ def testnormalize_data_safe_handles_error_gracefully() -> None:
 
 
 def test_post_result_aggregate() -> None:
+    result = {"job_id": 1, "status": "passed", "update_settings": 123}
     with patch("openqabot.openqa.OpenQAInterface.__bool__", return_value=True):
         syncres = SyncRes(Namespace(dry=False, token="0", openqa_instance=urlparse("http://instance.qa")))
-        result = {"job_id": 1, "status": "passed", "update_settings": 123}
         with patch("openqabot.syncres.post_job") as mock_post:
             syncres.post_result(result)
             mock_post.assert_called()
+    syncres.dry = True
+    with patch("openqabot.syncres.post_job") as mock_post:
+        syncres.post_result(result)
+        mock_post.assert_not_called()

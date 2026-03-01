@@ -94,8 +94,11 @@ class SyncRes:
             result["status"],
         )
         log.debug("Full post data: %s", pformat(result))
-
-        if self.dry or not self.client:
+        if self.dry:
             log.debug("Dry run: Skipping dashboard update")
             return
+        if not self.client:
+            log.warning("openQA client not configured - skipping dashboard update")
+            return
+
         post_job(self.token, result)

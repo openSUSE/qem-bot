@@ -202,5 +202,6 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
         "Synchronizing results for 1 active submissions...",
         f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
+        "openQA client not configured - skipping dashboard update",
         "Submission results sync completed: Synced 1 job results to the dashboard",
     ]
