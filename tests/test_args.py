@@ -129,7 +129,7 @@ def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
     amqp.assert_called_once()
     assert amqp.call_args[0][0].url == "amqp://host"
 
-    # Test with default URL (covers line 532 in args.py)
+    # Verify that the default AMQP URL is correctly resolved from configuration when not explicitly provided.
     amqp.reset_mock()
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "amqp"])
     assert result.exit_code == 0
@@ -172,8 +172,10 @@ def test_inc_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
-def test_configs_not_dir_all_commands(mocker: MockerFixture, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    mocker.patch("pathlib.Path.is_dir", return_value=False)
+def test_configs_non_existent_all_commands(
+    mocker: MockerFixture, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch("pathlib.Path.exists", return_value=False)
     commands = [
         "full-run",
         "submissions-run",
@@ -202,16 +204,13 @@ def test_command_help(mocker: MockerFixture) -> None:
     assert "Full schedule for Maintenance Submissions" in result.stdout
 
 
-def test_args_help_no_token(mocker: MockerFixture) -> None:
-    """Test the help check in main callback when no token is provided."""
+def test_args_help_bypasses_mandatory_token(mocker: MockerFixture) -> None:
     ctx = MagicMock(spec=typer.Context)
     ctx.resilient_parsing = False
-    ctx.help_option_names = ["--help"]
+    ctx.help_option_names = ["--help", "-h"]
     mocker.patch("sys.argv", ["qem-bot", "--help"])
 
-    # We call main directly with token=None
-    # Need to match the parameters of main()
-    main(
+    result = main(
         ctx,
         configs=Path("/etc/openqabot"),
         dry=False,
@@ -224,4 +223,56 @@ def test_args_help_no_token(mocker: MockerFixture) -> None:
         singlearch=Path("/etc/openqabot/singlearch.yml"),
         retry=2,
     )
-    # If we reached this point without sys.exit(1), it means it returned (line 112)
+    assert result is None, "Successful early return is expected because help flags bypass the mandatory token check"
+
+
+def test_configs_file_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("product: foo")
+
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(config_file), "full-run"])
+
+    assert result.exit_code == 0
+    bot.assert_called_once()
+
+
+def test_configs_dir_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(config_dir), "full-run"])
+
+    assert result.exit_code == 0
+    bot.assert_called_once()
+
+
+def test_main_no_token_exit(mocker: MockerFixture) -> None:
+    """Test that main exits with 1 when token is missing and help is not requested."""
+    # Mock sys.argv to not contain any help options
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+
+    # We need to invoke via runner to capture the SystemExit
+    result = runner.invoke(app, ["full-run"])
+    assert result.exit_code == 1
+    assert (
+        "Error: Missing option '--token' / '-t'." in result.stdout
+        or "Error: Missing option '--token' / '-t'." in result.stderr
+    )
+
+
+def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that application state is correctly initialized when a valid token is provided.
+
+    Verifies that providing a token allows the application context to be fully established
+    for subcommand execution.
+    """
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run"])
+    assert result.exit_code == 0

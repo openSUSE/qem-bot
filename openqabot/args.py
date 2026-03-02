@@ -155,8 +155,8 @@ def full_run(
     args.disable_submissions = False
     args.disable_aggregates = False
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     bot = OpenQABot(args)
@@ -187,8 +187,8 @@ def submissions_run(
     args.disable_submissions = False
     args.disable_aggregates = True
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     bot = OpenQABot(args)
@@ -231,8 +231,8 @@ def updates_run(
     args.disable_aggregates = False
     args.disable_submissions = True
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     bot = OpenQABot(args)
@@ -244,8 +244,8 @@ def smelt_sync(ctx: typer.Context) -> None:
     """Sync data from SMELT into QEM Dashboard."""
     args = ctx.obj
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     syncer = SMELTSync(args)
@@ -285,8 +285,8 @@ def gitea_sync(
     args.consider_unrequested_prs = consider_unrequested_prs
     args.pr_number = pr_number
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     syncer = GiteaSync(args)
@@ -316,8 +316,8 @@ def sub_approve(
     args.submission = submission
     args.incident = submission
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     approve = Approver(args)
@@ -350,8 +350,8 @@ def sub_comment(ctx: typer.Context) -> None:
     """Comment submissions in BuildService."""
     args = ctx.obj
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     comment = Commenter(args)
@@ -369,8 +369,8 @@ def sub_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA submission jobs to Dashboard."""
     args = ctx.obj
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     syncer = SubResultsSync(args)
@@ -388,8 +388,8 @@ def aggr_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA aggregate jobs to Dashboard."""
     args = ctx.obj
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     syncer = AggregateResultsSync(args)
@@ -544,8 +544,8 @@ def amqp_cmd(
         # Default from settings (which was already loaded in main callback)
         args.url = config_module.settings.amqp_url
 
-    if not args.configs.is_dir():
-        log.error("Configuration error: %s is not a valid directory", args.configs)
+    if not args.configs.exists():
+        log.error("Configuration error: %s does not exist", args.configs)
         sys.exit(1)
 
     amqp_obj = AMQP(args)
