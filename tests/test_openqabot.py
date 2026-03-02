@@ -46,7 +46,7 @@ def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
     mock_logger = mocker.Mock()
     mock_logger.setLevel = mocker.Mock()
     mocker.patch("openqabot.args.create_logger", return_value=mock_logger)
-    mocker.patch("pathlib.Path.is_dir", return_value=True)
+    mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch("openqabot.args.OpenQABot").return_value.return_value = 0
 
     result = runner.invoke(app, ["--token", "foo", "--debug", "full-run"])

@@ -172,8 +172,10 @@ def test_inc_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
-def test_configs_not_dir_all_commands(mocker: MockerFixture, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    mocker.patch("pathlib.Path.is_dir", return_value=False)
+def test_configs_non_existent_all_commands(
+    mocker: MockerFixture, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch("pathlib.Path.exists", return_value=False)
     commands = [
         "full-run",
         "submissions-run",
@@ -225,3 +227,81 @@ def test_args_help_no_token(mocker: MockerFixture) -> None:
         retry=2,
     )
     # If we reached this point without sys.exit(1), it means it returned (line 112)
+
+
+def test_configs_file_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("product: foo")
+
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(config_file), "full-run"])
+
+    assert result.exit_code == 0
+    bot.assert_called_once()
+
+
+def test_configs_dir_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
+    config_dir = tmp_path / "configs"
+    config_dir.mkdir()
+
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(config_dir), "full-run"])
+
+    assert result.exit_code == 0
+    bot.assert_called_once()
+
+
+def test_main_help_branch_coverage(mocker: MockerFixture) -> None:
+    """Explicitly test the help branch in main()"""
+    ctx = MagicMock(spec=typer.Context)
+    ctx.resilient_parsing = False
+    ctx.help_option_names = ["--help", "-h"]
+
+    # Mock sys.argv to contain one of the help option names
+    mocker.patch("sys.argv", ["qem-bot", "--help"])
+
+    # Call main directly.
+    # Since it's a callback, we need to provide all the arguments it expects.
+    result = main(
+        ctx,
+        configs=Path("/etc/openqabot"),
+        dry=False,
+        fake_data=False,
+        dump_data=False,
+        debug=False,
+        token=None,  # This is the key
+        gitea_token=None,
+        openqa_instance="https://openqa.suse.de",
+        singlearch=Path("/etc/openqabot/singlearch.yml"),
+        retry=2,
+    )
+
+    # It should return None because of the return statement on line 109
+    assert result is None
+
+
+def test_main_no_token_exit(mocker: MockerFixture) -> None:
+    """Test that main exits with 1 when token is missing and help is not requested."""
+    # Mock sys.argv to not contain any help options
+    mocker.patch("sys.argv", ["qem-bot", "full-run"])
+
+    # We need to invoke via runner to capture the SystemExit
+    result = runner.invoke(app, ["full-run"])
+    assert result.exit_code == 1
+    assert (
+        "Error: Missing option '--token' / '-t'." in result.stdout
+        or "Error: Missing option '--token' / '-t'." in result.stderr
+    )
+
+
+def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test main when token is provided and no help is requested (line 116 coverage)."""
+    # This targets line 116: ctx.obj = SimpleNamespace(...)
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run"])
+    assert result.exit_code == 0
