@@ -121,3 +121,27 @@ def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
 def test_is_build_acceptable_success() -> None:
     incident = {"failed_or_unpublished_packages": [], "successful_packages": ["pkg1"]}
     assert gitea.is_build_acceptable_and_log_if_not(incident, 123)
+
+
+def test_generate_repo_url_success(mocker: MockerFixture) -> None:
+    """Covert the actual logic of generate_repo_url."""
+    mock_pr = mocker.Mock()
+    mock_pr.repo_name = "products/sle"
+    mock_pr.branch = "main"
+    mock_pr.number = 555
+    mock_pr.product = "SLES"
+
+    mocker.patch("openqabot.config.settings.gitea_url", "https://gitea.com")
+    mocker.patch("openqabot.config.settings.obs_download_url", "https://download.obs.com")
+
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"StagingProject": "openQA:Staging:A"}
+    mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
+
+    url = gitea.generate_repo_url(mock_pr, {"Authorization": "token test"})
+
+    assert url == "https://download.obs.com/openQA:/Staging:/A:/555:/SLES/product/iso"
+
+    expected_gitea_url = "https://gitea.com/products/products/sle/raw/branch/main/staging.config"
+    mock_get.assert_called_once()
+    assert mock_get.call_args[0][0] == expected_gitea_url

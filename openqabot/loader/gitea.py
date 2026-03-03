@@ -67,7 +67,9 @@ def make_token_header(token: str) -> dict[str, str]:
 def get_json(query: str, token: dict[str, str], host: str | None = None) -> Any:  # noqa: ANN401
     """Fetch JSON data from Gitea API."""
     host = host or config.settings.gitea_url
-    return retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token).json()
+    response = retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token)
+    response.raise_for_status()
+    return response.json()
 
 
 def post_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> Any:  # noqa: ANN401
