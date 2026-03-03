@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
@@ -15,7 +14,6 @@ from typer.testing import CliRunner
 from openqabot.args import app, main
 
 if TYPE_CHECKING:
-    import pytest
     from pytest_mock import MockerFixture
 
 runner = CliRunner()
@@ -172,10 +170,9 @@ def test_inc_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
-def test_configs_non_existent_all_commands(
-    mocker: MockerFixture, tmp_path: Path, caplog: pytest.LogCaptureFixture
-) -> None:
-    mocker.patch("pathlib.Path.exists", return_value=False)
+def test_configs_non_existent_all_commands(mocker: MockerFixture, tmp_path: Path) -> None:
+    non_existent = tmp_path / "does_not_exist"
+    mock_log = mocker.patch("openqabot.args.log")
     commands = [
         "full-run",
         "submissions-run",
@@ -188,12 +185,13 @@ def test_configs_non_existent_all_commands(
         "aggr-sync-results",
         "amqp",
     ]
-    with caplog.at_level(logging.ERROR):
-        for cmd in commands:
-            result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), cmd])
-            assert result.exit_code == 1
-            assert "Configuration error" in caplog.text
-            caplog.clear()
+    for cmd in commands:
+        result = runner.invoke(app, ["--token", "foo", "--configs", str(non_existent), cmd])
+        assert result.exit_code == 1
+        mock_log.error.assert_called()
+        error_msg = mock_log.error.call_args[0][0]
+        assert "Configuration error" in error_msg
+        mock_log.reset_mock()
 
 
 def test_command_help(mocker: MockerFixture) -> None:

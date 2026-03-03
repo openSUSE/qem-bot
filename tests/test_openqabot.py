@@ -16,7 +16,6 @@ from openqabot.args import main as args_main
 from openqabot.main import main
 
 if TYPE_CHECKING:
-    import pytest
     from pytest_mock import MockerFixture
 
 runner = CliRunner()
@@ -28,18 +27,15 @@ def test_no_args_prints_help() -> None:
     assert "Usage: " in result.stdout
 
 
-def test_main_configs_not_dir_triggers_error_and_exit(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    mocker.patch("openqabot.args.OpenQABot")
-    mocker.patch("pathlib.Path.is_dir", return_value=False)
+def test_main_configs_not_dir_triggers_error_and_exit(tmp_path: Path, mocker: MockerFixture) -> None:
+    non_existent = tmp_path / "does_not_exist"
+    mock_log = mocker.patch("openqabot.args.log")
 
-    # We need to capture logs
-    with caplog.at_level(logging.ERROR):
-        # running full-run which requires config
-        result = runner.invoke(app, ["--token", "foo", "full-run"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(non_existent), "full-run"])
 
     assert result.exit_code == 1
-    # Check caplog for the error message
-    assert "Configuration error" in caplog.text
+    mock_log.error.assert_called()
+    assert "Configuration error" in mock_log.error.call_args[0][0]
 
 
 def test_main_debug_flag_sets_log_level(mocker: MockerFixture) -> None:
