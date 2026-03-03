@@ -248,7 +248,7 @@ def smelt_sync(ctx: typer.Context) -> None:
 
 
 @app.command("gitea-sync")
-def gitea_sync(
+def gitea_sync(  # noqa: PLR0913
     ctx: typer.Context,
     *,
     gitea_repo: Annotated[
@@ -266,6 +266,21 @@ def gitea_sync(
         ),
     ] = False,
     pr_number: pr_number_arg = None,
+    amqp: Annotated[
+        bool,
+        typer.Option(
+            "--amqp",
+            help="After initial sync listen for new PRs via AMQP and submit them to QEM dashboard immediately",
+        ),
+    ] = False,
+    amqp_url: Annotated[str | None, typer.Option("--amqp-url", help="the URL of the AMQP server")] = None,
+    skip_initial_sync: Annotated[
+        bool,
+        typer.Option(
+            "--amqp-only",
+            help="Skip initial sync before handling AMQP events for new PRs",
+        ),
+    ] = False,
 ) -> None:
     """Sync data from Gitea into QEM Dashboard."""
     args = ctx.obj
@@ -273,6 +288,10 @@ def gitea_sync(
     args.allow_build_failures = allow_build_failures
     args.consider_unrequested_prs = consider_unrequested_prs
     args.pr_number = pr_number
+    args.amqp = amqp
+    # Default from settings (which was already loaded in main callback)
+    args.amqp_url = amqp_url if amqp_url is not None else config_module.settings.amqp_url
+    args.skip_initial_sync = skip_initial_sync
 
     syncer = GiteaSync(args)
     sys.exit(syncer())

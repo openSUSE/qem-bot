@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from argparse import Namespace
@@ -125,6 +126,9 @@ def args() -> Namespace:
         consider_unrequested_prs=False,
         pr_number=None,
         openqa_instance=urlparse("https://openqa.suse.de"),
+        amqp=False,
+        amqp_url="",
+        skip_initial_sync=False,
     )
 
 
@@ -299,3 +303,37 @@ def test_adding_packages_from_files() -> None:
     ]
     add_packages_from_files(submission, {}, files, dry=True)
     assert submission["packages"] == ["tree", "tree"], "package added twice (once for each patchinfo with raw_url)"
+
+
+def test_gitea_sync_skips_initial_on_request(
+    args: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    args.skip_initial_sync = True
+    run_gitea_sync(mocker, caplog, args)
+
+
+def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    args.skip_initial_sync = True
+    args.amqp = True
+    mocker.patch("openqabot.giteasync.pika")
+    run_gitea_sync(mocker, caplog, args)
+
+    mock_subm = {"number": 42, "packages": ["foo"]}
+    mocker.patch("openqabot.giteasync.make_submission_from_gitea_pr", return_value=mock_subm)
+    mock_update = mocker.patch("openqabot.giteasync.update_submissions", return_value=0)
+    sync = GiteaSync(args)
+    body = json.dumps({"pull_request": {"id": 42, "base": {"repo": {"full_name": "products/SLFO"}}}}).encode()
+    # check successful code path
+    sync._on_amqp_message(mocker.MagicMock(), mocker.MagicMock(), mocker.MagicMock(), body)  # noqa: SLF001
+    mock_update.assert_called_once_with(sync.dashboard_token, [mock_subm], params={"type": "git"}, retry=args.retry)
+    mock_update.reset_mock()
+
+    # check dry run
+    args.dry = True
+    sync = GiteaSync(args)
+    sync._on_amqp_message(mocker.MagicMock(), mocker.MagicMock(), mocker.MagicMock(), body)  # noqa: SLF001
+
+    # check wrong PR does nothing
+    body = json.dumps({"pull_request": {"id": 42, "base": {"repo": {"full_name": "wrong/repo"}}}}).encode()
+    sync._on_amqp_message(mocker.MagicMock(), mocker.MagicMock(), mocker.MagicMock(), body)  # noqa: SLF001
+    mock_update.assert_not_called()

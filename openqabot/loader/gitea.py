@@ -238,7 +238,10 @@ def is_review_requested_by(
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
-    """Process PR reviews and update submission status."""
+    """Process PR reviews and update submission status.
+
+    Returns number of reviews by us that have been requested.
+    """
     pending_states = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
     qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
