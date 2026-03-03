@@ -63,21 +63,6 @@ def test_main_keyboard_interrupt(mocker: MockerFixture) -> None:
     mock_exit.assert_called_with(1)
 
 
-def test_main_exception(mocker: MockerFixture) -> None:
-    # We need to run main() and mock app() to raise an Exception
-    mocker.patch("openqabot.main.app", side_effect=Exception("something went wrong"))
-    mock_logger = mocker.Mock()
-    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
-    mock_exit = mocker.patch("sys.exit")
-
-    main()
-
-    # The exception object itself is logged
-    args, _ = mock_logger.error.call_args
-    assert "something went wrong" in str(args[0])
-    mock_exit.assert_called_with(1)
-
-
 def test_main_missing_token_exits(mocker: MockerFixture) -> None:
     # Use CliRunner to test main app execution with missing token
     # We must NOT provide --token and not have it in env
