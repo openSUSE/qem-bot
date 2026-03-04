@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     obs_maint_prj: str = Field(default="SUSE:Maintenance", alias="OBS_MAINT_PRJ")
     obs_group: str = Field(default="qam-openqa", alias="OBS_GROUP")
     oldest_approval_job_days: int = 6
+    # How long to wait for http(s) call in seconds
+    url_timeout: int = 60
 
     model_config = SettingsConfigDict(
         env_file=".env",

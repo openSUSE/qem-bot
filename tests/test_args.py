@@ -68,6 +68,14 @@ def test_sync_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
+def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
+    syncer = mocker.patch("openqabot.args.GiteaTrigger")
+    syncer.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-trigger"])
+    assert result.exit_code == 0
+    syncer.assert_called_once()
+
+
 def test_sub_approve(mocker: MockerFixture, tmp_path: Path) -> None:
     approve = mocker.patch("openqabot.args.Approver")
     approve.return_value.return_value = 0

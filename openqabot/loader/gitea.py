@@ -30,6 +30,7 @@ from openqabot import config
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
+    from openqabot.types.pullrequest import PullRequest
     from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
@@ -115,6 +116,11 @@ def comments_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR comments."""
     # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return f"repos/{repo_name}/issues/{number}/comments"
+
+
+def staging_config_url(repo_name: str, branch: str) -> str:
+    """Generate url pointing to staging.config file for certain repo."""
+    return f"{config.settings.gitea_url}/products/{repo_name}/raw/branch/{branch}/staging.config"
 
 
 def get_product_name(obs_project: str) -> str:
@@ -479,6 +485,27 @@ def add_comments_and_referenced_build_results(
             submission["number"],
             config.settings.git_obs_staging_bot_user,
         )
+
+
+def generate_repo_url(pullrequest: PullRequest, token: dict[str, str]) -> str:
+    """Generate repository URL for certain pull request.
+
+    Args:
+        pullrequest (PullRequest): pull request for which URL needs to be generated
+        token (dict[str, str]): security token for Gitea API
+
+    Returns:
+        str: URL pointing to a folder with iso images generated for certain pullrequest
+
+    """
+    response = retried_requests.get(
+        staging_config_url(pullrequest.repo_name, pullrequest.branch),
+        verify=False,
+        headers=token,
+    )
+    response.raise_for_status()
+    project = response.json()["StagingProject"].replace(":", ":/")
+    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{pullrequest.product}/product/iso"
 
 
 def add_packages_from_patchinfo(
