@@ -39,15 +39,15 @@ check-conventions: ## Check for banned coding patterns
 		exit 1; \
 	fi
 
-.PHONY: check-maintainability
-check-maintainability: ## Check maintainability index (radon)
-	@echo "Checking maintainability (grade B or worse) …"
-	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
-
 .PHONY: check-code-health
 check-code-health: ## Find dead code (vulture)
 	@echo "Checking code health…"
 	@vulture ${SOURCE_FILES} --min-confidence 80
+
+.PHONY: check-maintainability
+check-maintainability: ## Check maintainability index (radon)
+	@echo "Checking maintainability (grade B or worse) …"
+	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
 
 .PHONY: typecheck-ty
 typecheck-ty: ## Run ty type checker
@@ -63,13 +63,18 @@ only-test-with-coverage: ## Run unit tests with coverage report
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: ruff check-conventions check-maintainability check-code-health typecheck ## Run all style and static analysis checks
+checkstyle: ruff check-conventions typecheck ## Run fast style and static analysis checks
+
+.PHONY: checkstyle-all
+checkstyle-all: checkstyle check-code-health check-maintainability ## Run all style and static analysis checks
 
 .PHONY: test
-test: only-test checkstyle ## Run all tests and style checks
+test: ## Run all tests and style checks
+	@$(MAKE) -j only-test checkstyle-all
 
 .PHONY: test-with-coverage
-test-with-coverage: only-test-with-coverage checkstyle ## Run tests with coverage and style checks
+test-with-coverage: ## Run tests with coverage and style checks
+	@$(MAKE) -j only-test-with-coverage checkstyle-all
 
 BOT_COMMANDS ?= $(shell python3 -c "from openqabot.args import app; from typer.main import get_command_name; print(' '.join(get_command_name(c.name or c.callback.__name__) for c in app.registered_commands if not c.hidden))")
 TIMEOUT ?= 30
