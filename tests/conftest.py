@@ -61,6 +61,11 @@ def _reset_settings(mocker: MockerFixture, _session_settings: dict[str, Any]) ->
         setattr(config_module.settings, key, value)
 
 
+@pytest.fixture(autouse=True)
+def _mock_load_dotenv(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.main.load_dotenv")
+
+
 @pytest.fixture
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
