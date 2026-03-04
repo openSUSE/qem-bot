@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
 
@@ -43,12 +45,19 @@ def _auto_clear_cache() -> None:
     clear_cache()
 
 
+@pytest.fixture(scope="session")
+def _session_settings() -> dict[str, Any]:
+    """Capture default settings once per session to speed up test reset."""
+    with patch.dict(os.environ, {"OBS_URL": "https://api.suse.de"}):
+        defaults = Settings()
+        return {key: getattr(defaults, key) for key in Settings.model_fields}
+
+
 @pytest.fixture(autouse=True)
-def _reset_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+def _reset_settings(monkeypatch: pytest.MonkeyPatch, _session_settings: dict[str, Any]) -> None:
     monkeypatch.setenv("OBS_URL", "https://api.suse.de")
-    new_settings = Settings()
-    for key in type(new_settings).model_fields:
-        setattr(config_module.settings, key, getattr(new_settings, key))
+    for key, value in _session_settings.items():
+        setattr(config_module.settings, key, value)
 
 
 @pytest.fixture
