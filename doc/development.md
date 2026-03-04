@@ -76,6 +76,12 @@ to see a full list of available targets.
 Run `make test` or `pytest` to execute Python-based unit tests. Run e.g.
 `pytest tests/test_amqp.py` to execute a single test.
 
+To speed up test execution on multi-core systems, it is highly recommended to
+install `pytest-xdist`. The `Makefile` automatically detects it and runs
+tests in parallel (using `-n auto`).
+
+    uv add --dev pytest-xdist
+
 Run `make test-with-coverage` to check for 100% statement and branch coverage.
 
 Run `make checkstyle` to run all style and static analysis checks.
