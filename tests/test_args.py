@@ -100,20 +100,20 @@ def test_aggr_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
-def test_increment_approve(mocker: MockerFixture) -> None:
+def test_increment_approve(mocker: MockerFixture, tmp_path: Path) -> None:
     approve = mocker.patch("openqabot.args.IncrementApprover")
     approve.return_value.return_value = 0
-    # No config check needed for increment-approve
-    result = runner.invoke(app, ["--token", "foo", "increment-approve"])
+    # Provide a valid configs directory to avoid Configuration error in main callback
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "increment-approve"])
     assert result.exit_code == 0
     approve.assert_called_once()
 
 
-def test_repo_diff(mocker: MockerFixture) -> None:
+def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
     repo_diff = mocker.patch("openqabot.args.RepoDiff")
     repo_diff.return_value.return_value = 0
-    # No config check needed for repo-diff
-    result = runner.invoke(app, ["--token", "foo", "repo-diff"])
+    # Provide a valid configs directory to avoid Configuration error in main callback
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "repo-diff"])
     assert result.exit_code == 0
     repo_diff.assert_called_once()
 
@@ -252,7 +252,8 @@ def test_configs_dir_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
 
 def test_main_no_token_exit(mocker: MockerFixture) -> None:
     """Test that main exits with 1 when token is missing and help is not requested."""
-    # Mock sys.argv to not contain any help options
+    # Mock sys.argv to not contain any help options and clear env to avoid token leakage
+    mocker.patch.dict("os.environ", {}, clear=True)
     mocker.patch("sys.argv", ["qem-bot", "full-run"])
 
     # We need to invoke via runner to capture the SystemExit
