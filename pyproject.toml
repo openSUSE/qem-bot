@@ -61,7 +61,7 @@ show_missing = true
 skip_covered = true
 
 [tool.pytest.ini_options]
-addopts = "-p no:anyio"
+addopts = "-p no:anyio -p no:doctest -p no:pastebin -p no:nose"
 testpaths = ["tests"]
 python_files = "test_*.py"
 markers = ["qem_behavior(mode): configure the fake_qem fixture behavior"]
