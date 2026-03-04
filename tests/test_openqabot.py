@@ -80,7 +80,6 @@ def test_main_exception(mocker: MockerFixture) -> None:
 
 def test_main_missing_token_exits(mocker: MockerFixture) -> None:
     # Use CliRunner to test main app execution with missing token
-    mock_load_dotenv = mocker.patch("openqabot.args.load_dotenv")
     # We must NOT provide --token and not have it in env
     mocker.patch.dict(os.environ, {}, clear=True)
     # Mock configs dir to be True to avoid unrelated Configuration error if it fails later
@@ -92,12 +91,10 @@ def test_main_missing_token_exits(mocker: MockerFixture) -> None:
         "Error: Missing option '--token' / '-t'." in result.stdout
         or "Error: Missing option '--token' / '-t'." in result.stderr
     )
-    assert mock_load_dotenv.called
 
 
 def test_main_help_no_token(mocker: MockerFixture) -> None:
     # Test that --help works even without token
-    mocker.patch("openqabot.args.load_dotenv")
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch("sys.argv", ["qem-bot", "--help"])
     result = runner.invoke(app, ["--help"])
@@ -107,7 +104,6 @@ def test_main_help_no_token(mocker: MockerFixture) -> None:
 
 def test_main_help_subcommand_no_token(mocker: MockerFixture) -> None:
     # Test that full-run --help works even without token
-    mocker.patch("openqabot.args.load_dotenv")
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch("sys.argv", ["qem-bot", "full-run", "--help"])
     result = runner.invoke(app, ["full-run", "--help"])
@@ -117,7 +113,6 @@ def test_main_help_subcommand_no_token(mocker: MockerFixture) -> None:
 
 def test_main_missing_token_with_help_returns_early(mocker: MockerFixture) -> None:
     # Use mocker to capture sys.exit and print
-    mock_load_dotenv = mocker.patch("openqabot.args.load_dotenv")
     mock_exit = mocker.patch("sys.exit")
     mock_print = mocker.patch("builtins.print")
     # Ensure token is not in environment
@@ -137,4 +132,3 @@ def test_main_missing_token_with_help_returns_early(mocker: MockerFixture) -> No
     # It should NOT exit and NOT print error
     assert not mock_exit.called
     assert not mock_print.called
-    assert mock_load_dotenv.called

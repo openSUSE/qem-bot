@@ -12,7 +12,6 @@ from typing import Annotated
 from urllib.parse import urlparse
 
 import typer
-from dotenv import load_dotenv
 
 import openqabot.config as config_module
 
@@ -101,7 +100,6 @@ def main(  # noqa: PLR0913
     retry: Annotated[int, typer.Option("-r", "--retry", envvar="QEM_BOT_RETRY", help="Number of retries")] = 2,
 ) -> None:
     """QEM-Dashboard, SMELT, Gitea and openQA connector."""
-    load_dotenv()
     # Configure logging
     log_obj = create_logger("bot")
     if debug:
