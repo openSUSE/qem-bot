@@ -190,9 +190,14 @@ def test_configs_non_existent_all_commands(mocker: MockerFixture, tmp_path: Path
 def test_command_help(mocker: MockerFixture) -> None:
     # This covers the 'if "--help" in sys.argv' check in main() callback
     mocker.patch("sys.argv", ["qem-bot", "full-run", "--help"])
+    # Avoid full runner.invoke if we just want to check help bypass logic
+    # But we also want to ensure help is formatted correctly.
+    # We use a mocked OpenQABot to ensure it's NOT called.
+    bot = mocker.patch("openqabot.args.OpenQABot")
     result = runner.invoke(app, ["full-run", "--help"])
     assert result.exit_code == 0
     assert "Full schedule for Maintenance Submissions" in result.stdout
+    bot.assert_not_called()
 
 
 def test_args_help_bypasses_mandatory_token(mocker: MockerFixture) -> None:
