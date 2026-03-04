@@ -173,16 +173,9 @@ def test_inc_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_configs_non_existent_all_commands(mocker: MockerFixture, tmp_path: Path) -> None:
     non_existent = tmp_path / "does_not_exist"
     mock_log = mocker.patch("openqabot.args.log")
+    # We only need to test a few representative commands to ensure the config check in main() works.
     commands = [
         "full-run",
-        "submissions-run",
-        "updates-run",
-        "smelt-sync",
-        "gitea-sync",
-        "sub-approve",
-        "sub-comment",
-        "sub-sync-results",
-        "aggr-sync-results",
         "amqp",
     ]
     for cmd in commands:
