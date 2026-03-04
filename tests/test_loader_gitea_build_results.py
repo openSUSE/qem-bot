@@ -81,6 +81,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
     mocker.patch("openqabot.config.settings.obs_repo_type", None)
+    mocker.patch("openqabot.loader.gitea.get_product_version_from_repo_listing", return_value="15.4")
     xml_data = """
     <buildresults>
         <result project="proj" repository="repo" arch="x86_64" state="published">

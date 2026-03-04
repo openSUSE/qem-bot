@@ -296,6 +296,7 @@ def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     mock_rev.assert_not_called()
 
 
+@pytest.mark.usefixtures("mock_good")
 def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
     # Trigger setting cache params
