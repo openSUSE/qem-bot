@@ -11,6 +11,7 @@ from collections import Counter
 from concurrent import futures
 from dataclasses import dataclass, field
 from functools import lru_cache
+from io import BytesIO
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -78,19 +79,22 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str | Non
         log.error("Gitea API error: POST to %s failed: %s", url, res.text)
 
 
+@lru_cache(maxsize=128)
 def read_utf8(name: str) -> str:
     """Read a UTF-8 encoded response file."""
     return Path(f"responses/{name}").read_text(encoding="utf8")
 
 
+@lru_cache(maxsize=128)
 def read_json(name: str) -> Any:  # noqa: ANN401
     """Read a JSON response file."""
-    return json.loads(Path(f"responses/{name}.json").read_text(encoding="utf8"))
+    return json.loads(read_utf8(name + ".json"))
 
 
+@lru_cache(maxsize=128)
 def read_xml(name: str) -> etree.ElementTree:
     """Read an XML response file."""
-    return etree.parse(f"responses/{name}.xml")
+    return etree.parse(BytesIO(read_utf8(name + ".xml").encode("utf-8")))
 
 
 def reviews_url(repo_name: str, number: int) -> str:
