@@ -5,12 +5,15 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, ClassVar, NamedTuple
 
 if TYPE_CHECKING:
     import osc.core
 
 log = getLogger("bot.increment_approver")
+
+
+ScheduleParams = list[dict[str, str]]
 
 
 class BuildInfo(NamedTuple):
@@ -57,6 +60,7 @@ class ApprovalStatus(NamedTuple):
     request: osc.core.Request
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
+    params: ClassVar[ScheduleParams] = []
 
     def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
         """Add jobs and reasons to the status."""
