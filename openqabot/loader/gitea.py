@@ -9,8 +9,10 @@ import re
 import urllib.error
 from collections import Counter
 from concurrent import futures
+from contextlib import suppress
 from dataclasses import dataclass, field
 from functools import lru_cache
+from http import HTTPStatus
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
@@ -360,6 +362,32 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     return next((v for v in versions if len(v) > 0), "")
 
 
+def verify_repo_exists(project: str, product_name: str, product_version: str, arch: str) -> bool:
+    """Check if the repository actually exists for the given architecture via HTTP HEAD request."""
+    if not product_version:
+        return True
+    download_base = config.settings.download_base_url
+    obs_download = config.settings.obs_download_url
+    if not download_base or not obs_download:
+        return True
+    try:
+        host = obs_download.split("/")[2]
+    except IndexError:
+        return True
+    base = download_base.replace("%REPO_MIRROR_HOST%", host)
+    project_path = project.replace(":", ":/")
+    repo_url = f"{base}/{project_path}/{config.OBS_REPO_TYPE}/repo/{product_name}-{product_version}-{arch}/{arch}/"
+    with suppress(requests.exceptions.RequestException):
+        response = retried_requests.head(repo_url, allow_redirects=True)
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            log.debug("Repo %s not found (404), skipping channel", repo_url)
+            return False
+        log.debug("Repo %s returned %s, allowing channel", repo_url, response.status_code)
+        return response.ok
+    log.debug("HTTP check failed for repo %s, allowing channel", repo_url)
+    return True
+
+
 def _get_product_version(res: etree._Element, project: str, product_name: str) -> str:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
@@ -401,7 +429,9 @@ def add_channel_for_build_result(
     elif len(product_name) > 0:
         log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
-
+    if product_name and not verify_repo_exists(project, product_name, product_version, arch):
+        log.debug("Skipping %s:%s: repository not found for architecture %s", project, arch, arch)
+        return channel
     projects.add(channel)
     return channel
 
