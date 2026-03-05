@@ -15,7 +15,7 @@ help: ## Display this help
 all: help
 
 # Detect if pytest-xdist is installed for parallel testing
-PYTEST_XDIST := $(shell python3 -m pytest --version 2>&1 | grep -q xdist && echo "-n auto" || echo "")
+PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
 .PHONY: only-test
 only-test: ## Run unit tests without style checks
@@ -63,10 +63,12 @@ only-test-with-coverage: ## Run unit tests with coverage report
 # aggregate targets
 
 .PHONY: checkstyle
-checkstyle: ruff check-conventions typecheck ## Run fast style and static analysis checks
+checkstyle: ## Run fast style and static analysis checks
+	@$(MAKE) -j ruff check-conventions typecheck
 
 .PHONY: checkstyle-all
-checkstyle-all: checkstyle check-code-health check-maintainability ## Run all style and static analysis checks
+checkstyle-all: ## Run all style and static analysis checks
+	@$(MAKE) -j checkstyle check-code-health check-maintainability
 
 .PHONY: test
 test: ## Run all tests and style checks
