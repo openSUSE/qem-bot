@@ -143,7 +143,7 @@ def get_submission_settings_data(
     token: dict[str, str], number: int, submission_type: str | None = None
 ) -> Sequence[Data]:
     """Fetch job settings data for a submission and wrap them in Data objects."""
-    log.info(
+    log.debug(
         "Fetching settings for submission %s:%s", submission_type or config.settings.default_submission_type, number
     )
     params = {}

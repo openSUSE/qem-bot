@@ -11,7 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 import responses
-from openqabot.config import DEFAULT_SUBMISSION_TYPE, QEM_DASHBOARD
+from openqabot.config import QEM_DASHBOARD
 from openqabot.subsyncres import SubResultsSync
 
 openqa_url = (
@@ -73,7 +73,6 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     assert caplog.messages == [
         "Synchronizing results for 1 active submissions...",
-        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
         "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
@@ -102,7 +101,6 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     assert caplog.messages == [
         "Synchronizing results for 1 active submissions...",
-        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
         "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
@@ -136,7 +134,6 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
     assert ret == 0
     assert caplog.messages == [
         "Synchronizing results for 1 active submissions...",
-        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
         "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
@@ -168,7 +165,6 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     assert caplog.messages == [
         "Synchronizing results for 1 active submissions...",
-        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
         "Submission results sync completed: Synced 0 job results to the dashboard",
     ]
@@ -200,7 +196,6 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     assert ret == 0
     assert caplog.messages == [
         "Synchronizing results for 1 active submissions...",
-        f"Fetching settings for submission {DEFAULT_SUBMISSION_TYPE}:100",
         "Fetched 1 total jobs from openQA.",
         "openQA client not configured - skipping dashboard update",
         "Submission results sync completed: Synced 1 job results to the dashboard",
