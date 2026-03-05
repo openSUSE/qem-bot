@@ -48,14 +48,15 @@ def _auto_clear_cache() -> None:
 @pytest.fixture(scope="session")
 def _session_settings() -> dict[str, Any]:
     """Capture default settings once per session to speed up test reset."""
-    with patch.dict(os.environ, {"OBS_URL": "https://api.suse.de"}):
+    with patch.dict(os.environ, {}, clear=True), patch("osc.conf.get_config", side_effect=RuntimeError):
         defaults = Settings()
         return {key: getattr(defaults, key) for key in Settings.model_fields}
 
 
 @pytest.fixture(autouse=True)
-def _reset_settings(monkeypatch: pytest.MonkeyPatch, _session_settings: dict[str, Any]) -> None:
-    monkeypatch.setenv("OBS_URL", "https://api.suse.de")
+def _reset_settings(mocker: MockerFixture, _session_settings: dict[str, Any]) -> None:
+    # Maintain consistent environment and reset singleton settings for every test
+    mocker.patch.dict(os.environ, {"OBS_URL": _session_settings["obs_url"]})
     for key, value in _session_settings.items():
         setattr(config_module.settings, key, value)
 
