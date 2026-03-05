@@ -2,16 +2,36 @@
 # SPDX-License-Identifier: MIT
 """Test loader Gitea build results."""
 
+from __future__ import annotations
+
 import logging
 import urllib.error
 from io import BytesIO
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
-from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
-from openqabot.loader.gitea import BuildResults
+from openqabot.loader.gitea import BuildResults, verify_repo_exists
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
+
+@pytest.fixture
+def mock_product_setup(mocker: MockerFixture) -> None:
+    """Set up common mocks for add_build_result tests with product."""
+    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.config.settings.obs_products", "all")
+    mocker.patch("openqabot.loader.gitea.get_product_version_from_repo_listing", return_value="16.0")
+
+
+@pytest.fixture
+def mock_repo_check_setup(mocker: MockerFixture) -> None:
+    """Set up common mocks for verify_repo_exists tests."""
+    mocker.patch("openqabot.config.settings.download_base_url", "http://example.com")
+    mocker.patch("openqabot.config.settings.obs_download_url", "http://download.suse.de/ibs")
+    mocker.patch("openqabot.config.settings.obs_repo_type", "product")
 
 
 def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -215,3 +235,115 @@ def test_add_comments_bot_comments_no_urls(mocker: MockerFixture, caplog: pytest
     gitea.add_comments_and_referenced_build_results(submission, comments, dry=True)
     mock_add_build_results.assert_not_called()
     assert "PR git:123: No OBS URLs found in comments from autogits_obs_staging_bot" in caplog.text
+
+
+@pytest.mark.usefixtures("mock_product_setup")
+@pytest.mark.parametrize(
+    ("arch", "verify_result", "expected_in_projects", "expected_log"),
+    [
+        (
+            "ppc64le",
+            False,
+            False,
+            "Skipping SUSE:SLFO:1.2:PullRequest:2702:SLES:ppc64le: repository not found for architecture",
+        ),
+        ("x86_64", True, True, None),
+        ("aarch64", True, True, None),
+    ],
+)
+def test_add_build_result_channel_handling(
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    *,
+    arch: str,
+    verify_result: bool,
+    expected_in_projects: bool,
+    expected_log: str | None,
+) -> None:
+    """Verify channel is handled based on verify_repo_exists result."""
+    if expected_log:
+        caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
+    mocker.patch("openqabot.loader.gitea.verify_repo_exists", return_value=verify_result)
+
+    incident = {"number": 123}
+    res = mocker.Mock()
+    base_data = {
+        "project": "SUSE:SLFO:1.2:PullRequest:2702:SLES",
+        "arch": arch,
+        "repository": "product",
+    }
+    if arch == "aarch64":
+        base_data["state"] = "published"
+    res.get.side_effect = lambda k: base_data.get(k, "")
+    res.findall.return_value = []
+
+    results = BuildResults()
+    gitea.add_build_result(incident, res, results)
+
+    channel = f"SUSE:SLFO:1.2:PullRequest:2702:SLES:{arch}#16.0"
+    assert (channel in results.projects) == expected_in_projects
+    if expected_log:
+        assert expected_log in caplog.text
+
+
+@pytest.mark.usefixtures("mock_repo_check_setup")
+@pytest.mark.parametrize(
+    ("status_code", "ok", "expected"),
+    [
+        (404, False, False),
+        (200, True, True),
+    ],
+)
+def test_verify_repo_exists_status_codes(
+    mocker: MockerFixture,
+    *,
+    status_code: int,
+    ok: bool,
+    expected: bool,
+) -> None:
+    """Verify verify_repo_exists returns correct result for HTTP status codes."""
+    mock_head = mocker.patch("openqabot.loader.gitea.retried_requests.head")
+    mock_head.return_value.status_code = status_code
+    mock_head.return_value.ok = ok
+
+    result = verify_repo_exists("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "16.0", "x86_64")
+
+    assert result is expected
+
+
+def test_verify_repo_exists_no_product_version(mocker: MockerFixture) -> None:
+    """Verify verify_repo_exists returns True when no product version."""
+    mock_head = mocker.patch("openqabot.loader.gitea.retried_requests.head")
+
+    result = verify_repo_exists("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "", "x86_64")
+
+    assert result is True
+    mock_head.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("download_base", "obs_download"),
+    [
+        ("", "http://download.suse.de/ibs"),
+        ("http://example.com", ""),
+        ("", ""),
+    ],
+)
+def test_verify_repo_exists_missing_urls(mocker: MockerFixture, download_base: str, obs_download: str) -> None:
+    """Verify verify_repo_exists returns True when configuration URLs are missing."""
+    mocker.patch("openqabot.config.settings.download_base_url", download_base)
+    mocker.patch("openqabot.config.settings.obs_download_url", obs_download)
+
+    result = verify_repo_exists("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "16.0", "x86_64")
+
+    assert result is True
+
+
+def test_verify_repo_exists_invalid_obs_url(mocker: MockerFixture) -> None:
+    """Verify verify_repo_exists returns True when obs_download_url is invalid."""
+    mocker.patch("openqabot.config.settings.download_base_url", "http://example.com")
+    mocker.patch("openqabot.config.settings.obs_download_url", "invalid-url-no-slashes")
+
+    result = verify_repo_exists("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "16.0", "x86_64")
+
+    assert result is True
