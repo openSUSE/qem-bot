@@ -75,16 +75,14 @@ def get_submissions(token: dict[str, str], submission: str | None = None) -> lis
     """Fetch all or a specific submission from the dashboard and wrap them in Submission objects."""
     if submission:
         s_type, s_id = submission.split(":")
-    submissions = (
-        [_get_submission(token, int(s_id), s_type)]
-        if submission
-        else get_json("api/incidents", headers=token, verify=True)
-    )
+        submissions = [_get_submission(token, int(s_id), s_type)]
+    else:
+        submissions = get_json("api/incidents", headers=token, verify=True)
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
 
-    return [submission for s in submissions if (submission := Submission.create(s))]
+    return [sub for s in submissions if (sub := Submission.create(s))]
 
 
 def get_active_submissions(token: dict[str, str], submission_type: str | None = None) -> Sequence[int]:
