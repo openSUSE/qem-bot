@@ -90,6 +90,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
 def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.openqa")
     client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
     client.handle_job_not_found(42)
     assert len(caplog.messages) == 2
