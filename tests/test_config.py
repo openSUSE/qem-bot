@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
+from pydantic import ValidationError
 from openqabot.config import Settings, get_default_obs_url
 
 
@@ -104,3 +104,23 @@ def test_insecure_setting() -> None:
 
     settings = Settings(insecure=False)
     assert settings.insecure is False
+
+
+def test_obs_download_url_validation() -> None:
+    """Test validation of obs_download_url."""
+    # Valid URL
+    settings = Settings(obs_download_url="http://download.suse.de/ibs")
+    assert settings.obs_download_url == "http://download.suse.de/ibs"
+
+    # Invalid URL (no hostname)
+    with pytest.raises(ValidationError, match="OBS_DOWNLOAD_URL 'invalid-url' does not contain a valid hostname"):
+        Settings(obs_download_url="invalid-url")
+
+
+def test_repo_mirror_host_property() -> None:
+    """Test the repo_mirror_host property."""
+    settings = Settings(obs_download_url="http://download.suse.de/ibs")
+    assert settings.repo_mirror_host == "download.suse.de"
+
+    settings = Settings(obs_download_url="https://mirror.example.com/path")
+    assert settings.repo_mirror_host == "mirror.example.com"

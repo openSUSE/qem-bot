@@ -374,8 +374,6 @@ def verify_repo_exists(
     if not product_version:
         return True
     repo_url = get_repo_url(target, product_version, config)
-    if not repo_url:
-        return True
     with suppress(requests.exceptions.RequestException):
         response = retried_requests.head(repo_url, allow_redirects=True)
         if response.status_code == HTTPStatus.NOT_FOUND:
@@ -481,6 +479,7 @@ def add_build_result(
         repo_type=config.settings.obs_repo_type or "product",
         download_base_url=config.settings.download_base_url,
         obs_download_url=config.settings.obs_download_url,
+        repo_mirror_host=config.settings.repo_mirror_host,
         obs_products=config.settings.obs_products_set,
     )
     target = Repos(product=project, version=product, arch=res.get("arch"))
