@@ -153,7 +153,7 @@ def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
         _product: str,
         _res: Any,
         projects: set[str],
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> str:
         projects.add("chan")
         return "chan"
@@ -246,30 +246,21 @@ def test_add_comments_bot_comments_no_urls(mocker: MockerFixture, caplog: pytest
 
 @pytest.mark.usefixtures("mock_product_setup")
 @pytest.mark.parametrize(
-    ("arch", "verify_result", "expected_in_projects", "expected_log"),
+    ("arch", "verify_result", "expected_in_projects"),
     [
-        (
-            "ppc64le",
-            False,
-            False,
-            "Skipping SUSE:SLFO:1.2:PullRequest:2702:SLES:ppc64le: repository not found for architecture",
-        ),
-        ("x86_64", True, True, None),
-        ("aarch64", True, True, None),
+        ("ppc64le", False, False),
+        ("x86_64", True, True),
+        ("aarch64", True, True),
     ],
 )
 def test_add_build_result_channel_handling(
     mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
     *,
     arch: str,
     verify_result: bool,
     expected_in_projects: bool,
-    expected_log: str | None,
 ) -> None:
     """Verify channel is handled based on verify_repo_exists result."""
-    if expected_log:
-        caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.verify_repo_exists", return_value=verify_result)
 
     incident = {"number": 123}
@@ -279,8 +270,6 @@ def test_add_build_result_channel_handling(
         "arch": arch,
         "repository": "product",
     }
-    if arch == "aarch64":
-        base_data["state"] = "published"
     res.get.side_effect = lambda k: base_data.get(k, "")
     res.findall.return_value = []
 
@@ -289,8 +278,6 @@ def test_add_build_result_channel_handling(
 
     channel = f"SUSE:SLFO:1.2:PullRequest:2702:SLES:{arch}#16.0"
     assert (channel in results.projects) == expected_in_projects
-    if expected_log:
-        assert expected_log in caplog.text
 
 
 @pytest.mark.usefixtures("mock_repo_check_setup")
@@ -352,7 +339,7 @@ def test_verify_repo_exists_no_product_version(mocker: MockerFixture) -> None:
         ("", ""),
     ],
 )
-def test_verify_repo_exists_missing_urls(mocker: MockerFixture, download_base: str, obs_download: str) -> None:
+def test_verify_repo_exists_missing_urls(download_base: str, obs_download: str) -> None:
     """Verify verify_repo_exists returns True when configuration URLs are missing."""
     result = verify_repo_exists(
         "SUSE:SLFO:1.2:PullRequest:2702:SLES",
@@ -367,7 +354,7 @@ def test_verify_repo_exists_missing_urls(mocker: MockerFixture, download_base: s
     assert result is True
 
 
-def test_verify_repo_exists_invalid_obs_url(mocker: MockerFixture) -> None:
+def test_verify_repo_exists_invalid_obs_url() -> None:
     """Verify verify_repo_exists returns True when obs_download_url is invalid."""
     result = verify_repo_exists(
         "SUSE:SLFO:1.2:PullRequest:2702:SLES",

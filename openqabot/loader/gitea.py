@@ -392,11 +392,11 @@ def verify_repo_exists(  # noqa: PLR0913
     with suppress(requests.exceptions.RequestException):
         response = retried_requests.head(repo_url, allow_redirects=True)
         if response.status_code == HTTPStatus.NOT_FOUND:
-            log.debug("Repo %s not found (404), skipping channel", repo_url)
+            log.debug("Repo %s not found, skipping channel", repo_url)
             return False
         log.debug("Repo %s returned %s, allowing channel", repo_url, response.status_code)
         return response.ok
-    log.debug("HTTP check failed for repo %s, allowing channel", repo_url)
+    log.info("HTTP check failed for repo %s, allowing channel", repo_url)
     return True
 
 
@@ -459,7 +459,6 @@ def add_channel_for_build_result(  # noqa: PLR0913
         download_base_url=download_base_url,
         obs_download_url=obs_download_url,
     ):
-        log.debug("Skipping %s:%s: repository not found for architecture %s", project, arch, arch)
         return channel
     projects.add(channel)
     return channel
