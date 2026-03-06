@@ -198,7 +198,7 @@ def test_sub_rev_no_repo_found(mocker: MockerFixture) -> None:
 
 def test_sub_repr_no_rrid() -> None:
     data = deepcopy(test_data)
-    data["rr_number"] = None
+    data["rr_number"] = None  # type: ignore[assignment]
     sub = Submission(data)
     assert repr(sub) == f"<Submission: smelt:{data['project']}>"
 

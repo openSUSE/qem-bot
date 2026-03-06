@@ -155,8 +155,9 @@ class Aggregate(BaseConf):
         ci_url: str | None,
     ) -> dict[str, Any] | None:
         """Create the full post data for the dashboard."""
+        openqa_data: dict[str, Any] = {"REPOHASH": data.repohash, "BUILD": data.build}
         full_post: dict[str, Any] = {
-            "openqa": {"REPOHASH": data.repohash, "BUILD": data.build},
+            "openqa": openqa_data,
             "qem": {"incidents": [], "settings": {}},
             "api": "api/update_settings",
         }
