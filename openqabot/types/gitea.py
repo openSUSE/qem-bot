@@ -14,4 +14,5 @@ class RepoConfig:
     repo_type: str
     download_base_url: str
     obs_download_url: str
+    repo_mirror_host: str
     obs_products: set[str] | None = None

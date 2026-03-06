@@ -9,7 +9,6 @@ import os
 import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
 
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -116,10 +115,7 @@ def get_repo_url(
     config: RepoConfig,
 ) -> str:
     """Construct the repository URL for a given project and architecture."""
-    host = urlparse(config.obs_download_url).netloc
-    if not host:
-        return ""
-    base = config.download_base_url.replace("%REPO_MIRROR_HOST%", host)
+    base = config.download_base_url.replace("%REPO_MIRROR_HOST%", config.repo_mirror_host)
     project_path = target.product.replace(":", ":/")
     return (
         f"{base}/{project_path}/{config.repo_type}/repo/{target.version}-{product_version}-{target.arch}/{target.arch}/"

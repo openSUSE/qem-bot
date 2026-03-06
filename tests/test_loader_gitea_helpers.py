@@ -116,6 +116,7 @@ def test_add_channel_for_build_result_local() -> None:
             repo_type="product",
             download_base_url="http://base.url",
             obs_download_url="http://obs.url",
+            repo_mirror_host="obs.url",
             obs_products={"all"},
         ),
     )

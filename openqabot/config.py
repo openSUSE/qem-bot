@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import osc.conf
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -68,6 +69,15 @@ class Settings(BaseSettings):
     # How long to wait for http(s) call in seconds
     url_timeout: int = 60
 
+    @field_validator("obs_download_url")
+    @classmethod
+    def validate_obs_download_url(cls, v: str) -> str:
+        """Validate that obs_download_url has a valid hostname."""
+        if not urlparse(v).netloc:
+            msg = f"OBS_DOWNLOAD_URL '{v}' does not contain a valid hostname"
+            raise ValueError(msg)
+        return v
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -99,6 +109,11 @@ class Settings(BaseSettings):
         if self.git_review_bot is not None:
             return self.git_review_bot
         return self.obs_group + "-review"
+
+    @property
+    def repo_mirror_host(self) -> str:
+        """Extract the repository mirror host from obs_download_url."""
+        return urlparse(self.obs_download_url).netloc
 
     @property
     def obs_products_set(self) -> set[str]:
