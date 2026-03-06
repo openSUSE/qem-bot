@@ -8,15 +8,6 @@ from dataclasses import dataclass
 
 
 @dataclass
-class BuildTarget:
-    """OBS build target information including project, architecture, and product name."""
-
-    project: str
-    arch: str
-    product_name: str
-
-
-@dataclass
 class RepoConfig:
     """Configuration for OBS repository mirrors and product sets."""
 
