@@ -29,7 +29,8 @@ from osc.core import MultibuildFlavorResolver
 from openqabot import config
 from openqabot.errors import NoRepoFoundError
 from openqabot.types.pullrequest import PullRequest
-from openqabot.utils import BuildTarget, RepoConfig, get_repo_url
+from openqabot.types.gitea import BuildTarget, RepoConfig
+from openqabot.utils import get_repo_url
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
