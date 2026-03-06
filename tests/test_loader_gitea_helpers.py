@@ -12,8 +12,9 @@ from pytest_mock import MockerFixture
 
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
+from openqabot.types.gitea import RepoConfig
 from openqabot.types.pullrequest import PullRequest
-from openqabot.types.gitea import BuildTarget, RepoConfig
+from openqabot.types.types import Repos
 
 
 @pytest.fixture
@@ -154,7 +155,7 @@ def test_get_product_version_from_repo_listing_requests_json_error(
 def test_add_channel_for_build_result_local() -> None:
     projects: set[str] = set()
     res = gitea.add_channel_for_build_result(
-        BuildTarget("myproj", "local", "myprod"),
+        Repos("myproj", "myprod", "local"),
         None,
         projects,
         config=RepoConfig(
