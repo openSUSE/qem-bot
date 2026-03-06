@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.types.pullrequest import PullRequest
-from openqabot.utils import BuildTarget, RepoConfig
+from openqabot.types.gitea import BuildTarget, RepoConfig
 
 
 @pytest.fixture
