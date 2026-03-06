@@ -29,13 +29,14 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
-from openqabot.types.gitea import BuildTarget, RepoConfig
+from openqabot.types.gitea import RepoConfig
+from openqabot.types.types import Repos
 from openqabot.utils import get_repo_url
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
     from openqabot.types.pullrequest import PullRequest
-    from openqabot.types.types import Repos
+
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 
@@ -292,7 +293,7 @@ def get_product_version_from_repo_listing(
 
 
 def verify_repo_exists(
-    target: BuildTarget,
+    target: Repos,
     product_version: str,
     config: RepoConfig,
 ) -> bool:
@@ -315,7 +316,7 @@ def verify_repo_exists(
 
 def _get_product_version(
     res: etree._Element,
-    target: BuildTarget,
+    target: Repos,
     config: RepoConfig,
 ) -> str:
     """Extract product version from scmsync element or repository listing."""
@@ -332,26 +333,26 @@ def _get_product_version(
     # read product version from directory listing if the project is for a concrete product
     if (
         not product_version
-        and target.product_name
+        and target.version
         and config.obs_products
-        and ("all" in config.obs_products or target.product_name in config.obs_products)
+        and ("all" in config.obs_products or target.version in config.obs_products)
     ):
         product_version = get_product_version_from_repo_listing(
-            target.project, target.product_name, res.get("repository"), config.obs_download_url
+            target.product, target.version, res.get("repository"), config.obs_download_url
         )
 
     return product_version
 
 
 def add_channel_for_build_result(
-    target: BuildTarget,
+    target: Repos,
     res: etree._Element,
     projects: set[str],
     *,
     config: RepoConfig,
 ) -> str:
     """Construct a channel string for a build result and add it to the project set."""
-    channel = f"{target.project}:{target.arch}"
+    channel = f"{target.product}:{target.arch}"
     if target.arch == "local":
         return channel
 
@@ -360,17 +361,16 @@ def add_channel_for_build_result(
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
     if product_version:
         channel += f"#{product_version}"
-    elif len(target.product_name) > 0:
+    elif target.version:
         log.debug(
             "Channel skipped: Product version for build result %s:%s could not be determined",
-            target.project,
+            target.product,
             target.arch,
         )
         return channel
-    if target.product_name and not verify_repo_exists(target, product_version, config):
-        log.debug("Skipping %s:%s: repository not found for architecture %s", target.project, target.arch, target.arch)
-        return channel
-    projects.add(channel)
+
+    if not product_version or verify_repo_exists(target, product_version, config):
+        projects.add(channel)
     return channel
 
 
@@ -409,7 +409,7 @@ def add_build_result(
         obs_download_url=config.settings.obs_download_url,
         obs_products=config.settings.obs_products_set,
     )
-    target = BuildTarget(project, res.get("arch"), product)
+    target = Repos(product=project, version=product, arch=res.get("arch"))
     channel = add_channel_for_build_result(target, res, results.projects, config=repo_config)
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
         return

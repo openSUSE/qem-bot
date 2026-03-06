@@ -18,8 +18,8 @@ from urllib3.util.retry import Retry
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .types.gitea import BuildTarget, RepoConfig
-    from .types.types import Data
+    from .types.gitea import RepoConfig
+    from .types.types import Data, Repos
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
@@ -111,7 +111,7 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
 
 
 def get_repo_url(
-    target: BuildTarget,
+    target: Repos,
     product_version: str,
     config: RepoConfig,
 ) -> str:
@@ -120,10 +120,9 @@ def get_repo_url(
     if not host:
         return ""
     base = config.download_base_url.replace("%REPO_MIRROR_HOST%", host)
-    project_path = target.project.replace(":", ":/")
+    project_path = target.product.replace(":", ":/")
     return (
-        f"{base}/{project_path}/{config.repo_type}/repo/"
-        f"{target.product_name}-{product_version}-{target.arch}/{target.arch}/"
+        f"{base}/{project_path}/{config.repo_type}/repo/{target.version}-{product_version}-{target.arch}/{target.arch}/"
     )
 
 
