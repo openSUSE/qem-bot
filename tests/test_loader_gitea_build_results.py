@@ -13,7 +13,7 @@ import pytest
 
 from openqabot.loader import gitea
 from openqabot.loader.gitea import BuildResults, verify_repo_exists
-from openqabot.utils import BuildTarget, RepoConfig
+from openqabot.types.gitea import BuildTarget, RepoConfig
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
