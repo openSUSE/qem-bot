@@ -13,7 +13,8 @@ import pytest
 
 from openqabot.loader import gitea
 from openqabot.loader.gitea import BuildResults, verify_repo_exists
-from openqabot.types.gitea import BuildTarget, RepoConfig
+from openqabot.types.gitea import RepoConfig
+from openqabot.types.types import Repos
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -149,7 +150,7 @@ def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
 
     def mock_add_channel(
-        _target: BuildTarget,
+        _target: Repos,
         _res: Any,
         projects: set[str],
         *,
@@ -301,7 +302,7 @@ def test_verify_repo_exists_status_codes(
     mock_head.return_value.ok = ok
 
     result = verify_repo_exists(
-        BuildTarget("SUSE:SLFO:1.2:PullRequest:2702:SLES", "x86_64", "SLES"),
+        Repos("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "x86_64"),
         "16.0",
         config=RepoConfig(
             repo_type="product",
@@ -318,7 +319,7 @@ def test_verify_repo_exists_no_product_version(mocker: MockerFixture) -> None:
     mock_head = mocker.patch("openqabot.loader.gitea.retried_requests.head")
 
     result = verify_repo_exists(
-        BuildTarget("SUSE:SLFO:1.2:PullRequest:2702:SLES", "x86_64", "SLES"),
+        Repos("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "x86_64"),
         "",
         config=RepoConfig(
             repo_type="product",
@@ -342,7 +343,7 @@ def test_verify_repo_exists_no_product_version(mocker: MockerFixture) -> None:
 def test_verify_repo_exists_missing_urls(download_base: str, obs_download: str) -> None:
     """Verify verify_repo_exists returns True when configuration URLs are missing."""
     result = verify_repo_exists(
-        BuildTarget("SUSE:SLFO:1.2:PullRequest:2702:SLES", "x86_64", "SLES"),
+        Repos("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "x86_64"),
         "16.0",
         config=RepoConfig(
             repo_type="product",
@@ -357,7 +358,7 @@ def test_verify_repo_exists_missing_urls(download_base: str, obs_download: str) 
 def test_verify_repo_exists_invalid_obs_url() -> None:
     """Verify verify_repo_exists returns True when obs_download_url is invalid."""
     result = verify_repo_exists(
-        BuildTarget("SUSE:SLFO:1.2:PullRequest:2702:SLES", "x86_64", "SLES"),
+        Repos("SUSE:SLFO:1.2:PullRequest:2702:SLES", "SLES", "x86_64"),
         "16.0",
         config=RepoConfig(
             repo_type="product",
