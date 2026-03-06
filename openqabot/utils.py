@@ -8,7 +8,6 @@ import logging
 import os
 import re
 from copy import deepcopy
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -19,6 +18,7 @@ from urllib3.util.retry import Retry
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from .types.gitea import BuildTarget, RepoConfig
     from .types.types import Data
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
@@ -108,25 +108,6 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     copy = dict1.copy()
     copy.update(dict2)
     return copy
-
-
-@dataclass
-class BuildTarget:
-    """Build target information."""
-
-    project: str
-    arch: str
-    product_name: str
-
-
-@dataclass
-class RepoConfig:
-    """Repository configuration parameters."""
-
-    repo_type: str
-    download_base_url: str
-    obs_download_url: str
-    obs_products: set[str] | None = None
 
 
 def get_repo_url(

@@ -11,7 +11,7 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
-from openqabot.utils import BuildTarget, RepoConfig
+from openqabot.types.gitea import BuildTarget, RepoConfig
 
 
 def test_post_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
