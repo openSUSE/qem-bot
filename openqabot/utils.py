@@ -8,6 +8,7 @@ import logging
 import os
 import re
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
@@ -109,23 +110,40 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     return copy
 
 
-def get_repo_url(  # noqa: PLR0913
-    project: str,
-    product_name: str,
+@dataclass
+class BuildTarget:
+    """Build target information."""
+
+    project: str
+    arch: str
+    product_name: str
+
+
+@dataclass
+class RepoConfig:
+    """Repository configuration parameters."""
+
+    repo_type: str
+    download_base_url: str
+    obs_download_url: str
+    obs_products: set[str] | None = None
+
+
+def get_repo_url(
+    target: BuildTarget,
     product_version: str,
-    arch: str,
-    *,
-    repo_type: str,
-    download_base_url: str,
-    obs_download_url: str,
+    config: RepoConfig,
 ) -> str:
     """Construct the repository URL for a given project and architecture."""
-    host = urlparse(obs_download_url).netloc
+    host = urlparse(config.obs_download_url).netloc
     if not host:
         return ""
-    base = download_base_url.replace("%REPO_MIRROR_HOST%", host)
-    project_path = project.replace(":", ":/")
-    return f"{base}/{project_path}/{repo_type}/repo/{product_name}-{product_version}-{arch}/{arch}/"
+    base = config.download_base_url.replace("%REPO_MIRROR_HOST%", host)
+    project_path = target.project.replace(":", ":/")
+    return (
+        f"{base}/{project_path}/{config.repo_type}/repo/"
+        f"{target.product_name}-{product_version}-{target.arch}/{target.arch}/"
+    )
 
 
 def number_of_retries(fallback: int = 3) -> int:

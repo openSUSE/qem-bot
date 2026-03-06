@@ -29,7 +29,7 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
-from openqabot.utils import get_repo_url
+from openqabot.utils import BuildTarget, RepoConfig, get_repo_url
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -290,28 +290,15 @@ def get_product_version_from_repo_listing(
     return next((v for v in versions if len(v) > 0), "")
 
 
-def verify_repo_exists(  # noqa: PLR0913
-    project: str,
-    product_name: str,
+def verify_repo_exists(
+    target: BuildTarget,
     product_version: str,
-    arch: str,
-    *,
-    repo_type: str,
-    download_base_url: str,
-    obs_download_url: str,
+    config: RepoConfig,
 ) -> bool:
     """Check if the repository actually exists for the given architecture via HTTP HEAD request."""
     if not product_version:
         return True
-    repo_url = get_repo_url(
-        project,
-        product_name,
-        product_version,
-        arch,
-        repo_type=repo_type,
-        download_base_url=download_base_url,
-        obs_download_url=obs_download_url,
-    )
+    repo_url = get_repo_url(target, product_version, config)
     if not repo_url:
         return True
     with suppress(requests.exceptions.RequestException):
@@ -327,10 +314,8 @@ def verify_repo_exists(  # noqa: PLR0913
 
 def _get_product_version(
     res: etree._Element,
-    project: str,
-    product_name: str,
-    obs_download_url: str,
-    obs_products: set[str],
+    target: BuildTarget,
+    config: RepoConfig,
 ) -> str:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
@@ -344,48 +329,45 @@ def _get_product_version(
     )
 
     # read product version from directory listing if the project is for a concrete product
-    if not product_version and product_name and ("all" in obs_products or product_name in obs_products):
+    if (
+        not product_version
+        and target.product_name
+        and config.obs_products
+        and ("all" in config.obs_products or target.product_name in config.obs_products)
+    ):
         product_version = get_product_version_from_repo_listing(
-            project, product_name, res.get("repository"), obs_download_url
+            target.project, target.product_name, res.get("repository"), config.obs_download_url
         )
 
     return product_version
 
 
-def add_channel_for_build_result(  # noqa: PLR0913
-    project: str,
-    arch: str,
-    product_name: str,
+def add_channel_for_build_result(
+    target: BuildTarget,
     res: etree._Element,
     projects: set[str],
     *,
-    repo_type: str,
-    download_base_url: str,
-    obs_download_url: str,
-    obs_products: set[str],
+    config: RepoConfig,
 ) -> str:
     """Construct a channel string for a build result and add it to the project set."""
-    channel = f"{project}:{arch}"
-    if arch == "local":
+    channel = f"{target.project}:{target.arch}"
+    if target.arch == "local":
         return channel
 
-    product_version = _get_product_version(res, project, product_name, obs_download_url, obs_products)
+    product_version = _get_product_version(res, target, config)
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
     if product_version:
         channel += f"#{product_version}"
-    elif len(product_name) > 0:
-        log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
+    elif len(target.product_name) > 0:
+        log.debug(
+            "Channel skipped: Product version for build result %s:%s could not be determined",
+            target.project,
+            target.arch,
+        )
         return channel
-    if product_name and not verify_repo_exists(
-        project,
-        product_name,
-        product_version,
-        arch,
-        repo_type=repo_type,
-        download_base_url=download_base_url,
-        obs_download_url=obs_download_url,
-    ):
+    if target.product_name and not verify_repo_exists(target, product_version, config):
+        log.debug("Skipping %s:%s: repository not found for architecture %s", target.project, target.arch, target.arch)
         return channel
     projects.add(channel)
     return channel
@@ -420,18 +402,14 @@ def add_build_result(
 
     _update_scminfo(submission, res, project, product)
 
-    channel = add_channel_for_build_result(
-        project,
-        res.get("arch"),
-        product,
-        res,
-        results.projects,
+    repo_config = RepoConfig(
         repo_type=config.settings.obs_repo_type or "product",
         download_base_url=config.settings.download_base_url,
         obs_download_url=config.settings.obs_download_url,
         obs_products=config.settings.obs_products_set,
     )
-
+    target = BuildTarget(project, res.get("arch"), product)
+    channel = add_channel_for_build_result(target, res, results.projects, config=repo_config)
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
         return
 

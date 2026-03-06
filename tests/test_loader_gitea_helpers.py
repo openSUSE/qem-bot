@@ -11,6 +11,7 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
+from openqabot.utils import BuildTarget, RepoConfig
 
 
 def test_post_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -107,15 +108,15 @@ def test_get_product_version_from_repo_listing_requests_json_error(
 def test_add_channel_for_build_result_local() -> None:
     projects: set[str] = set()
     res = gitea.add_channel_for_build_result(
-        "myproj",
-        "local",
-        "myprod",
+        BuildTarget("myproj", "local", "myprod"),
         None,
         projects,
-        repo_type="product",
-        download_base_url="http://base.url",
-        obs_download_url="http://obs.url",
-        obs_products={"all"},
+        config=RepoConfig(
+            repo_type="product",
+            download_base_url="http://base.url",
+            obs_download_url="http://obs.url",
+            obs_products={"all"},
+        ),
     )
     assert res == "myproj:local"
     assert len(projects) == 0
