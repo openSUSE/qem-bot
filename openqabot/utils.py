@@ -9,6 +9,7 @@ import os
 import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -106,6 +107,25 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     copy = dict1.copy()
     copy.update(dict2)
     return copy
+
+
+def get_repo_url(  # noqa: PLR0913
+    project: str,
+    product_name: str,
+    product_version: str,
+    arch: str,
+    *,
+    repo_type: str,
+    download_base_url: str,
+    obs_download_url: str,
+) -> str:
+    """Construct the repository URL for a given project and architecture."""
+    host = urlparse(obs_download_url).netloc
+    if not host:
+        return ""
+    base = download_base_url.replace("%REPO_MIRROR_HOST%", host)
+    project_path = project.replace(":", ":/")
+    return f"{base}/{project_path}/{repo_type}/repo/{product_name}-{product_version}-{arch}/{arch}/"
 
 
 def number_of_retries(fallback: int = 3) -> int:
