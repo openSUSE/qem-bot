@@ -31,9 +31,7 @@ def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
 
 def patch(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
     """Perform a PATCH request to the dashboard."""
-    # openqabot/loader/qem.py originally used req.patch so we will just use that here without retry. Can potentially be
-    # changed to used retry5 as requests as well
-    return requests.patch(settings.qem_dashboard_url + route, timeout=10, **kwargs)
+    return retried_requests.patch(settings.qem_dashboard_url + route, **kwargs)
 
 
 def put(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
