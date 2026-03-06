@@ -17,7 +17,6 @@ from io import BytesIO
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-from urllib.parse import urlparse
 
 import osc.conf as osc_conf
 import osc.core as osc_core
@@ -30,6 +29,7 @@ from osc.core import MultibuildFlavorResolver
 from openqabot import config
 from openqabot.errors import NoRepoFoundError
 from openqabot.types.pullrequest import PullRequest
+from openqabot.utils import get_repo_url
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -367,16 +367,17 @@ def verify_repo_exists(project: str, product_name: str, product_version: str, ar
     """Check if the repository actually exists for the given architecture via HTTP HEAD request."""
     if not product_version:
         return True
-    download_base = config.settings.download_base_url
-    obs_download = config.settings.obs_download_url
-    if not download_base or not obs_download:
+    repo_url = get_repo_url(
+        project,
+        product_name,
+        product_version,
+        arch,
+        repo_type=config.settings.obs_repo_type or "product",
+        download_base_url=config.settings.download_base_url,
+        obs_download_url=config.settings.obs_download_url,
+    )
+    if not repo_url:
         return True
-    host = urlparse(obs_download).netloc
-    if not host:
-        return True
-    base = download_base.replace("%REPO_MIRROR_HOST%", host)
-    project_path = project.replace(":", ":/")
-    repo_url = f"{base}/{project_path}/{config.OBS_REPO_TYPE}/repo/{product_name}-{product_version}-{arch}/{arch}/"
     with suppress(requests.exceptions.RequestException):
         response = retried_requests.head(repo_url, allow_redirects=True)
         if response.status_code == HTTPStatus.NOT_FOUND:
