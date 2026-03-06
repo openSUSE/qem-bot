@@ -308,6 +308,7 @@ def test_verify_repo_exists_status_codes(
             repo_type="product",
             download_base_url="http://example.com",
             obs_download_url="http://download.suse.de/ibs",
+            repo_mirror_host="download.suse.de",
         ),
     )
 
@@ -325,6 +326,7 @@ def test_verify_repo_exists_no_product_version(mocker: MockerFixture) -> None:
             repo_type="product",
             download_base_url="http://example.com",
             obs_download_url="http://download.suse.de/ibs",
+            repo_mirror_host="download.suse.de",
         ),
     )
 
@@ -349,6 +351,7 @@ def test_verify_repo_exists_missing_urls(download_base: str, obs_download: str) 
             repo_type="product",
             download_base_url=download_base,
             obs_download_url=obs_download,
+            repo_mirror_host="example.com",
         ),
     )
 
@@ -364,6 +367,7 @@ def test_verify_repo_exists_invalid_obs_url() -> None:
             repo_type="product",
             download_base_url="http://example.com",
             obs_download_url="invalid-url-no-slashes",
+            repo_mirror_host="",
         ),
     )
 
