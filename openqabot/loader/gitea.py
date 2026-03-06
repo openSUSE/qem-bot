@@ -17,10 +17,11 @@ from io import BytesIO
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import urlparse
 
-import osc.conf
-import osc.core
-import osc.util.xml
+import osc.conf as osc_conf
+import osc.core as osc_core
+import osc.util.xml as osc_xml
 import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_GET
@@ -370,9 +371,8 @@ def verify_repo_exists(project: str, product_name: str, product_version: str, ar
     obs_download = config.settings.obs_download_url
     if not download_base or not obs_download:
         return True
-    try:
-        host = obs_download.split("/")[2]
-    except IndexError:
+    host = urlparse(obs_download).netloc
+    if not host:
         return True
     base = download_base.replace("%REPO_MIRROR_HOST%", host)
     project_path = project.replace(":", ":/")
@@ -527,11 +527,11 @@ def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | Non
 
 def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[etree._Element]:
     """Fetch build results for an OBS project."""
-    build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
+    build_info_url = osc_core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
     if dry:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
     try:
-        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
+        return osc_xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
     except urllib.error.HTTPError:
         results.unavailable.add(obs_project)
         log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
@@ -800,7 +800,7 @@ def get_submissions_from_open_prs(
     submissions = []
 
     # configure osc to be able to request build info from OBS
-    osc.conf.get_config(override_apiurl=config.settings.obs_url)
+    osc_conf.get_config(override_apiurl=config.settings.obs_url)
 
     with futures.ThreadPoolExecutor() as executor:
         future_sub = [
