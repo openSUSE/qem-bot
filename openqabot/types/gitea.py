@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 @dataclass
 class BuildTarget:
-    """Build target information."""
+    """OBS build target information including project, architecture, and product name."""
 
     project: str
     arch: str
@@ -18,7 +18,7 @@ class BuildTarget:
 
 @dataclass
 class RepoConfig:
-    """Repository configuration parameters."""
+    """Configuration for OBS repository mirrors and product sets."""
 
     repo_type: str
     download_base_url: str
