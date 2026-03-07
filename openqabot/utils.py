@@ -129,7 +129,6 @@ def make_retry_session(retries: int, backoff_factor: float) -> Session:
     return http
 
 
-no_retry = make_retry_session(0, 0)
 retry3 = make_retry_session(3, 2)
 retry5 = make_retry_session(5, 1)
 retry10 = make_retry_session(10, 0.1)

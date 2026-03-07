@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 
-def testpackage_diff_repo(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+def test_package_diff_repo(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(distri="sle", version="any", flavor="any", project_base="BASE", diff_project_suffix="DIFF")
     mock_diff = mocker.patch("openqabot.incrementapprover.RepoDiff")
@@ -25,14 +25,14 @@ def testpackage_diff_repo(caplog: pytest.LogCaptureFixture, mocker: MockerFixtur
     assert res == {"some": "diff"}
 
 
-def testpackage_diff_none(caplog: pytest.LogCaptureFixture) -> None:
+def test_package_diff_none(caplog: pytest.LogCaptureFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(distri="sle", version="any", flavor="any", diff_project_suffix="none")
     res = approver.get_package_diff(None, config, "/product")
     assert res == {}
 
 
-def testpackage_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
+def test_package_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle",
@@ -48,7 +48,7 @@ def testpackage_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
     assert res == {"cached": "diff"}
 
 
-def testpackage_diff_source_report_no_request(caplog: pytest.LogCaptureFixture) -> None:
+def test_package_diff_source_report_no_request(caplog: pytest.LogCaptureFixture) -> None:
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="sle", version="any", flavor="any", project_base="BASE", diff_project_suffix="source-report"
