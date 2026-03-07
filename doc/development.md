@@ -84,7 +84,7 @@ tests in parallel (using `-n auto`).
 Run `make help` to find all possible targets. Individual make targets can be
 considered for quicker feedback for individual development steps.
 
-One can run `pytest` to execute only Python-based unit tests. Run e.g. `pytest
+One can run `pytest` to execute only Python-based tests. Run e.g. `pytest
 tests/test_amqp.py` to execute a single test.
 
 Run `make checkstyle` to run all style and static analysis checks.
