@@ -18,8 +18,15 @@ all: help
 PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
 .PHONY: only-test
-only-test: ## Run unit tests without style checks
+only-test: ## Run unit tests with coverage report
+	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
+
+.PHONY: only-test-no-coverage
+only-test-no-coverage: ## Run unit tests without coverage analysis and without style checks
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST)
+
+.PHONY: only-test-with-coverage
+only-test-with-coverage: only-test  ## Alias for "only-test"
 
 .PHONY: ruff
 ruff: ## Run ruff linting and formatting checks
@@ -56,10 +63,6 @@ typecheck-ty: ## Run ty type checker
 .PHONY: typecheck
 typecheck: typecheck-ty
 
-.PHONY: only-test-with-coverage
-only-test-with-coverage: ## Run unit tests with coverage report
-	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
-
 # aggregate targets
 
 .PHONY: checkstyle
@@ -71,12 +74,15 @@ checkstyle-all: ## Run all style and static analysis checks
 	@$(MAKE) -j checkstyle check-code-health check-maintainability
 
 .PHONY: test
-test: ## Run all tests and style checks
+test: ## Run all tests with coverage analysis and style checks
+	@$(MAKE) -j only-test-with-coverage checkstyle-all
+
+.PHONY: test-no-coverage
+test-no-coverage: ## Run all tests *without* coverage analysis and style checks (faster)
 	@$(MAKE) -j only-test checkstyle-all
 
 .PHONY: test-with-coverage
-test-with-coverage: ## Run tests with coverage and style checks
-	@$(MAKE) -j only-test-with-coverage checkstyle-all
+test-with-coverage: test  ## Alias for "test"
 
 BOT_COMMANDS ?= $(shell python3 -c "from openqabot.args import app; from typer.main import get_command_name; print(' '.join(get_command_name(c.name or c.callback.__name__) for c in app.registered_commands if not c.hidden))")
 TIMEOUT ?= 30
