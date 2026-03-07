@@ -52,11 +52,11 @@ check-maintainability: ## Check maintainability index (radon)
 .PHONY: typecheck-ty
 typecheck-ty: ## Run ty type checker
 	ty check
-.PHONY: only-test-with-coverage
 
 .PHONY: typecheck
 typecheck: typecheck-ty
 
+.PHONY: only-test-with-coverage
 only-test-with-coverage: ## Run unit tests with coverage report
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
 
