@@ -274,18 +274,8 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     return next((v for v in versions if len(v) > 0), "")
 
 
-def add_channel_for_build_result(
-    project: str,
-    arch: str,
-    product_name: str,
-    res: Any,  # noqa: ANN401
-    projects: set[str],
-) -> str:
-    """Construct a channel string for a build result and add it to the project set."""
-    channel = f"{project}:{arch}"
-    if arch == "local":
-        return channel
-
+def _get_product_version(res: Any, project: str, product_name: str) -> str:  # noqa: ANN401
+    """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
     product_version = next(
         (
@@ -304,6 +294,23 @@ def add_channel_for_build_result(
     ):
         product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
 
+    return product_version
+
+
+def add_channel_for_build_result(
+    project: str,
+    arch: str,
+    product_name: str,
+    res: Any,  # noqa: ANN401
+    projects: set[str],
+) -> str:
+    """Construct a channel string for a build result and add it to the project set."""
+    channel = f"{project}:{arch}"
+    if arch == "local":
+        return channel
+
+    product_version = _get_product_version(res, project, product_name)
+
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
     if len(product_version) > 0:
         channel = f"{channel}#{product_version}"
@@ -315,6 +322,24 @@ def add_channel_for_build_result(
     return channel
 
 
+def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product: str) -> None:  # noqa: ANN401
+    """Update SCM info in the submission dict."""
+    scm_key = f"scminfo_{product}" if product else "scminfo"
+    for found in (e.text for e in res.findall("scminfo") if e.text):
+        if (existing := submission.get(scm_key)) and found != existing:
+            msg = "PR git:%s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
+            log.warning(msg, submission["number"], project, found, existing)
+            continue
+        submission[scm_key] = found
+
+
+def _update_build_statuses(res: Any, results: BuildResults) -> None:  # noqa: ANN401
+    """Update successful and failed packages based on build status."""
+    statuses = res.findall("status")
+    results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
+    results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
+
+
 def add_build_result(
     submission: dict[str, Any],
     res: Any,  # noqa: ANN401
@@ -323,22 +348,19 @@ def add_build_result(
     """Process a single build result and update submission and results."""
     project = res.get("project")
     product = get_product_name(project)
-    scm_key = f"scminfo_{product}" if product else "scminfo"
-    for found in (e.text for e in res.findall("scminfo") if e.text):
-        if (existing := submission.get(scm_key)) and found != existing:
-            msg = "PR git:%s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
-            log.warning(msg, submission["number"], project, found, existing)
-            continue
-        submission[scm_key] = found
+
+    _update_scminfo(submission, res, project, product)
+
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
+
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
         return
+
     if res.get("state") != "published":
         results.unpublished.add(channel)
         return
-    statuses = res.findall("status")
-    results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
-    results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
+
+    _update_build_statuses(res, results)
 
 
 def get_multibuild_data(obs_project: str) -> str:
