@@ -716,3 +716,23 @@ def test_handle_submission_prevents_empty_incident_repo() -> None:
         res["openqa"]["INCIDENT_REPO"]
         == "http://%REPO_MIRROR_HOST%/ibs/SUSE:/Maintenance:/0/SUSE_Updates_SLE_any_x86_64"
     )
+
+
+def test_handle_submission_packages_mismatch() -> None:
+    sub = MockSubmission(id=1, contains_package_value=False)
+    test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}
+    submissions_obj = Submissions(
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config=test_config,
+        ),
+        extrasettings=set(),
+    )
+
+    ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={"packages": ["foo"]})
+    cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
+
+    assert submissions_obj.should_skip(ctx, cfg, {}) is True

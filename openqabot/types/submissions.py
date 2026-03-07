@@ -143,42 +143,45 @@ class Submissions(BaseConf):
         f_channel = Repos(channel.product, channel.version, arch, channel.product_version)
         return [f_channel] if f_channel in sub.channels else []
 
-    def should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
-        """Check if a submission context should be skipped."""
-        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
+    def _is_invalid_status(self, sub: Submission, arch: str, flavor: str) -> bool:
         if not sub.ongoing:
             log.debug("Submission %s skipped (%s, %s): closed/approved/review no longer requested", sub, arch, flavor)
             return True
-        if (self.filter_embargoed(flavor) and sub.embargoed) or sub.staging:
-            if sub.embargoed:
-                log.info("Submission %s skipped: Embargoed and embargo-filtering enabled", sub)
+        if self.filter_embargoed(flavor) and sub.embargoed:
+            log.info("Submission %s skipped: Embargoed and embargo-filtering enabled", sub)
+            return True
+        return sub.staging
+
+    @staticmethod
+    def _is_invalid_package_or_channel(ctx: SubContext, matches: dict[str, list[Repos]]) -> bool:
+        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
+        if data.get("packages") is not None and not sub.contains_package(data["packages"]):
+            return True
+        if data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"]):
+            return True
+        if not matches:
+            log.debug("Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch)
+            return True
+        return bool("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
+
+    def should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
+        """Check if a submission context should be skipped."""
+        if self._is_invalid_status(ctx.sub, ctx.arch, ctx.flavor):
             return True
 
-        # Check packages and channels
-        pkg_mismatch = (data.get("packages") is not None and not sub.contains_package(data["packages"])) or (
-            data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"])
-        )
-        if (
-            pkg_mismatch
-            or not matches
-            or ("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
-        ):
-            if not matches:
-                log.debug(
-                    "Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch
-                )
+        if self._is_invalid_package_or_channel(ctx, matches):
             return True
 
         if not cfg.ignore_onetime and self.is_scheduled_job(
-            cfg.token, ctx, self.settings["VERSION"], submission_type=sub.type
+            cfg.token, ctx, self.settings["VERSION"], submission_type=ctx.sub.type
         ):
-            log.info("Submission %s already scheduled for %s on %s", sub, flavor, arch)
+            log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
             return True
 
-        if "Kernel" in flavor and not sub.livepatch and not flavor.endswith("Azure"):
+        if "Kernel" in ctx.flavor and not ctx.sub.livepatch and not ctx.flavor.endswith("Azure"):
             allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
             if set(matches).isdisjoint(allowed):
-                log.warning("Submission %s skipped: Kernel submission missing product repository", sub)
+                log.warning("Submission %s skipped: Kernel submission missing product repository", ctx.sub)
                 return True
 
         return False
@@ -260,43 +263,56 @@ class Submissions(BaseConf):
             return False
         return bool(neg and pos)
 
+    def _prepare_settings(
+        self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]], version: str, revs: int
+    ) -> dict[str, Any] | None:
+        settings = self.get_base_settings(ctx, revs, cfg)
+        for issue in matches:
+            settings[issue] = str(ctx.sub.id)
+
+        all_repos = {c for matched in matches.values() for c in matched}
+        repos = {c for c in all_repos if c.product_version == version} or all_repos
+        settings["INCIDENT_REPO"] = ",".join(sorted(self.make_repo_url(ctx.sub, chan) for chan in repos))
+
+        if prio := self.get_priority(ctx):
+            settings["_PRIORITY"] = prio
+
+        if not self.apply_params_expand(settings, ctx.data, ctx.flavor):
+            return None
+
+        self.add_metadata_urls(settings, ctx.sub)
+        return self.apply_pc_images(settings)
+
     def handle_submission(self, ctx: SubContext, cfg: SubConfig) -> dict[str, Any] | None:
         """Process a submission context and return dashboard post data."""
-        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
         matches = {
             issue: matched
-            for issue, channel in data.get("issues", {}).items()
-            if (matched := self.get_matching_channels(sub, channel, arch))
+            for issue, channel in ctx.data.get("issues", {}).items()
+            if (matched := self.get_matching_channels(ctx.sub, channel, ctx.arch))
         }
         if self.should_skip(ctx, cfg, matches):
             return None
+
         version = self.product_version or self.settings["VERSION"]
-        if not sub.compute_revisions_for_product_repo(
+        if not ctx.sub.compute_revisions_for_product_repo(
             self.product_repo, self.product_version, limit_archs=self.valid_archs
         ):
             return None
-        if not (revs := sub.revisions_with_fallback(arch, version)):
+
+        if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, version)):
             return None
-        settings = self.get_base_settings(ctx, revs, cfg)
-        for issue in matches:
-            settings[issue] = str(sub.id)
-        all_repos = {c for matched in matches.values() for c in matched}
-        repos = {c for c in all_repos if c.product_version == version} or all_repos
-        settings["INCIDENT_REPO"] = ",".join(sorted(self.make_repo_url(sub, chan) for chan in repos))
-        if prio := self.get_priority(ctx):
-            settings["_PRIORITY"] = prio
-        if not self.apply_params_expand(settings, data, flavor):
+
+        settings = self._prepare_settings(ctx, cfg, matches, version, revs)
+        if not settings:
             return None
-        self.add_metadata_urls(settings, sub)
-        if not (settings := self.apply_pc_images(settings)):
-            return None
+
         return {
             "api": "api/incident_settings",
             "qem": {
-                "incident": sub.id,
-                "type": sub.type,
-                "arch": arch,
-                "flavor": flavor,
+                "incident": ctx.sub.id,
+                "type": ctx.sub.type,
+                "arch": ctx.arch,
+                "flavor": ctx.flavor,
                 "version": self.settings["VERSION"],
                 "withAggregate": self.is_aggregate_needed(ctx, set(settings.keys())),
                 "settings": settings,
