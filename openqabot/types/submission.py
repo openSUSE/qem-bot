@@ -38,21 +38,30 @@ class Submission:
         self.priority: int | None = submission.get("priority")
         self.type: str = submission.get("type") or config.settings.default_submission_type
 
-        self.channels, self.skipped_products = self._parse_channels(submission["channels"])
-        self._logged_skipped = False
-
-        if not self.channels:
-            raise EmptyChannelsError(self.project)
-
-        self.packages: list[str] = cast("list[str]", sorted(submission["packages"], key=len))
-        if not self.packages:
-            raise EmptyPackagesError(self.project)
-
+        self._initialize_channels(submission["channels"])
+        self._validate_channels()
+        self._initialize_packages(submission["packages"])
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
         self.rev_cache_params: tuple[Any, ...] | None = None
         self.rev_logged: bool = False
+        self._logged_skipped: bool = False
         self.livepatch: bool = self.is_livepatch(self.packages)
+
+    def _initialize_channels(self, raw_channels: list[str]) -> None:
+        """Initialize channels and skipped products from raw channel data."""
+        self.channels, self.skipped_products = self._parse_channels(raw_channels)
+
+    def _validate_channels(self) -> None:
+        """Validate that channels were parsed successfully."""
+        if not self.channels:
+            raise EmptyChannelsError(self.project)
+
+    def _initialize_packages(self, raw_packages: list[str]) -> None:
+        """Initialize packages from raw package data."""
+        self.packages: list[str] = cast("list[str]", sorted(raw_packages, key=len))
+        if not self.packages:
+            raise EmptyPackagesError(self.project)
 
     @staticmethod
     def _parse_channels(raw_channels: list[str]) -> tuple[list[Repos], set[str]]:
