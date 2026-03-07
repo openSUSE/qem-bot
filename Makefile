@@ -18,11 +18,11 @@ all: help
 PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
 .PHONY: only-test
-only-test: ## Run unit tests with coverage report
+only-test: ## Run dynamic tests with coverage report
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
 
 .PHONY: only-test-no-coverage
-only-test-no-coverage: ## Run unit tests without coverage analysis and without style checks
+only-test-no-coverage: ## Run dynamic tests without coverage analysis and without style checks
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST)
 
 .PHONY: only-test-with-coverage
