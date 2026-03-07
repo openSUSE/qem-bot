@@ -98,6 +98,20 @@ class CommentAPI:
             comments[c["id"]] = c
         return comments
 
+    @staticmethod
+    def _parse_info(info_str: str) -> dict[str, str]:
+        """Parse the info string from a comment marker."""
+        if not (stripped := info_str.strip()):
+            return {}
+        return dict(pair.split("=") for pair in stripped.split())
+
+    @staticmethod
+    def _info_matches(info: dict[str, str], info_match: dict[str, Any] | None) -> bool:
+        """Check if parsed info matches the criteria."""
+        if not info_match:
+            return True
+        return all(value is None or info.get(key) == value for key, value in info_match.items())
+
     def comment_find(
         self,
         comments: dict[str, Any],
@@ -107,29 +121,16 @@ class CommentAPI:
         """Return previous bot comments that match criteria."""
         # Case-insensitive for backwards compatibility.
         bot = bot.lower()
-        for c in list(comments.values()):
-            m = self.COMMENT_MARKER_REGEX.match(c["comment"])
-            if m and bot == m.group("bot").lower():
-                info = {}
+        for c in comments.values():
+            if not (m := self.COMMENT_MARKER_REGEX.match(c["comment"])):
+                continue
+            if bot != m.group("bot").lower():
+                continue
 
-                # Python base regex does not support repeated subgroup capture
-                # so parse the optional info using string split.
-                if stripped := m.group("info").strip():
-                    for pair in stripped.split(" "):
-                        key, value = pair.split("=")
-                        info[key] = value
-
-                # Skip if info does not match.
-                if info_match:
-                    match = True
-                    for key, value in list(info_match.items()):
-                        if not (value is None or (key in info and info[key] == value)):
-                            match = False
-                            break
-                    if not match:
-                        continue
-
+            info = self._parse_info(m.group("info"))
+            if self._info_matches(info, info_match):
                 return c, info
+
         return None, None
 
     @staticmethod
