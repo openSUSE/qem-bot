@@ -31,10 +31,6 @@ class NoResultsError(Error):
     """Raised when no test results are found."""
 
 
-class EmptySettingsError(Error):
-    """Raised when settings are empty."""
-
-
 class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 

@@ -161,7 +161,7 @@ def test_handle_submission_not_matching_data(mocker: MockerFixture, amqp: AMQP) 
     fetch_openqa_results_mock.assert_not_called()
 
 
-def testfetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP) -> None:
+def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     r = {"job_id": 42}
     message = job
@@ -177,7 +177,7 @@ def testfetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP
     get_jobs_mock.assert_called_once_with({})
 
 
-def testfetch_openqa_results_unfiltered(mocker: MockerFixture, amqp: AMQP) -> None:
+def test_fetch_openqa_results_unfiltered(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     message = job
 
@@ -189,7 +189,7 @@ def testfetch_openqa_results_unfiltered(mocker: MockerFixture, amqp: AMQP) -> No
     post_result_mock.assert_not_called()
 
 
-def testfetch_openqa_results_key_error(mocker: MockerFixture, amqp: AMQP) -> None:
+def test_fetch_openqa_results_key_error(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     message = job
 
@@ -202,7 +202,7 @@ def testfetch_openqa_results_key_error(mocker: MockerFixture, amqp: AMQP) -> Non
     post_result_mock.assert_not_called()
 
 
-def testfetch_openqa_results_no_id(mocker: MockerFixture, amqp: AMQP) -> None:
+def test_fetch_openqa_results_no_id(mocker: MockerFixture, amqp: AMQP) -> None:
     job = {"id": 42}
     r = {"job_id": 42}
     message = {"id": 43}

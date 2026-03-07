@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
-default_flavor_suffix = "Increments"
 default_flavor = "Online"
 
 

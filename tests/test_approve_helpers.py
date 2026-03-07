@@ -60,7 +60,7 @@ def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) ->
         ({"build": "20200101-1", "result": "passed", "id": 123}, "Older jobs are too old"),
     ],
 )
-def testwas_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
+def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
     approver_instance = Approver(args)
     oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
 
