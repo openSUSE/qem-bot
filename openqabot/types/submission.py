@@ -19,6 +19,9 @@ from .types import ArchVer, Repos
 log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
+EXPECTED_PART_LENGTH_WITH_ARCH = 3
+EXPECTED_PART_LENGTH_NO_ARCH = 2
+
 
 class Submission:
     """Information about a submission."""
@@ -35,50 +38,8 @@ class Submission:
         self.priority: int | None = submission.get("priority")
         self.type: str = submission.get("type") or config.settings.default_submission_type
 
-        self.channels: list[Repos] = [
-            Repos(p, v, a)
-            for p, v, a in (
-                val
-                for val in (r.split(":")[2:] for r in submission["channels"] if r.startswith("SUSE:Updates"))
-                if len(val) == 3  # noqa: PLR2004
-            )
-            if p != "SLE-Module-Development-Tools-OBS"
-        ]
-        # set openSUSE-SLE arch as x86_64 by default
-        # for now is simplification as we now test only on x86_64
-        self.channels += [
-            Repos(p, v, "x86_64")
-            for p, v in (
-                val
-                for val in (
-                    r.split(":")[2:] for r in (i for i in submission["channels"] if i.startswith("SUSE:Updates"))
-                )
-                if len(val) == 2  # noqa: PLR2004
-            )
-        ]
-        # add channels for Gitea-based submissions
-        self.skipped_products = set()
-        for r in submission["channels"]:
-            if not r.startswith("SUSE:SLFO"):
-                continue
-            val = r.split(":")
-            if len(val) <= 3:  # noqa: PLR2004
-                continue
-            obs_project = ":".join(val[2:-1])
-            product = gitea.get_product_name(obs_project)
-            if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
-                self.channels.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
-            else:
-                self.skipped_products.add(product)
-
+        self.channels, self.skipped_products = self._parse_channels(submission["channels"])
         self._logged_skipped = False
-
-        # remove Manager-Server on aarch64 from channels
-        self.channels = [
-            chan
-            for chan in self.channels
-            if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
-        ]
 
         if not self.channels:
             raise EmptyChannelsError(self.project)
@@ -92,6 +53,37 @@ class Submission:
         self.rev_cache_params: tuple[Any, ...] | None = None
         self.rev_logged: bool = False
         self.livepatch: bool = self.is_livepatch(self.packages)
+
+    @staticmethod
+    def _parse_channels(raw_channels: list[str]) -> tuple[list[Repos], set[str]]:
+        updates_3, updates_2, slfo = [], [], []
+        skipped = set()
+
+        for r in raw_channels:
+            if r.startswith("SUSE:Updates"):
+                val = r.split(":")[2:]
+                if len(val) == EXPECTED_PART_LENGTH_WITH_ARCH and val[0] != "SLE-Module-Development-Tools-OBS":
+                    updates_3.append(Repos(val[0], val[1], val[2]))
+                elif len(val) == EXPECTED_PART_LENGTH_NO_ARCH:
+                    updates_2.append(Repos(val[0], val[1], "x86_64"))
+            elif r.startswith("SUSE:SLFO"):
+                val = r.split(":")
+                if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
+                    obs_project = ":".join(val[2:-1])
+                    product = gitea.get_product_name(obs_project)
+                    if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
+                        slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
+                    else:
+                        skipped.add(product)
+
+        # remove Manager-Server on aarch64 from channels
+        filtered_channels = [
+            chan
+            for chan in (updates_3 + updates_2 + slfo)
+            if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
+        ]
+
+        return filtered_channels, skipped
 
     def log_skipped(self) -> None:
         """Log products that were skipped during channel initialization."""
@@ -166,16 +158,10 @@ class Submission:
             return None
 
     @staticmethod
-    def rev(
-        channels: list[Repos],
-        project: str,
-        options: RepoOptions,
-        limit_archs: set[str] | None = None,
-    ) -> dict[ArchVer, int]:
-        """Calculate repohashes for a set of channels."""
-        rev: dict[ArchVer, int] = {}
+    def _group_repos_by_archver(
+        channels: list[Repos], options: RepoOptions, limit_archs: set[str] | None
+    ) -> dict[ArchVer, list[Repos]]:
         tmpdict: dict[ArchVer, list[Repos]] = defaultdict(list)
-
         for repo in channels:
             if limit_archs and repo.arch not in limit_archs:
                 continue
@@ -189,6 +175,18 @@ class Submission:
                 continue
 
             tmpdict[ArchVer(repo.arch, ver)].append(repo)
+        return tmpdict
+
+    @staticmethod
+    def rev(
+        channels: list[Repos],
+        project: str,
+        options: RepoOptions,
+        limit_archs: set[str] | None = None,
+    ) -> dict[ArchVer, int]:
+        """Calculate repohashes for a set of channels."""
+        rev: dict[ArchVer, int] = {}
+        tmpdict = Submission._group_repos_by_archver(channels, options, limit_archs)
 
         for archver, lrepos in tmpdict.items():
             repos_to_check = lrepos
