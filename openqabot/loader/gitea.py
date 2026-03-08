@@ -440,13 +440,8 @@ def _process_obs_url(
             add_build_result(submission, res, results)
 
 
-def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
-    """Aggregate build results from multiple OBS URLs into a submission."""
-    results = BuildResults()
-
-    for url in obs_urls:
-        _process_obs_url(url, submission, dry=dry, results=results)
-
+def _finalize_submission_results(submission: dict[str, Any], results: BuildResults) -> None:
+    """Update submission dictionary with aggregated results."""
     if results.unpublished:
         log.info(
             "PR git:%i: Some repos not published yet: %s",
@@ -474,6 +469,16 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         and "all" not in config.settings.obs_products_set
     ):
         submission["scminfo"] = submission.get("scminfo_" + next(iter(config.settings.obs_products_set)), "")
+
+
+def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+    """Aggregate build results from multiple OBS URLs into a submission."""
+    results = BuildResults()
+
+    for url in obs_urls:
+        _process_obs_url(url, submission, dry=dry, results=results)
+
+    _finalize_submission_results(submission, results)
 
 
 def add_comments_and_referenced_build_results(
