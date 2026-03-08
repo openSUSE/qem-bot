@@ -78,32 +78,31 @@ class Submissions(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
+    def _get_scheduled_jobs(
+        token: dict[str, str], sub_id: int, submission_type: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Fetch scheduled jobs from the dashboard."""
+        try:
+            url = f"{settings.qem_dashboard_url}api/incident_settings/{sub_id}"
+            params = {"type": submission_type} if submission_type else {}
+            res = retried_requests.get(url, headers=token, params=params).json()
+            return res if isinstance(res, list) else []
+        except (requests.exceptions.RequestException, json.JSONDecodeError):
+            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub_id)
+            return []
+
+    @staticmethod
     def is_scheduled_job(token: dict[str, str], ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
         """Check if a job is already scheduled in the dashboard."""
-        jobs = {}
-        try:
-            url = f"{settings.qem_dashboard_url}api/incident_settings/{ctx.sub.id}"
-            params = {}
-            if submission_type:
-                params["type"] = submission_type
-            jobs = retried_requests.get(url, headers=token, params=params).json()
-        except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", ctx.sub)
-
-        if not jobs:
+        if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
             return False
 
-        if isinstance(jobs, dict) and "error" in jobs:
-            return False
-
-        revs = ctx.sub.revisions_with_fallback(ctx.arch, ver)
-        if not revs:
-            return False
+        jobs = Submissions._get_scheduled_jobs(token, ctx.sub.id, submission_type)
         return any(
             job["flavor"] == ctx.flavor
             and job["arch"] == ctx.arch
             and job["version"] == ver
-            and job["settings"]["REPOHASH"] == revs
+            and job.get("settings", {}).get("REPOHASH") == revs
             for job in jobs
         )
 
