@@ -163,6 +163,17 @@ class Submissions(BaseConf):
             return True
         return bool("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
 
+    def _is_kernel_missing_repo(self, sub: Submission, flavor: str, matches: dict[str, list[Repos]]) -> bool:
+        """Check if a Kernel submission is missing its product repository."""
+        if "Kernel" not in flavor or sub.livepatch or flavor.endswith("Azure"):
+            return False
+
+        allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
+        if set(matches).isdisjoint(allowed):
+            log.warning("Submission %s skipped: Kernel submission missing product repository", sub)
+            return True
+        return False
+
     def should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
         """Check if a submission context should be skipped."""
         if self._is_invalid_status(ctx.sub, ctx.arch, ctx.flavor):
@@ -177,13 +188,7 @@ class Submissions(BaseConf):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
             return True
 
-        if "Kernel" in ctx.flavor and not ctx.sub.livepatch and not ctx.flavor.endswith("Azure"):
-            allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
-            if set(matches).isdisjoint(allowed):
-                log.warning("Submission %s skipped: Kernel submission missing product repository", ctx.sub)
-                return True
-
-        return False
+        return self._is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
 
     def get_base_settings(self, ctx: SubContext, revs: int, cfg: SubConfig) -> dict[str, Any]:
         """Return base openQA settings for a submission."""
