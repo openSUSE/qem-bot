@@ -141,40 +141,36 @@ def compute_repo_url_for_job_setting(
     return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_list)
 
 
+def _iter_gitea_pages(query: str, token: dict[str, str]) -> Any:  # noqa: ANN401
+    page = 1
+    while True:
+        sep = "&" if "?" in query else "?"
+        paged_query = f"{query}{sep}page={page}"
+        res = get_json(paged_query, token)
+        if not isinstance(res, list) or not res:
+            return
+        yield res
+        page += 1
+
+
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
     """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
     if dry:
         return read_json("pulls")
+
     if number is not None:
         try:
             pr = get_json(f"repos/{repo}/pulls/{number}", token)
-        # Catching RequestException for general API errors, and json's JSONDecodeError
-        # for cases where requests might not wrap it in RequestException
+            log.debug("PR git:%i: %s", number, pr)
+            return [pr]
         except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError):
             log.exception("PR git:%s ignored: Could not read PR metadata", number)
             return []
-        log.debug("PR git:%i: %s", number, pr)
-        return [pr]
-
-    def iter_pr_pages() -> Any:  # noqa: ANN401
-        """Iterate through all pages of open PRs.
-
-        Yields:
-            Lists of open PRs.
-
-        """
-        page = 1
-        while True:
-            # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
-            prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
-            if not isinstance(prs_on_page, list) or not prs_on_page:
-                return
-            yield prs_on_page
-            page += 1
 
     try:
-        return [pr for page in iter_pr_pages() for pr in page]
+        query = f"repos/{repo}/pulls?state=open"
+        return [pr for page in _iter_gitea_pages(query, token) for pr in page]
     except requests.exceptions.JSONDecodeError:
         log.exception("Gitea API error: Invalid JSON received for open PRs")
         return []
@@ -215,33 +211,29 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
     return entity.get(via, "") if entity is not None else ""
 
 
-def is_review_requested_by(
-    review: dict[str, Any],
-    users: tuple[str | None, ...] | None = None,
-) -> bool:
-    """Check if a review was requested by specific users or groups."""
-    if users is None:
-        users = (config.settings.obs_group, config.settings.git_review_bot_user)
-    user_specifications = (
-        get_name(review, "user", "login"),  # review via our bot account or review bot
-        get_name(review, "team", "name"),  # review request for team bot is part of
-    )
-    return any(user in user_specifications for user in users)
+def is_review_requested_by(review: dict[str, Any], users: tuple[str | None, ...] | None = None) -> bool:
+    users = users or (config.settings.obs_group, config.settings.git_review_bot_user)
+    specs = (get_name(review, "user", "login"), get_name(review, "team", "name"))
+    return any(u in specs for u in users)
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
-    """Process PR reviews and update submission status."""
-    pending_states = {"PENDING", "REQUEST_REVIEW"}
-    open_reviews = [r for r in reviews if not r.get("dismissed", True)]
-    qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
-    has_other_pending = any(r.get("state", "") in pending_states for r in open_reviews if not is_review_requested_by(r))
-    counts = Counter(qam_states)
+    open_revs = [r for r in reviews if not r.get("dismissed", True)]
+    qam_revs = [r for r in open_revs if is_review_requested_by(r)]
+
+    counts = Counter(r.get("state", "") for r in qam_revs)
     qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
     qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
-    submission["approved"] = (counts["APPROVED"] > 0) and (qam_blocking == 0)
-    submission["inReviewQAM"] = qam_pending > 0
-    submission["inReview"] = has_other_pending or (qam_pending > 0)
-    return len(qam_states)
+    has_other_pending = any(
+        r.get("state", "") in {"PENDING", "REQUEST_REVIEW"} for r in open_revs if not is_review_requested_by(r)
+    )
+
+    submission.update({
+        "approved": (counts["APPROVED"] > 0) and (qam_blocking == 0),
+        "inReviewQAM": qam_pending > 0,
+        "inReview": has_other_pending or (qam_pending > 0),
+    })
+    return len(qam_revs)
 
 
 def _extract_version(name: str, prefix: str) -> str:
@@ -322,10 +314,9 @@ def add_channel_for_build_result(
     return channel
 
 
-def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product: str) -> None:  # noqa: ANN401
-    """Update SCM info in the submission dict."""
+def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product: str) -> None:
     scm_key = f"scminfo_{product}" if product else "scminfo"
-    for found in (e.text for e in res.findall("scminfo") if e.text):
+    for found in filter(None, (e.text for e in res.findall("scminfo"))):
         if (existing := submission.get(scm_key)) and found != existing:
             msg = "PR git:%s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
             log.warning(msg, submission["number"], project, found, existing)
@@ -333,8 +324,7 @@ def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product:
         submission[scm_key] = found
 
 
-def _update_build_statuses(res: Any, results: BuildResults) -> None:  # noqa: ANN401
-    """Update successful and failed packages based on build status."""
+def _update_build_statuses(res: Any, results: BuildResults) -> None:
     statuses = res.findall("status")
     results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
     results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
@@ -345,12 +335,9 @@ def add_build_result(
     res: Any,  # noqa: ANN401
     results: BuildResults,
 ) -> None:
-    """Process a single build result and update submission and results."""
     project = res.get("project")
     product = get_product_name(project)
-
     _update_scminfo(submission, res, project, product)
-
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
 
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
@@ -369,35 +356,30 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
-    """Determine which architectures are relevant for a product based on multibuild data."""
-    # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
-    product_name = get_product_name(obs_project)
-    if not product_name:
-        return None
-    product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
-    prefix_len = len(product_prefix)
+def _fetch_multibuild_data(obs_project: str, *, dry: bool) -> str | None:
     if dry:
-        multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
-    else:
-        try:
-            multibuild_data = get_multibuild_data(obs_project)
-        except (urllib.error.HTTPError, urllib.error.URLError) as e:
-            log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
-            return None
+        return read_utf8("_multibuild-124-" + obs_project + ".xml")
+    try:
+        return get_multibuild_data(obs_project)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
+        return None
 
-    # determine from the flavors we got what architectures are actually expected to be present
 
-    # note: The build info will contain result elements for archs like `local` and `ppc64le` that and the published
-    # flag set even though no repos for those products are actually present. Considering these would lead to problems
-    # later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering to actually
-    # relevant ones.
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
+    """Determine relevant architectures for a product based on multibuild data."""
+    if not (product_name := get_product_name(obs_project)):
+        return None
+
+    if not (multibuild_data := _fetch_multibuild_data(obs_project, dry=dry)):
+        return None
+
+    prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
-    relevant_archs = {
-        flavor[prefix_len:] for flavor in flavors if flavor.startswith(product_prefix) and flavor[prefix_len:] in ARCHS
-    }
-    log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
-    return relevant_archs
+    relevant = {f[len(prefix) :] for f in flavors if f.startswith(prefix) and f[len(prefix) :] in ARCHS}
+
+    log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant))
+    return relevant
 
 
 def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
@@ -441,7 +423,6 @@ def _process_obs_url(
 
 
 def _finalize_submission_results(submission: dict[str, Any], results: BuildResults) -> None:
-    """Update submission dictionary with aggregated results."""
     if results.unpublished:
         log.info(
             "PR git:%i: Some repos not published yet: %s",
@@ -550,46 +531,6 @@ def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) 
     return True
 
 
-def _init_git_submission(pr: dict[str, Any]) -> dict[str, Any]:
-    """Initialize a submission dictionary from a Gitea PR."""
-    repo = pr["base"]["repo"]
-    return {
-        "number": pr["number"],
-        "project": repo["name"],
-        # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
-        # see openqabot/types/incidents.py#L227
-        "emu": False,
-        "isActive": pr["state"] == "open",
-        "inReviewQAM": False,
-        "inReview": False,
-        "approved": False,
-        # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
-        "embargoed": False,
-        "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
-        "rr_number": None,
-        "packages": [],
-        "channels": [],
-        "url": pr["url"],
-        "type": "git",
-    }
-
-
-def _fetch_pr_metadata(
-    repo_name: str, number: int, token: dict[str, str], *, dry: bool
-) -> tuple[list[Any], list[Any], list[Any]]:
-    """Fetch reviews, comments, and files for a PR."""
-    if dry:
-        if number == 124:  # noqa: PLR2004
-            return read_json("reviews-124"), read_json("comments-124"), read_json("files-124")
-        return [], [], []
-
-    return (
-        get_json(reviews_url(repo_name, number), token),
-        get_json(comments_url(repo_name, number), token),
-        get_json(changed_files_url(repo_name, number), token),
-    )
-
-
 def make_submission_from_gitea_pr(
     pr: dict[str, Any],
     token: dict[str, str],
@@ -601,24 +542,51 @@ def make_submission_from_gitea_pr(
     """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.get("number", "?"))
     try:
-        submission = _init_git_submission(pr)
-        number = submission["number"]
-        repo_name = pr["base"]["repo"]["full_name"]
+        repo = pr["base"]["repo"]
+        submission = {
+            "number": pr["number"],
+            "project": repo["name"],
+            "emu": False,
+            "isActive": pr["state"] == "open",
+            "inReviewQAM": False,
+            "inReview": False,
+            "approved": False,
+            "embargoed": False,
+            "priority": 0,
+            "rr_number": None,
+            "packages": [],
+            "channels": [],
+            "url": pr["url"],
+            "type": "git",
+        }
+        num, repo_name = submission["number"], repo["full_name"]
 
-        reviews, comments, files = _fetch_pr_metadata(repo_name, number, token, dry=dry)
+        if dry:
+            reviews, comments, files = (
+                (read_json("reviews-124"), read_json("comments-124"), read_json("files-124"))
+                if num == 124  # noqa: PLR2004
+                else ([], [], [])
+            )
+        else:
+            reviews = get_json(reviews_url(repo_name, num), token)
+            comments = get_json(comments_url(repo_name, num), token)
+            files = get_json(changed_files_url(repo_name, num), token)
 
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
-            log.info("PR git:%s skipped: No reviews by %s", number, config.settings.obs_group)
+            log.info("PR git:%s skipped: No reviews by %s", num, config.settings.obs_group)
             return None
+
         add_comments_and_referenced_build_results(submission, comments, dry=dry)
         if not submission["channels"]:
-            log.info("PR git:%s skipped: No channels found", number)
+            log.info("PR git:%s skipped: No channels found", num)
             return None
-        if only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number):
+
+        if only_successful_builds and not is_build_acceptable_and_log_if_not(submission, num):
             return None
+
         add_packages_from_files(submission, token, files, dry=dry)
         if not submission["packages"]:
-            log.info("PR git:%s skipped: No packages found", number)
+            log.info("PR git:%s skipped: No packages found", num)
             return None
 
     except Exception:
