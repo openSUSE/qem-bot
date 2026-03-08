@@ -60,18 +60,6 @@ class IncrementApprover:
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
 
     def check_unique_jobid_request_pair(self, jobids: list[int], request: osc.core.Request) -> None:
-        """Check if certain openQA job was already used to verify certain request ID.
-
-           By design it should not happen and means some bug needs investigation.
-
-        Args:
-            jobids (list[int]): list of openQA job IDs
-            request (_type_): OBS request
-
-        Raises:
-            AmbiguousApprovalStatusError: raised when some job is used second time for different request ID
-
-        """
         for jobid in jobids:
             self.unique_jobid_request_pair.setdefault(jobid, request.reqid)
             if self.unique_jobid_request_pair[jobid] != request.reqid:
@@ -84,19 +72,13 @@ class IncrementApprover:
     @staticmethod
     @lru_cache(maxsize=128)
     def get_regex_match(pattern: str, string: str) -> re.Match | None:
-        """Compile and match a regex pattern."""
-        match = None
         try:
-            match = re.search(pattern, string)
+            return re.search(pattern, string)
         except re.error:
-            log.warning(
-                "Pattern `%s` did not compile successfully. Considering as non-match and returning empty result.",
-                pattern,
-            )
-        return match
+            log.warning("Pattern `%s` did not compile successfully.", pattern)
+            return None
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
-        """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
         query_params = (
             {
@@ -115,13 +97,12 @@ class IncrementApprover:
 
     @staticmethod
     def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
-        """Check if all openQA jobs are finished."""
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
-        if len(actual_states) == 0:
+        if not actual_states:
             build_info.log_no_jobs(params)
             return None
-        if len(pending_states):
+        if pending_states:
             build_info.log_pending_jobs(pending_states)
             return False
         return True
@@ -130,9 +111,6 @@ class IncrementApprover:
         """Fetch job details and check if it belongs to a development group."""
         job = self.client.get_single_job(job_id)
         return self.client.is_in_devel_group(job) if job else False
-
-    def _get_relevant_job_ids(self, job_ids: list[int]) -> list[int]:
-        return [jid for jid in job_ids if not self.is_in_devel_group(jid)]
 
     def evaluate_openqa_job_results(
         self,
@@ -144,7 +122,8 @@ class IncrementApprover:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
-            if not (relevant := self._get_relevant_job_ids(info["job_ids"])):
+            relevant = [jid for jid in info["job_ids"] if not self.is_in_devel_group(jid)]
+            if not relevant:
                 continue
 
             self.check_unique_jobid_request_pair(relevant, request)
@@ -236,11 +215,6 @@ class IncrementApprover:
             return None
         return match
 
-    def _is_skippable_package(self, package: Package) -> bool:
-        if re.match(r"^1(?:\..*)?$", package.version):
-            return True
-        return "-debuginfo" in package.name or package.arch in {"src", "nosrc"}
-
     def extra_builds_for_package(
         self,
         package: Package,
@@ -248,7 +222,9 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if self._is_skippable_package(package):
+        if re.match(r"^1(?:\..*)?$", package.version):
+            return None
+        if "-debuginfo" in package.name or package.arch in {"src", "nosrc"}:
             return None
 
         for build in config_inc.additional_builds:
@@ -304,19 +280,6 @@ class IncrementApprover:
             return config_inc.reference_repos[build_info.flavor], True
         return diff_project, False
 
-    def _get_build_and_diff_projects(
-        self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None
-    ) -> tuple[str, str, bool]:
-        build_project = config_inc.build_project() + repo_sub_path
-        diff_project, is_ref = self._get_diff_project(config_inc, build_info)
-
-        if build_info and is_ref:
-            chan = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
-            build_project = f"{build_project}/{chan}/{build_info.arch}"
-            diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
-
-        return build_project, diff_project, is_ref
-
     def get_package_diff_from_repo(
         self,
         config_inc: IncrementConfig,
@@ -324,15 +287,26 @@ class IncrementApprover:
         build_info: BuildInfo | None = None,
     ) -> defaultdict[str, set[Package]]:
         """Compute package diff by comparing repositories."""
-        build_proj, diff_proj, is_ref = self._get_build_and_diff_projects(config_inc, repo_sub_path, build_info)
+        build_project = config_inc.build_project() + repo_sub_path
+        diff_project, is_reference_repo = self._get_diff_project(config_inc, build_info)
 
-        if not is_ref and any(s in diff_proj for s in ("-Debug", "-Source")):
-            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_proj)
+        if build_info and is_reference_repo:
+            channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
+            build_project = f"{build_project}/{channel}/{build_info.arch}"
+            diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
+
+        if not is_reference_repo and any(s in diff_project for s in ("-Debug", "-Source")):
+            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_project)
             return defaultdict(set)
 
-        key = f"{build_proj}:{diff_proj}"
-        if key in self.package_diff:
-            return self.package_diff[key]
+        diff_key = f"{build_project}:{diff_project}"
+        if diff_key in self.package_diff:
+            return self.package_diff[diff_key]
+
+        log.debug("Comuting repo diff to project %s", diff_project)
+        package_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
+        self.package_diff[diff_key] = package_diff
+        return package_diff
 
         log.debug("Comuting repo diff to project %s", diff_proj)
         self.package_diff[key] = RepoDiff(self.args).compute_diff(diff_proj, build_proj)[0]
@@ -388,24 +362,20 @@ class IncrementApprover:
             extra_params.append({})
         return [merge_dicts(base_params, p) for p in extra_params]
 
-    def _schedule_single_job(self, build_info: BuildInfo, params: dict[str, str]) -> bool:
-        """Schedule a single job and return True if successful."""
-        suffix = f": {params}" if self.args.dry else ""
-        settings = apply_public_cloud_settings(params.copy()) or params
-        log.info("Scheduling jobs for %s%s", build_info.string_with_params(settings), suffix)
-
-        if self.args.dry:
-            return True
-
-        try:
-            self.client.post_job(settings)
-            return True
-        except PostOpenQAError:
-            return False
-
     def schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         """Schedule jobs on openQA."""
-        return sum(1 for p in params if not self._schedule_single_job(build_info, p))
+        error_count = 0
+        for p in params:
+            suffix = f": {p}" if self.args.dry else ""
+            settings = apply_public_cloud_settings(p.copy()) or p
+            log.info("Scheduling jobs for %s%s", build_info.string_with_params(settings), suffix)
+            if self.args.dry:
+                continue
+            try:
+                self.client.post_job(settings)
+            except PostOpenQAError:
+                error_count += 1
+        return error_count
 
     def _handle_not_ready_jobs(
         self,
@@ -506,21 +476,13 @@ class IncrementApprover:
 
     def __call__(self) -> int:
         """Run the increment approval process."""
-        error_count = 0
-        single_request = (
-            osc.core.Request.from_api(config.settings.obs_url, self.args.request_id) if self.args.request_id else None
-        )
-        for config_inc in self.config:
-            if single_request and single_request.actions[0].src_project != config_inc.build_project():
-                log.debug(
-                    "Skipping config %s as it does not match request %s project %s",
-                    config_inc.build_project(),
-                    self.args.request_id,
-                    single_request.actions[0].src_project,
-                )
+        err, req_id = 0, self.args.request_id
+        single = osc.core.Request.from_api(config.settings.obs_url, req_id) if req_id else None
+
+        for cfg in self.config:
+            if single and single.actions[0].src_project != cfg.build_project():
+                log.debug("Skipping config %s (request %s mismatch)", cfg.build_project(), req_id)
                 continue
-            request = find_request_on_obs(self.args, config_inc.build_project())
-            error_count += self.process_request_for_config(request, config_inc)
-        for request in self.requests_to_approve.values():
-            error_count += self.handle_approval(request)
-        return error_count
+            err += self.process_request_for_config(find_request_on_obs(self.args, cfg.build_project()), cfg)
+
+        return err + sum(self.handle_approval(r) for r in self.requests_to_approve.values())
