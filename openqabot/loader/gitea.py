@@ -33,9 +33,7 @@ if TYPE_CHECKING:
     from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
-
 log = getLogger("bot.loader.gitea")
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -54,8 +52,6 @@ PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
 VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
 OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
-# Regex to find all HTTPS URLs, excluding common trailing punctuation like dots or parentheses
-# that are likely part of the surrounding text (e.g. at the end of a sentence or in Markdown).
 URL_FINDALL_REGEX = re.compile(r"https?://[^\s\?\#\)]*[^\s\?\#\)\.]")
 
 
@@ -99,19 +95,16 @@ def read_xml(name: str) -> etree.ElementTree:
 
 def reviews_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR reviews."""
-    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullReviews
     return f"repos/{repo_name}/pulls/{number}/reviews"
 
 
 def changed_files_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR changed files."""
-    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
     return f"repos/{repo_name}/pulls/{number}/files"
 
 
 def comments_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR comments."""
-    # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
     return f"repos/{repo_name}/issues/{number}/comments"
 
 
@@ -141,18 +134,6 @@ def compute_repo_url_for_job_setting(
     return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_list)
 
 
-def _iter_gitea_pages(query: str, token: dict[str, str]) -> Any:  # noqa: ANN401
-    page = 1
-    while True:
-        sep = "&" if "?" in query else "?"
-        paged_query = f"{query}{sep}page={page}"
-        res = get_json(paged_query, token)
-        if not isinstance(res, list) or not res:
-            return
-        yield res
-        page += 1
-
-
 def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
     """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
@@ -169,8 +150,15 @@ def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | N
             return []
 
     try:
-        query = f"repos/{repo}/pulls?state=open"
-        return [pr for page in _iter_gitea_pages(query, token) for pr in page]
+        prs = []
+        page = 1
+        while True:
+            res = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
+            if not isinstance(res, list) or not res:
+                break
+            prs.extend(res)
+            page += 1
+        return prs
     except requests.exceptions.JSONDecodeError:
         log.exception("Gitea API error: Invalid JSON received for open PRs")
         return []
@@ -212,34 +200,26 @@ def get_name(review: dict[str, Any], of: str, via: str) -> str:
 
 
 def is_review_requested_by(review: dict[str, Any], users: tuple[str | None, ...] | None = None) -> bool:
+    """Check if a review was requested by specific users or groups."""
     users = users or (config.settings.obs_group, config.settings.git_review_bot_user)
     specs = (get_name(review, "user", "login"), get_name(review, "team", "name"))
     return any(u in specs for u in users)
 
 
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
+    """Process PR reviews and update submission status."""
     open_revs = [r for r in reviews if not r.get("dismissed", True)]
     qam_revs = [r for r in open_revs if is_review_requested_by(r)]
 
     counts = Counter(r.get("state", "") for r in qam_revs)
-    qam_pending = counts["PENDING"] + counts["REQUEST_REVIEW"]
-    qam_blocking = counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"]
-    has_other_pending = any(
-        r.get("state", "") in {"PENDING", "REQUEST_REVIEW"} for r in open_revs if not is_review_requested_by(r)
+    qam_pend = counts["PENDING"] + counts["REQUEST_REVIEW"]
+    submission["approved"] = (counts["APPROVED"] > 0) and (counts["REQUEST_CHANGES"] + counts["REQUEST_REVIEW"] == 0)
+    submission["inReviewQAM"] = qam_pend > 0
+    submission["inReview"] = qam_pend > 0 or any(
+        r.get("state") in {"PENDING", "REQUEST_REVIEW"} for r in open_revs if not is_review_requested_by(r)
     )
 
-    submission.update({
-        "approved": (counts["APPROVED"] > 0) and (qam_blocking == 0),
-        "inReviewQAM": qam_pending > 0,
-        "inReview": has_other_pending or (qam_pending > 0),
-    })
     return len(qam_revs)
-
-
-def _extract_version(name: str, prefix: str) -> str:
-    """Extract version number from a package name string."""
-    remainder = name.removeprefix(prefix)
-    return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
 
 
 @lru_cache(maxsize=512)
@@ -255,30 +235,32 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     except requests.exceptions.HTTPError as e:
         log.warning("Repo ignored: Could not query repository '%s' (%s->%s): %s", repository, product_name, project, e)
         return ""
-    # Catching both because requests' JSONDecodeError might not inherit from json's
     except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
         log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
         return ""
     except requests.exceptions.RequestException as e:
         log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
         return ""
-    versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
+    versions = (
+        next((p for p in entry["name"].removeprefix(start).split("-") if VERSION_EXTRACT_REGEX.search(p)), "")
+        for entry in data
+        if entry["name"].startswith(start)
+    )
     return next((v for v in versions if len(v) > 0), "")
 
 
 def _get_product_version(res: Any, project: str, product_name: str) -> str:  # noqa: ANN401
     """Extract product version from scmsync element or repository listing."""
-    # read product version from scmsync element if possible, e.g. 15.99
-    product_version = next(
-        (
-            pv
-            for _, pv in (get_product_name_and_version_from_scmsync(e.text) for e in res.findall("scmsync"))
-            if len(pv) > 0
-        ),
-        "",
-    )
+    versions = []
+    for e in res.findall("scmsync"):
+        if not e.text:
+            continue
+        m = SCMSYNC_REGEX.search(e.text)
+        if m and m.group(2):
+            versions.append(m.group(2))
 
-    # read product version from directory listing if the project is for a concrete product
+    product_version = next((v for v in versions if len(v) > 0), "")
+
     if (
         len(product_name) != 0
         and len(product_version) == 0
@@ -303,7 +285,6 @@ def add_channel_for_build_result(
 
     product_version = _get_product_version(res, project, product_name)
 
-    # append product version to channel if known; otherwise skip channel if this is for a concrete product
     if len(product_version) > 0:
         channel = f"{channel}#{product_version}"
     elif len(product_name) > 0:
@@ -314,7 +295,15 @@ def add_channel_for_build_result(
     return channel
 
 
-def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product: str) -> None:
+def add_build_result(
+    submission: dict[str, Any],
+    res: Any,  # noqa: ANN401
+    results: BuildResults,
+) -> None:
+    """Process a single build result and update submission and results."""
+    project = res.get("project")
+    product = get_product_name(project)
+
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in filter(None, (e.text for e in res.findall("scminfo"))):
         if (existing := submission.get(scm_key)) and found != existing:
@@ -323,21 +312,6 @@ def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product:
             continue
         submission[scm_key] = found
 
-
-def _update_build_statuses(res: Any, results: BuildResults) -> None:
-    statuses = res.findall("status")
-    results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
-    results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
-
-
-def add_build_result(
-    submission: dict[str, Any],
-    res: Any,  # noqa: ANN401
-    results: BuildResults,
-) -> None:
-    project = res.get("project")
-    product = get_product_name(project)
-    _update_scminfo(submission, res, project, product)
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
 
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
@@ -347,7 +321,9 @@ def add_build_result(
         results.unpublished.add(channel)
         return
 
-    _update_build_statuses(res, results)
+    statuses = res.findall("status")
+    results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
+    results.failed.update(s.get("package") for s in statuses if s.get("code") not in {"excluded", "succeeded"})
 
 
 def get_multibuild_data(obs_project: str) -> str:
@@ -356,22 +332,17 @@ def get_multibuild_data(obs_project: str) -> str:
     return r.get_multibuild_data()
 
 
-def _fetch_multibuild_data(obs_project: str, *, dry: bool) -> str | None:
-    if dry:
-        return read_utf8("_multibuild-124-" + obs_project + ".xml")
-    try:
-        return get_multibuild_data(obs_project)
-    except (urllib.error.HTTPError, urllib.error.URLError) as e:
-        log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
-        return None
-
-
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
     """Determine relevant architectures for a product based on multibuild data."""
     if not (product_name := get_product_name(obs_project)):
         return None
 
-    if not (multibuild_data := _fetch_multibuild_data(obs_project, dry=dry)):
+    try:
+        multibuild_data = (
+            read_utf8("_multibuild-124-" + obs_project + ".xml") if dry else get_multibuild_data(obs_project)
+        )
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
         return None
 
     prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
@@ -390,19 +361,6 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[Any]:
-    """Fetch build results for an OBS project."""
-    build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
-    if dry:
-        return read_xml("build-results-124-" + obs_project).getroot().findall("result")
-    try:
-        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
-    except urllib.error.HTTPError:
-        results.unavailable.add(obs_project)
-        log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
-        return []
-
-
 def _process_obs_url(
     url: str,
     submission: dict[str, Any],
@@ -417,12 +375,30 @@ def _process_obs_url(
     log.debug("Checking OBS project %s", obs_project)
     relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
 
-    for res in _get_project_results(obs_project, dry=dry, results=results):
+    build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
+    try:
+        res_list = (
+            read_xml("build-results-124-" + obs_project).getroot().findall("result")
+            if dry
+            else osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
+        )
+    except urllib.error.HTTPError:
+        results.unavailable.add(obs_project)
+        log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
+        res_list = []
+
+    for res in res_list:
         if is_build_result_relevant(res, relevant_archs):
             add_build_result(submission, res, results)
 
 
-def _finalize_submission_results(submission: dict[str, Any], results: BuildResults) -> None:
+def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+    """Aggregate build results from multiple OBS URLs into a submission."""
+    results = BuildResults()
+
+    for url in obs_urls:
+        _process_obs_url(url, submission, dry=dry, results=results)
+
     if results.unpublished:
         log.info(
             "PR git:%i: Some repos not published yet: %s",
@@ -450,16 +426,6 @@ def _finalize_submission_results(submission: dict[str, Any], results: BuildResul
         and "all" not in config.settings.obs_products_set
     ):
         submission["scminfo"] = submission.get("scminfo_" + next(iter(config.settings.obs_products_set)), "")
-
-
-def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
-    """Aggregate build results from multiple OBS URLs into a submission."""
-    results = BuildResults()
-
-    for url in obs_urls:
-        _process_obs_url(url, submission, dry=dry, results=results)
-
-    _finalize_submission_results(submission, results)
 
 
 def add_comments_and_referenced_build_results(
@@ -495,16 +461,15 @@ def add_packages_from_patchinfo(
     dry: bool,
 ) -> None:
     """Extract package names from a _patchinfo file URL."""
-    if dry:
-        patch_info = read_xml("patch-info")
-    else:
-        try:
-            response = retried_requests.get(patch_info_url, verify=False, headers=token)
-            response.raise_for_status()
-            patch_info = etree.fromstring(response.content)
-        except (etree.ParseError, requests.RequestException) as e:
-            log.info("Failed to parse patchinfo from %s: %s", patch_info_url, e)
-            return
+    try:
+        patch_info = (
+            read_xml("patch-info")
+            if dry
+            else etree.fromstring(retried_requests.get(patch_info_url, verify=False, headers=token).content)
+        )
+    except (etree.ParseError, requests.RequestException) as e:
+        log.info("Failed to parse patchinfo from %s: %s", patch_info_url, e)
+        return
 
     submission["packages"].extend(res.text for res in patch_info.findall("package"))
 
