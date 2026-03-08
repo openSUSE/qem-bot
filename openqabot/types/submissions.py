@@ -262,6 +262,12 @@ class Submissions(BaseConf):
             return False
         return bool(neg and pos)
 
+    def _get_incident_repo_url(self, sub: Submission, matches: dict[str, list[Repos]], version: str) -> str:
+        """Construct the comma-separated incident repo URL string."""
+        all_repos = {c for matched in matches.values() for c in matched}
+        repos = {c for c in all_repos if c.product_version == version} or all_repos
+        return ",".join(sorted(self.make_repo_url(sub, chan) for chan in repos))
+
     def _prepare_settings(
         self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]], version: str, revs: int
     ) -> dict[str, Any] | None:
@@ -269,9 +275,7 @@ class Submissions(BaseConf):
         for issue in matches:
             settings[issue] = str(ctx.sub.id)
 
-        all_repos = {c for matched in matches.values() for c in matched}
-        repos = {c for c in all_repos if c.product_version == version} or all_repos
-        settings["INCIDENT_REPO"] = ",".join(sorted(self.make_repo_url(ctx.sub, chan) for chan in repos))
+        settings["INCIDENT_REPO"] = self._get_incident_repo_url(ctx.sub, matches, version)
 
         if prio := self.get_priority(ctx):
             settings["_PRIORITY"] = prio
