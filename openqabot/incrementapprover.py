@@ -301,30 +301,39 @@ class IncrementApprover:
             return config_inc.reference_repos[build_info.flavor], True
         return diff_project, False
 
-    def get_package_diff_from_repo(
-        self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
-    ) -> defaultdict[str, set[Package]]:
-        """Compute package diff by comparing repositories."""
+    def _get_build_and_diff_projects(
+        self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None
+    ) -> tuple[str, str, bool]:
         build_project = config_inc.build_project() + repo_sub_path
-        diff_project, is_reference_repo = self._get_diff_project(config_inc, build_info)
+        diff_project, is_ref = self._get_diff_project(config_inc, build_info)
 
-        if build_info and is_reference_repo:
-            channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
-            build_project = f"{build_project}/{channel}/{build_info.arch}"
+        if build_info and is_ref:
+            chan = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
+            build_project = f"{build_project}/{chan}/{build_info.arch}"
             diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
 
-        if not is_reference_repo and any(s in diff_project for s in ("-Debug", "-Source")):
-            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_project)
+        return build_project, diff_project, is_ref
+
+    def get_package_diff_from_repo(
+        self,
+        config_inc: IncrementConfig,
+        repo_sub_path: str,
+        build_info: BuildInfo | None = None,
+    ) -> defaultdict[str, set[Package]]:
+        """Compute package diff by comparing repositories."""
+        build_proj, diff_proj, is_ref = self._get_build_and_diff_projects(config_inc, repo_sub_path, build_info)
+
+        if not is_ref and any(s in diff_proj for s in ("-Debug", "-Source")):
+            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_proj)
             return defaultdict(set)
 
-        diff_key = f"{build_project}:{diff_project}"
-        if diff_key in self.package_diff:
-            return self.package_diff[diff_key]
+        key = f"{build_proj}:{diff_proj}"
+        if key in self.package_diff:
+            return self.package_diff[key]
 
-        log.debug("Comuting repo diff to project %s", diff_project)
-        package_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
-        self.package_diff[diff_key] = package_diff
-        return package_diff
+        log.debug("Comuting repo diff to project %s", diff_proj)
+        self.package_diff[key] = RepoDiff(self.args).compute_diff(diff_proj, build_proj)[0]
+        return self.package_diff[key]
 
     def get_package_diff(
         self,
