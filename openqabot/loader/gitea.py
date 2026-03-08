@@ -550,6 +550,46 @@ def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) 
     return True
 
 
+def _init_git_submission(pr: dict[str, Any]) -> dict[str, Any]:
+    """Initialize a submission dictionary from a Gitea PR."""
+    repo = pr["base"]["repo"]
+    return {
+        "number": pr["number"],
+        "project": repo["name"],
+        # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
+        # see openqabot/types/incidents.py#L227
+        "emu": False,
+        "isActive": pr["state"] == "open",
+        "inReviewQAM": False,
+        "inReview": False,
+        "approved": False,
+        # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
+        "embargoed": False,
+        "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
+        "rr_number": None,
+        "packages": [],
+        "channels": [],
+        "url": pr["url"],
+        "type": "git",
+    }
+
+
+def _fetch_pr_metadata(
+    repo_name: str, number: int, token: dict[str, str], *, dry: bool
+) -> tuple[list[Any], list[Any], list[Any]]:
+    """Fetch reviews, comments, and files for a PR."""
+    if dry:
+        if number == 124:  # noqa: PLR2004
+            return read_json("reviews-124"), read_json("comments-124"), read_json("files-124")
+        return [], [], []
+
+    return (
+        get_json(reviews_url(repo_name, number), token),
+        get_json(comments_url(repo_name, number), token),
+        get_json(changed_files_url(repo_name, number), token),
+    )
+
+
 def make_submission_from_gitea_pr(
     pr: dict[str, Any],
     token: dict[str, str],
@@ -561,41 +601,12 @@ def make_submission_from_gitea_pr(
     """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.get("number", "?"))
     try:
-        number = pr["number"]
-        repo = pr["base"]["repo"]
-        repo_name = repo["full_name"]
-        submission = {
-            "number": number,
-            "project": repo["name"],
-            # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
-            # see openqabot/types/incidents.py#L227
-            "emu": False,
-            "isActive": pr["state"] == "open",
-            "inReviewQAM": False,
-            "inReview": False,
-            "approved": False,
-            # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
-            "embargoed": False,
-            "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
-            "rr_number": None,
-            "packages": [],
-            "channels": [],
-            "url": pr["url"],
-            "type": "git",
-        }
-        if dry:
-            if number == 124:  # noqa: PLR2004
-                reviews = read_json("reviews-124")
-                comments = read_json("comments-124")
-                files = read_json("files-124")
-            else:
-                reviews = []
-                comments = []
-                files = []
-        else:
-            reviews = get_json(reviews_url(repo_name, number), token)
-            comments = get_json(comments_url(repo_name, number), token)
-            files = get_json(changed_files_url(repo_name, number), token)
+        submission = _init_git_submission(pr)
+        number = submission["number"]
+        repo_name = pr["base"]["repo"]["full_name"]
+
+        reviews, comments, files = _fetch_pr_metadata(repo_name, number, token, dry=dry)
+
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
             log.info("PR git:%s skipped: No reviews by %s", number, config.settings.obs_group)
             return None
