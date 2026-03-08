@@ -236,6 +236,11 @@ class IncrementApprover:
             return None
         return match
 
+    def _is_skippable_package(self, package: Package) -> bool:
+        if re.match(r"^1(?:\..*)?$", package.version):
+            return True
+        return "-debuginfo" in package.name or package.arch in {"src", "nosrc"}
+
     def extra_builds_for_package(
         self,
         package: Package,
@@ -243,13 +248,11 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if re.match(r"^1(?:\..*)?$", package.version):
-            return None
-        if "-debuginfo" in package.name or package.arch in {"src", "nosrc"}:
+        if self._is_skippable_package(package):
             return None
 
-        for additional_build in config_inc.additional_builds:
-            if (res := self._match_additional_build(package, additional_build, build_info)) is not None:
+        for build in config_inc.additional_builds:
+            if (res := self._match_additional_build(package, build, build_info)) is not None:
                 return res
         return None
 
@@ -385,20 +388,24 @@ class IncrementApprover:
             extra_params.append({})
         return [merge_dicts(base_params, p) for p in extra_params]
 
+    def _schedule_single_job(self, build_info: BuildInfo, params: dict[str, str]) -> bool:
+        """Schedule a single job and return True if successful."""
+        suffix = f": {params}" if self.args.dry else ""
+        settings = apply_public_cloud_settings(params.copy()) or params
+        log.info("Scheduling jobs for %s%s", build_info.string_with_params(settings), suffix)
+
+        if self.args.dry:
+            return True
+
+        try:
+            self.client.post_job(settings)
+            return True
+        except PostOpenQAError:
+            return False
+
     def schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         """Schedule jobs on openQA."""
-        error_count = 0
-        for p in params:
-            suffix = f": {p}" if self.args.dry else ""
-            settings = apply_public_cloud_settings(p.copy()) or p
-            log.info("Scheduling jobs for %s%s", build_info.string_with_params(settings), suffix)
-            if self.args.dry:
-                continue
-            try:
-                self.client.post_job(settings)
-            except PostOpenQAError:
-                error_count += 1
-        return error_count
+        return sum(1 for p in params if not self._schedule_single_job(build_info, p))
 
     def _handle_not_ready_jobs(
         self,
