@@ -131,20 +131,24 @@ class IncrementApprover:
         job = self.client.get_single_job(job_id)
         return self.client.is_in_devel_group(job) if job else False
 
+    def _get_relevant_job_ids(self, job_ids: list[int]) -> list[int]:
+        return [jid for jid in job_ids if not self.is_in_devel_group(jid)]
+
     def evaluate_openqa_job_results(
-        self, results: OpenQAResult, ok_jobs: set[int], not_ok_jobs: dict[str, set[str]], request: osc.core.Request
+        self,
+        results: OpenQAResult,
+        ok_jobs: set[int],
+        not_ok_jobs: dict[str, set[str]],
+        request: osc.core.Request,
     ) -> None:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
-            # Filter out jobs that belong to a development group
-            relevant_job_ids = [job_id for job_id in info["job_ids"] if not self.is_in_devel_group(job_id)]
-            if not relevant_job_ids:
+            if not (relevant := self._get_relevant_job_ids(info["job_ids"])):
                 continue
 
-            destination = ok_jobs if result in ok_results else not_ok_jobs[result]
-            self.check_unique_jobid_request_pair(relevant_job_ids, request)
-            destination.update(relevant_job_ids)
+            self.check_unique_jobid_request_pair(relevant, request)
+            (ok_jobs if result in ok_results else not_ok_jobs[result]).update(relevant)
 
     def evaluate_list_of_openqa_job_results(
         self, list_of_results: OpenQAResults, request: osc.core.Request
