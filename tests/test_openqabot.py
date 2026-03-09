@@ -67,15 +67,11 @@ def test_main_missing_token_exits(mocker: MockerFixture) -> None:
     # Use CliRunner to test main app execution with missing token
     # We must NOT provide --token and not have it in env
     mocker.patch.dict(os.environ, {}, clear=True)
-    # Mock configs dir to be True to avoid unrelated Configuration error if it fails later
-    mocker.patch("pathlib.Path.is_dir", return_value=True)
+    mocker.patch("pathlib.Path.exists", return_value=True)
 
     result = runner.invoke(app, ["full-run"])
     assert result.exit_code == 1
-    assert (
-        "Error: Missing option '--token' / '-t'." in result.stdout
-        or "Error: Missing option '--token' / '-t'." in result.stderr
-    )
+    assert "Error: Missing option '--token' / '-t'." in result.stdout
 
 
 def test_main_help_no_token(mocker: MockerFixture) -> None:

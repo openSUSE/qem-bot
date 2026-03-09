@@ -46,6 +46,19 @@ pr_number_arg = Annotated[
 ]
 
 
+def _require_token(args: SimpleNamespace) -> None:
+    """Enforce that a qem-dashboard token is present before entering a command.
+
+    Call this guard at the start of every command that does need the dashboard.
+    Used in the most `qem-bot` subcommands which use the qem-dashboard API,
+    which requires Bearer token authentication. The token
+    is intentionally optional, in case of dashboard-free commands.
+    """
+    if args.token is None:
+        typer.echo("Error: Missing option '--token' / '-t'.", err=True)
+        raise typer.Exit(1)
+
+
 @app.callback()
 def main(  # noqa: PLR0913
     ctx: typer.Context,
@@ -114,14 +127,9 @@ def main(  # noqa: PLR0913
     if debug:
         log_obj.setLevel(logging.DEBUG)
 
-    # Allow missing token if help was requested
-    if token is None and not ctx.resilient_parsing:
-        # Check if help is in the arguments
-        if any(arg in sys.argv for arg in ctx.help_option_names):
-            return
-
-        print("Error: Missing option '--token' / '-t'.", file=sys.stderr)  # noqa: T201
-        sys.exit(1)
+    # Check if help is in the arguments
+    if any(arg in sys.argv for arg in ctx.help_option_names):
+        return
 
     if not configs.exists():
         log.error("Configuration error: %s does not exist", configs)
@@ -161,6 +169,7 @@ def full_run(
 ) -> None:
     """Full schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
+    _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.submission = submission
     args.disable_submissions = False
@@ -189,6 +198,7 @@ def submissions_run(
 ) -> None:
     """Submissions only schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
+    _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.submission = submission
     args.disable_submissions = False
@@ -230,6 +240,7 @@ def updates_run(
 ) -> None:
     """Aggregates only schedule for Maintenance Submissions in openQA."""  # noqa: D401
     args = ctx.obj
+    _require_token(args)
     args.ignore_onetime = ignore_onetime
     args.disable_aggregates = False
     args.disable_submissions = True
@@ -242,6 +253,7 @@ def updates_run(
 def smelt_sync(ctx: typer.Context) -> None:
     """Sync data from SMELT into QEM Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     syncer = SMELTSync(args)
     sys.exit(syncer())
@@ -284,6 +296,7 @@ def gitea_sync(  # noqa: PLR0913
 ) -> None:
     """Sync data from Gitea into QEM Dashboard."""
     args = ctx.obj
+    _require_token(args)
     args.gitea_repo = gitea_repo
     args.allow_build_failures = allow_build_failures
     args.consider_unrequested_prs = consider_unrequested_prs
@@ -339,6 +352,7 @@ def sub_approve(
 ) -> None:
     """Approve submissions which passed tests."""
     args = ctx.obj
+    _require_token(args)
     args.all_submissions = all_submissions
     args.submission = submission
     args.incident = submission
@@ -372,6 +386,7 @@ def inc_approve(
 def sub_comment(ctx: typer.Context) -> None:
     """Comment submissions in BuildService."""
     args = ctx.obj
+    _require_token(args)
 
     comment = Commenter(args)
     sys.exit(comment())
@@ -387,6 +402,7 @@ def inc_comment(ctx: typer.Context) -> None:
 def sub_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA submission jobs to Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     syncer = SubResultsSync(args)
     sys.exit(syncer())
@@ -402,6 +418,7 @@ def inc_sync_results(ctx: typer.Context) -> None:
 def aggr_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA aggregate jobs to Dashboard."""
     args = ctx.obj
+    _require_token(args)
 
     syncer = AggregateResultsSync(args)
     sys.exit(syncer())
@@ -502,6 +519,7 @@ def increment_approve(  # noqa: PLR0913
 ) -> None:
     """Approve the most recent product increment for an OBS project if tests passed."""
     args = ctx.obj
+    _require_token(args)
     args.project_base = project_base
     args.build_project_suffix = build_project_suffix
     args.diff_project_suffix = diff_project_suffix
@@ -549,6 +567,7 @@ def amqp_cmd(
 ) -> None:
     """AMQP listener daemon."""
     args = ctx.obj
+    _require_token(args)
     if url is not None:
         args.url = url
     else:

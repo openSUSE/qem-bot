@@ -201,6 +201,7 @@ def test_command_help(mocker: MockerFixture) -> None:
     # Avoid full runner.invoke if we just want to check help bypass logic
     # But we also want to ensure help is formatted correctly.
     # We use a mocked OpenQABot to ensure it's NOT called.
+    mocker.patch("pathlib.Path.exists", return_value=True)
     bot = mocker.patch("openqabot.args.OpenQABot")
     result = runner.invoke(app, ["full-run", "--help"])
     assert result.exit_code == 0
@@ -213,6 +214,7 @@ def test_args_help_bypasses_mandatory_token(mocker: MockerFixture) -> None:
     ctx.resilient_parsing = False
     ctx.help_option_names = ["--help", "-h"]
     mocker.patch("sys.argv", ["qem-bot", "--help"])
+    mocker.patch("pathlib.Path.exists", return_value=True)
 
     result = main(
         ctx,
@@ -256,19 +258,16 @@ def test_configs_dir_accepted(mocker: MockerFixture, tmp_path: Path) -> None:
     bot.assert_called_once()
 
 
-def test_main_no_token_exit(mocker: MockerFixture) -> None:
+def test_main_no_token_exit(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test that main exits with 1 when token is missing and help is not requested."""
     # Mock sys.argv to not contain any help options and clear env to avoid token leakage
     mocker.patch.dict("os.environ", {}, clear=True)
     mocker.patch("sys.argv", ["qem-bot", "full-run"])
 
     # We need to invoke via runner to capture the SystemExit
-    result = runner.invoke(app, ["full-run"])
+    result = runner.invoke(app, ["--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 1
-    assert (
-        "Error: Missing option '--token' / '-t'." in result.stdout
-        or "Error: Missing option '--token' / '-t'." in result.stderr
-    )
+    assert "Error: Missing option '--token' / '-t'." in result.stdout
 
 
 def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> None:
