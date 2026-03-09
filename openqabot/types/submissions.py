@@ -16,7 +16,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
-from .types import ProdVer, Repos
+from .types import ChannelType, ProdVer, Repos, get_channel_type
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -56,22 +56,12 @@ class Submissions(BaseConf):
         return f"<Submissions product: {self.product}>"
 
     @staticmethod
-    def product_version_from_issue_channel(issue: str) -> ProdVer:
-        """Extract product and version from an issue channel string."""
-        channel_parts = issue.split(":")
-        version_parts = channel_parts[1].split("#")
-        return ProdVer(channel_parts[0], *version_parts)
-
-    @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
         """Normalize repository configuration from settings."""
         return {
             flavor: {
                 key: (
-                    {
-                        template: Submissions.product_version_from_issue_channel(channel)
-                        for template, channel in value.items()
-                    }
+                    {template: ProdVer.from_issue_channel(channel) for template, channel in value.items()}
                     if key == "issues"
                     else value
                 )
@@ -123,13 +113,13 @@ class Submissions(BaseConf):
             gitea.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-            if chan.product == "SUSE:SLFO"
+            if get_channel_type(chan.product) == ChannelType.SLFO
             else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
     def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
         """Find channels in a submission matching the given product and architecture."""
-        if channel.product == "SLFO":
+        if get_channel_type(channel.product) == ChannelType.SLFO:
             return [
                 ic
                 for ic in sub.channels
@@ -232,7 +222,7 @@ class Submissions(BaseConf):
         """Add source and dashboard URLs to settings."""
         url = (
             f"{settings.gitea_url}/products/{sub.project}/pulls/{sub.id}"
-            if sub.project == "SLFO"
+            if get_channel_type(sub.project) == ChannelType.SLFO
             else f"{settings.smelt_url}/incident/{sub.id}"
         )
         settings_data["__SOURCE_CHANGE_URL"] = url

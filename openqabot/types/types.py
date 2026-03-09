@@ -4,9 +4,33 @@
 
 from __future__ import annotations
 
+from enum import Enum, auto
 from typing import NamedTuple
 
 from openqabot.config import OBS_REPO_TYPE
+
+
+class ChannelType(Enum):
+    """Enumeration of channel types."""
+
+    UPDATES = auto()
+    SLFO = auto()
+    OPENSUSE = auto()
+
+
+_CHANNEL_PREFIX_MAP = {
+    "SUSE:SLFO": ChannelType.SLFO,
+    "SLFO": ChannelType.SLFO,
+    "openSUSE": ChannelType.OPENSUSE,
+}
+
+
+def get_channel_type(product: str) -> ChannelType:
+    """Determine the channel type based on the product string."""
+    return next(
+        (v for k, v in _CHANNEL_PREFIX_MAP.items() if product.startswith(k)),
+        ChannelType.UPDATES,
+    )
 
 
 class Repos(NamedTuple):
@@ -27,7 +51,7 @@ class Repos(NamedTuple):
     ) -> str:
         """Construct the repository URL."""
         arch = arch or self.arch
-        if project == "SLFO" or self.product.startswith("SUSE:SLFO"):
+        if get_channel_type(self.product) == ChannelType.SLFO or project == "SLFO":
             product = self.product.replace(":", ":/")
             version = self.version.replace(":", ":/")
             start = f"{base}/{product}:/{version}/{OBS_REPO_TYPE}"
@@ -39,7 +63,7 @@ class Repos(NamedTuple):
             return f"{start}/repo/{product_name}-{self.product_version}-{arch}/{path}"
 
         url_base = f"{base}/{project.replace(':', ':/')}" if project else base
-        if self.product.startswith("openSUSE"):
+        if get_channel_type(self.product) == ChannelType.OPENSUSE:
             return f"{url_base}/SUSE_Updates_{self.product}_{self.version}/{path}"
         return f"{url_base}/SUSE_Updates_{self.product}_{self.version}_{arch}/{path}"
 
@@ -50,6 +74,13 @@ class ProdVer(NamedTuple):
     product: str
     version: str  # for SLFO it is the OBS project name; for others it is the product version
     product_version: str = ""  # if non-empty, "version" is the codestream version or OBS project
+
+    @classmethod
+    def from_issue_channel(cls, issue: str) -> ProdVer:
+        """Create a ProdVer from an issue channel string like 'SLFO:project#version'."""
+        channel_parts = issue.split(":")
+        version_parts = channel_parts[1].split("#")
+        return cls(channel_parts[0], version_parts[0], version_parts[1] if len(version_parts) > 1 else "")
 
     def compute_url(
         self,

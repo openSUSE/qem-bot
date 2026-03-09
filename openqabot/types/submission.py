@@ -14,7 +14,7 @@ from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFound
 from openqabot.loader import gitea
 from openqabot.loader.repohash import RepoOptions, get_max_revision
 
-from .types import ArchVer, Repos
+from .types import ArchVer, ChannelType, Repos, get_channel_type
 
 log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
@@ -199,7 +199,7 @@ class Submission:
 
         for archver, lrepos in tmpdict.items():
             repos_to_check = lrepos
-            if project == "SLFO" and options.product_name:
+            if get_channel_type(project) == ChannelType.SLFO and options.product_name:
                 filtered_repos = [
                     r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r.version))
                 ]

@@ -20,7 +20,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from openqabot.utc import UTC
 
 from .baseconf import BaseConf, JobConfig
-from .types import ProdVer, Repos
+from .types import ChannelType, ProdVer, Repos, get_channel_type
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -54,7 +54,7 @@ class Aggregate(BaseConf):
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
         """Normalize repository configuration from config.settings."""
         try:
-            return {key: ProdVer(*value.split(":")) for key, value in config["test_issues"].items()}
+            return {key: ProdVer.from_issue_channel(value) for key, value in config["test_issues"].items()}
         except KeyError as e:
             raise NoTestIssuesError from e
 
@@ -111,7 +111,7 @@ class Aggregate(BaseConf):
         product = self.test_issues[issue].product
         version = self.test_issues[issue].version
         base_url = f"{config.settings.download_maintenance}{sub.id}/SUSE_Updates_{product}_{version}"
-        return f"{base_url}/" if product.startswith("openSUSE") else f"{base_url}_{issues_arch}/"
+        return f"{base_url}/" if get_channel_type(product) == ChannelType.OPENSUSE else f"{base_url}_{issues_arch}/"
 
     def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # noqa: PLR6301
         """Add incident-specific data to the dashboard post."""
