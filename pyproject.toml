@@ -47,7 +47,7 @@ dev = [
     "ruff",
     "pytest-mock",
     "vulture",
-    "ty",
+    "ty>=0.0.21",
     "pre-commit",
     "gitlint",
 ]
