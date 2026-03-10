@@ -285,7 +285,7 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     return next((v for v in versions if len(v) > 0), "")
 
 
-def _get_product_version(res: Any, project: str, product_name: str) -> str:  # noqa: ANN401
+def _get_product_version(res: etree._Element, project: str, product_name: str) -> str:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
     product_version = next(
@@ -312,7 +312,7 @@ def add_channel_for_build_result(
     project: str,
     arch: str,
     product_name: str,
-    res: Any,  # noqa: ANN401
+    res: etree._Element,
     projects: set[str],
 ) -> str:
     """Construct a channel string for a build result and add it to the project set."""
@@ -333,7 +333,7 @@ def add_channel_for_build_result(
     return channel
 
 
-def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product: str) -> None:  # noqa: ANN401
+def _update_scminfo(submission: dict[str, Any], res: etree._Element, project: str, product: str) -> None:
     """Update SCM info in the submission dict."""
     scm_key = f"scminfo_{product}" if product else "scminfo"
     for found in (e.text for e in res.findall("scminfo") if e.text):
@@ -344,7 +344,7 @@ def _update_scminfo(submission: dict[str, Any], res: Any, project: str, product:
         submission[scm_key] = found
 
 
-def _update_build_statuses(res: Any, results: BuildResults) -> None:  # noqa: ANN401
+def _update_build_statuses(res: etree._Element, results: BuildResults) -> None:
     """Update successful and failed packages based on build status."""
     statuses = res.findall("status")
     results.successful.update(s.get("package") for s in statuses if s.get("code") == "succeeded")
@@ -353,7 +353,7 @@ def _update_build_statuses(res: Any, results: BuildResults) -> None:  # noqa: AN
 
 def add_build_result(
     submission: dict[str, Any],
-    res: Any,  # noqa: ANN401
+    res: etree._Element,
     results: BuildResults,
 ) -> None:
     """Process a single build result and update submission and results."""
@@ -411,7 +411,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
     return relevant_archs
 
 
-def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:  # noqa: ANN401
+def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | None) -> bool:
     """Check if a build result is relevant for the current product and architecture."""
     if config.settings.obs_repo_type and res.get("repository") != config.settings.obs_repo_type:
         return False
@@ -419,7 +419,7 @@ def is_build_result_relevant(res: Any, relevant_archs: set[str] | None) -> bool:
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[Any]:
+def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[etree._Element]:
     """Fetch build results for an OBS project."""
     build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
     if dry:
