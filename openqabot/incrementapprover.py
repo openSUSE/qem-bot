@@ -27,7 +27,7 @@ from .loader.incrementconfig import IncrementConfig
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
-from .types.increment import ApprovalStatus, BuildInfo
+from .types.increment import ApprovalStatus, BuildInfo, ScheduleParams
 from .utils import merge_dicts
 
 if TYPE_CHECKING:
@@ -42,7 +42,6 @@ default_flavor = "Online"
 
 OpenQAResult = dict[str, dict[str, dict[str, Any]]]
 OpenQAResults = list[OpenQAResult]
-ScheduleParams = list[dict[str, str]]
 
 
 class IncrementApprover:
@@ -96,10 +95,10 @@ class IncrementApprover:
             )
         return match
 
-    def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
-        """Fetch results from openQA for the specified scheduling parameters."""
-        log.debug("Checking openQA job results for %s", info_str)
-        query_params = (
+    @staticmethod
+    def _make_search_params(params: ScheduleParams) -> list[dict[str, Any]]:
+        """Return search parameters used with the openQA `isos` routes for the specified scheduling parameters."""
+        return [
             {
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
@@ -109,8 +108,12 @@ class IncrementApprover:
                 "product": p.get("PRODUCT"),
             }
             for p in params
-        )
-        res = [self.client.get_scheduled_product_stats(p) for p in query_params]
+        ]
+
+    def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
+        """Fetch results from openQA for the specified scheduling parameters."""
+        log.debug("Checking openQA job results for %s", info_str)
+        res = [self.client.get_scheduled_product_stats(p) for p in self._make_search_params(params)]
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
@@ -175,6 +178,10 @@ class IncrementApprover:
             message=msg,
         )
 
+    def _update_scheduled_product_note(self, approval_status: ApprovalStatus, note: str) -> None:
+        for params in self._make_search_params(approval_status.params):
+            self.client.update_scheduled_product_note(params, note)
+
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
         """Process approval or disapproval based on job results."""
         reasons_to_disapprove = approval_status.reasons_to_disapprove
@@ -188,10 +195,12 @@ class IncrementApprover:
             results_str = "/".join(sorted(ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
             self.approve_on_obs(str(reqid), message)
+            self._update_scheduled_product_note(approval_status, f"Approving {reqid}: {message}")
             log.info("Approving %s: %s", id_msg, message)
         else:
             reasons_str = "\n\t".join(reasons_to_disapprove)
             end_str = f"End of reasons for not approving {id_msg}"
+            self._update_scheduled_product_note(approval_status, f"Not approving {reqid}: {reasons_str}")
             log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
 
@@ -417,6 +426,7 @@ class IncrementApprover:
         """Process a single build and update its approval status."""
         error_count = 0
         params = self.make_scheduling_parameters(request, config_inc, build_info)
+        approval_status.params.extend(params)
         log.debug("Prepared scheduling parameters: %s", params)
         if len(params) < 1:
             log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
@@ -455,7 +465,7 @@ class IncrementApprover:
         if request_id in self.requests_to_approve:
             return self.requests_to_approve[request_id]
 
-        status = ApprovalStatus(request, set(), [])
+        status = ApprovalStatus(request, set(), [], [])
         self.requests_to_approve[request_id] = status
         return status
 
