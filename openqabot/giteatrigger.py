@@ -112,7 +112,7 @@ class GiteaTrigger:
         open_prs: list[Any] = get_open_prs(
             self.gitea_token,
             self.gitea_repo,
-            dry=self.dry,
+            fake_data=False,
             number=self.pr_number,
         )
         log.info(

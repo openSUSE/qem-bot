@@ -149,10 +149,10 @@ def compute_repo_url_for_job_setting(
     return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_list)
 
 
-def get_open_prs(token: dict[str, str], repo: str, *, dry: bool, number: int | None) -> list[Any]:
+def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: int | None) -> list[Any]:
     """Fetch open PRs from a Gitea repository."""
-    log.debug("Fetching open PRs from '%s'%s", repo, ", dry-run" if dry else "")
-    if dry:
+    log.debug("Fetching open PRs from '%s'%s", repo, ", fake-data" if fake_data else "")
+    if fake_data:
         return read_json("pulls")
     if number is not None:
         try:
