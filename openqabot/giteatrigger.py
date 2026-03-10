@@ -100,18 +100,8 @@ class GiteaTrigger:
                     "DISTRI": self.distri,
                     "BUILD": build,
                 }
-                if self.dry:
-                    log.info(
-                        "Dry run: Would trigger openQA job with settings: %s",
-                        pformat(openqa_settings),
-                    )
-                else:
-                    self.openqa.post_job(openqa_settings)
-                    log.info(
-                        "Triggered openQA job for PR %s on %s",
-                        pullrequest.number,
-                        arch,
-                    )
+                self.openqa.post_job(openqa_settings)
+                log.info("Triggered openQA job for PR %s on %s", pullrequest.number, arch)
             else:
                 log.debug("Build %s already covered", build)
         else:

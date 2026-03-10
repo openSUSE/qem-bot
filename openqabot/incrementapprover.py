@@ -379,8 +379,6 @@ class IncrementApprover:
             suffix = f": {p}" if self.args.dry else ""
             settings = apply_public_cloud_settings(p.copy()) or p
             log.info("Scheduling jobs for %s%s", build_info.string_with_params(settings), suffix)
-            if self.args.dry:
-                continue
             try:
                 self.client.post_job(settings)
             except PostOpenQAError:

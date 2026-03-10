@@ -29,10 +29,10 @@ def testget_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture) -> Non
 
 def test_schedule_jobs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
-    approver.args.dry = True
+    approver.client.dry = True
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     params = [{"BUILD": "1.1"}]
-    mock_post = mocker.patch.object(approver.client, "post_job")
+    mock_post = mocker.patch.object(approver.client.openqa, "openqa_request")
     res = approver.schedule_openqa_jobs(build_info, params)
     assert res == 0
     mock_post.assert_not_called()

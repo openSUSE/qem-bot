@@ -72,9 +72,6 @@ class OpenQABot:
         log.info("Triggering %d products in openQA", len(post))
 
         def poster(job: dict[str, Any]) -> None:
-            if self.dry:
-                log.info("Would trigger job with details from dashboard: %s", job)
-                return
             log.info("Triggering job with details from dashboard: %s", job)
             try:
                 self.post_openqa(job["openqa"])

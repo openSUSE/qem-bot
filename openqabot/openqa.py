@@ -36,6 +36,7 @@ class OpenQAInterface:
     def __init__(self, args: Namespace) -> None:
         """Initialize the OpenQAInterface class."""
         self.url: ParseResult = args.openqa_instance
+        self.dry: bool = args.dry
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = number_of_retries()
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
@@ -56,6 +57,9 @@ class OpenQAInterface:
             self.url.geturl(),
             " ".join(f"{k}={v}" for k, v in settings.items()),
         )
+        if self.dry:
+            log.info("OpenQA post_job skipped due dry run mode")
+            return
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:

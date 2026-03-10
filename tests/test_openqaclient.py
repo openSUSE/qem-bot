@@ -31,6 +31,11 @@ def fake_osd_rsp() -> None:
 
 
 @pytest.fixture
+def namespace() -> Namespace:
+    return Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token="", dry=False)
+
+
+@pytest.fixture
 def fake_responses_failing_job_update() -> None:
     responses.add(
         responses.PATCH,
@@ -48,18 +53,16 @@ def fake_responses_failing_job_update() -> None:
     )
 
 
-def test_bool() -> None:
-    false_address = urlparse("http://fake.openqa.site")
-    true_address = urlparse("https://openqa.suse.de")
-
-    assert oQAI(Namespace(openqa_instance=true_address, token=""))
-    assert not oQAI(Namespace(openqa_instance=false_address, token=""))
+def test_bool(namespace: Namespace) -> None:
+    assert oQAI(namespace)
+    namespace.openqa_instance = urlparse("http://fake.openqa.site")
+    assert not oQAI(namespace)
 
 
 @responses.activate
-def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
+def test_post_job_failed(caplog: pytest.LogCaptureFixture, namespace: Namespace) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    client = oQAI(namespace)
     client.retries = 0
     with pytest.raises(PostOpenQAError):
         client.post_job({"foo": "bar"})
@@ -74,9 +77,9 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_osd_rsp")
-def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
+def test_post_job_passed(caplog: pytest.LogCaptureFixture, namespace: Namespace) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    client = oQAI(namespace)
     client.post_job({"foo": "bar"})
 
     assert "openqa-cli api --host https://openqa.suse.de -X post isos foo=bar" in caplog.messages
@@ -89,9 +92,9 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
-def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
+def test_handle_job_not_found(caplog: pytest.LogCaptureFixture, namespace: Namespace) -> None:
     caplog.set_level(logging.INFO, logger="bot.openqa")
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    client = oQAI(namespace)
     client.handle_job_not_found(42)
     assert len(caplog.messages) == 2
     assert len(responses.calls) == 1
@@ -99,8 +102,8 @@ def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     assert any("job not found" in m for m in caplog.messages)  # the 404 fixture is supposed to match
 
 
-def test_get_methods_handle_errors_gracefully() -> None:
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+def test_get_methods_handle_errors_gracefully(namespace: Namespace) -> None:
+    client = oQAI(namespace)
     error = RequestError("GET", "no.where", 500, "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
         assert client.get_job_comments(42) == []
@@ -108,8 +111,8 @@ def test_get_methods_handle_errors_gracefully() -> None:
         assert client.get_older_jobs(42, 0) == {"data": []}
 
 
-def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture, namespace: Namespace) -> None:
+    client = oQAI(namespace)
     with patch(
         "openqabot.openqa.OpenQA_Client.openqa_request",
         side_effect=requests.exceptions.RequestException("Request failed"),
@@ -118,9 +121,9 @@ def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) ->
     assert "openQA API error when fetching comments for job 42" in caplog.text
 
 
-def test_is_in_devel_group_allow_development_groups() -> None:
+def test_is_in_devel_group_allow_development_groups(namespace: Namespace) -> None:
     """Test is_in_devel_group when allow_development_groups is True."""
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    client = oQAI(namespace)
     # Settings expects a string or None
     with patch("openqabot.config.settings.allow_development_groups", "1"):
         # Should return False regardless of group name if allowed
@@ -128,9 +131,9 @@ def test_is_in_devel_group_allow_development_groups() -> None:
         assert not client.is_in_devel_group({"group": "Production"})
 
 
-def test_is_in_devel_group_no_group_id() -> None:
+def test_is_in_devel_group_no_group_id(namespace: Namespace) -> None:
     """Test is_in_devel_group when no group_id is present and not matching name."""
-    client = oQAI(Namespace(openqa_instance=urlparse("https://openqa.suse.de"), token=""))
+    client = oQAI(namespace)
     with patch("openqabot.config.settings.allow_development_groups", None):
         # No group_id and no "Devel"/"Test" in name -> should return False
         assert not client.is_in_devel_group({"group": "Production"})

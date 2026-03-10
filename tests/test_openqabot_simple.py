@@ -100,31 +100,6 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_dry(caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.DEBUG)
-    args = Namespace(
-        dry=True,
-        ignore_onetime=False,
-        token="token",
-        singlearch="single",
-        openqa_instance=urlparse("https://openqa.suse.de"),
-        configs=None,
-        disable_aggregates=False,
-        disable_submissions=False,
-        submission=None,
-    )
-    bot = openqabot.openqabot.OpenQABot(args)
-
-    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
-    bot()
-
-    assert len(caplog.messages) == 6
-    assert "Triggering 1 products in openQA" in caplog.messages
-    assert "Would trigger job with details" in caplog.text
-
-
-@responses.activate
-@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
 def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     args = Namespace(

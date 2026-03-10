@@ -93,7 +93,7 @@ def test_check_pullrequest_dry_run(trigger: GiteaTrigger, mocker: MockerFixture)
     mocker.patch("openqabot.giteatrigger.generate_repo_url", return_value="http://fake.url/")
     mock_pr = MagicMock(number=456)
     trigger.check_pullrequest(mock_pr)
-    cast("MagicMock", trigger.openqa.post_job).assert_not_called()
+    cast("MagicMock", trigger.openqa.openqa.openqa_request).assert_not_called()
 
 
 def test_check_pullrequest_no_iso_found(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
