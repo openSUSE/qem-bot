@@ -30,6 +30,25 @@ log = getLogger("bot.types.aggregate")
 ALL_ISSUES_KEY = "TEST_ISSUES[]"
 
 
+def _normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
+    """Normalize repository configuration from config.settings."""
+    try:
+        return {key: ProdVer.from_issue_channel(value) for key, value in config["test_issues"].items()}
+    except KeyError as e:
+        raise NoTestIssuesError from e
+
+
+def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
+    """Determine the next build number based on current date and repohash."""
+    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+
+    if build.startswith(today) and repohash == old_repohash:
+        raise SameBuildExistsError
+
+    counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
+    return f"{today}-{counter}"
+
+
 class PostData(NamedTuple):
     """Data to be posted to dashboard."""
 
@@ -53,25 +72,11 @@ class Aggregate(BaseConf):
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
         """Normalize repository configuration from config.settings."""
-        try:
-            return {key: ProdVer.from_issue_channel(value) for key, value in config["test_issues"].items()}
-        except KeyError as e:
-            raise NoTestIssuesError from e
+        return _normalize_repos(config)
 
     def __repr__(self) -> str:
         """Return a string representation of the Aggregate."""
         return f"<Aggregate product: {self.product}>"
-
-    @staticmethod
-    def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
-        """Determine the next build number based on current date and repohash."""
-        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-
-        if build.startswith(today) and repohash == old_repohash:
-            raise SameBuildExistsError
-
-        counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
-        return f"{today}-{counter}"
 
     def filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
         """Filter out submissions that are not suitable for aggregate tests."""
@@ -230,7 +235,7 @@ class Aggregate(BaseConf):
         old_build = old_jobs[0].get("build", "") if old_jobs else ""
 
         try:
-            build = self.get_buildnr(
+            build = get_buildnr(
                 repohash,
                 old_repohash,
                 old_build,

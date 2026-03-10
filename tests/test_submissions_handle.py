@@ -11,6 +11,7 @@ import pytest
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
+from openqabot.types import submissions
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.submissions import SubConfig, SubContext, Submissions
@@ -138,7 +139,7 @@ def test_is_scheduled_job_error(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job({}, ctx, "ver")
+    assert not submissions.is_scheduled_job({}, ctx, "ver")
 
 
 def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
@@ -147,7 +148,7 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job({}, ctx, "ver")
+    assert not submissions.is_scheduled_job({}, ctx, "ver")
 
 
 def test_handle_submission_embargoed_skip() -> None:
@@ -247,7 +248,7 @@ def test_handle_submission_livepatch_kgraft(mocker: MockerFixture) -> None:
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
     # Mock is_scheduled_job to return False
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -316,7 +317,7 @@ def test_handle_submission_already_scheduled(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=True)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=True, create=True)
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
 
@@ -348,7 +349,7 @@ def test_handle_submission_kernel_no_product_repo_skip(mocker: MockerFixture) ->
         data=submissions_obj.flavors["SomeKernel-Flavor"],
     )
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
@@ -374,7 +375,7 @@ def test_handle_submission_singlearch_no_aggregate(mocker: MockerFixture) -> Non
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -402,7 +403,7 @@ def test_handle_submission_should_aggregate_logic(mocker: MockerFixture, aggrega
     submissions_obj = _get_submissions_obj(test_config=test_config)
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -432,7 +433,7 @@ def test_handle_submission_params_expand_forbidden(mocker: MockerFixture) -> Non
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
@@ -452,7 +453,7 @@ def test_handle_submission_pc_tools_image_fail(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
     mocker.patch("openqabot.types.submissions.apply_pc_tools_image", return_value={})
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
@@ -473,7 +474,7 @@ def test_handle_submission_pc_pint_image_fail(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
     mocker.patch(
         "openqabot.types.submissions.apply_publiccloud_pint_image", return_value={"PUBLIC_CLOUD_IMAGE_ID": None}
     )
@@ -524,7 +525,7 @@ def test_handle_submission_priority_logic(
     submissions_obj = _get_submissions_obj(test_config=test_config)
     ctx = SubContext(sub=sub, arch="x86_64", flavor=flavor, data=submissions_obj.flavors[flavor])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
     if expected_prio is None:
@@ -548,7 +549,7 @@ def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(token={}, ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch("openqabot.types.submissions.is_scheduled_job", return_value=False, create=True)
     mocker.patch(
         "openqabot.types.submissions.apply_pc_tools_image",
         return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "some_image"},
