@@ -97,7 +97,9 @@ def fake_openqa_comment_api() -> None:
     )
 
 
-def make_approver(mocker: MockerFixture, submission: int = 0, *, patch_commenter: bool = False) -> int:
+def make_approver(submission: int = 0, *, mocker: MockerFixture | None = None) -> int:
+    if mocker:
+        mocker.patch("openqabot.approver.Commenter", autospec=True)
     args = Namespace(
         dry=True,
         token="123",
@@ -106,8 +108,6 @@ def make_approver(mocker: MockerFixture, submission: int = 0, *, patch_commenter
         incident=submission,
         gitea_token=None,
     )
-    if patch_commenter:
-        mocker.patch("openqabot.approver.Commenter", autospec=True)
     instance = Approver(args)
     instance.client.retries = 0
     return instance()

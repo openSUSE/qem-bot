@@ -76,7 +76,7 @@ def fake_responses_for_unblocking_submissions_via_older_ok_result(
 
 
 def approver(mocker: MockerFixture, submission: int = 0) -> int:
-    return make_approver(mocker, submission, patch_commenter=True)
+    return make_approver(submission, mocker=mocker)
 
 
 @responses.activate
