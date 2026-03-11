@@ -148,6 +148,12 @@ class Approver:
 
         return 0 if overall_result else 1
 
+    def _reject(self, sub: SubReq, reason: str) -> bool:
+        log.info(reason, ms2str(sub))
+        if sub.data and (full_sub := Submission.create(sub.data)):
+            self.commenter.comment_on_submission(full_sub)
+        return False
+
     def approvable(self, sub: SubReq) -> bool:
         """Check if a submission is ready for approval."""
         try:
@@ -167,20 +173,12 @@ class Approver:
             a_jobs = []
 
         if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            log.info("%s has at least one not-ok job in submission tests", ms2str(sub))
-            full_sub = Submission.create(sub.data) if sub.data else None
-            if full_sub:
-                self.commenter.comment_on_submission(full_sub)
-            return False
+            return self._reject(sub, "%s has at least one not-ok job in submission tests")
 
         if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
             a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
-            log.info("%s has at least one not-ok job in aggregate tests", ms2str(sub))
-            full_sub = Submission.create(sub.data) if sub.data else None
-            if full_sub:
-                self.commenter.comment_on_submission(full_sub)
-            return False
+            return self._reject(sub, "%s has at least one not-ok job in aggregate tests")
 
         # everything is green --> add submission to approve list
         return True
