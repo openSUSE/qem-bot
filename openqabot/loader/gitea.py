@@ -72,6 +72,7 @@ def make_token_header(token: str) -> dict[str, str]:
 def get_json(query: str, token: dict[str, str], host: str | None = None) -> JsonType:
     """Fetch JSON data from Gitea API."""
     host = host or config.settings.gitea_url
+    # verify=False: the internal Gitea instance uses a self-signed certificate
     response = retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token)
     response.raise_for_status()
     return response.json()
@@ -90,6 +91,7 @@ def _request_json(method: str, query: str, token: dict[str, str], post_data: Jso
     """Send a JSON request to Gitea API."""
     host = host or config.settings.gitea_url
     url = host + "/api/v1/" + query
+    # verify=False: same self-signed certificate rationale as get_json
     res = getattr(retried_requests, method.lower())(url, verify=False, headers=token, json=post_data)
     if not res.ok:
         log.error("Gitea API error: %s to %s failed: %s", method.upper(), url, res.text)
