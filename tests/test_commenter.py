@@ -91,6 +91,7 @@ def mock_git_submission(mocker: MockerFixture) -> MagicMock:
     mock_sub.id = 123
     mock_sub.project = "owner/repo"
     mock_sub.type = "git"
+    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
     mock_sub.__str__ = mocker.Mock(return_value="git:123")
     return mock_sub
 
@@ -503,6 +504,21 @@ def test_gitea_comment_post_new(
 
     mock_gitea.post_json.assert_called_once()
     assert mock_gitea.post_json.call_args[0][0] == "repos/owner/repo/issues/123/comments"
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_gitea_comment_no_url(
+    mock_args: Namespace,
+    caplog: pytest.LogCaptureFixture,
+    mock_git_submission: MagicMock,
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.commenter")
+    mock_git_submission.url = None
+
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_git_submission, "Test message", "passed")
+
+    assert "Submission git:123 has no URL, skipping Gitea comment" in caplog.text
 
 
 def test_gitea_comment_patch_existing(

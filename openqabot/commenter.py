@@ -7,6 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import osc.conf
 
@@ -139,12 +140,17 @@ class Commenter:
             log.debug("Skipping empty comment")
             return
 
+        if not sub.url:
+            log.warning("Submission %s has no URL, skipping Gitea comment", sub)
+            return
+
+        repo = "/".join(urlparse(sub.url).path.split("/")[-4:-2])
         bot_name = "openqa"
         info = {"state": state}
         # Add a marker so we can find our own comments later
         msg = self.commentapi.add_marker(msg, bot_name, info)
 
-        comments = gitea.get_json_list(gitea.comments_url(sub.project, sub.id), self.gitea_token)
+        comments = gitea.get_json_list(gitea.comments_url(repo, sub.id), self.gitea_token)
         # Convert Gitea comments to CommentAPI format
         formatted_comments = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
 
@@ -162,9 +168,9 @@ class Commenter:
             return
 
         if comment is None:
-            gitea.post_json(gitea.comments_url(sub.project, sub.id), self.gitea_token, {"body": msg})
+            gitea.post_json(gitea.comments_url(repo, sub.id), self.gitea_token, {"body": msg})
         else:
-            gitea.patch_json(f"repos/{sub.project}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
+            gitea.patch_json(f"repos/{repo}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
         """Create markdown containing openQA badges."""
