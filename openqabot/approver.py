@@ -318,7 +318,7 @@ class Approver:
                 job_result[f"acceptable_for_{sub}"] = True
                 self.mark_job_as_acceptable_for_submission(job_id, sub)
 
-    def is_job_acceptable(self, sub: int, api: str, job_result: dict) -> bool:
+    def is_job_acceptable(self, sub: int, api: str, job_result: dict, submission_type: str | None = None) -> bool:
         """Determine if a job result is acceptable for approval."""
         if self.is_job_passing(job_result):
             return True
@@ -328,7 +328,7 @@ class Approver:
             log.info(
                 "Ignoring not-ok job %s for submission %s:%s (manually marked as acceptable)",
                 url,
-                self.submission_type or config.settings.default_submission_type,
+                submission_type or self.submission_type or config.settings.default_submission_type,
                 sub,
             )
             return True
@@ -336,7 +336,7 @@ class Approver:
             log.info(
                 "Ignoring not-ok aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
                 url,
-                self.submission_type or config.settings.default_submission_type,
+                submission_type or self.submission_type or config.settings.default_submission_type,
                 sub,
             )
             return True
@@ -344,7 +344,7 @@ class Approver:
         log.info(
             "Found not-ok, not-ignored job %s for submission %s:%s",
             url,
-            self.submission_type or config.settings.default_submission_type,
+            submission_type or self.submission_type or config.settings.default_submission_type,
             sub,
         )
         return False
@@ -383,7 +383,7 @@ class Approver:
                 job_aggr.id,
             )
         self.mark_jobs_as_acceptable_for_submission(job_results, sub)
-        return all(self.is_job_acceptable(sub, api, r) for r in job_results)
+        return all(self.is_job_acceptable(sub, api, r, submission_type=submission_type) for r in job_results)
 
     def get_submission_result(
         self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
