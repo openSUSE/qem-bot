@@ -150,7 +150,11 @@ class Commenter:
             log.warning("Submission %s has no URL, skipping Gitea comment", sub)
             return
 
-        repo = "/".join(urlparse(sub.url).path.split("/")[-4:-2])
+        # Derive owner/repo from the PR URL (e.g. https://host/owner/repo/pulls/N)
+        # sub.project holds the OBS project name, not the Gitea owner/repo path.
+        parts = urlparse(sub.url).path.strip("/").split("/")
+        repo = "/".join(parts[:2])
+
         bot_name = "openqa"
         info = {"state": state}
         # Add a marker so we can find our own comments later

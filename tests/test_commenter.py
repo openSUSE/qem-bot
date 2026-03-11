@@ -66,6 +66,27 @@ def mock_args() -> Namespace:
 
 
 @pytest.fixture
+def mock_smelt_sub() -> MagicMock:
+    sub = MagicMock(spec=Submission)
+    sub.id = 1
+    sub.type = "smelt"
+    sub.rr = 274060
+    sub.revisions = None
+    sub.__str__ = MagicMock(return_value="smelt:1")
+    return sub
+
+
+@pytest.fixture
+def mock_git_sub() -> MagicMock:
+    sub = MagicMock(spec=Submission)
+    sub.id = 123
+    sub.type = "git"
+    sub.url = "https://src.suse.de/owner/repo/pulls/123"
+    sub.__str__ = MagicMock(return_value="git:123")
+    return sub
+
+
+@pytest.fixture
 def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
     mock_client = mocker.patch("openqabot.commenter.OpenQAInterface")
     mock_get_subs = mocker.patch("openqabot.commenter.get_submissions")
@@ -106,18 +127,12 @@ def test_commenter_init_with_submissions(commenter_setup: dict[str, MagicMock], 
 def test_commenter_call_failed_jobs(
     mocker: MockerFixture,
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_job: Callable,
 ) -> None:
     caplog.set_level(logging.INFO, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 1
-    mock_sub.type = "smelt"
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
-    mock_sub.__str__ = MagicMock(return_value="smelt:1")
-
-    mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_sub])
+    mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_smelt_sub])
     mocker.patch(
         "openqabot.commenter.get_submission_results", return_value=[make_job(name="test_failed", status="failed")]
     )
@@ -127,22 +142,16 @@ def test_commenter_call_failed_jobs(
     c = Commenter(mock_args)
     assert c() == 0
     assert "At least one job failed" in caplog.text
-    mock_osc_comment.assert_called_once_with(mock_sub, mocker.ANY, "failed")
+    mock_osc_comment.assert_called_once_with(mock_smelt_sub, mocker.ANY, "failed")
 
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_passed_jobs(
     mocker: MockerFixture,
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
 ) -> None:
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 1
-    mock_sub.type = "smelt"
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
-    mock_sub.__str__ = MagicMock(return_value="smelt:1")
-
-    mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_sub])
+    mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_smelt_sub])
     mocker.patch(
         "openqabot.commenter.get_submission_results",
         return_value=[{"job_id": 1, "name": "test_passed", "status": "passed", "build": "1"}],
@@ -152,53 +161,48 @@ def test_commenter_call_passed_jobs(
 
     c = Commenter(mock_args)
     assert c() == 0
-    mock_osc_comment.assert_called_once_with(mock_sub, mocker.ANY, "passed")
+    mock_osc_comment.assert_called_once_with(mock_smelt_sub, mocker.ANY, "passed")
 
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_no_request(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = None
+    mock_smelt_sub.rr = None
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Comment skipped for submission" in caplog.text
 
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_no_msg(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "", "")
+    c.osc_comment(mock_smelt_sub, "", "")
     assert "Skipping empty comment" in caplog.text
 
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_dry_run(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
-    mock_sub.__str__ = MagicMock(return_value="smelt:1")
     comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
     commenter_setup["comment_api"].return_value = comment_api
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Would write comment to request" in caplog.text
     assert not comment_api.add_comment.called
 
@@ -206,21 +210,18 @@ def test_osc_comment_dry_run(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_with_revision(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
-    mock_sub.__str__ = MagicMock(return_value="smelt:1")
-    mock_sub.revisions = {ArchVer("x86_64", "15-SP4"): 12345}
+    mock_smelt_sub.revisions = {ArchVer("x86_64", "15-SP4"): 12345}
     comment_api = make_comment_api(comment_find_results=[(None, None), (None, None)])
     commenter_setup["comment_api"].return_value = comment_api
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Would write comment to request" in caplog.text
     assert not comment_api.add_comment.called
 
@@ -228,18 +229,16 @@ def test_osc_comment_with_revision(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_no_comment(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     commenter_setup["comment_api"].return_value = make_comment_api(comment_find_results=[(None, None), (None, None)])
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "No comment with this state, looking without the state filter" in caplog.text
     assert "No previous comment found to replace" in caplog.text
 
@@ -247,21 +246,19 @@ def test_osc_comment_no_comment(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_similar_exists(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     existing_comment = {"id": 42, "comment": "comment 1\ncomment 2\ncomment 3"}
     commenter_setup["comment_api"].return_value = make_comment_api(
         comments=[existing_comment], comment_find_results=[(existing_comment, None)]
     )
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Previous comment is too similar" in caplog.text
     assert not commenter_setup["comment_api"].return_value.add_comment.called
 
@@ -269,19 +266,17 @@ def test_osc_comment_similar_exists(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_delete_existing_not_similar_not_dry(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     mock_args.dry = False
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     existing_comment = {"id": 42, "comment": "foo bar"}
     comment_api = make_comment_api(comments=[existing_comment], comment_find_results=[(existing_comment, None)])
     commenter_setup["comment_api"].return_value = comment_api
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     comment_api.delete.assert_called_once_with(42)
     comment_api.add_comment.assert_called_once()
 
@@ -289,13 +284,11 @@ def test_osc_comment_delete_existing_not_similar_not_dry(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_replace_not_dry(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     mock_args.dry = False
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     existing_comment = {"id": 42, "comment": "Old comment"}
     comment_api = make_comment_api(
         comments=[existing_comment], comment_find_results=[(None, None), (existing_comment, None)]
@@ -303,7 +296,7 @@ def test_osc_comment_replace_not_dry(
     commenter_setup["comment_api"].return_value = comment_api
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     comment_api.delete.assert_called_once_with(42)
     comment_api.add_comment.assert_called_once()
 
@@ -311,14 +304,12 @@ def test_osc_comment_replace_not_dry(
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_replace_dry_run(
     mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.INFO, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.rr = 274060
-    mock_sub.revisions = None
     existing_comment = {"id": 42, "comment": "Old comment"}
     comment_api = make_comment_api(
         comments=[existing_comment],
@@ -328,7 +319,7 @@ def test_osc_comment_replace_dry_run(
     commenter_setup["comment_api"].return_value = comment_api
 
     c = Commenter(mock_args)
-    c.osc_comment(mock_sub, "Test message", "passed")
+    c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Would delete comment 42" in caplog.text
     assert "Would write comment to request" in caplog.text
     assert not comment_api.delete.called
@@ -357,24 +348,18 @@ def test_summarize_message(
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_dry_run(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mock_gitea = commenter_setup["gitea"]
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.type = "git"
-    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
-    # Configure CommentAPI mock
     mock_comment_api = commenter_setup["comment_api"].return_value
     mock_comment_api.comment_find.return_value = (None, None)
     mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nTest message"
 
     c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "Test message", "passed")
+    c.gitea_comment(mock_git_sub, "Test message", "passed")
 
     assert "Would write/update comment to PR git:123" in caplog.text
     assert not mock_gitea.post_json.called
@@ -384,69 +369,37 @@ def test_gitea_comment_dry_run(
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_post_new(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     mock_gitea = commenter_setup["gitea"]
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.type = "git"
-    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
-    # Configure CommentAPI mock
     mock_comment_api = commenter_setup["comment_api"].return_value
     mock_comment_api.comment_find.return_value = (None, None)
     mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nTest message"
 
     mock_args.dry = False
     c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "Test message", "passed")
+    c.gitea_comment(mock_git_sub, "Test message", "passed")
 
     mock_gitea.post_json.assert_called_once()
     assert mock_gitea.post_json.call_args[0][0] == "repos/owner/repo/issues/123/comments"
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_gitea_comment_no_url(
-    mock_args: Namespace,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    caplog.set_level(logging.WARNING, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.url = None
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
-    c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "Test message", "passed")
-
-    assert "Submission git:123 has no URL, skipping Gitea comment" in caplog.text
-
-
-@pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_patch_existing(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     mock_gitea = commenter_setup["gitea"]
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.type = "git"
-    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
-    # Existing comment returned from API
     mock_gitea.get_json.return_value = [{"id": 456, "body": "<!-- openqa state=failed -->\n\nOld message"}]
-
-    # Configure CommentAPI mock
     mock_comment_api = commenter_setup["comment_api"].return_value
     mock_comment_api.comment_find.return_value = ({"id": 456, "comment": "Old message"}, {"state": "failed"})
     mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nNew message"
 
     mock_args.dry = False
     c = Commenter(mock_args)
-    # Different message or state to trigger update
-    c.gitea_comment(mock_sub, "New message", "passed")
+    c.gitea_comment(mock_git_sub, "New message", "passed")
 
     mock_gitea.patch_json.assert_called_once()
     assert mock_gitea.patch_json.call_args[0][0] == "repos/owner/repo/issues/comments/456"
@@ -455,17 +408,12 @@ def test_gitea_comment_patch_existing(
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_git(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     mocker: MockerFixture,
     commenter_setup: dict[str, MagicMock],
     make_job: Callable,
 ) -> None:
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.type = "git"
-    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
-    commenter_setup["get_submissions"].return_value = [mock_sub]
+    commenter_setup["get_submissions"].return_value = [mock_git_sub]
 
     mocker.patch("openqabot.commenter.get_submission_results", return_value=[make_job()])
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
@@ -482,20 +430,15 @@ def test_commenter_call_git(
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_no_token(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.WARNING, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-    mock_sub.url = "https://some.url"
-
-    # Gitea token missing
     commenter_setup["gitea"].make_token_header.return_value = {}
 
     c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "Test message", "passed")
+    c.gitea_comment(mock_git_sub, "Test message", "passed")
 
     assert "Gitea token missing, skipping comment for git:123" in caplog.text
 
@@ -503,45 +446,46 @@ def test_gitea_comment_no_token(
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_no_msg(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.url = "https://some.url"
-
     c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "", "passed")
+    c.gitea_comment(mock_git_sub, "", "passed")
 
     assert "Skipping empty comment" in caplog.text
 
 
 @pytest.mark.usefixtures("commenter_setup")
+def test_gitea_comment_no_url(
+    mock_args: Namespace,
+    mock_git_sub: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.commenter")
+    mock_git_sub.url = None
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_git_sub, "Test message", "passed")
+    assert "has no URL, skipping Gitea comment" in caplog.text
+
+
+@pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_similar_exists(
     mock_args: Namespace,
+    mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mock_sub = MagicMock(spec=Submission)
-    mock_sub.id = 123
-    mock_sub.type = "git"
-    mock_sub.url = "https://src.suse.de/products/owner/repo/pulls/123"
-    mock_sub.__str__ = MagicMock(return_value="git:123")
-
     mock_gitea = commenter_setup["gitea"]
-    # Existing comment with marker and same line count
     existing_body = "<!-- openqa state=passed -->\n\nSome message"
     mock_gitea.get_json.return_value = [{"id": 456, "body": existing_body}]
-
-    # Configure CommentAPI mock
     mock_comment_api = commenter_setup["comment_api"].return_value
     mock_comment_api.comment_find.return_value = ({"id": 456, "comment": existing_body}, {"state": "passed"})
-    # New message with same line count
     mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nOther message"
 
     c = Commenter(mock_args)
-    c.gitea_comment(mock_sub, "Other message", "passed")
+    c.gitea_comment(mock_git_sub, "Other message", "passed")
 
     assert "Comment skipped: Previous comment is too similar" in caplog.text
 
