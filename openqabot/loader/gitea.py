@@ -73,22 +73,29 @@ def get_json(query: str, token: dict[str, str], host: str | None = None) -> Any:
     return response.json()
 
 
-def post_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> Any:  # noqa: ANN401
-    """Post JSON data to Gitea API."""
+def _request_json(
+    method: str,
+    query: str,
+    token: dict[str, str],
+    post_data: Any,  # noqa: ANN401
+    host: str | None = None,
+) -> None:
+    """Send a JSON request to Gitea API."""
     host = host or config.settings.gitea_url
     url = host + "/api/v1/" + query
-    res = retried_requests.post(url, verify=False, headers=token, json=post_data)
+    res = getattr(retried_requests, method.lower())(url, verify=False, headers=token, json=post_data)
     if not res.ok:
-        log.error("Gitea API error: POST to %s failed: %s", url, res.text)
+        log.error("Gitea API error: %s to %s failed: %s", method.upper(), url, res.text)
+
+
+def post_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> None:  # noqa: ANN401
+    """Post JSON data to Gitea API."""
+    _request_json("POST", query, token, post_data, host)
 
 
 def patch_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> None:  # noqa: ANN401
     """Patch JSON data in Gitea API."""
-    host = host or config.settings.gitea_url
-    url = host + "/api/v1/" + query
-    res = retried_requests.patch(url, verify=False, headers=token, json=post_data)
-    if not res.ok:
-        log.error("Gitea API error: PATCH to %s failed: %s", url, res.text)
+    _request_json("PATCH", query, token, post_data, host)
 
 
 @lru_cache(maxsize=128)

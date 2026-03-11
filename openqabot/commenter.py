@@ -162,14 +162,11 @@ class Commenter:
 
     def summarize_gitea_message(self, jobs: list[dict[str, Any]]) -> str:
         """Create markdown containing openQA badges."""
-        builds = sorted({j["build"] for j in jobs})
         base_url = self.client.openqa.baseurl
-        msg = ""
-        for build in builds:
-            badge_url = f"{base_url}/tests/overview/badge?build={build}"
-            overview_url = f"{base_url}/tests/overview?build={build}"
-            msg += f"[![Test Results]({badge_url})]({overview_url})\n"
-        return msg.strip()
+        return "".join(
+            f"[![Test Results]({base_url}/tests/overview/badge?build={b})]({base_url}/tests/overview?build={b})\n"
+            for b in sorted({j["build"] for j in jobs})
+        ).strip()
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
         """Summarize multiple openQA jobs into a single message."""
