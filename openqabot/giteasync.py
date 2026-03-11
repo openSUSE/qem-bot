@@ -2,17 +2,12 @@
 # SPDX-License-Identifier: MIT
 """Sync Gitea pull requests to dashboard."""
 
-import contextlib
-import json
 from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
 from typing import Any
 
-import pika
-import pika.channel
-from pika.spec import Basic, BasicProperties
-
+from .loader.amqp_listener import AMQPListener
 from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_submission_from_gitea_pr, make_token_header
 from .loader.qem import update_submissions
 
@@ -35,6 +30,14 @@ class GiteaSync:
         self.retry = args.retry
         self.amqp = args.amqp
         self.amqp_url = args.amqp_url
+        self.amqp_listener = AMQPListener(
+            url=args.amqp_url,
+            routing_keys=[
+                "suse.src.*.pull_request.opened",
+                "suse.src.*.pull_request_review_request.review_requested",
+            ],
+            handler=self._on_amqp_message,
+        )
         self.skip_initial_sync = args.skip_initial_sync
 
     def __call__(self) -> int:
@@ -44,7 +47,7 @@ class GiteaSync:
             ret = self._initial_sync()
         if not self.amqp:
             return ret
-        self._listen_amqp()
+        self.amqp_listener.listen()
         return 0
 
     def _initial_sync(self) -> int:
@@ -74,33 +77,7 @@ class GiteaSync:
         log.info("Syncing Gitea PRs to QEM Dashboard: Considering %d submissions", len(submissions))
         return update_submissions(self.dashboard_token, submissions, params={"type": "git"}, retry=self.retry)
 
-    def _listen_amqp(self) -> None:
-        log.info("Listening for AMQP events for new PRs created")
-
-        self.amqp_connection = pika.BlockingConnection(pika.URLParameters(self.amqp_url))
-        self.channel = self.amqp_connection.channel()
-        self.channel.exchange_declare(exchange="pubsub", exchange_type="topic", passive=True, durable=True)
-        result = self.channel.queue_declare("", exclusive=True)
-        queue_name = result.method.queue
-        for r in [
-            "suse.src.*.pull_request.opened",
-            "suse.src.*.pull_request_review_request.review_requested",
-        ]:
-            self.channel.queue_bind(exchange="pubsub", queue=queue_name, routing_key=r)
-        self.channel.basic_consume(queue_name, self._on_amqp_message, auto_ack=True)
-
-        with contextlib.suppress(KeyboardInterrupt):
-            self.channel.start_consuming()
-        self.amqp_connection.close()
-
-    def _on_amqp_message(
-        self,
-        _: pika.channel.Channel,
-        __: Basic.Deliver,
-        ___: BasicProperties,
-        body: bytes,
-    ) -> None:
-        message = json.loads(body)
+    def _on_amqp_message(self, message: dict[str, Any], _: str) -> None:
         if message["pull_request"]["base"]["repo"]["full_name"] == self.gitea_repo:
             log.info("New PR #%s on %s", message["pull_request"]["id"], self.gitea_repo)
             submission = make_submission_from_gitea_pr(

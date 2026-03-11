@@ -44,6 +44,7 @@ pr_number_arg = Annotated[
         help="Only consider the specified PR (for manual debugging)",
     ),
 ]
+gitea_repo_arg = Annotated[str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")]
 
 
 def _require_token(args: SimpleNamespace) -> None:
@@ -263,9 +264,7 @@ def smelt_sync(ctx: typer.Context) -> None:
 def gitea_sync(  # noqa: PLR0913
     ctx: typer.Context,
     *,
-    gitea_repo: Annotated[
-        str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")
-    ] = "products/SLFO",
+    gitea_repo: gitea_repo_arg = "products/SLFO",
     allow_build_failures: Annotated[
         bool,
         typer.Option("--allow-build-failures", help="Sync data from PRs despite failing packages"),
@@ -314,9 +313,7 @@ def gitea_sync(  # noqa: PLR0913
 def gitea_trigger(
     ctx: typer.Context,
     *,
-    gitea_repo: Annotated[
-        str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")
-    ] = "products/SLFO",
+    gitea_repo: gitea_repo_arg = "products/SLFO",
     pr_label: Annotated[
         str,
         typer.Option("--pr-label", help="Gitea PRs label for which to trigger tests"),

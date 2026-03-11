@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from argparse import Namespace
-from typing import TYPE_CHECKING, Any, NamedTuple, cast
+from typing import TYPE_CHECKING, cast
 from urllib.parse import urlparse
 
 import pytest
@@ -17,18 +16,14 @@ from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 
 if TYPE_CHECKING:
+    from unittest.mock import MagicMock
+
     from pytest_mock import MockerFixture
 
     from openqabot.types.types import Data
 
 
-class FakeMethod(NamedTuple):
-    """Fake AMQP method."""
-
-    routing_key: str
-
-
-fake_job_done = FakeMethod("suse.openqa.job.done")
+fake_job_done = "suse.openqa.job.done"
 
 
 @pytest.fixture
@@ -37,7 +32,7 @@ def args() -> Namespace:
         dry=True,
         token="ToKeN",
         openqa_instance=urlparse("http://instance.qa"),
-        url=None,
+        url="amqp://localhost",
         gitea_token=None,
     )
 
@@ -47,25 +42,12 @@ def amqp(args: Namespace) -> AMQP:
     return AMQP(args)
 
 
-def test_init_no_url(amqp: AMQP) -> None:
-    assert amqp.connection is None
-    amqp.stop()
-
-
-def test_call(mocker: MockerFixture, args: Namespace) -> None:
-    mocker.patch("openqabot.amqp.pika")
-    args.url = "amqp://test.url"
-    amqp_with_url = AMQP(args)
-    amqp_with_url()
-    amqp_with_url.channel.start_consuming.assert_called_once()
-    amqp_with_url.connection.close.assert_called_once()
-
-
-def test_call_no_channel(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
-    caplog.set_level(logging.ERROR)
-    amqp_no_url = AMQP(args)
-    assert amqp_no_url() == 1
-    assert "AMQP listener not started: No channel available" in caplog.text
+def test_handling_aggregate_full_coverage(args: Namespace, mocker: MagicMock) -> None:
+    mock_listener_class = mocker.patch("openqabot.amqp.AMQPListener")
+    amqp = AMQP(args)
+    result = amqp()
+    mock_listener_class.return_value.listen.assert_called_once()
+    assert result == 0
 
 
 @pytest.mark.parametrize(
@@ -81,9 +63,8 @@ def test_on_message_parsing(
 ) -> None:
     mock_handle = mocker.patch.object(amqp, "handle_submission")
     message = {"BUILD": build}
-    body = json.dumps(message).encode()
 
-    amqp.on_message(cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), body)
+    amqp.on_message(message, fake_job_done)
 
     mock_handle.assert_called_once_with(expected_id, expected_type, message)
 
@@ -91,38 +72,27 @@ def test_on_message_parsing(
 @responses.activate
 def test_handling_aggregate(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message(
-        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "12345678-9"}).encode()
-    )
+    amqp.on_message({"BUILD": "12345678-9"}, fake_job_done)
 
     assert "Aggregate 12345678-9: openQA build finished" in caplog.messages  # currently noop
 
 
 def test_on_message_bad_routing_key(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
-    fake_job_fail = FakeMethod("suse.openqa.job.fail")
-    amqp.on_message(
-        cast("Any", ""),
-        cast("Any", fake_job_fail),
-        cast("Any", ""),
-        json.dumps({"BUILD": "12345678-9"}).encode(),
-    )
+    fake_job_fail = "suse.openqa.job.fail"
+    amqp.on_message({"BUILD": "12345678-9"}, fake_job_fail)
     assert not caplog.text
 
 
 def test_on_message_no_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message(
-        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"NOBUILD": "12345678-9"}).encode()
-    )
+    amqp.on_message({"NOBUILD": "12345678-9"}, fake_job_done)
     assert not caplog.text
 
 
 def test_on_message_bad_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
-    amqp.on_message(
-        cast("Any", ""), cast("Any", fake_job_done), cast("Any", ""), json.dumps({"BUILD": "badbuild"}).encode()
-    )
+    amqp.on_message({"BUILD": "badbuild"}, fake_job_done)
     assert not caplog.text
 
 
