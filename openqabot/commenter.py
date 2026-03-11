@@ -38,7 +38,6 @@ class Commenter:
         self.gitea_token = gitea.make_token_header(args.gitea_token)
         self.client = OpenQAInterface(args)
         self.submissions = submissions if submissions is not None else get_submissions(self.token)
-        osc.conf.get_config(override_apiurl=config.settings.obs_url)
         self.commentapi = CommentAPI(config.settings.obs_url)
 
     def __call__(self) -> int:
@@ -92,6 +91,7 @@ class Commenter:
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
         """Comment a submission in OBS."""
+        osc.conf.get_config(override_apiurl=config.settings.obs_url)
         if sub.rr is None:
             log.debug("Comment skipped for submission %s: No release request defined", sub)
             return
