@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import re
+from argparse import Namespace
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
@@ -15,11 +16,11 @@ import pytest
 import openqabot.config as config_module
 import responses
 from openqabot.approver import Approver
-from openqabot.config import Settings
+from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json
-from openqabot.loader.qem import JobAggr
+from openqabot.loader.qem import JobAggr, SubReq
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list
@@ -33,11 +34,83 @@ from .helpers import (
     fake_osc_get_config,
     make_passing_and_failing_job,
     obs_product_table_url,
+    openqa_instance_url,
     openqa_url,
 )
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
+
+@pytest.fixture
+def fake_responses_for_unblocking_submissions_via_openqa_comments(
+    request: pytest.FixtureRequest,
+) -> None:
+    params = request.param
+    submission = params["submission"]
+    responses.add(
+        responses.GET,
+        f"{settings.qem_dashboard_url}api/jobs/update/20005",
+        json=[
+            {"job_id": 100000, "status": "passed"},
+            {"job_id": 100002, "status": "failed"},
+            {"job_id": 100003, "status": "failed"},
+            {"job_id": 100004, "status": "failed"},
+        ],
+    )
+    add_two_passed_response()
+    for job_id in params.get("not_acceptable_job_ids", []):
+        responses.get(
+            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
+            json=[{"text": ""}],
+        )
+    for job_id in params.get("acceptable_job_ids", [100002, 100003, 100004]):
+        responses.get(
+            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
+            json=[{"text": f"@review:acceptable_for:submission_{submission}:foo"}],
+        )
+
+
+def with_fake_qem(mode: str) -> Any:
+    def decorator(test_func: object) -> object:
+        test_func = pytest.mark.qem_behavior(mode)(test_func)
+        return pytest.mark.usefixtures("fake_qem")(test_func)
+
+    return decorator
+
+
+@pytest.fixture
+def fake_openqa_older_jobs_api() -> None:
+    responses.get(
+        re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
+        json={"data": []},
+    )
+
+
+@pytest.fixture
+def fake_openqa_comment_api() -> None:
+    responses.add(
+        responses.GET,
+        re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
+        json={"error": "job not found"},
+        status=404,
+    )
+
+
+def make_approver(mocker: MockerFixture, submission: int = 0, *, patch_commenter: bool = False) -> int:
+    args = Namespace(
+        dry=True,
+        token="123",
+        all_submissions=False,
+        openqa_instance=openqa_instance_url,
+        incident=submission,
+        gitea_token=None,
+    )
+    if patch_commenter:
+        mocker.patch("openqabot.approver.Commenter", autospec=True)
+    instance = Approver(args)
+    instance.client.retries = 0
+    return instance()
 
 
 @pytest.fixture(autouse=True)
@@ -102,11 +175,14 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
+    def mock_get_submissions_approver(_token: dict[str, str]) -> list[SubReq]:
+        return [s for s in f_sub_approver() if s.data and s.data.get("inReviewQAM")]
+
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        side_effect=lambda _, i, submission_type=None: [f_sub_approver()[i - 1]],  # noqa: ARG005
+        side_effect=lambda _token, i, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
     )
-    mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
+    mocker.patch("openqabot.approver.get_submissions_approver", side_effect=mock_get_submissions_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 

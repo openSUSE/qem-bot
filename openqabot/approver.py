@@ -23,7 +23,9 @@ from openqabot import config
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import OpenQAInterface
+from openqabot.types.submission import Submission
 
+from .commenter import Commenter
 from .loader.gitea import make_token_header, review_pr
 from .loader.qem import (
     JobAggr,
@@ -119,6 +121,7 @@ class Approver:
             self.submission_type = submission_type
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)
+        self.commenter = Commenter(args, submissions=[])
 
     def __call__(self) -> int:
         """Run the approval process."""
@@ -165,12 +168,18 @@ class Approver:
 
         if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
             log.info("%s has at least one not-ok job in submission tests", ms2str(sub))
+            full_sub = Submission.create(sub.data) if sub.data else None
+            if full_sub:
+                self.commenter.comment_on_submission(full_sub)
             return False
 
         if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
             a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
             log.info("%s has at least one not-ok job in aggregate tests", ms2str(sub))
+            full_sub = Submission.create(sub.data) if sub.data else None
+            if full_sub:
+                self.commenter.comment_on_submission(full_sub)
             return False
 
         # everything is green --> add submission to approve list

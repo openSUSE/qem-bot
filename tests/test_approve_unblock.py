@@ -6,20 +6,18 @@ from __future__ import annotations
 
 import logging
 import re
-from argparse import Namespace
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import responses
-from openqabot.approver import Approver
 from openqabot.config import settings
 
+from .conftest import make_approver, with_fake_qem
 from .helpers import (
     add_two_passed_response,
     assert_log_messages,
-    openqa_instance_url,
 )
 
 if TYPE_CHECKING:
@@ -32,14 +30,6 @@ class CommentFormatTestCase:
 
     comment_text: str
     description: str
-
-
-def with_fake_qem(mode: str) -> Any:
-    def decorator(test_func: object) -> object:
-        test_func = pytest.mark.qem_behavior(mode)(test_func)
-        return pytest.mark.usefixtures("fake_qem")(test_func)
-
-    return decorator
 
 
 @pytest.fixture
@@ -85,65 +75,8 @@ def fake_responses_for_unblocking_submissions_via_older_ok_result(
     )
 
 
-@pytest.fixture
-def fake_openqa_older_jobs_api() -> None:
-    responses.get(
-        re.compile(r"http://instance.qa/tests/.*/ajax\?previous_limit=.*&next_limit=0"),
-        json={"data": []},
-    )
-
-
-@pytest.fixture
-def fake_openqa_comment_api() -> None:
-    responses.add(
-        responses.GET,
-        re.compile(r"http://instance.qa/api/v1/jobs/.*/comments"),
-        json={"error": "job not found"},
-        status=404,
-    )
-
-
-@pytest.fixture
-def fake_responses_for_unblocking_submissions_via_openqa_comments(
-    request: pytest.FixtureRequest,
-) -> None:
-    params = request.param
-    submission = params["submission"]
-    responses.add(
-        responses.GET,
-        f"{settings.qem_dashboard_url}api/jobs/update/20005",
-        json=[
-            {"job_id": 100000, "status": "passed"},
-            {"job_id": 100002, "status": "failed"},
-            {"job_id": 100003, "status": "failed"},
-            {"job_id": 100004, "status": "failed"},
-        ],
-    )
-    add_two_passed_response()
-    for job_id in params.get("not_acceptable_job_ids", []):
-        responses.get(
-            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
-            json=[{"text": ""}],
-        )
-    for job_id in params.get("acceptable_job_ids", [100002, 100003, 100004]):
-        responses.get(
-            url=f"http://instance.qa/api/v1/jobs/{job_id}/comments",
-            json=[{"text": f"@review:acceptable_for:submission_{submission}:foo"}],
-        )
-
-
-def approver(submission: int = 0) -> int:
-    args = Namespace(
-        dry=True,
-        token="123",
-        all_submissions=False,
-        openqa_instance=openqa_instance_url,
-        incident=submission,
-        gitea_token=None,
-    )
-    approver = Approver(args)
-    approver.client.retries = 0
-    return approver()
+def approver(mocker: MockerFixture, submission: int = 0) -> int:
+    return make_approver(mocker, submission, patch_commenter=True)
 
 
 @responses.activate
@@ -172,11 +105,12 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
         return [{"job_id": 100000, "status": "passed"}]
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    # 100002, 100003, 100004 all have comments
     comments_return_value = [{"text": "@review:acceptable_for:submission_2:foo"}]
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
     mock_patch = mocker.patch("openqabot.approver.patch")
 
-    assert approver() == 0
+    assert approver(mocker) == 0
     expected = [
         "* SUSE:Maintenance:2:200",
         "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
@@ -205,7 +139,7 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
     "fake_openqa_comment_api",
     "fake_openqa_older_jobs_api",
 )
-def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
+def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
     caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
@@ -222,6 +156,7 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
 
+    # 100002 and 100004 have comments, 100003 does not
     def mock_get_job_comments(job_id: int) -> list[dict[str, str]]:
         if job_id in {100002, 100004}:
             return [{"text": "@review:acceptable_for:submission_2:foo"}]
@@ -230,11 +165,14 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", side_effect=mock_get_job_comments)
     mock_patch = mocker.patch("openqabot.approver.patch")
 
-    assert approver() == 0
+    assert approver(mocker) == 0
     expected = [
         "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
+        "Found not-ok, not-ignored job http://instance.qa/t100003 for submission smelt:2",
+        "SUSE:Maintenance:2:200 has at least one not-ok job in submission tests",
     ]
     assert_log_messages(caplog.messages, expected)
+    # The submission should be blocked because job 100003 is NOT marked as acceptable.
     assert "* SUSE:Maintenance:2:200" not in caplog.messages, "submission not approved due to one unacceptable failure"
 
     mock_patch.assert_any_call("api/jobs/100002/remarks?text=acceptable_for&incident_number=2", headers=mocker.ANY)
@@ -249,7 +187,7 @@ def test_all_jobs_marked_as_acceptable_for_via_openqa_comment(
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.parametrize(
     "fake_responses_for_unblocking_submissions_via_openqa_comments",
-    [{"submission": 22}],
+    [{"submission": 22, "not_acceptable_job_ids": [100002]}],
     indirect=True,
 )
 @pytest.mark.usefixtures(
@@ -263,7 +201,7 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     def mock_get_json(url: str, **_kwargs: Any) -> Any:
-        if "update/2000" in url:
+        if "api/jobs/incident/2000" in url:
             return [
                 {"job_id": 100000, "status": "passed"},
                 {"job_id": 100002, "status": "failed"},
@@ -271,10 +209,12 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
         return [{"job_id": 100000, "status": "passed"}]
 
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    # Comment is for submission 22, but we are checking submission 2
     comments_return_value = [{"text": "@review:acceptable_for:submission_22:foo"}]
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
 
-    assert approver() == 0
+    assert approver(mocker) == 0
+    assert "SUSE:Maintenance:2:200 has at least one not-ok job in submission tests" in caplog.messages
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
 
 
@@ -317,7 +257,7 @@ def test_approval_via_openqa_older_ok_job(
         return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
     )
 
-    assert approver() == 0
+    assert approver(mocker) == 0
 
     log_message = "* SUSE:Maintenance:2:200"
     assert log_message in caplog.messages if approved else log_message not in caplog.messages
@@ -354,7 +294,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
         return_value={"settings": {"BASE_TEST_REPOS": "Maintenance:/2/"}},
     )
 
-    assert approver() == 0
+    assert approver(mocker) == 0
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
 
 
@@ -366,9 +306,11 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_responses_for_unblocking_submissions_via_older_ok_result")
-def test_approval_still_blocked_if_openqa_older_job_dont_include_submission(caplog: pytest.LogCaptureFixture) -> None:
+def test_approval_still_blocked_if_openqa_older_job_dont_include_submission(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    assert approver() == 0
+    assert approver(mocker) == 0
     assert "* SUSE:Maintenance:2:200" not in caplog.messages
 
 
@@ -420,7 +362,7 @@ def test_approval_unblocked_with_various_comment_formats(
     )
     mock_patch = mocker.patch("openqabot.approver.patch")
 
-    assert approver() == 0
+    assert approver(mocker) == 0
     assert "* SUSE:Maintenance:2:200" in caplog.messages
     assert (
         "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)"

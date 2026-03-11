@@ -57,18 +57,52 @@ class Repo:
     arch: str
 
 
+def _make_smelt_subreq(sub: int) -> SubReq:
+    rr = sub * 100
+    return SubReq(
+        sub,
+        rr,
+        data={
+            "number": sub,
+            "rr_number": rr,
+            "project": f"PRJ{sub}",
+            "inReview": True,
+            "isActive": True,
+            "approved": False,
+            "inReviewQAM": True,
+            "embargoed": False,
+            "channels": ["SUSE:Updates:SLE-Module-Development-Tools:15-SP4:x86_64"],
+            "packages": [f"pkg{sub}"],
+            "emu": False,
+        },
+    )
+
+
 def f_sub_approver(*_args: Any) -> list[SubReq]:
     return [
-        SubReq(1, 100),
-        SubReq(2, 200),
-        SubReq(3, 300),
-        SubReq(4, 400),
+        *[_make_smelt_subreq(i) for i in range(1, 5)],
         SubReq(
             5,
             500,
             "git",
             "https://src.suse.de/products/SLFO/pulls/124",
             "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+            data={
+                "number": 5,
+                "rr_number": 500,
+                "type": "git",
+                "url": "https://src.suse.de/products/SLFO/pulls/124",
+                "scm_info": "...",
+                "project": "SLFO",
+                "inReview": True,
+                "isActive": True,
+                "approved": False,
+                "inReviewQAM": True,
+                "embargoed": False,
+                "channels": ["SUSE:SLFO:Main:1.0:x86_64#products/SLFO"],
+                "packages": ["pkg5"],
+                "emu": False,
+            },
         ),
     ]
 

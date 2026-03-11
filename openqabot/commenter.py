@@ -21,6 +21,7 @@ from .osclib.comments import CommentAPI
 
 if TYPE_CHECKING:
     from argparse import Namespace
+    from collections.abc import Sequence
 
     from .types.submission import Submission
 
@@ -30,13 +31,13 @@ log = getLogger("bot.commenter")
 class Commenter:
     """Logic for commenting on submissions in OBS."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: Namespace, submissions: Sequence[Submission] | None = None) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
         self.gitea_token = gitea.make_token_header(args.gitea_token)
         self.client = OpenQAInterface(args)
-        self.submissions = get_submissions(self.token)
+        self.submissions = submissions if submissions is not None else get_submissions(self.token)
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
         self.commentapi = CommentAPI(config.settings.obs_url)
 
