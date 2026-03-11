@@ -49,19 +49,27 @@ class Commenter:
                 continue
             try:
                 s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
+            except (ValueError, NoResultsError) as e:
+                log.debug(e)
+                s_jobs = []
+
+            try:
                 a_jobs = get_aggregate_results(sub.id, self.token, submission_type=sub.type)
-            except ValueError as e:
+            except (ValueError, NoResultsError) as e:
                 log.debug(e)
-                continue
-            except NoResultsError as e:
-                log.debug(e)
+                a_jobs = []
+
+            all_jobs = s_jobs + a_jobs
+
+            if not all_jobs:
+                log.debug("No jobs found for submission %s", sub)
                 continue
 
-            state = "none"
-            all_jobs = s_jobs + a_jobs
             if any(j["status"] == "running" for j in all_jobs):
                 log.info("Postponing comment for %s: Some tests are still running", sub)
-            elif any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
+                continue
+
+            if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
                 log.info("Creating 'failed' comment for %s: At least one job failed", sub)
                 state = "failed"
             else:

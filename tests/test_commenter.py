@@ -172,6 +172,7 @@ def test_commenter_call_value_error_submission_results(
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
 
     mocker.patch("openqabot.commenter.get_submission_results", side_effect=ValueError("get_submission_results error"))
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
 
     c = Commenter(mock_args)
     assert c() == 0
@@ -187,7 +188,7 @@ def test_commenter_call_value_error_aggregate_results(
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
-    mocker.patch("openqabot.commenter.get_submission_results", return_value=0)
+    mocker.patch("openqabot.commenter.get_submission_results", return_value=[])
     mocker.patch("openqabot.commenter.get_aggregate_results", side_effect=ValueError("get_aggregate_results error"))
 
     c = Commenter(mock_args)
@@ -205,6 +206,7 @@ def test_commenter_call_no_results_error_submission_results(
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     mocker.patch("openqabot.commenter.get_submission_results", side_effect=NoResultsError("No submission results"))
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
 
     c = Commenter(mock_args)
     assert c() == 0
@@ -233,7 +235,7 @@ def test_commenter_call_running_jobs(
     c = Commenter(mock_args)
     assert c() == 0
     assert "Postponing comment for" in caplog.text
-    assert mock_osc_comment.call_args[0][2] == "none"
+    assert not mock_osc_comment.called
 
 
 def test_commenter_call_failed_jobs(
