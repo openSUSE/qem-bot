@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from enum import Enum, auto
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -13,6 +14,21 @@ if TYPE_CHECKING:
     from openqabot.loader.triggerconfig import TriggerConfig
     from openqabot.types.isomatch import IsoMatch
 
+
+VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
+
+
+class ProductVersion(str):  # noqa: FURB189
+    """A validated product version string."""
+
+    __slots__ = ()
+
+    def __new__(cls, value: str) -> ProductVersion:  # noqa: PYI034
+        """Create a new ProductVersion instance and validate its format."""
+        if not VERSION_EXTRACT_REGEX.fullmatch(value):
+            msg = f"Invalid product version format: '{value}'"
+            raise ValueError(msg)
+        return super().__new__(cls, value)
 
 class ChannelType(Enum):
     """Enumeration of channel types."""
