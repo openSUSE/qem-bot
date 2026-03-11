@@ -138,7 +138,7 @@ class Commenter:
         # Add a marker so we can find our own comments later
         msg = self.commentapi.add_marker(msg, bot_name, info)
 
-        comments = gitea.get_json(gitea.comments_url(sub.project, sub.id), self.gitea_token)
+        comments = gitea.get_json_list(gitea.comments_url(sub.project, sub.id), self.gitea_token)
         # Convert Gitea comments to CommentAPI format
         formatted_comments = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
 

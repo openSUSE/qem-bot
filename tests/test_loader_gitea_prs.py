@@ -12,8 +12,8 @@ from openqabot.loader import gitea
 
 
 def test_get_open_prs_returns_empty_on_dry_run(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.read_json", return_value=42)
-    assert gitea.get_open_prs({}, "repo", fake_data=True, number=None) == 42
+    mocker.patch("openqabot.loader.gitea.read_json_list", return_value=[42])
+    assert gitea.get_open_prs({}, "repo", fake_data=True, number=None) == [42]
 
 
 def test_get_open_prs_returns_specified_pr(mocker: MockerFixture) -> None:
@@ -34,6 +34,13 @@ def test_get_open_prs_iter_pages(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=[[1], [2], []])
     res = gitea.get_open_prs({}, "repo", fake_data=False, number=None)
     assert res == [1, 2]
+
+
+def test_get_open_prs_iter_pages_unexpected_dict(mocker: MockerFixture) -> None:
+    """Cover the case where pagination returns a dict instead of a list."""
+    mocker.patch("openqabot.loader.gitea.get_json", return_value={"message": "error"})
+    with pytest.raises(TypeError, match="Gitea API returned dict instead of list for PR pages"):
+        gitea.get_open_prs({}, "repo", fake_data=False, number=None)
 
 
 def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:

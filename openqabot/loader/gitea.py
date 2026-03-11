@@ -14,7 +14,7 @@ from functools import lru_cache
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import osc.conf
 import osc.core
@@ -30,10 +30,14 @@ from openqabot import config
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from openqabot.types.pullrequest import PullRequest
     from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
+
+JsonType = dict[str, Any] | list[Any]
 
 log = getLogger("bot.loader.gitea")
 
@@ -65,7 +69,7 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: dict[str, str], host: str | None = None) -> Any:  # noqa: ANN401
+def get_json(query: str, token: dict[str, str], host: str | None = None) -> JsonType:
     """Fetch JSON data from Gitea API."""
     host = host or config.settings.gitea_url
     response = retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token)
@@ -73,13 +77,16 @@ def get_json(query: str, token: dict[str, str], host: str | None = None) -> Any:
     return response.json()
 
 
-def _request_json(
-    method: str,
-    query: str,
-    token: dict[str, str],
-    post_data: Any,  # noqa: ANN401
-    host: str | None = None,
-) -> None:
+def get_json_list(query: str, token: dict[str, str], host: str | None = None) -> list[Any]:
+    """Fetch a list of JSON data from Gitea API."""
+    res = get_json(query, token, host)
+    if not isinstance(res, list):
+        msg = f"Gitea API returned {type(res).__name__} instead of list for query: {query}"
+        raise TypeError(msg)
+    return res
+
+
+def _request_json(method: str, query: str, token: dict[str, str], post_data: JsonType, host: str | None = None) -> None:
     """Send a JSON request to Gitea API."""
     host = host or config.settings.gitea_url
     url = host + "/api/v1/" + query
@@ -88,12 +95,12 @@ def _request_json(
         log.error("Gitea API error: %s to %s failed: %s", method.upper(), url, res.text)
 
 
-def post_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> None:  # noqa: ANN401
+def post_json(query: str, token: dict[str, str], post_data: JsonType, host: str | None = None) -> None:
     """Post JSON data to Gitea API."""
     _request_json("POST", query, token, post_data, host)
 
 
-def patch_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> None:  # noqa: ANN401
+def patch_json(query: str, token: dict[str, str], post_data: JsonType, host: str | None = None) -> None:
     """Patch JSON data in Gitea API."""
     _request_json("PATCH", query, token, post_data, host)
 
@@ -105,9 +112,18 @@ def read_utf8(name: str) -> str:
 
 
 @lru_cache(maxsize=128)
-def read_json(name: str) -> Any:  # noqa: ANN401
+def read_json(name: str) -> JsonType:
     """Read a JSON response file."""
     return json.loads(read_utf8(name + ".json"))
+
+
+def read_json_list(name: str) -> list[Any]:
+    """Read a list from a JSON response file."""
+    res = read_json(name)
+    if not isinstance(res, list):
+        msg = f"JSON response file '{name}' returned {type(res).__name__} instead of list"
+        raise TypeError(msg)
+    return res
 
 
 @lru_cache(maxsize=128)
@@ -165,11 +181,11 @@ def compute_repo_url_for_job_setting(
     return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_list)
 
 
-def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: int | None) -> list[Any]:
+def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: int | None) -> list[dict[str, Any]]:
     """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'%s", repo, ", fake-data" if fake_data else "")
     if fake_data:
-        return read_json("pulls")
+        return read_json_list("pulls")
     if number is not None:
         try:
             pr = get_json(f"repos/{repo}/pulls/{number}", token)
@@ -179,9 +195,9 @@ def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: i
             log.exception("PR git:%s ignored: Could not read PR metadata", number)
             return []
         log.debug("PR git:%i: %s", number, pr)
-        return [pr]
+        return [cast("dict[str, Any]", pr)]
 
-    def iter_pr_pages() -> Any:  # noqa: ANN401
+    def iter_pr_pages() -> Iterator[list[dict[str, Any]]]:
         """Iterate through all pages of open PRs.
 
         Yields:
@@ -192,7 +208,10 @@ def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: i
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
             prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
-            if not isinstance(prs_on_page, list) or not prs_on_page:
+            if not isinstance(prs_on_page, list):
+                msg = f"Gitea API returned {type(prs_on_page).__name__} instead of list for PR pages"
+                raise TypeError(msg)
+            if not prs_on_page:
                 return
             yield prs_on_page
             page += 1
@@ -393,7 +412,7 @@ def add_build_result(
 def get_multibuild_data(obs_project: str) -> str:
     """Fetch multibuild configuration data for an OBS project."""
     r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, "000productcompose")
-    return r.get_multibuild_data()
+    return cast("str", r.get_multibuild_data())
 
 
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
@@ -593,6 +612,24 @@ def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) 
     return True
 
 
+def _fetch_details(
+    repo_name: str, number: int, token: dict[str, str], *, dry: bool
+) -> tuple[list[Any], list[Any], list[Any]]:
+    if dry:
+        if number == 124:  # noqa: PLR2004
+            return (
+                read_json_list("reviews-124"),
+                read_json_list("comments-124"),
+                read_json_list("files-124"),
+            )
+        return [], [], []
+    return (
+        get_json_list(reviews_url(repo_name, number), token),
+        get_json_list(comments_url(repo_name, number), token),
+        get_json_list(changed_files_url(repo_name, number), token),
+    )
+
+
 def make_submission_from_gitea_pr(
     pr: dict[str, Any],
     token: dict[str, str],
@@ -626,19 +663,8 @@ def make_submission_from_gitea_pr(
             "url": pr["url"],
             "type": "git",
         }
-        if dry:
-            if number == 124:  # noqa: PLR2004
-                reviews = read_json("reviews-124")
-                comments = read_json("comments-124")
-                files = read_json("files-124")
-            else:
-                reviews = []
-                comments = []
-                files = []
-        else:
-            reviews = get_json(reviews_url(repo_name, number), token)
-            comments = get_json(comments_url(repo_name, number), token)
-            files = get_json(changed_files_url(repo_name, number), token)
+        reviews, comments, files = _fetch_details(repo_name, number, token, dry=dry)
+
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
             log.info("PR git:%s skipped: No reviews by %s", number, config.settings.obs_group)
             return None

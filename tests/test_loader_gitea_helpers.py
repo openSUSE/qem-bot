@@ -127,6 +127,32 @@ def test_add_channel_for_build_result_local() -> None:
     assert len(projects) == 0
 
 
+def test_get_json_list_success(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.get_json", return_value=[{"id": 1}])
+    res = gitea.get_json_list("some/query", {"Authorization": "token test"})
+    assert res == [{"id": 1}]
+
+
+def test_get_json_list_throws_on_dict(mocker: MockerFixture) -> None:
+    # Mock get_json to return a dict instead of a list
+    mocker.patch("openqabot.loader.gitea.get_json", return_value={"message": "Not Found"})
+    # New behavior: throws TypeError
+    with pytest.raises(TypeError, match="Gitea API returned dict instead of list"):
+        gitea.get_json_list("some/query", {"Authorization": "token test"})
+
+
+def test_read_json_list_success(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.read_json", return_value=[{"id": 1}])
+    res = gitea.read_json_list("some_file")
+    assert res == [{"id": 1}]
+
+
+def test_read_json_list_throws_on_dict(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.read_json", return_value={"message": "Not Found"})
+    with pytest.raises(TypeError, match="JSON response file 'some_file' returned dict instead of list"):
+        gitea.read_json_list("some_file")
+
+
 def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     incident = {"failed_or_unpublished_packages": ["pkg1"], "successful_packages": ["pkg2"]}
