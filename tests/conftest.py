@@ -176,7 +176,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         return results.get(sub, [])
 
     def mock_get_submissions_approver(_token: dict[str, str]) -> list[SubReq]:
-        return [s for s in f_sub_approver() if s.data and s.data.get("inReviewQAM")]
+        return list(f_sub_approver())
 
     mocker.patch(
         "openqabot.approver.get_single_submission",

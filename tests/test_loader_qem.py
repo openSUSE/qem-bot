@@ -121,16 +121,24 @@ def test_get_active_submissions(mock_get_json: MagicMock) -> None:
     mock_get_json.assert_called_once_with("api/incidents", headers={}, params={"type": "git"})
 
 
+_FULL_INCIDENT: dict = {
+    "number": 1,
+    "rr_number": 123,
+    "inReviewQAM": True,
+    "inReview": True,
+    "isActive": True,
+    "approved": False,
+    "embargoed": False,
+    "project": "PRJ1",
+    "channels": ["SUSE:Updates:SLE-Module-Development-Tools:15-SP4:x86_64"],
+    "packages": ["pkg1"],
+    "emu": False,
+}
+
+
 def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [
-        {
-            "number": 1,
-            "rr_number": 123,
-            "inReviewQAM": True,
-            "type": "gitea",
-            "url": "http://foo.bar",
-            "scm_info": "foo",
-        },
+        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scm_info": "foo"},
         {"number": 2, "rr_number": 124, "inReviewQAM": False},
     ]
 
@@ -142,10 +150,11 @@ def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
     assert res[0].type == "gitea"
     assert res[0].url == "http://foo.bar"
     assert res[0].scm_info == "foo"
+    assert res[0].submission is not None
 
 
 def test_get_single_submission(mock_get_json: MagicMock) -> None:
-    mock_get_json.return_value = {"number": 1, "rr_number": 123, "type": DEFAULT_SUBMISSION_TYPE}
+    mock_get_json.return_value = {**_FULL_INCIDENT, "type": DEFAULT_SUBMISSION_TYPE}
 
     res = get_single_submission({}, 1, submission_type=DEFAULT_SUBMISSION_TYPE)
 
@@ -153,6 +162,7 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
     assert res[0].sub == 1
     assert res[0].req == 123
     assert res[0].type == DEFAULT_SUBMISSION_TYPE
+    assert res[0].submission is not None
     mock_get_json.assert_called_once_with("api/incidents/1", headers={}, params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
@@ -426,18 +436,20 @@ def test_get_active_submissions_no_type(mock_get_json: MagicMock) -> None:
 
 
 def test_get_single_submission_with_type(mock_get_json: MagicMock) -> None:
-    mock_get_json.return_value = {"number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE}
+    mock_get_json.return_value = {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE}
     res = get_single_submission({"token": "foo"}, 123, submission_type=DEFAULT_SUBMISSION_TYPE)
     assert len(res) == 1
     assert res[0].sub == 123
+    assert res[0].submission is not None
     mock_get_json.assert_called_once_with(
         "api/incidents/123", headers={"token": "foo"}, params={"type": DEFAULT_SUBMISSION_TYPE}
     )
 
 
 def test_get_single_submission_no_type(mock_get_json: MagicMock) -> None:
-    mock_get_json.return_value = {"number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE}
+    mock_get_json.return_value = {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE}
     res = get_single_submission({"token": "foo"}, 123)
     assert len(res) == 1
     assert res[0].sub == 123
+    assert res[0].submission is not None
     mock_get_json.assert_called_once_with("api/incidents/123", headers={"token": "foo"}, params={})

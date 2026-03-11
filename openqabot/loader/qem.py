@@ -33,7 +33,7 @@ class SubReq(NamedTuple):
     type: str | None = None
     url: str | None = None
     scm_info: str | None = None
-    data: dict[str, Any] | None = None
+    submission: Submission | None = None
 
 
 class JobAggr(NamedTuple):
@@ -105,7 +105,7 @@ def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
             i.get("type", ""),
             i.get("url", ""),
             i.get("scm_info", ""),
-            i,
+            Submission.create(i),
         )
         for i in submissions
         if i["inReviewQAM"]
@@ -117,7 +117,14 @@ def get_single_submission(
 ) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
     submission = _get_submission(token, submission_id, submission_type)
-    return [SubReq(submission["number"], submission["rr_number"], submission.get("type"), data=submission)]
+    return [
+        SubReq(
+            submission["number"],
+            submission["rr_number"],
+            submission.get("type"),
+            submission=Submission.create(submission),
+        )
+    ]
 
 
 def get_submission_settings(

@@ -23,7 +23,6 @@ from openqabot import config
 from openqabot.dashboard import get_json, patch
 from openqabot.errors import NoResultsError
 from openqabot.openqa import OpenQAInterface
-from openqabot.types.submission import Submission
 
 from .commenter import Commenter
 from .loader.gitea import make_token_header, review_pr
@@ -150,8 +149,8 @@ class Approver:
 
     def _reject(self, sub: SubReq, reason: str) -> bool:
         log.info(reason, ms2str(sub))
-        if sub.data and (full_sub := Submission.create(sub.data)):
-            self.commenter.comment_on_submission(full_sub)
+        if sub.submission:
+            self.commenter.comment_on_submission(sub.submission)
         return False
 
     def approvable(self, sub: SubReq) -> bool:

@@ -274,13 +274,13 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 def test_single_submission_not_ok_no_data(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
-    # Mock get_single_submission to return a SubReq without data
+    # Mock get_single_submission to return a SubReq without a parsed submission
     def mock_get_json(_url: str, **_kwargs: Any) -> Any:
         return [{"submission_settings": 1000, "job_id": 100001, "status": "failed"}]
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        return_value=[SubReq(sub=1, req=100, type="smelt", data=None)],
+        return_value=[SubReq(sub=1, req=100, type="smelt", submission=None)],
     )
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
@@ -303,7 +303,7 @@ def test_single_submission_aggr_not_ok_no_data(caplog: pytest.LogCaptureFixture,
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        return_value=[SubReq(sub=1, req=100, type="smelt", data=None)],
+        return_value=[SubReq(sub=1, req=100, type="smelt", submission=None)],
     )
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
