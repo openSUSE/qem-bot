@@ -177,6 +177,8 @@ class Commenter:
             log.debug(pformat(msg))
             return
 
+        # Unlike OBS (delete + add), Gitea supports PATCH to update in-place,
+        # avoiding notification noise from a delete event followed by a new comment.
         if comment is None:
             gitea.post_json(gitea.comments_url(repo, sub.id), self.gitea_token, {"body": msg})
         else:
