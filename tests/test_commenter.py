@@ -91,7 +91,7 @@ def mock_git_submission(mocker: MockerFixture) -> MagicMock:
     mock_sub.id = 123
     mock_sub.project = "owner/repo"
     mock_sub.type = "git"
-    mock_sub.__str__.return_value = "git:123"
+    mock_sub.__str__ = mocker.Mock(return_value="git:123")
     return mock_sub
 
 
@@ -134,7 +134,7 @@ def test_commenter_call_unknown_type(
     mock_submission = mocker.MagicMock(spec=Submission)
     mock_submission.id = 1
     mock_submission.type = "unknown"
-    mock_submission.__str__.return_value = "unknown:1"
+    mock_submission.__str__ = mocker.Mock(return_value="unknown:1")
     commenter_setup["get_submissions"].return_value = [mock_submission]
 
     c = Commenter(mock_args)
@@ -153,7 +153,7 @@ def test_commenter_call(
 
     mock_submission.id = 1
     mock_submission.type = "maintenance"
-    mock_submission.__str__.return_value = "maintenance:1"
+    mock_submission.__str__ = mocker.Mock(return_value="maintenance:1")
     commenter_setup["get_submissions"].return_value = [mock_submission]
 
     c = Commenter(mock_args)
@@ -271,7 +271,7 @@ def test_commenter_call_passed_jobs(
     commenter_setup["get_submissions"].return_value = [mock_submission_smelt]
     mocker.patch(
         "openqabot.commenter.get_submission_results",
-        return_value=[{"job_id": 1, "name": "test_passed", "status": "passed"}],
+        return_value=[{"job_id": 1, "name": "test_passed", "status": "passed", "build": "1"}],
     )
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
     mock_osc_comment = mocker.patch.object(Commenter, "osc_comment")
@@ -443,52 +443,14 @@ def test_osc_comment_replace_dry_run(
     assert not comment_api.add_comment.called
 
 
-def test_summarize_message_one_passed_job(
-    mock_args: Namespace,
-    make_job: Callable,
-    commenter_setup: dict[str, MagicMock],
-) -> None:
-    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
-    c = Commenter(mock_args)
-    result = c.summarize_message([make_job()])
-    assert "foo" in result
-    assert "test-flavor" in result
-    assert "1 tests passed" in result
-
-
-def test_summarize_message_multiple_jobs_same_group(
-    mock_args: Namespace,
-    make_job: Callable,
-    commenter_setup: dict[str, MagicMock],
-) -> None:
-    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
-    c = Commenter(mock_args)
-    result = c.summarize_message([make_job(name="test_job_1"), make_job(job_id=2, name="test_job_2")])
-    assert "foo" in result
-    assert "test-flavor" in result
-    assert "2 tests passed" in result
-
-
-def test_summarize_message_job_status_none(
-    mock_args: Namespace,
-    make_job: Callable,
-    commenter_setup: dict[str, MagicMock],
-) -> None:
-    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
-    c = Commenter(mock_args)
-    result = c.summarize_message([make_job(status="none")])
-    assert "foo" in result
-    assert "1 unfinished tests" in result
-
-
-def test_summarize_gitea_message(
+def test_summarize_message(
     mock_args: Namespace,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
     c = Commenter(mock_args)
     jobs = [{"build": "1.1"}, {"build": "1.2"}]
-    result = c.summarize_gitea_message(jobs)
+    result = c.summarize_message(jobs)
     assert (
         "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1)](https://openqa.opensuse.org/tests/overview?build=1.1)"
         in result
@@ -577,11 +539,11 @@ def test_commenter_call_git(
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
 
     mock_gitea_comment = mocker.patch.object(Commenter, "gitea_comment")
-    mock_summarize_gitea = mocker.patch.object(Commenter, "summarize_gitea_message", return_value="badge")
+    mock_summarize = mocker.patch.object(Commenter, "summarize_message", return_value="badge")
 
     c = Commenter(mock_args)
     assert c() == 0
-    mock_summarize_gitea.assert_called_once()
+    mock_summarize.assert_called_once()
     mock_gitea_comment.assert_called_once()
 
 
