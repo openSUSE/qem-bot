@@ -61,7 +61,7 @@ def make_comment_api() -> Callable[..., MagicMock]:
 
 @pytest.fixture
 def mock_args() -> Namespace:
-    return Namespace(dry=True, token="test_token")
+    return Namespace(dry=True, token="test_token", gitea_token="gitea_token")
 
 
 @pytest.fixture
@@ -91,10 +91,12 @@ def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
     mock_get_subs = mocker.patch("openqabot.commenter.get_submissions")
     mocker.patch("openqabot.commenter.osc.conf.get_config")
     mock_comment_api = mocker.patch("openqabot.commenter.CommentAPI")
+    mock_gitea = mocker.patch("openqabot.commenter.gitea")
     return {
         "client": mock_client,
         "get_submissions": mock_get_subs,
         "comment_api": mock_comment_api,
+        "gitea": mock_gitea,
     }
 
 
@@ -103,6 +105,24 @@ def test_commenter_init(commenter_setup: dict[str, MagicMock], mock_args: Namesp
     assert c.dry
     assert c.token == {"Authorization": "Token test_token"}
     assert c.client == commenter_setup["client"].return_value
+
+
+def test_commenter_call_unknown_type(
+    mock_args: Namespace,
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 1
+    mock_submission.type = "unknown"
+    mock_submission.__str__.return_value = "unknown:1"
+    commenter_setup["get_submissions"].return_value = [mock_submission]
+
+    c = Commenter(mock_args)
+    assert c() == 0
+    assert "Submission unknown:1 skipped: Not a SMELT incident or Gitea PR (type: unknown)" in caplog.text
 
 
 def test_commenter_call(
@@ -121,7 +141,7 @@ def test_commenter_call(
 
     c = Commenter(mock_args)
     assert c() == 0
-    assert "Submission maintenance:1 skipped: Not a SMELT incident (type: maintenance)" in caplog.text
+    assert "Submission maintenance:1 skipped: Not a SMELT incident or Gitea PR (type: maintenance)" in caplog.text
 
 
 def test_commenter_call_value_error_submission_results(
@@ -442,3 +462,200 @@ def test_summarize_message_job_status_none(
     result = c.summarize_message([make_job(status="none")])
     assert "foo" in result
     assert "1 unfinished tests" in result
+
+
+def test_summarize_gitea_message(
+    mock_args: Namespace,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
+    c = Commenter(mock_args)
+    jobs = [{"build": "1.1"}, {"build": "1.2"}]
+    result = c.summarize_gitea_message(jobs)
+    assert (
+        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1)](https://openqa.opensuse.org/tests/overview?build=1.1)"
+        in result
+    )
+    assert (
+        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.2)](https://openqa.opensuse.org/tests/overview?build=1.2)"
+        in result
+    )
+
+
+def test_gitea_comment_dry_run(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.project = "owner/repo"
+    mock_submission.type = "git"
+    mock_submission.__str__.return_value = "git:123"
+
+    mock_gitea = commenter_setup["gitea"]
+    mock_gitea.make_token_header.return_value = {"Authorization": "token gitea_token"}
+    mock_gitea.comments_url.return_value = "repos/owner/repo/issues/123/comments"
+    mock_gitea.get_json.return_value = []
+
+    # Configure CommentAPI mock
+    mock_comment_api = commenter_setup["comment_api"].return_value
+    mock_comment_api.comment_find.return_value = (None, None)
+    mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nTest message"
+
+    mock_args.gitea_token = "gitea_token"
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_submission, "Test message", "passed")
+
+    assert "Would write/update comment to PR git:123" in caplog.text
+    assert not mock_gitea.post_json.called
+    assert not mock_gitea.patch_json.called
+
+
+def test_gitea_comment_post_new(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.project = "owner/repo"
+    mock_submission.type = "git"
+
+    mock_gitea = commenter_setup["gitea"]
+    mock_gitea.make_token_header.return_value = {"Authorization": "token gitea_token"}
+    mock_gitea.get_json.return_value = []
+    mock_gitea.comments_url.return_value = "repos/owner/repo/issues/123/comments"
+
+    # Configure CommentAPI mock
+    mock_comment_api = commenter_setup["comment_api"].return_value
+    mock_comment_api.comment_find.return_value = (None, None)
+    mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nTest message"
+
+    mock_args.dry = False
+    mock_args.gitea_token = "gitea_token"
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_submission, "Test message", "passed")
+
+    mock_gitea.post_json.assert_called_once()
+    assert mock_gitea.post_json.call_args[0][0] == "repos/owner/repo/issues/123/comments"
+
+
+def test_gitea_comment_patch_existing(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.project = "owner/repo"
+    mock_submission.type = "git"
+
+    mock_gitea = commenter_setup["gitea"]
+    mock_gitea.make_token_header.return_value = {"Authorization": "token gitea_token"}
+    # Existing comment returned from API
+    mock_gitea.get_json.return_value = [{"id": 456, "body": "<!-- openqa state=failed -->\n\nOld message"}]
+    mock_gitea.comments_url.return_value = "repos/owner/repo/issues/123/comments"
+
+    # Configure CommentAPI mock
+    mock_comment_api = commenter_setup["comment_api"].return_value
+    mock_comment_api.comment_find.return_value = ({"id": 456, "comment": "Old message"}, {"state": "failed"})
+    mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nNew message"
+
+    mock_args.dry = False
+    mock_args.gitea_token = "gitea_token"
+    c = Commenter(mock_args)
+    # Different message or state to trigger update
+    c.gitea_comment(mock_submission, "New message", "passed")
+
+    mock_gitea.patch_json.assert_called_once()
+    assert mock_gitea.patch_json.call_args[0][0] == "repos/owner/repo/issues/comments/456"
+
+
+def test_commenter_call_git(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    commenter_setup: dict[str, MagicMock],
+    make_job: Callable,
+) -> None:
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.type = "git"
+    mock_submission.__str__.return_value = "git:123"
+    commenter_setup["get_submissions"].return_value = [mock_submission]
+
+    mocker.patch("openqabot.commenter.get_submission_results", return_value=[make_job()])
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+
+    mock_gitea_comment = mocker.patch.object(Commenter, "gitea_comment")
+    mock_summarize_gitea = mocker.patch.object(Commenter, "summarize_gitea_message", return_value="badge")
+
+    c = Commenter(mock_args)
+    assert c() == 0
+    mock_summarize_gitea.assert_called_once()
+    mock_gitea_comment.assert_called_once()
+
+
+def test_gitea_comment_no_token(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.commenter")
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.__str__.return_value = "git:123"
+
+    # Gitea token missing
+    commenter_setup["gitea"].make_token_header.return_value = {}
+
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_submission, "Test message", "passed")
+
+    assert "Gitea token missing, skipping comment for git:123" in caplog.text
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_gitea_comment_no_msg(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mock_submission = mocker.MagicMock(spec=Submission)
+
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_submission, "", "passed")
+
+    assert "Skipping empty comment" in caplog.text
+
+
+def test_gitea_comment_similar_exists(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mock_submission = mocker.MagicMock(spec=Submission)
+    mock_submission.id = 123
+    mock_submission.project = "owner/repo"
+
+    mock_gitea = commenter_setup["gitea"]
+    # Existing comment with marker and same line count
+    existing_body = "<!-- openqa state=passed -->\n\nSome message"
+    mock_gitea.get_json.return_value = [{"id": 456, "body": existing_body}]
+    mock_gitea.comments_url.return_value = "repos/owner/repo/issues/123/comments"
+
+    # Configure CommentAPI mock
+    mock_comment_api = commenter_setup["comment_api"].return_value
+    mock_comment_api.comment_find.return_value = ({"id": 456, "comment": existing_body}, {"state": "passed"})
+    # New message with same line count
+    mock_comment_api.add_marker.return_value = "<!-- openqa state=passed -->\n\nOther message"
+
+    c = Commenter(mock_args)
+    c.gitea_comment(mock_submission, "Other message", "passed")
+
+    assert "Comment skipped: Previous comment is too similar" in caplog.text

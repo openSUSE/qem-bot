@@ -185,7 +185,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
         channel = "#".join([f"{expected_repo}:{arch}", "15.99"])
         assert channel in channels
         assert channel in failed_or_unpublished
-    assert submission["project"] == "SLFO"
+    assert submission["project"] == "products/SLFO"
     assert submission["url"] == "https://src.suse.de/products/SLFO/pulls/124"
     assert submission["inReview"]
     assert submission["inReviewQAM"]
@@ -268,6 +268,17 @@ def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.L
 @pytest.mark.usefixtures("fake_gitea_api_post_review_comment")
 def test_reviewing_pr() -> None:
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
+
+
+@responses.activate
+def test_reviewing_pr_no_bot_user(mocker: MockerFixture) -> None:
+    # Patch the property on the class so it affects the existing 'settings' instance
+    mocker.patch("openqabot.config.Settings.git_review_bot_user", new_callable=mocker.PropertyMock, return_value=None)
+    url = "https://src.suse.de/api/v1/repos/orga/repo/pulls/42/reviews"
+    responses.post(url, json={"status": "ok"})
+    review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
+    assert len(responses.calls) > 0
+    assert responses.calls[0].request.url == url
 
 
 def test_computing_repo_url() -> None:

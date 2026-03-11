@@ -82,6 +82,15 @@ def post_json(query: str, token: dict[str, str], post_data: Any, host: str | Non
         log.error("Gitea API error: POST to %s failed: %s", url, res.text)
 
 
+def patch_json(query: str, token: dict[str, str], post_data: Any, host: str | None = None) -> None:  # noqa: ANN401
+    """Patch JSON data in Gitea API."""
+    host = host or config.settings.gitea_url
+    url = host + "/api/v1/" + query
+    res = retried_requests.patch(url, verify=False, headers=token, json=post_data)
+    if not res.ok:
+        log.error("Gitea API error: PATCH to %s failed: %s", url, res.text)
+
+
 @lru_cache(maxsize=128)
 def read_utf8(name: str) -> str:
     """Read a UTF-8 encoded response file."""
@@ -593,7 +602,7 @@ def make_submission_from_gitea_pr(
         repo_name = repo["full_name"]
         submission = {
             "number": number,
-            "project": repo["name"],
+            "project": repo["full_name"],
             # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
             # see openqabot/types/incidents.py#L227
             "emu": False,

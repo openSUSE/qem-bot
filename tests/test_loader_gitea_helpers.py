@@ -22,6 +22,22 @@ def test_post_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.Lo
     assert "Gitea API error: POST to my.host/api/v1/foo" in caplog.text
 
 
+def test_patch_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
+    mocked_patch = mocker.Mock()
+    mocked_patch.ok = False
+    mocker.patch("openqabot.loader.gitea.retried_requests.patch", return_value=mocked_patch)
+    gitea.patch_json("foo", {}, {}, host="my.host")
+    assert "Gitea API error: PATCH to my.host/api/v1/foo" in caplog.text
+
+
+def test_patch_json_success(mocker: MockerFixture) -> None:
+    mocked_patch = mocker.Mock()
+    mocked_patch.ok = True
+    mocker.patch("openqabot.loader.gitea.retried_requests.patch", return_value=mocked_patch)
+    gitea.patch_json("foo", {}, {})
+
+
 def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture) -> None:
     mock_log = mocker.patch("openqabot.loader.gitea.log")
     mock_response = MagicMock()

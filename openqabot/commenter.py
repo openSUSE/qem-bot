@@ -14,6 +14,7 @@ import osc.core
 from openqabot import config
 from openqabot.errors import NoResultsError
 
+from .loader import gitea
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
@@ -33,6 +34,7 @@ class Commenter:
         """Initialize the Commenter class."""
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
+        self.gitea_token = gitea.make_token_header(args.gitea_token)
         self.client = OpenQAInterface(args)
         self.submissions = get_submissions(self.token)
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
@@ -43,8 +45,8 @@ class Commenter:
         log.info("Starting to comment SMELT incidents in OBS")
 
         for sub in self.submissions:
-            if sub.type != config.settings.default_submission_type:
-                log.debug("Submission %s skipped: Not a SMELT incident (type: %s)", sub, sub.type)
+            if sub.type not in {config.settings.default_submission_type, "git"}:
+                log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
                 continue
             try:
                 s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
@@ -66,8 +68,12 @@ class Commenter:
             else:
                 state = "passed"
 
-            msg = self.summarize_message(all_jobs)
-            self.osc_comment(sub, msg, state)
+            if sub.type == config.settings.default_submission_type:
+                msg = self.summarize_message(all_jobs)
+                self.osc_comment(sub, msg, state)
+            else:
+                msg = self.summarize_gitea_message(all_jobs)
+                self.gitea_comment(sub, msg, state)
 
         return 0
 
@@ -116,6 +122,54 @@ class Commenter:
         else:
             log.info("Dry run: Would write comment to request %s", sub)
             log.debug(pformat(msg))
+
+    def gitea_comment(self, sub: Submission, msg: str, state: str) -> None:
+        """Comment a submission in Gitea."""
+        if not self.gitea_token:
+            log.warning("Gitea token missing, skipping comment for %s", sub)
+            return
+
+        if not msg:
+            log.debug("Skipping empty comment")
+            return
+
+        bot_name = "openqa"
+        info = {"state": state}
+        # Add a marker so we can find our own comments later
+        msg = self.commentapi.add_marker(msg, bot_name, info)
+
+        comments = gitea.get_json(gitea.comments_url(sub.project, sub.id), self.gitea_token)
+        # Convert Gitea comments to CommentAPI format
+        formatted_comments = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
+
+        comment, _ = self.commentapi.comment_find(formatted_comments, bot_name, info)
+
+        # To prevent spam, assume same state/result
+        # and number of lines in message is a duplicate message
+        if comment is not None and comment["comment"].count("\n") == msg.count("\n"):
+            log.debug("Comment skipped: Previous comment is too similar")
+            return
+
+        if self.dry:
+            log.info("Dry run: Would write/update comment to PR %s", sub)
+            log.debug(pformat(msg))
+            return
+
+        if comment is None:
+            gitea.post_json(gitea.comments_url(sub.project, sub.id), self.gitea_token, {"body": msg})
+        else:
+            gitea.patch_json(f"repos/{sub.project}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
+
+    def summarize_gitea_message(self, jobs: list[dict[str, Any]]) -> str:
+        """Create markdown containing openQA badges."""
+        builds = sorted({j["build"] for j in jobs})
+        base_url = self.client.openqa.baseurl
+        msg = ""
+        for build in builds:
+            badge_url = f"{base_url}/tests/overview/badge?build={build}"
+            overview_url = f"{base_url}/tests/overview?build={build}"
+            msg += f"[![Test Results]({badge_url})]({overview_url})\n"
+        return msg.strip()
 
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
         """Summarize multiple openQA jobs into a single message."""
