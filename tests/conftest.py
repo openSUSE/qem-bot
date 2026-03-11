@@ -20,7 +20,7 @@ from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json
-from openqabot.loader.qem import JobAggr, SubReq
+from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list
@@ -175,14 +175,11 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def mock_get_submissions_approver(_token: dict[str, str]) -> list[SubReq]:
-        return list(f_sub_approver())
-
     mocker.patch(
         "openqabot.approver.get_single_submission",
         side_effect=lambda _token, i, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
     )
-    mocker.patch("openqabot.approver.get_submissions_approver", side_effect=mock_get_submissions_approver)
+    mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
 
