@@ -247,7 +247,7 @@ def test_extracting_product_name_and_version() -> None:
 
     slfo_url = "https://src.suse.de/user1/SLFO.git?onlybuild=tree#f229f"
     prod_ver = get_product_name_and_version_from_scmsync(slfo_url)
-    assert prod_ver == ("", "")
+    assert prod_ver == ("", None)
     prod_url = "https://src.suse.de/products/SLES#15.99"
     prod_ver = get_product_name_and_version_from_scmsync(prod_url)
     assert prod_ver == ("SLES", "15.99")
