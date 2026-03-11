@@ -45,44 +45,49 @@ class Commenter:
         log.info("Starting to comment SMELT incidents in OBS")
 
         for sub in self.submissions:
-            if sub.type not in {config.settings.default_submission_type, "git"}:
-                log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
-                continue
-            try:
-                s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
-            except (ValueError, NoResultsError) as e:
-                log.debug(e)
-                s_jobs = []
-
-            try:
-                a_jobs = get_aggregate_results(sub.id, self.token, submission_type=sub.type)
-            except (ValueError, NoResultsError) as e:
-                log.debug(e)
-                a_jobs = []
-
-            all_jobs = s_jobs + a_jobs
-
-            if not all_jobs:
-                log.debug("No jobs found for submission %s", sub)
-                continue
-
-            if any(j["status"] == "running" for j in all_jobs):
-                log.info("Postponing comment for %s: Some tests are still running", sub)
-                continue
-
-            if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
-                log.info("Creating 'failed' comment for %s: At least one job failed", sub)
-                state = "failed"
-            else:
-                state = "passed"
-
-            msg = self.summarize_message(all_jobs)
-            if sub.type == config.settings.default_submission_type:
-                self.osc_comment(sub, msg, state)
-            else:
-                self.gitea_comment(sub, msg, state)
+            self.comment_on_submission(sub)
 
         return 0
+
+    def comment_on_submission(self, sub: Submission) -> None:
+        """Comment on a single submission if it has openQA results."""
+        if sub.type not in {config.settings.default_submission_type, "git"}:
+            log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
+            return
+
+        try:
+            s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
+        except (ValueError, NoResultsError) as e:
+            log.debug(e)
+            s_jobs = []
+
+        try:
+            a_jobs = get_aggregate_results(sub.id, self.token, submission_type=sub.type)
+        except (ValueError, NoResultsError) as e:
+            log.debug(e)
+            a_jobs = []
+
+        all_jobs = s_jobs + a_jobs
+
+        if not all_jobs:
+            log.debug("No jobs found for submission %s", sub)
+            return
+
+        if any(j["status"] == "running" for j in all_jobs):
+            log.info("Postponing comment for %s: Some tests are still running", sub)
+            return
+
+        if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
+            log.info("Creating 'failed' comment for %s: At least one job failed", sub)
+            state = "failed"
+        else:
+            state = "passed"
+
+        msg = self.summarize_message(all_jobs)
+        if sub.type == config.settings.default_submission_type:
+            self.osc_comment(sub, msg, state)
+        else:
+            self.gitea_comment(sub, msg, state)
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
         """Comment a submission in OBS."""
