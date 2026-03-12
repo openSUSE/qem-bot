@@ -73,7 +73,7 @@ def test_gitea_submissions() -> None:
     expected_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99"
     res = subs(submissions=[sub], token={}, ci_url="", ignore_onetime=False)
     assert len(res) == len(archs)
-    for arch, result in zip(archs, res):
+    for arch, result in zip(archs, res, strict=True):
         _assert_gitea_settings(
             result,
             arch=arch,

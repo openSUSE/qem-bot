@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from argparse import Namespace
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -18,6 +18,8 @@ from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pytest_mock import MockerFixture
 
 

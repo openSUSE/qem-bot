@@ -5,13 +5,14 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from openqabot.types.increment import BuildInfo
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
     import re
+    from collections.abc import Callable
 
     from openqabot.loader.incrementconfig import IncrementConfig
 
