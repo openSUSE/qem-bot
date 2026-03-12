@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
+import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -76,12 +77,28 @@ def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.assert_called_once()
 
 
-def test_sub_approve(mocker: MockerFixture, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "env", "expected_comment"),
+    [
+        ([], {}, False),
+        (["--no-comment"], {}, False),
+        (["--comment"], {}, True),
+        ([], {"QEM_BOT_APPROVE_COMMENT": "True"}, True),
+    ],
+)
+def test_sub_approve(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    extra_args: list[str],
+    env: dict[str, str],
+    expected_comment: bool,  # noqa: FBT001
+) -> None:
     approve = mocker.patch("openqabot.args.Approver")
     approve.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-approve"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-approve", *extra_args], env=env)
     assert result.exit_code == 0
     approve.assert_called_once()
+    assert approve.call_args[0][0].comment is expected_comment
 
 
 def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:

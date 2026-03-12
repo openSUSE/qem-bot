@@ -118,6 +118,7 @@ class Approver:
             self.single_submission = single_submission
             self.all_submissions = False
             self.submission_type = submission_type
+        self.comment = getattr(args, "comment", False)
         self.token = {"Authorization": f"Token {args.token}"}
         self.client = OpenQAInterface(args)
         self.commenter = Commenter(args, submissions=[])
@@ -149,7 +150,7 @@ class Approver:
 
     def _reject(self, sub: SubReq, reason: str) -> bool:
         log.info(reason, ms2str(sub))
-        if sub.submission:
+        if self.comment and sub.submission:
             self.commenter.comment_on_submission(sub.submission)
         return False
 

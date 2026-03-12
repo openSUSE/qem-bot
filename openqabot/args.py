@@ -46,6 +46,15 @@ pr_number_arg = Annotated[
 ]
 gitea_repo_arg = Annotated[str, typer.Option("--gitea-repo", help="Repository on Gitea to check for PRs")]
 
+comment_option = Annotated[
+    bool,
+    typer.Option(
+        "--comment/--no-comment",
+        envvar="QEM_BOT_APPROVE_COMMENT",
+        help="Post a comment on OBS/Gitea when a submission is not approved",
+    ),
+]
+
 
 def _require_token(args: SimpleNamespace) -> None:
     """Enforce that a qem-dashboard token is present before entering a command.
@@ -346,6 +355,7 @@ def sub_approve(
             help="Submission ID (to approve only a single submission)",
         ),
     ] = None,
+    comment: comment_option = False,
 ) -> None:
     """Approve submissions which passed tests."""
     args = ctx.obj
@@ -353,6 +363,7 @@ def sub_approve(
     args.all_submissions = all_submissions
     args.submission = submission
     args.incident = submission
+    args.comment = comment
 
     approve = Approver(args)
     sys.exit(approve())
@@ -374,9 +385,10 @@ def inc_approve(
             help="Submission ID (to approve only a single submission)",
         ),
     ] = None,
+    comment: comment_option = False,
 ) -> None:
     """DEPRECATED: Approve submissions which passed tests (use sub-approve)."""  # noqa: D401
-    sub_approve(ctx, all_submissions=all_submissions, submission=incident)
+    sub_approve(ctx, all_submissions=all_submissions, submission=incident, comment=comment)
 
 
 @app.command("sub-comment")

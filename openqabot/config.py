@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
+    approve_comment: bool = Field(default=False, alias="QEM_BOT_APPROVE_COMMENT")
 
     # App-specific settings
     qem_dashboard_url: str = Field(default="http://dashboard.qam.suse.de/", alias="QEM_DASHBOARD_URL")

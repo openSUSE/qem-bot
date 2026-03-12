@@ -92,7 +92,7 @@ def test_single_submission_not_ok_not_approved(caplog: pytest.LogCaptureFixture,
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    approver(submission=1)
+    approver(submission=1, comment=True)
     assert_submission_not_approved(
         caplog.messages,
         "SUSE:Maintenance:1:100",
@@ -101,6 +101,20 @@ def test_single_submission_not_ok_not_approved(caplog: pytest.LogCaptureFixture,
     assert "Found not-ok, not-ignored job http://instance.qa/t100001 for submission smelt:1" in caplog.messages
     mock_comment.assert_called()
     assert any(c.args[0].rr == 100 for c in mock_comment.call_args_list)
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+def test_no_comment_suppresses_commenting(mocker: MockerFixture) -> None:
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        return [{"submission_settings": int(url.rsplit("/", maxsplit=1)[-1]), "job_id": 100001, "status": "failed"}]
+
+    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
+    mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
+    approver(submission=1)  # default comment=False
+    mock_comment.assert_not_called()
 
 
 @responses.activate
@@ -252,7 +266,7 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
     responses.add(responses.PATCH, f"{settings.qem_dashboard_url}api/jobs/100003")
     mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    assert approver() == 0
+    assert approver(comment=True) == 0
     expected = [
         "* SUSE:Maintenance:1:100",
         "* SUSE:Maintenance:3:300",
