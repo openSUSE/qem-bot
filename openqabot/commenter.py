@@ -45,16 +45,9 @@ class Commenter:
         log.info("Starting to comment SMELT incidents in OBS")
 
         for sub in self.submissions:
-            self._comment_single_submission(sub)
+            self.comment_on_submission(sub)
 
         return 0
-
-    def _comment_single_submission(self, sub: Submission) -> None:
-        """Comment on a single submission with error handling."""
-        try:
-            self.comment_on_submission(sub)
-        except EmptyCommentError as e:
-            log.debug(e)
 
     def comment_on_submission(self, sub: Submission) -> None:
         """Comment on a single submission if it has openQA results."""

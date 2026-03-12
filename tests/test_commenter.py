@@ -497,16 +497,14 @@ def test_commenter_call_empty_msg(
     mocker: MockerFixture,
     mock_args: Namespace,
     mock_smelt_sub: MagicMock,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_smelt_sub])
     mocker.patch("openqabot.commenter.get_submission_results", return_value=[{"status": "passed"}])
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
 
     c = Commenter(mock_args)
-    assert c() == 0
-    assert "Skipping empty comment for smelt:1" in caplog.text
+    with pytest.raises(EmptyCommentError, match="Skipping empty comment for smelt:1"):
+        c()
 
 
 @pytest.mark.usefixtures("commenter_setup")
