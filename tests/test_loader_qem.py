@@ -38,17 +38,17 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def mock_get_json(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("openqabot.loader.qem.get_json")
+    return mocker.patch("openqabot.loader.qem.dashboard.get_json")
 
 
 @pytest.fixture
 def mock_patch(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("openqabot.loader.qem.patch")
+    return mocker.patch("openqabot.loader.qem.dashboard.patch")
 
 
 @pytest.fixture
 def mock_put(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("openqabot.loader.qem.put")
+    return mocker.patch("openqabot.loader.qem.dashboard.put")
 
 
 def test_get_submissions_simple(mock_get_json: MagicMock) -> None:

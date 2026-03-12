@@ -19,8 +19,7 @@ import osc.conf
 import osc.core
 from openqa_client.exceptions import RequestError
 
-from openqabot import config
-from openqabot.dashboard import get_json, patch
+from openqabot import config, dashboard
 from openqabot.errors import NoResultsError
 from openqabot.openqa import OpenQAInterface
 
@@ -186,7 +185,7 @@ class Approver:
     def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
         """Mark a job as acceptable for a submission in the dashboard."""
         try:
-            patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
+            dashboard.patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
         except RequestError as e:
             log.info(
                 "Unable to mark job %i as acceptable for submission %s:%i: %s",
@@ -212,7 +211,7 @@ class Approver:
         # Check that valid test result is still present in the dashboard (see
         # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
         # request
-        qam_data = get_json(f"api/jobs/{job}", headers=self.token)
+        qam_data = dashboard.get_json(f"api/jobs/{job}", headers=self.token)
         if not qam_data:
             return False
         if "error" in qam_data:
@@ -368,7 +367,7 @@ class Approver:
         params = {}
         if submission_type:
             params["type"] = submission_type
-        job_results = get_json(api + str(job_aggr.id), headers=self.token, params=params)
+        job_results = dashboard.get_json(api + str(job_aggr.id), headers=self.token, params=params)
         if not job_results:
             log.info(
                 "Job setting %s not found for submission %s:%s",

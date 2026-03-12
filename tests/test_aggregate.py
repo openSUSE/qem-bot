@@ -106,7 +106,7 @@ def test_aggregate_call_with_test_issues(
     acc = aggregate_factory(product="product", config=config)
     sub = submission_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
     sub2 = submission_mock(product="EEEEEEEEE", version="FFFFFFFF", arch="ciao", sub_id=42)
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     res = acc(submissions=[sub, sub2], token={}, ci_url=None)
     assert len(res) == 1
     settings = res[0]["openqa"]
@@ -123,7 +123,7 @@ def test_aggregate_call_pc_pint(aggregate_factory: Any, config: dict, mocker: Mo
         "openqabot.pc_helper.apply_publiccloud_pint_image",
         return_value={"PUBLIC_CLOUD_IMAGE_ID": "Hola", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "Base"},
     )
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     acc(submissions=[], token={}, ci_url=None)
 
 
@@ -139,7 +139,7 @@ def test_aggregate_call_pc_pint_with_submissions(
         return_value={"PUBLIC_CLOUD_IMAGE_ID": "Hola", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "Base"},
     )
     sub = submission_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     ret = acc(submissions=[sub], token={}, ci_url=None)
     assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
 
@@ -151,7 +151,7 @@ def test_aggregate_call_no_job_settings(
     """Test with no job settings found."""
     caplog.set_level(10)  # DEBUG
     acc = aggregate_factory(product="product", config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[])
     res = acc(submissions=[], token={}, ci_url=None)
     assert res == []
     assert "No aggregate jobs found for <Aggregate product: product> on arch ciao" in caplog.text
@@ -165,7 +165,7 @@ def test_aggregate_call_pc_tools_fail(
     caplog.set_level(logging.INFO)
     config["test_issues"] = {"I": "P:V"}
     acc = aggregate_factory(product="product", settings={"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "query"}, config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     mocker.patch("openqabot.pc_helper.apply_pc_tools_image", return_value=None)
 
     sub = submission_mock(product="P", version="V", arch="ciao")
@@ -183,7 +183,7 @@ def test_aggregate_call_pc_pint_fail(
     caplog.set_level(logging.INFO)
     config["test_issues"] = {"I": "P:V"}
     acc = aggregate_factory(product="product", settings={"PUBLIC_CLOUD_PINT_QUERY": "query"}, config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     mocker.patch("openqabot.pc_helper.apply_publiccloud_pint_image", return_value=None)
 
     sub = submission_mock(product="P", version="V", arch="ciao")
@@ -233,7 +233,9 @@ def test_get_test_submissions_repos_existing(aggregate_factory: Any, submission_
 def test_aggregate_call_ci_url(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "20220101-1", "repohash": "old"}])
+    mocker.patch(
+        "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": "20220101-1", "repohash": "old"}]
+    )
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
@@ -247,7 +249,7 @@ def test_process_arch_json_error(
     aggregate_factory: Any, config: dict, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     acc = aggregate_factory("product", config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", side_effect=requests.JSONDecodeError("msg", "doc", 0))
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", side_effect=requests.JSONDecodeError("msg", "doc", 0))
     assert acc(submissions=[], token={}, ci_url=None) == []
     assert "Invalid JSON received for aggregate jobs" in caplog.text
 
@@ -257,7 +259,7 @@ def test_process_arch_request_error(
     aggregate_factory: Any, config: dict, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     acc = aggregate_factory("product", config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", side_effect=requests.RequestException("error"))
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", side_effect=requests.RequestException("error"))
     assert acc(submissions=[], token={}, ci_url=None) == []
     assert "Could not fetch previous aggregate jobs" in caplog.text
 
@@ -267,7 +269,9 @@ def test_process_arch_onetime_skip(aggregate_factory: Any, config: dict, mocker:
     acc.onetime = True
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="new")
     today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": today + "-1", "repohash": "old"}])
+    mocker.patch(
+        "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "old"}]
+    )
     assert acc.process_arch("ciao", [], {}, None, ignore_onetime=False) is None
 
 
@@ -275,7 +279,7 @@ def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mo
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
     mocker.patch("openqabot.config.settings.deprioritize_limit", 10)
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": "old", "repohash": "old"}])
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
@@ -286,7 +290,7 @@ def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mo
 def test_aggregate_call_pc_tools_success(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
     config = {"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}}
     acc = aggregate_factory("product", settings={"PUBLIC_CLOUD_TOOLS_IMAGE_QUERY": "query"}, config=config)
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"repohash": "old", "build": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
     mocker.patch("openqabot.pc_helper.apply_pc_tools_image", return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "Base"})
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
@@ -298,7 +302,7 @@ def test_aggregate_call_pc_tools_success(aggregate_factory: Any, submission_mock
 def test_aggregate_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": "old", "repohash": "old"}])
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.priority = 100
@@ -311,7 +315,7 @@ def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: An
         "product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I1": "P:V", "I2": "P:V"}}
     )
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": "old", "repohash": "old"}])
+    mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": "old", "repohash": "old"}])
 
     sub1 = submission_mock(product="P", version="V", arch="A")
     sub1.id = 1
@@ -331,7 +335,9 @@ def test_process_arch_same_build_exists(
     acc = aggregate_factory("product", config=config)
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="same")
     today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-    mocker.patch("openqabot.types.aggregate.get_json", return_value=[{"build": today + "-1", "repohash": "same"}])
+    mocker.patch(
+        "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "same"}]
+    )
     assert acc.process_arch("A", [], {}, None, ignore_onetime=False) is None
     assert "A build with the same RepoHash already exists" in caplog.text
 

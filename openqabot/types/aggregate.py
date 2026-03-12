@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot import config
-from openqabot.dashboard import get_json
+from openqabot import config, dashboard
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_public_cloud_settings
@@ -210,7 +209,7 @@ class Aggregate(BaseConf):
         )
 
         try:
-            old_jobs = get_json(
+            old_jobs = dashboard.get_json(
                 "api/update_settings",
                 params={"product": self.product, "arch": arch},
                 headers=token,

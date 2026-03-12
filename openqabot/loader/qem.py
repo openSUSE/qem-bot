@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
-from openqabot import config
-from openqabot.dashboard import get_json, patch, put
+from openqabot import config, dashboard
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import Data
@@ -69,7 +68,7 @@ def _get_submission(token: dict[str, str], submission_id: int, submission_type: 
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return get_json(f"api/incidents/{submission_id}", headers=token, params=params)
+    return dashboard.get_json(f"api/incidents/{submission_id}", headers=token, params=params)
 
 
 def get_submissions(token: dict[str, str], submission: str | None = None) -> list[Submission]:
@@ -78,7 +77,7 @@ def get_submissions(token: dict[str, str], submission: str | None = None) -> lis
         s_type, s_id = submission.split(":")
         submissions = [_get_submission(token, int(s_id), s_type)]
     else:
-        submissions = get_json("api/incidents", headers=token, verify=True)
+        submissions = dashboard.get_json("api/incidents", headers=token, verify=True)
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
@@ -91,13 +90,13 @@ def get_active_submissions(token: dict[str, str], submission_type: str | None = 
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = get_json("api/incidents", headers=token, params=params)
+    data = dashboard.get_json("api/incidents", headers=token, params=params)
     return list({i["number"] for i in data})
 
 
 def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
     """Fetch submissions that are ready for QAM review."""
-    submissions = get_json("api/incidents", headers=token)
+    submissions = dashboard.get_json("api/incidents", headers=token)
     return [
         SubReq(
             i["number"],
@@ -134,7 +133,7 @@ def get_submission_settings(
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = get_json(f"api/incident_settings/{sub}", headers=token, params=params)
+    settings = dashboard.get_json(f"api/incident_settings/{sub}", headers=token, params=params)
     if not settings:
         raise NoSubmissionResultsError(sub)
 
@@ -158,7 +157,7 @@ def get_submission_settings_data(
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = get_json("api/incident_settings/" + f"{number}", headers=token, params=params)
+    data = dashboard.get_json("api/incident_settings/" + f"{number}", headers=token, params=params)
     if "error" in data:
         log.warning(
             "Submission %s:%s error: %s",
@@ -190,7 +189,7 @@ def get_submission_results(sub: int, token: dict[str, Any], submission_type: str
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific settings ID."""
-        data = get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
+        data = dashboard.get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
         if "error" in data:
             raise ValueError(data["error"])
         return data
@@ -204,7 +203,7 @@ def get_aggregate_settings(sub: int, token: dict[str, str], submission_type: str
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = get_json(f"api/update_settings/{sub}", headers=token, params=params)
+    settings = dashboard.get_json(f"api/update_settings/{sub}", headers=token, params=params)
     if not settings:
         raise NoAggregateResultsError(sub)
 
@@ -219,7 +218,7 @@ def get_aggregate_settings(sub: int, token: dict[str, str], submission_type: str
 def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[Data]:
     """Fetch aggregate job settings data for a product and architecture."""
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
-    settings = get_json(url, headers=token)
+    settings = dashboard.get_json(url, headers=token)
     if not settings:
         log.info("No aggregate settings found for product %s on arch %s", data.product, data.arch)
         return []
@@ -249,7 +248,7 @@ def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str 
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific aggregate settings ID."""
-        data = get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
+        data = dashboard.get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
         if "error" in data:
             raise ValueError(data["error"])
         return data
@@ -265,7 +264,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
     while retry >= 0:
         retry -= 1
         try:
-            ret = patch("api/incidents", headers=token, params=query_params, json=data)
+            ret = dashboard.patch("api/incidents", headers=token, params=query_params, json=data)
         except requests.exceptions.RequestException:
             log.exception("QEM Dashboard API request failed")
             return 1
@@ -284,7 +283,7 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
 def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
     """Create a new job record on the dashboard."""
     try:
-        result = put("api/jobs", headers=token, json=data)
+        result = dashboard.put("api/jobs", headers=token, json=data)
         if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not post job: %s", result.text)
 
@@ -295,7 +294,7 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
 def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
     """Update an existing job record on the dashboard."""
     try:
-        result = patch(f"api/jobs/{job_id}", headers=token, json=data)
+        result = dashboard.patch(f"api/jobs/{job_id}", headers=token, json=data)
         if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 

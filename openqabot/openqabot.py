@@ -8,7 +8,7 @@ from logging import getLogger
 from os import environ
 from typing import Any
 
-from openqabot.dashboard import put
+from openqabot import dashboard
 
 from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
@@ -52,7 +52,7 @@ class OpenQABot:
             log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
 
-        res = put(api, headers=self.token, json=data)
+        res = dashboard.put(api, headers=self.token, json=data)
         res_id = res.json().get("id", "unknown")
         log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 

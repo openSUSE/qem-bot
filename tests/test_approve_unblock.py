@@ -104,11 +104,11 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
             ]
         return [{"job_id": 100000, "status": "passed"}]
 
-    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     # 100002, 100003, 100004 all have comments
     comments_return_value = [{"text": "@review:acceptable_for:submission_2:foo"}]
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
-    mock_patch = mocker.patch("openqabot.approver.patch")
+    mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
 
     assert approver(mocker) == 0
     expected = [
@@ -154,7 +154,7 @@ def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
             ]
         return [{"job_id": 100000, "status": "passed"}]
 
-    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
 
     # 100002 and 100004 have comments, 100003 does not
     def mock_get_job_comments(job_id: int) -> list[dict[str, str]]:
@@ -163,7 +163,7 @@ def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
         return []
 
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", side_effect=mock_get_job_comments)
-    mock_patch = mocker.patch("openqabot.approver.patch")
+    mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
 
     assert approver(mocker) == 0
     expected = [
@@ -208,7 +208,7 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
             ]
         return [{"job_id": 100000, "status": "passed"}]
 
-    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     # Comment is for submission 22, but we are checking submission 2
     comments_return_value = [{"text": "@review:acceptable_for:submission_22:foo"}]
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
@@ -242,7 +242,7 @@ def test_approval_via_openqa_older_ok_job(
             return mock_json
         return [{"job_id": 100000, "status": "passed"}]
 
-    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mocker.patch(
         "openqabot.openqa.OpenQAInterface.get_older_jobs",
         return_value={
@@ -279,7 +279,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
             return {"error": "Job not found"}
         return [{"job_id": 100000, "status": "passed"}]
 
-    mocker.patch("openqabot.approver.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mocker.patch(
         "openqabot.openqa.OpenQAInterface.get_older_jobs",
         return_value={
@@ -343,7 +343,7 @@ def test_approval_unblocked_with_various_comment_formats(
     case: CommentFormatTestCase, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
-    mock_get_json = mocker.patch("openqabot.approver.get_json")
+    mock_get_json = mocker.patch("openqabot.approver.dashboard.get_json")
 
     def side_effect_get_json(url: str, **_kwargs: Any) -> Any:
         if "api/jobs/incident/2000" in url:
@@ -360,7 +360,7 @@ def test_approval_unblocked_with_various_comment_formats(
         "openqabot.openqa.OpenQAInterface.get_job_comments",
         return_value=[{"text": case.comment_text}],
     )
-    mock_patch = mocker.patch("openqabot.approver.patch")
+    mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
 
     assert approver(mocker) == 0
     assert "* SUSE:Maintenance:2:200" in caplog.messages
