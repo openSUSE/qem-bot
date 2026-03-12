@@ -2,9 +2,22 @@
 # SPDX-License-Identifier: MIT
 """Test configuration."""
 
+import ast
+from pathlib import Path
 from unittest.mock import patch
 
 from openqabot.config import Settings, get_default_obs_url
+
+
+def _keyword_str_values(tree: ast.AST, arg: str) -> set[str]:
+    return {
+        node.value.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.keyword)
+        and node.arg == arg
+        and isinstance(node.value, ast.Constant)
+        and isinstance(node.value.value, str)
+    }
 
 
 def test_download_maintenance_override() -> None:
@@ -47,6 +60,14 @@ def test_get_default_obs_url_fallback() -> None:
     """Test that get_default_obs_url falls back to default if osc.conf fails."""
     with patch("osc.conf.get_config", side_effect=Exception("osc not configured")):
         assert get_default_obs_url() == "https://api.suse.de"
+
+
+def test_cli_envvars_covered_by_settings() -> None:
+    """Every envvar= in args.py must have a matching alias= in config.py Settings."""
+    cli_envvars = _keyword_str_values(ast.parse(Path("openqabot/args.py").read_text(encoding="utf-8")), "envvar")
+    config_aliases = _keyword_str_values(ast.parse(Path("openqabot/config.py").read_text(encoding="utf-8")), "alias")
+    missing = cli_envvars - config_aliases
+    assert not missing, f"envvars in args.py missing from config.py Settings: {missing}"
 
 
 def test_obs_web_url_property() -> None:
