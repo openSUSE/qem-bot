@@ -71,7 +71,7 @@ def test_main_missing_token_exits(mocker: MockerFixture) -> None:
 
     result = runner.invoke(app, ["full-run"])
     assert result.exit_code == 1
-    assert "Error: Missing option '--token' / '-t'." in result.stdout
+    assert "Error: Missing option '--token' / '-t'." in result.output
 
 
 def test_main_help_no_token(mocker: MockerFixture) -> None:

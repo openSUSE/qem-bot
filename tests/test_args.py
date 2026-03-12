@@ -267,7 +267,7 @@ def test_main_no_token_exit(mocker: MockerFixture, tmp_path: Path) -> None:
     # We need to invoke via runner to capture the SystemExit
     result = runner.invoke(app, ["--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 1
-    assert "Error: Missing option '--token' / '-t'." in result.stdout
+    assert "Error: Missing option '--token' / '-t'." in result.output
 
 
 def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> None:
