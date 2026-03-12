@@ -54,6 +54,15 @@ Feel free to add issues in github or send pull requests.
 If this is too much hassle for you feel free to provide incomplete pull requests
 for consideration or create an issue with a code change proposal.
 
+### Architecture invariants
+
+CLI flags and `config.py` must stay in sync. When adding a CLI flag backed by
+an environment variable, declare `envvar=` on the `typer.Option` in `args.py`
+**and** a matching `alias=` on a `Field` in `config.py`'s `Settings` class.
+The test `test_cli_envvars_covered_by_settings` in `tests/test_config.py`
+enforces this automatically.
+
+
 ## Local testing
 
 Ensure you have the dependencies for development installed. The easiest
