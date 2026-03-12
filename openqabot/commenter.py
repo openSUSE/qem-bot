@@ -77,11 +77,8 @@ class Commenter:
             log.info("Postponing comment for %s: Some tests are still running", sub)
             return
 
-        if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs):
-            log.info("Creating 'failed' comment for %s: At least one job failed", sub)
-            state = "failed"
-        else:
-            state = "passed"
+        state = "failed" if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs) else "passed"
+        log.debug("Determined comment state for %s: %s", sub, state)
 
         msg = self.summarize_message(all_jobs)
         if sub.type == config.settings.default_submission_type:

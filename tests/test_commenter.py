@@ -131,7 +131,7 @@ def test_commenter_call_failed_jobs(
     caplog: pytest.LogCaptureFixture,
     make_job: Callable,
 ) -> None:
-    caplog.set_level(logging.INFO, logger="bot.commenter")
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
     mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_smelt_sub])
     mocker.patch(
         "openqabot.commenter.get_submission_results", return_value=[make_job(name="test_failed", status="failed")]
@@ -141,7 +141,8 @@ def test_commenter_call_failed_jobs(
 
     c = Commenter(mock_args)
     assert c() == 0
-    assert "At least one job failed" in caplog.text
+    assert "comment state" in caplog.text
+    assert "failed" in caplog.text
     mock_osc_comment.assert_called_once_with(mock_smelt_sub, mocker.ANY, "failed")
 
 
