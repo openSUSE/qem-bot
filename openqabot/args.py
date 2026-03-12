@@ -23,6 +23,7 @@ from .config import BUILD_REGEX
 from .giteasync import GiteaSync
 from .giteatrigger import GiteaTrigger
 from .incrementapprover import IncrementApprover
+from .loader.qem import get_submissions
 from .openqabot import OpenQABot
 from .repodiff import RepoDiff
 from .smeltsync import SMELTSync
@@ -397,7 +398,9 @@ def sub_comment(ctx: typer.Context) -> None:
     args = ctx.obj
     _require_token(args)
 
-    comment = Commenter(args)
+    token = {"Authorization": f"Token {args.token}"}
+    submissions = get_submissions(token)
+    comment = Commenter(args, submissions)
     sys.exit(comment())
 
 

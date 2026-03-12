@@ -102,6 +102,7 @@ def test_sub_approve(
 
 
 def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
+    mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
     comment.return_value.return_value = 0
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-comment"])
@@ -180,6 +181,7 @@ def test_inc_approve(mocker: MockerFixture, tmp_path: Path) -> None:
 
 
 def test_inc_comment(mocker: MockerFixture, tmp_path: Path) -> None:
+    mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
     comment.return_value.return_value = 0
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "inc-comment"])

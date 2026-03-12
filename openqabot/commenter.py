@@ -15,7 +15,7 @@ from openqabot import config
 from openqabot.errors import EmptyCommentError, NoResultsError
 
 from .loader import gitea
-from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
+from .loader.qem import get_aggregate_results, get_submission_results
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
 
@@ -31,13 +31,13 @@ log = getLogger("bot.commenter")
 class Commenter:
     """Logic for commenting on submissions in OBS."""
 
-    def __init__(self, args: Namespace, submissions: Sequence[Submission] | None = None) -> None:
+    def __init__(self, args: Namespace, submissions: Sequence[Submission]) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry
         self.token = {"Authorization": f"Token {args.token}"}
         self.gitea_token = gitea.make_token_header(args.gitea_token)
         self.client = OpenQAInterface(args)
-        self.submissions = submissions if submissions is not None else get_submissions(self.token)
+        self.submissions = submissions
         self.commentapi = CommentAPI(config.settings.obs_url)
 
     def __call__(self) -> int:
