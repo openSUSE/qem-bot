@@ -84,10 +84,11 @@ class Commenter:
         if not msg:
             raise EmptyCommentError(sub)
 
-        if sub.type == config.settings.default_submission_type:
-            self.osc_comment(sub, msg, state)
-        else:
-            self.gitea_comment(sub, msg, state)
+        handlers = {
+            config.settings.default_submission_type: self.osc_comment,
+            "git": self.gitea_comment,
+        }
+        handlers[sub.type](sub, msg, state)
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
         """Comment a submission in OBS."""
