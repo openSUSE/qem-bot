@@ -19,7 +19,7 @@ from openqabot.approver import Approver
 from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
-from openqabot.loader.gitea import read_json
+from openqabot.loader.gitea import read_json_file
 from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
@@ -236,7 +236,7 @@ def fake_ok_jobs() -> None:
 
 @pytest.fixture
 def fake_product_repo() -> None:
-    responses.add(responses.GET, obs_product_table_url, json=read_json("test-product-repo"))
+    responses.add(responses.GET, obs_product_table_url, json=read_json_file("test-product-repo"))
 
 
 @pytest.fixture

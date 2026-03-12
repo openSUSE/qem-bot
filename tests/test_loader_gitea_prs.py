@@ -12,7 +12,7 @@ from openqabot.loader import gitea
 
 
 def test_get_open_prs_returns_empty_on_dry_run(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.read_json_list", return_value=[42])
+    mocker.patch("openqabot.loader.gitea.read_json_file_list", return_value=[42])
     assert gitea.get_open_prs({}, "repo", fake_data=True, number=None) == [42]
 
 

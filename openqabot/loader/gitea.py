@@ -72,7 +72,6 @@ def make_token_header(token: str) -> dict[str, str]:
 def get_json(query: str, token: dict[str, str], host: str | None = None) -> JsonType:
     """Fetch JSON data from Gitea API."""
     host = host or config.settings.gitea_url
-    # verify=False: the internal Gitea instance uses a self-signed certificate
     response = retried_requests.get(host + "/api/v1/" + query, verify=False, headers=token)
     response.raise_for_status()
     return response.json()
@@ -91,7 +90,6 @@ def _request_json(method: str, query: str, token: dict[str, str], post_data: Jso
     """Send a JSON request to Gitea API."""
     host = host or config.settings.gitea_url
     url = host + "/api/v1/" + query
-    # verify=False: same self-signed certificate rationale as get_json
     res = getattr(retried_requests, method.lower())(url, verify=False, headers=token, json=post_data)
     if not res.ok:
         log.error("Gitea API error: %s to %s failed: %s", method.upper(), url, res.text)
@@ -114,14 +112,14 @@ def read_utf8(name: str) -> str:
 
 
 @lru_cache(maxsize=128)
-def read_json(name: str) -> JsonType:
+def read_json_file(name: str) -> JsonType:
     """Read a JSON response file."""
     return json.loads(read_utf8(name + ".json"))
 
 
-def read_json_list(name: str) -> list[Any]:
+def read_json_file_list(name: str) -> list[Any]:
     """Read a list from a JSON response file."""
-    res = read_json(name)
+    res = read_json_file(name)
     if not isinstance(res, list):
         msg = f"JSON response file '{name}' returned {type(res).__name__} instead of list"
         raise TypeError(msg)
@@ -187,7 +185,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, fake_data: bool, number: i
     """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'%s", repo, ", fake-data" if fake_data else "")
     if fake_data:
-        return read_json_list("pulls")
+        return read_json_file_list("pulls")
     if number is not None:
         try:
             pr = get_json(f"repos/{repo}/pulls/{number}", token)
@@ -620,9 +618,9 @@ def _fetch_details(
     if dry:
         if number == 124:  # noqa: PLR2004
             return (
-                read_json_list("reviews-124"),
-                read_json_list("comments-124"),
-                read_json_list("files-124"),
+                read_json_file_list("reviews-124"),
+                read_json_file_list("comments-124"),
+                read_json_file_list("files-124"),
             )
         return [], [], []
     return (

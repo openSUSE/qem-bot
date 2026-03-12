@@ -24,7 +24,7 @@ from openqabot.loader.gitea import (
     compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
-    read_json,
+    read_json_file,
     read_utf8,
     read_xml,
     review_pr,
@@ -44,13 +44,13 @@ def fake_gitea_api() -> None:
     # ruff: noqa: E501 line-too-long
     patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
     patchinfo_data = Path("responses/patch-info.xml").read_bytes()
-    responses.add(GET, pulls_url + "?state=open&page=1", json=read_json("pulls"))
+    responses.add(GET, pulls_url + "?state=open&page=1", json=read_json_file("pulls"))
     responses.add(GET, re.compile(pulls_url + r"\?state=open&page=.*"), json=[])
-    responses.add(GET, pulls_url + "/124/reviews", json=read_json("reviews-124"))
-    responses.add(GET, pulls_url + "/124/files", json=read_json("files-124"))
+    responses.add(GET, pulls_url + "/124/reviews", json=read_json_file("reviews-124"))
+    responses.add(GET, pulls_url + "/124/files", json=read_json_file("files-124"))
     responses.add(GET, re.compile(pulls_url + r"/.*/reviews"), json=[])
     responses.add(GET, re.compile(pulls_url + r"/.*/files"), json=[])
-    responses.add(GET, issues_url + "/124/comments", json=read_json("comments-124"))
+    responses.add(GET, issues_url + "/124/comments", json=read_json_file("comments-124"))
     responses.add(GET, re.compile(issues_url + r"/.*/comments"), json=[])
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
 

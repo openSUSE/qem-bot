@@ -14,7 +14,7 @@ from openqabot.loader import gitea
 
 def test_make_submission_from_gitea_pr_dry(mocker: MockerFixture) -> None:
     pr = {"number": 124, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
-    mocker.patch("openqabot.loader.gitea.read_json", return_value=[])
+    mocker.patch("openqabot.loader.gitea.read_json_file", return_value=[])
 
     def mock_add_comments(incident: dict, _comments: list, *, dry: bool) -> None:
         incident["channels"] = [1]
