@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from openqabot.commenter import Commenter
-from openqabot.errors import NoResultsError
+from openqabot.errors import EmptyCommentError, NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
 
@@ -179,15 +179,16 @@ def test_osc_comment_no_request(
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_osc_comment_no_msg(
+def test_comment_on_submission_empty_msg(
     mock_args: Namespace,
     mock_smelt_sub: MagicMock,
-    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mocker.patch("openqabot.commenter.get_submission_results", return_value=[{"status": "passed"}])  # No "build" key
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
     c = Commenter(mock_args)
-    c.osc_comment(mock_smelt_sub, "", "")
-    assert "Skipping empty comment" in caplog.text
+    with pytest.raises(EmptyCommentError, match="Skipping empty comment for smelt:1"):
+        c.comment_on_submission(mock_smelt_sub)
 
 
 @pytest.mark.usefixtures("commenter_setup")
@@ -445,16 +446,16 @@ def test_gitea_comment_no_token(
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_gitea_comment_no_msg(
+def test_comment_on_submission_empty_msg_git(
     mock_args: Namespace,
     mock_git_sub: MagicMock,
-    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
 ) -> None:
-    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mocker.patch("openqabot.commenter.get_submission_results", return_value=[{"status": "passed"}])  # No "build" key
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
     c = Commenter(mock_args)
-    c.gitea_comment(mock_git_sub, "", "passed")
-
-    assert "Skipping empty comment" in caplog.text
+    with pytest.raises(EmptyCommentError, match="Skipping empty comment for git:123"):
+        c.comment_on_submission(mock_git_sub)
 
 
 @pytest.mark.usefixtures("commenter_setup")
@@ -489,6 +490,23 @@ def test_gitea_comment_similar_exists(
     c.gitea_comment(mock_git_sub, "Other message", "passed")
 
     assert "Comment skipped: Previous comment is too similar" in caplog.text
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_commenter_call_empty_msg(
+    mocker: MockerFixture,
+    mock_args: Namespace,
+    mock_smelt_sub: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.commenter")
+    mocker.patch("openqabot.commenter.get_submissions", return_value=[mock_smelt_sub])
+    mocker.patch("openqabot.commenter.get_submission_results", return_value=[{"status": "passed"}])
+    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+
+    c = Commenter(mock_args)
+    assert c() == 0
+    assert "Skipping empty comment for smelt:1" in caplog.text
 
 
 @pytest.mark.usefixtures("commenter_setup")

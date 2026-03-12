@@ -23,6 +23,14 @@ class EmptyPackagesError(Error):
     """Raised when no packages are found for a submission."""
 
 
+class EmptyCommentError(Error):
+    """Raised when generated comment is empty."""
+
+    def __init__(self, submission: object) -> None:
+        """Initialize with the submission that caused the empty comment."""
+        super().__init__(f"Skipping empty comment for {submission}")
+
+
 class SameBuildExistsError(Error):
     """Raised when a build with the same repohash already exists."""
 

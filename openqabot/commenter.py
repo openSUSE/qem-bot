@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import osc.conf
 
 from openqabot import config
-from openqabot.errors import NoResultsError
+from openqabot.errors import EmptyCommentError, NoResultsError
 
 from .loader import gitea
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
@@ -45,9 +45,16 @@ class Commenter:
         log.info("Starting to comment SMELT incidents in OBS")
 
         for sub in self.submissions:
-            self.comment_on_submission(sub)
+            self._comment_single_submission(sub)
 
         return 0
+
+    def _comment_single_submission(self, sub: Submission) -> None:
+        """Comment on a single submission with error handling."""
+        try:
+            self.comment_on_submission(sub)
+        except EmptyCommentError as e:
+            log.debug(e)
 
     def comment_on_submission(self, sub: Submission) -> None:
         """Comment on a single submission if it has openQA results."""
@@ -81,6 +88,9 @@ class Commenter:
         log.debug("Determined comment state for %s: %s", sub, state)
 
         msg = self.summarize_message(all_jobs)
+        if not msg:
+            raise EmptyCommentError(sub)
+
         if sub.type == config.settings.default_submission_type:
             self.osc_comment(sub, msg, state)
         else:
@@ -91,10 +101,6 @@ class Commenter:
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
         if sub.rr is None:
             log.debug("Comment skipped for submission %s: No release request defined", sub)
-            return
-
-        if not msg:
-            log.debug("Skipping empty comment")
             return
 
         bot_name = "openqa"
@@ -139,10 +145,6 @@ class Commenter:
             log.warning("Gitea token missing, skipping comment for %s", sub)
             return
 
-        if not msg:
-            log.debug("Skipping empty comment")
-            return
-
         if not sub.url:
             log.warning("Submission %s has no URL, skipping Gitea comment", sub)
             return
@@ -184,7 +186,8 @@ class Commenter:
     def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
         """Create markdown containing openQA badges."""
         base_url = self.client.openqa.baseurl
+        builds = sorted({j["build"] for j in jobs if "build" in j})
         return "".join(
             f"[![Test Results]({base_url}/tests/overview/badge?build={b})]({base_url}/tests/overview?build={b})\n"
-            for b in sorted({j["build"] for j in jobs})
+            for b in builds
         ).strip()
