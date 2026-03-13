@@ -11,6 +11,8 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
+from openqabot.types.gitea import RepoConfig
+from openqabot.types.types import Repos
 
 
 def test_post_json_on_not_ok_logs_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -27,7 +29,7 @@ def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture)
     mock_response = MagicMock()
     mock_response.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
     mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
+    res = gitea.get_product_version_from_repo_listing("project", "product", "repo", "http://obs.url")
     assert not res
     assert mock_log.info.called
 
@@ -38,7 +40,7 @@ def test_get_product_version_from_repo_listing_http_error(mocker: MockerFixture)
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error")
     mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
+    res = gitea.get_product_version_from_repo_listing("project", "product", "repo", "http://obs.url")
     assert not res
     assert mock_log.warning.called
 
@@ -49,7 +51,7 @@ def test_get_product_version_from_repo_listing_request_exception(
     gitea.get_product_version_from_repo_listing.cache_clear()
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.retried_requests.get", side_effect=requests.RequestException("error"))
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
+    res = gitea.get_product_version_from_repo_listing("project", "product", "repo", "http://obs.url")
     assert not res
     assert "Product version unresolved" in caplog.text
 
@@ -85,7 +87,7 @@ def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) ->
     # product name 'SLES', prefix 'SLES-'
     # _extract_version will be called with name 'SLES-15-SP4-x86_64' and prefix 'SLES-'
     # remainder '15-SP4-x86_64', next(...) returns '15'
-    res = gitea.get_product_version_from_repo_listing("project", "SLES", "repo")
+    res = gitea.get_product_version_from_repo_listing("project", "SLES", "repo", "http://obs.url")
     assert res == "15"
 
 
@@ -99,14 +101,25 @@ def test_get_product_version_from_repo_listing_requests_json_error(
     # but requests.exceptions.JSONDecodeError should work.
     mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
     mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project_json", "product_json", "repo_json")
+    res = gitea.get_product_version_from_repo_listing("project_json", "product_json", "repo_json", "http://obs.url")
     assert not res
     assert "Invalid JSON document" in caplog.text
 
 
 def test_add_channel_for_build_result_local() -> None:
     projects: set[str] = set()
-    res = gitea.add_channel_for_build_result("myproj", "local", "myprod", None, projects)
+    res = gitea.add_channel_for_build_result(
+        Repos("myproj", "myprod", "local"),
+        None,
+        projects,
+        config=RepoConfig(
+            repo_type="product",
+            download_base_url="http://base.url",
+            obs_download_url="http://obs.url",
+            repo_mirror_host="obs.url",
+            obs_products={"all"},
+        ),
+    )
     assert res == "myproj:local"
     assert len(projects) == 0
 

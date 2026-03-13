@@ -9,16 +9,18 @@ import re
 import urllib.error
 from collections import Counter
 from concurrent import futures
+from contextlib import suppress
 from dataclasses import dataclass, field
 from functools import lru_cache
+from http import HTTPStatus
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import osc.conf
-import osc.core
-import osc.util.xml
+import osc.conf as osc_conf
+import osc.core as osc_core
+import osc.util.xml as osc_xml
 import requests
 import urllib3
 import urllib3.exceptions
@@ -27,11 +29,14 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.types.gitea import RepoConfig
+from openqabot.types.types import Repos
+from openqabot.utils import get_repo_url
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
     from openqabot.types.pullrequest import PullRequest
-    from openqabot.types.types import Repos
+
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 
@@ -262,10 +267,12 @@ def _extract_version(name: str, prefix: str) -> str:
 
 
 @lru_cache(maxsize=512)
-def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
+def get_product_version_from_repo_listing(
+    project: str, product_name: str, repository: str, obs_download_url: str
+) -> str:
     """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
-    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo?jsontable"
+    url = f"{obs_download_url}/{project_path}/{repository}/repo?jsontable"
     start = f"{product_name}-"
     try:
         r = retried_requests.get(url)
@@ -285,7 +292,31 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     return next((v for v in versions if len(v) > 0), "")
 
 
-def _get_product_version(res: etree._Element, project: str, product_name: str) -> str:
+def verify_repo_exists(
+    target: Repos,
+    product_version: str,
+    config: RepoConfig,
+) -> bool:
+    """Check if the repository actually exists for the given architecture via HTTP HEAD request."""
+    if not product_version:
+        return True
+    repo_url = get_repo_url(target, product_version, config)
+    with suppress(requests.exceptions.RequestException):
+        response = retried_requests.head(repo_url, allow_redirects=True)
+        if response.status_code == HTTPStatus.NOT_FOUND:
+            log.debug("Repo %s not found, skipping channel", repo_url)
+            return False
+        log.debug("Repo %s returned %s, allowing channel", repo_url, response.status_code)
+        return response.ok
+    log.info("HTTP check failed for repo %s, allowing channel", repo_url)
+    return True
+
+
+def _get_product_version(
+    res: etree._Element,
+    target: Repos,
+    config: RepoConfig,
+) -> str:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
     product_version = next(
@@ -299,37 +330,45 @@ def _get_product_version(res: etree._Element, project: str, product_name: str) -
 
     # read product version from directory listing if the project is for a concrete product
     if (
-        len(product_name) != 0
-        and len(product_version) == 0
-        and ("all" in config.settings.obs_products_set or product_name in config.settings.obs_products_set)
+        not product_version
+        and target.version
+        and config.obs_products
+        and ("all" in config.obs_products or target.version in config.obs_products)
     ):
-        product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
+        product_version = get_product_version_from_repo_listing(
+            target.product, target.version, res.get("repository"), config.obs_download_url
+        )
 
     return product_version
 
 
 def add_channel_for_build_result(
-    project: str,
-    arch: str,
-    product_name: str,
+    target: Repos,
     res: etree._Element,
     projects: set[str],
+    *,
+    config: RepoConfig,
 ) -> str:
     """Construct a channel string for a build result and add it to the project set."""
-    channel = f"{project}:{arch}"
-    if arch == "local":
+    channel = f"{target.product}:{target.arch}"
+    if target.arch == "local":
         return channel
 
-    product_version = _get_product_version(res, project, product_name)
+    product_version = _get_product_version(res, target, config)
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
-    if len(product_version) > 0:
-        channel = f"{channel}#{product_version}"
-    elif len(product_name) > 0:
-        log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
+    if product_version:
+        channel += f"#{product_version}"
+    elif target.version:
+        log.debug(
+            "Channel skipped: Product version for build result %s:%s could not be determined",
+            target.product,
+            target.arch,
+        )
         return channel
 
-    projects.add(channel)
+    if not product_version or verify_repo_exists(target, product_version, config):
+        projects.add(channel)
     return channel
 
 
@@ -362,8 +401,15 @@ def add_build_result(
 
     _update_scminfo(submission, res, project, product)
 
-    channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
-
+    repo_config = RepoConfig(
+        repo_type=config.settings.obs_repo_type or "product",
+        download_base_url=config.settings.download_base_url,
+        obs_download_url=config.settings.obs_download_url,
+        repo_mirror_host=config.settings.repo_mirror_host,
+        obs_products=config.settings.obs_products_set,
+    )
+    target = Repos(product=project, version=product, arch=res.get("arch"))
+    channel = add_channel_for_build_result(target, res, results.projects, config=repo_config)
     if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
         return
 
@@ -421,11 +467,11 @@ def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | Non
 
 def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[etree._Element]:
     """Fetch build results for an OBS project."""
-    build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
+    build_info_url = osc_core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
     if dry:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
     try:
-        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
+        return osc_xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
     except urllib.error.HTTPError:
         results.unavailable.add(obs_project)
         log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
@@ -655,7 +701,7 @@ def get_submissions_from_open_prs(
     submissions = []
 
     # configure osc to be able to request build info from OBS
-    osc.conf.get_config(override_apiurl=config.settings.obs_url)
+    osc_conf.get_config(override_apiurl=config.settings.obs_url)
 
     with futures.ThreadPoolExecutor() as executor:
         future_sub = [
