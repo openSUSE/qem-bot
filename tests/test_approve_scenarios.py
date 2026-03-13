@@ -381,3 +381,59 @@ def test_approval_via_openqa_older_ok_job(
     if not_approved_reason:
         assert_submission_not_approved(caplog.messages, "SUSE:Maintenance:2:200", not_approved_reason)
         assert "* SUSE:Maintenance:2:200" not in caplog.messages
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+@pytest.mark.parametrize(
+    ("job_results", "expected_messages", "is_approved"),
+    [
+        (
+            [{"job_id": 100001, "status": "failed", "obsolete": True}],
+            ["Ignoring obsolete job http://instance.qa/t100001 for submission smelt:1"],
+            True,
+        ),
+        (
+            [
+                {"job_id": 100001, "status": "failed", "obsolete": True},
+                {"job_id": 100002, "status": "failed", "obsolete": False},
+            ],
+            [
+                "Ignoring obsolete job http://instance.qa/t100001 for submission smelt:1",
+                "Found not-ok, not-ignored job http://instance.qa/t100002 for submission smelt:1",
+            ],
+            False,
+        ),
+    ],
+    ids=["obsolete_only", "obsolete_and_failed"],
+)
+def test_approval_with_obsolete_jobs(
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    job_results: list[dict],
+    expected_messages: list[str],
+    *,
+    is_approved: bool,
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "api/jobs/incident/1000" in url:
+            return job_results
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
+    mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
+
+    assert approver(submission=1) == 0
+    assert_log_messages(caplog.messages, expected_messages)
+    if is_approved:
+        assert_submission_approved(caplog.messages, "SUSE:Maintenance:1:100")
+    else:
+        assert_submission_not_approved(
+            caplog.messages,
+            "SUSE:Maintenance:1:100",
+            "SUSE:Maintenance:1:100 has at least one not-ok job in submission tests",
+        )

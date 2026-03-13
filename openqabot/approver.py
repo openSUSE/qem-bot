@@ -330,6 +330,14 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
+        if job_result.get("obsolete"):
+            log.info(
+                "Ignoring obsolete job %s for submission %s:%s",
+                url,
+                submission_type or self.submission_type or config.settings.default_submission_type,
+                sub,
+            )
+            return True
         if job_result.get(f"acceptable_for_{sub}"):
             log.info(
                 "Ignoring not-ok job %s for submission %s:%s (manually marked as acceptable)",
