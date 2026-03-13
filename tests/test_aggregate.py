@@ -14,7 +14,7 @@ import requests
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
-from openqabot.types.aggregate import Aggregate, PostData
+from openqabot.types.aggregate import Aggregate, PostData, get_buildnr
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
@@ -196,7 +196,7 @@ def test_aggregate_call_pc_pint_fail(
 def test_get_buildnr_same_build() -> None:
     today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
     with pytest.raises(SameBuildExistsError):
-        Aggregate.get_buildnr("hash", "hash", today + "-1")
+        get_buildnr("hash", "hash", today + "-1")
 
 
 def test_filter_submissions_embargoed(

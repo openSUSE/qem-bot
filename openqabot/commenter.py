@@ -16,7 +16,7 @@ from openqabot.errors import NoResultsError
 
 from .loader.qem import get_aggregate_results, get_submission_results, get_submissions
 from .openqa import OpenQAInterface
-from .osclib.comments import CommentAPI
+from .osclib.comments import CommentAPI, add_marker, truncate
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -24,6 +24,27 @@ if TYPE_CHECKING:
     from .types.submission import Submission
 
 log = getLogger("bot.commenter")
+
+
+def _format_group_message(group_data: dict[str, Any]) -> str:
+    """Format a single group summary into a markdown string."""
+    msg = "\n\n" + group_data["title"]
+    infos = []
+    if group_data["passed"]:
+        infos.append(f"{group_data['passed']:d} tests passed")
+    if group_data["failed"]:
+        infos.append(f"{len(group_data['failed']):d} tests failed")
+    if group_data["unfinished"]:
+        infos.append(f"{group_data['unfinished']:d} unfinished tests")
+    msg += "(" + ", ".join(infos) + ")\n"
+    for fail in group_data["failed"]:
+        msg += fail
+    return msg
+
+
+def _escape_for_markdown(string: str) -> str:
+    """Escape underscores for markdown."""
+    return string.replace("_", r"\_")
 
 
 class Commenter:
@@ -87,8 +108,8 @@ class Commenter:
             for key in sub.revisions:
                 info[f"revision_{key.version}_{key.arch}"] = sub.revisions[key]
 
-        msg = self.commentapi.add_marker(msg, bot_name, info)
-        msg = self.commentapi.truncate(msg.strip())
+        msg = add_marker(msg, bot_name, info)
+        msg = truncate(msg.strip())
 
         kw = {"request_id": str(sub.rr)}
         comments = self.commentapi.get_comments(**kw)
@@ -125,7 +146,7 @@ class Commenter:
 
         msg = ""
         for group in sorted(groups.keys()):
-            msg += self._format_group_message(groups[group])
+            msg += _format_group_message(groups[group])
         return msg.rstrip("\n")
 
     def _process_job(self, groups: dict[str, dict[str, Any]], job: dict[str, Any]) -> None:
@@ -135,7 +156,7 @@ class Commenter:
             log.warning("Job %s skipped: Missing 'job_group'", job["job_id"])
             return
 
-        gl = f"{Commenter.escape_for_markdown(job['job_group'])}@{Commenter.escape_for_markdown(job['flavor'])}"
+        gl = f"{_escape_for_markdown(job['job_group'])}@{_escape_for_markdown(job['flavor'])}"
         self._create_group_if_missing(groups, job, gl)
 
         job_summary = self.__summarize_one_openqa_job(job)
@@ -171,27 +192,6 @@ class Commenter:
                 "unfinished": 0,
                 "failed": [],
             }
-
-    @staticmethod
-    def _format_group_message(group_data: dict[str, Any]) -> str:
-        """Format a single group summary into a markdown string."""
-        msg = "\n\n" + group_data["title"]
-        infos = []
-        if group_data["passed"]:
-            infos.append(f"{group_data['passed']:d} tests passed")
-        if group_data["failed"]:
-            infos.append(f"{len(group_data['failed']):d} tests failed")
-        if group_data["unfinished"]:
-            infos.append(f"{group_data['unfinished']:d} unfinished tests")
-        msg += "(" + ", ".join(infos) + ")\n"
-        for fail in group_data["failed"]:
-            msg += fail
-        return msg
-
-    @staticmethod
-    def escape_for_markdown(string: str) -> str:
-        """Escape underscores for markdown."""
-        return string.replace("_", r"\_")
 
     def __summarize_one_openqa_job(self, job: dict[str, Any]) -> str | None:
         testurl = osc.core.makeurl(self.client.openqa.baseurl, ["tests", str(job["job_id"])])

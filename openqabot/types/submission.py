@@ -14,13 +14,100 @@ from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFound
 from openqabot.loader import gitea
 from openqabot.loader.repohash import RepoOptions, get_max_revision
 
-from .types import ArchVer, ChannelType, Repos, get_channel_type
+from .types import ArchVer, Repos
 
 log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 
 EXPECTED_PART_LENGTH_WITH_ARCH = 3
 EXPECTED_PART_LENGTH_NO_ARCH = 2
+
+
+def _parse_channels(raw_channels: list[str]) -> tuple[list[Repos], set[str]]:
+    """Parse raw channels and return a list of Repos and a set of skipped products."""
+    updates_3, updates_2, slfo = [], [], []
+    skipped = set()
+
+    for r in raw_channels:
+        if r.startswith("SUSE:Updates"):
+            val = r.split(":")[2:]
+            if len(val) == EXPECTED_PART_LENGTH_WITH_ARCH and val[0] != "SLE-Module-Development-Tools-OBS":
+                updates_3.append(Repos(val[0], val[1], val[2]))
+            elif len(val) == EXPECTED_PART_LENGTH_NO_ARCH:
+                updates_2.append(Repos(val[0], val[1], "x86_64"))
+        elif r.startswith("SUSE:SLFO"):
+            val = r.split(":")
+            if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
+                obs_project = ":".join(val[2:-1])
+                product = gitea.get_product_name(obs_project)
+                if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
+                    slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
+                else:
+                    skipped.add(product)
+
+    # remove Manager-Server on aarch64 from channels
+    filtered_channels = [
+        chan
+        for chan in (updates_3 + updates_2 + slfo)
+        if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
+    ]
+
+    return filtered_channels, skipped
+
+
+def _group_repos_by_archver(
+    channels: list[Repos], options: RepoOptions, limit_archs: set[str] | None
+) -> dict[ArchVer, list[Repos]]:
+    """Group repositories by architecture and version."""
+    tmpdict: dict[ArchVer, list[Repos]] = defaultdict(list)
+    for repo in channels:
+        if limit_archs and repo.arch not in limit_archs:
+            continue
+        version = repo.version
+        if v := re.match(version_pattern, repo.version):
+            version = v.group(0)
+
+        ver = repo.product_version or version
+
+        if options.product_version and ver != options.product_version:
+            continue
+
+        tmpdict[ArchVer(repo.arch, ver)].append(repo)
+    return tmpdict
+
+
+def calculate_revisions(
+    channels: list[Repos],
+    project: str,
+    options: RepoOptions,
+    limit_archs: set[str] | None = None,
+) -> dict[ArchVer, int]:
+    """Calculate repohashes for a set of channels."""
+    rev: dict[ArchVer, int] = {}
+    tmpdict = _group_repos_by_archver(channels, options, limit_archs)
+
+    for archver, lrepos in tmpdict.items():
+        repos_to_check = lrepos
+        if project == "SLFO" and options.product_name:
+            filtered_repos = [r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r.version))]
+            if not filtered_repos:
+                continue
+            repos_to_check = filtered_repos
+
+        max_rev = get_max_revision(repos_to_check, archver.arch, project, options)
+        if max_rev > 0:
+            rev[archver] = max_rev
+
+    if not rev:
+        raise NoRepoFoundError
+    return rev
+
+
+def is_livepatch(packages: list[str]) -> bool:
+    """Check if a list of packages contains livepatch related ones."""
+    if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
+        return False
+    return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
 
 class Submission:
@@ -46,11 +133,11 @@ class Submission:
         self.rev_cache_params: tuple[Any, ...] | None = None
         self.rev_logged: bool = False
         self._logged_skipped: bool = False
-        self.livepatch: bool = self.is_livepatch(self.packages)
+        self.livepatch: bool = is_livepatch(self.packages)
 
     def _initialize_channels(self, raw_channels: list[str]) -> None:
         """Initialize channels and skipped products from raw channel data."""
-        self.channels, self.skipped_products = self._parse_channels(raw_channels)
+        self.channels, self.skipped_products = _parse_channels(raw_channels)
 
     def _validate_channels(self) -> None:
         """Validate that channels were parsed successfully."""
@@ -62,37 +149,6 @@ class Submission:
         self.packages: list[str] = cast("list[str]", sorted(raw_packages, key=len))
         if not self.packages:
             raise EmptyPackagesError(self.project)
-
-    @staticmethod
-    def _parse_channels(raw_channels: list[str]) -> tuple[list[Repos], set[str]]:
-        updates_3, updates_2, slfo = [], [], []
-        skipped = set()
-
-        for r in raw_channels:
-            if r.startswith("SUSE:Updates"):
-                val = r.split(":")[2:]
-                if len(val) == EXPECTED_PART_LENGTH_WITH_ARCH and val[0] != "SLE-Module-Development-Tools-OBS":
-                    updates_3.append(Repos(val[0], val[1], val[2]))
-                elif len(val) == EXPECTED_PART_LENGTH_NO_ARCH:
-                    updates_2.append(Repos(val[0], val[1], "x86_64"))
-            elif r.startswith("SUSE:SLFO"):
-                val = r.split(":")
-                if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
-                    obs_project = ":".join(val[2:-1])
-                    product = gitea.get_product_name(obs_project)
-                    if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
-                        slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
-                    else:
-                        skipped.add(product)
-
-        # remove Manager-Server on aarch64 from channels
-        filtered_channels = [
-            chan
-            for chan in (updates_3 + updates_2 + slfo)
-            if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
-        ]
-
-        return filtered_channels, skipped
 
     def log_skipped(self) -> None:
         """Log products that were skipped during channel initialization."""
@@ -131,7 +187,7 @@ class Submission:
         opts = RepoOptions(product_name, product_version, str(self))
 
         try:
-            self.revisions = self.rev(
+            self.revisions = calculate_revisions(
                 self.channels,
                 self.project,
                 opts,
@@ -166,55 +222,6 @@ class Submission:
             log.debug("Submission %s: Architecture %s not found for version %s", self, arch, ver)
             return None
 
-    @staticmethod
-    def _group_repos_by_archver(
-        channels: list[Repos], options: RepoOptions, limit_archs: set[str] | None
-    ) -> dict[ArchVer, list[Repos]]:
-        tmpdict: dict[ArchVer, list[Repos]] = defaultdict(list)
-        for repo in channels:
-            if limit_archs and repo.arch not in limit_archs:
-                continue
-            version = repo.version
-            if v := re.match(version_pattern, repo.version):
-                version = v.group(0)
-
-            ver = repo.product_version or version
-
-            if options.product_version and ver != options.product_version:
-                continue
-
-            tmpdict[ArchVer(repo.arch, ver)].append(repo)
-        return tmpdict
-
-    @staticmethod
-    def rev(
-        channels: list[Repos],
-        project: str,
-        options: RepoOptions,
-        limit_archs: set[str] | None = None,
-    ) -> dict[ArchVer, int]:
-        """Calculate repohashes for a set of channels."""
-        rev: dict[ArchVer, int] = {}
-        tmpdict = Submission._group_repos_by_archver(channels, options, limit_archs)
-
-        for archver, lrepos in tmpdict.items():
-            repos_to_check = lrepos
-            if get_channel_type(project) == ChannelType.SLFO and options.product_name:
-                filtered_repos = [
-                    r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r.version))
-                ]
-                if not filtered_repos:
-                    continue
-                repos_to_check = filtered_repos
-
-            max_rev = get_max_revision(repos_to_check, archver.arch, project, options)
-            if max_rev > 0:
-                rev[archver] = max_rev
-
-        if not rev:
-            raise NoRepoFoundError
-        return rev
-
     def __repr__(self) -> str:
         """Return a representation of the Submission."""
         if self.rrid:
@@ -224,13 +231,6 @@ class Submission:
     def __str__(self) -> str:
         """Return a string representation of the Submission."""
         return f"{self.type}:{self.id}"
-
-    @staticmethod
-    def is_livepatch(packages: list[str]) -> bool:
-        """Check if a list of packages contains livepatch related ones."""
-        if any(p.startswith(("kernel-default", "kernel-source", "kernel-azure")) for p in packages):
-            return False
-        return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
         """Check if the submission contains any of the required packages."""
