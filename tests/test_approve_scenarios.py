@@ -342,7 +342,7 @@ def test_single_submission_aggr_not_ok_no_data(caplog: pytest.LogCaptureFixture,
             True,
             [
                 "* SUSE:Maintenance:2:200",
-                "Ignoring not-ok aggregate job http://instance.qa/t100002 for submission smelt:2 due to older eligible openQA job being ok",  # noqa: E501
+                "Ignoring not-ok aggregate job http://instance.qa/t100002 for submission smelt:2 due to older ok job",
             ],
             None,
         ),

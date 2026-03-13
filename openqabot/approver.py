@@ -330,37 +330,28 @@ class Approver:
             return True
         job_id = job_result["job_id"]
         url = f"{self.client.url.geturl()}/t{job_id}"
+        s_type = submission_type or self.submission_type or config.settings.default_submission_type
         if job_result.get("obsolete"):
-            log.info(
-                "Ignoring obsolete job %s for submission %s:%s",
-                url,
-                submission_type or self.submission_type or config.settings.default_submission_type,
-                sub,
-            )
+            log.info("Ignoring obsolete job %s for submission %s:%s", url, s_type, sub)
             return True
         if job_result.get(f"acceptable_for_{sub}"):
             log.info(
                 "Ignoring not-ok job %s for submission %s:%s (manually marked as acceptable)",
                 url,
-                submission_type or self.submission_type or config.settings.default_submission_type,
+                s_type,
                 sub,
             )
             return True
         if api == "api/jobs/update/" and self.was_ok_before(job_id, sub):
             log.info(
-                "Ignoring not-ok aggregate job %s for submission %s:%s due to older eligible openQA job being ok",
+                "Ignoring not-ok aggregate job %s for submission %s:%s due to older ok job",
                 url,
-                submission_type or self.submission_type or config.settings.default_submission_type,
+                s_type,
                 sub,
             )
             return True
 
-        log.info(
-            "Found not-ok, not-ignored job %s for submission %s:%s",
-            url,
-            submission_type or self.submission_type or config.settings.default_submission_type,
-            sub,
-        )
+        log.info("Found not-ok, not-ignored job %s for submission %s:%s", url, s_type, sub)
         return False
 
     @lru_cache(maxsize=128)  # noqa: B019
