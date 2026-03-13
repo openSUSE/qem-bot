@@ -328,17 +328,38 @@ def test_osc_comment_replace_dry_run(
 def test_summarize_message(
     mock_args: Namespace,
     commenter_setup: dict[str, MagicMock],
+    mocker: MockerFixture,
 ) -> None:
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
+    mocker.patch("openqabot.config.settings.allow_development_groups", new=None)
     c = Commenter(mock_args, submissions=[])
     jobs = [{"build": "1.1"}, {"build": "1.2"}]
     result = c.summarize_message(jobs)
+    suffix = "&not_group_glob=*Devel*%2C*Test*"
     assert (
-        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1)](https://openqa.opensuse.org/tests/overview?build=1.1)"
+        f"[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1{suffix})](https://openqa.opensuse.org/tests/overview?build=1.1{suffix})"
         in result
     )
     assert (
-        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.2)](https://openqa.opensuse.org/tests/overview?build=1.2)"
+        f"[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.2{suffix})](https://openqa.opensuse.org/tests/overview?build=1.2{suffix})"
+        in result
+    )
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_summarize_message_allow_devel(
+    mock_args: Namespace,
+    commenter_setup: dict[str, MagicMock],
+    mocker: MockerFixture,
+) -> None:
+    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
+    mocker.patch("openqabot.config.settings.allow_development_groups", new="1")
+    c = Commenter(mock_args, submissions=[])
+    jobs = [{"build": "1.1"}]
+    result = c.summarize_message(jobs)
+    assert "not_group_glob" not in result
+    assert (
+        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1)](https://openqa.opensuse.org/tests/overview?build=1.1)"
         in result
     )
 
