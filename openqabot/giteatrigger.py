@@ -40,7 +40,7 @@ class GiteaTrigger:
         self.gitea_repo: Any = args.gitea_repo
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface(args)
-        self.pr_label: str = args.pr_label
+        self.pr_label: set[str] = set(args.pr_label.split(","))
         self.product: str = "SLES"
         self.flavor: str = "Online-Updates-Staging"
         self.distri: str = "sle"
@@ -131,7 +131,7 @@ class GiteaTrigger:
                     branch=pr["base"]["label"],
                     product=self.product,
                 )
-                if pullrequest.has_label(self.pr_label):
+                if pullrequest.has_labels(self.pr_label):
                     self.prs.append(pullrequest)
             except Exception:
                 log.exception("Unable to process PR git:%s", pr_id)

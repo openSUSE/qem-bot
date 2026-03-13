@@ -9,6 +9,7 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
+from openqabot.types.pullrequest import PullRequest
 
 
 def test_get_open_prs_specific_number_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -30,3 +31,14 @@ def test_get_open_prs_specific_number_key_error(mocker: MockerFixture, caplog: p
 
     assert res == []
     assert "PR git:124 ignored: Could not read PR metadata" in caplog.text
+
+
+def test_pull_request_has_labels() -> None:
+    """Verify that has_labels returns True only when all labels are present."""
+    raw_data = [{"name": "bug", "id": 1}, {"name": "urgent", "id": 2}, {"name": "v1.0", "id": 3}]
+    pr = PullRequest(number=124, repo_name="os-autoinst", branch="master", product="SLES", raw_labels=raw_data)
+
+    assert pr.has_labels({"bug", "urgent"})
+    assert pr.has_labels({"v1.0"})
+    assert not pr.has_labels({"bug", "missing"})
+    assert not pr.has_labels({"feature"})

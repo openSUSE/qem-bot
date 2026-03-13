@@ -16,12 +16,12 @@ class PullRequest:
     product: str
     raw_labels: list[dict[str, Any]] = field(repr=False)
 
-    labels: list[str] = field(init=False)
+    labels: set[str] = field(init=False)
 
     def __post_init__(self) -> None:
-        """Extract names from the raw label dictionaries."""
-        self.labels = [label["name"] for label in self.raw_labels]
+        """Extract names from the raw label dictionaries into a set."""
+        self.labels = {label["name"] for label in self.raw_labels}
 
-    def has_label(self, label: str) -> bool:
-        """Check if pull request is labeled with certain label."""
-        return label in self.labels
+    def has_labels(self, required_labels: set[str]) -> bool:
+        """Check if pull request has ALL labels provided in the input list."""
+        return self.labels.issuperset(required_labels)
