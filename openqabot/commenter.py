@@ -181,7 +181,9 @@ class Commenter:
         """Create markdown containing openQA badges."""
         base_url = self.client.openqa.baseurl
         builds = sorted({j["build"] for j in jobs if "build" in j})
+        suffix = "&not_group_glob=*Devel*%2C*Test*" if not config.settings.allow_development_groups else ""
         return "".join(
-            f"[![Test Results]({base_url}/tests/overview/badge?build={b})]({base_url}/tests/overview?build={b})\n"
+            f"[![Test Results]({base_url}/tests/overview/badge?build={b}{suffix})]"
+            f"({base_url}/tests/overview?build={b}{suffix})\n"
             for b in builds
         ).strip()
