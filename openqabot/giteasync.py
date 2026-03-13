@@ -78,7 +78,7 @@ class GiteaSync:
 
     def _on_amqp_message(self, message: dict[str, Any], _: str) -> None:
         if message["pull_request"]["base"]["repo"]["full_name"] == self.gitea_repo:
-            log.info("New PR #%s on %s", message["pull_request"]["id"], self.gitea_repo)
+            log.info("PR #%s on %s %s", message["pull_request"]["number"], self.gitea_repo, message["action"])
             submission = make_submission_from_gitea_pr(
                 message["pull_request"],
                 self.gitea_token,

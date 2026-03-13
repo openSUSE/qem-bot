@@ -332,7 +332,10 @@ def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.
     mocker.patch("openqabot.giteasync.make_submission_from_gitea_pr", return_value=mock_subm)
     mock_update = mocker.patch("openqabot.giteasync.update_submissions", return_value=0)
     sync = GiteaSync(args)
-    message = {"pull_request": {"id": 42, "base": {"repo": {"full_name": "products/SLFO"}}}}
+    message = {
+        "action": "opened",
+        "pull_request": {"id": 42, "number": 123, "base": {"repo": {"full_name": "products/SLFO"}}},
+    }
     # check successful code path
     sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # noqa: SLF001
     mock_update.assert_called_once_with([mock_subm], params={"type": "git"}, retry=args.retry)
@@ -345,6 +348,7 @@ def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.
 
     # check wrong PR does nothing
     sync._on_amqp_message(  # noqa: SLF001
-        {"pull_request": {"id": 42, "base": {"repo": {"full_name": "wrong/repo"}}}}, "suse.src.*.pull_request.opened"
+        {"action": "opened", "pull_request": {"id": 42, "number": 123, "base": {"repo": {"full_name": "wrong/repo"}}}},
+        "suse.src.*.pull_request.opened",
     )
     mock_update.assert_not_called()
