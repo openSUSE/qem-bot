@@ -4,7 +4,39 @@
 
 import pytest
 
-from openqabot.types.types import ChannelType, ProdVer, Repos, get_channel_type
+from openqabot.types.types import ChannelType, ProductVersion, ProdVer, Repos, get_channel_type
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "15.4",
+        "15",
+        "0.1.2",
+        "1234.5678",
+    ],
+)
+def test_product_version_valid(value: str) -> None:
+    """Test valid product version strings."""
+    pv = ProductVersion(value)
+    assert pv == value
+    assert isinstance(pv, ProductVersion)
+    assert isinstance(pv, str)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "a.b",
+        "15.4-SP1",
+        "15_4",
+    ],
+)
+def test_product_version_invalid(value: str) -> None:
+    """Test invalid product version strings."""
+    with pytest.raises(ValueError, match="Invalid product version format:"):
+        ProductVersion(value)
 
 
 @pytest.mark.parametrize(
