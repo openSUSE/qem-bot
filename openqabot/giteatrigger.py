@@ -41,7 +41,9 @@ class GiteaTrigger:
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface(args)
         self.pr_label: set[str] = set(args.pr_label.split(","))
-        self.product: str = "SLES"
+        # this is expected product name for PRs with label `QA-SLES-Reduced`
+        # so basically currently workflow is supporting ONLY PRs with this label
+        self.product: str = "SLES-Reduced"
         self.flavor: str = "Online-Updates-Staging"
         self.distri: str = "sle"
         self.prs: list[PullRequest] = []
