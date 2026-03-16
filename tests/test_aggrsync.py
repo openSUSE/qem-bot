@@ -3,7 +3,6 @@
 """Test aggregate sync."""
 
 from unittest.mock import MagicMock
-from urllib.parse import urlparse
 
 import pytest
 from pytest_mock import MockerFixture
@@ -17,7 +16,6 @@ def args(mocker: MockerFixture) -> MagicMock:
     args.configs = "configs"
     args.token = "token"
     args.dry = False
-    args.openqa_instance = urlparse("http://instance.qa")
     return args
 
 

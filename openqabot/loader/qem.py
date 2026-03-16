@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 
 import requests
 
+import openqabot.config as config_module
 from openqabot import config, dashboard
 from openqabot.errors import NoResultsError
 from openqabot.types.submission import Submission
@@ -63,21 +64,25 @@ class NoAggregateResultsError(NoResultsError):
         super().__init__(f"No aggregate test results found for {sub}")
 
 
-def _get_submission(token: dict[str, str], submission_id: int, submission_type: str | None = None) -> dict:
+def _get_submission(submission_id: int, submission_type: str | None = None) -> dict:
     """Fetch a single submission's raw data from the dashboard."""
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return dashboard.get_json(f"api/incidents/{submission_id}", headers=token, params=params)
+    return dashboard.get_json(
+        f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
+    )
 
 
-def get_submissions(token: dict[str, str], submission: str | None = None) -> list[Submission]:
+def get_submissions(submission: str | None = None) -> list[Submission]:
     """Fetch all or a specific submission from the dashboard and wrap them in Submission objects."""
     if submission:
         s_type, s_id = submission.split(":")
-        submissions = [_get_submission(token, int(s_id), s_type)]
+        submissions = [_get_submission(int(s_id), s_type)]
     else:
-        submissions = dashboard.get_json("api/incidents", headers=token, verify=True)
+        submissions = dashboard.get_json(
+            "api/incidents", headers=config_module.settings.dashboard_token_dict, verify=True
+        )
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
@@ -85,18 +90,18 @@ def get_submissions(token: dict[str, str], submission: str | None = None) -> lis
     return [sub for s in submissions if (sub := Submission.create(s))]
 
 
-def get_active_submissions(token: dict[str, str], submission_type: str | None = None) -> Sequence[int]:
+def get_active_submissions(submission_type: str | None = None) -> Sequence[int]:
     """Fetch IDs of all active submissions from the dashboard."""
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = dashboard.get_json("api/incidents", headers=token, params=params)
+    data = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict, params=params)
     return list({i["number"] for i in data})
 
 
-def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
+def get_submissions_approver() -> list[SubReq]:
     """Fetch submissions that are ready for QAM review."""
-    submissions = dashboard.get_json("api/incidents", headers=token)
+    submissions = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict)
     return [
         SubReq(
             i["number"],
@@ -111,11 +116,9 @@ def get_submissions_approver(token: dict[str, str]) -> list[SubReq]:
     ]
 
 
-def get_single_submission(
-    token: dict[str, str], submission_id: int, submission_type: str | None = None
-) -> list[SubReq]:
+def get_single_submission(submission_id: int, submission_type: str | None = None) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
-    submission = _get_submission(token, submission_id, submission_type)
+    submission = _get_submission(submission_id, submission_type)
     return [
         SubReq(
             submission["number"],
@@ -127,13 +130,15 @@ def get_single_submission(
 
 
 def get_submission_settings(
-    sub: int, token: dict[str, str], *, all_submissions: bool = False, submission_type: str | None = None
+    sub: int, *, all_submissions: bool = False, submission_type: str | None = None
 ) -> list[JobAggr]:
     """Fetch job settings associated with a submission."""
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = dashboard.get_json(f"api/incident_settings/{sub}", headers=token, params=params)
+    settings = dashboard.get_json(
+        f"api/incident_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
+    )
     if not settings:
         raise NoSubmissionResultsError(sub)
 
@@ -147,9 +152,7 @@ def get_submission_settings(
     return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
-def get_submission_settings_data(
-    token: dict[str, str], number: int, submission_type: str | None = None
-) -> Sequence[Data]:
+def get_submission_settings_data(number: int, submission_type: str | None = None) -> Sequence[Data]:
     """Fetch job settings data for a submission and wrap them in Data objects."""
     log.debug(
         "Fetching settings for submission %s:%s", submission_type or config.settings.default_submission_type, number
@@ -157,7 +160,9 @@ def get_submission_settings_data(
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = dashboard.get_json("api/incident_settings/" + f"{number}", headers=token, params=params)
+    data = dashboard.get_json(
+        "api/incident_settings/" + f"{number}", headers=config_module.settings.dashboard_token_dict, params=params
+    )
     if "error" in data:
         log.warning(
             "Submission %s:%s error: %s",
@@ -183,13 +188,15 @@ def get_submission_settings_data(
     ]
 
 
-def get_submission_results(sub: int, token: dict[str, Any], submission_type: str | None = None) -> list[dict[str, Any]]:
+def get_submission_results(sub: int, submission_type: str | None = None) -> list[dict[str, Any]]:
     """Fetch all test results associated with a submission."""
-    settings = get_submission_settings(sub, token, all_submissions=False, submission_type=submission_type)
+    settings = get_submission_settings(sub, all_submissions=False, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific settings ID."""
-        data = dashboard.get_json("api/jobs/incident/" + f"{job_aggr.id}", headers=token)
+        data = dashboard.get_json(
+            "api/jobs/incident/" + f"{job_aggr.id}", headers=config_module.settings.dashboard_token_dict
+        )
         if "error" in data:
             raise ValueError(data["error"])
         return data
@@ -198,12 +205,14 @@ def get_submission_results(sub: int, token: dict[str, Any], submission_type: str
     return list(chain.from_iterable(all_data))
 
 
-def get_aggregate_settings(sub: int, token: dict[str, str], submission_type: str | None = None) -> list[JobAggr]:
+def get_aggregate_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:
     """Fetch aggregate job settings associated with a submission."""
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = dashboard.get_json(f"api/update_settings/{sub}", headers=token, params=params)
+    settings = dashboard.get_json(
+        f"api/update_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
+    )
     if not settings:
         raise NoAggregateResultsError(sub)
 
@@ -215,10 +224,10 @@ def get_aggregate_settings(sub: int, token: dict[str, str], submission_type: str
     return [JobAggr(i["id"], aggregate=True, with_aggregate=False) for i in settings if last_build in i["build"]]
 
 
-def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[Data]:
+def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     """Fetch aggregate job settings data for a product and architecture."""
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
-    settings = dashboard.get_json(url, headers=token)
+    settings = dashboard.get_json(url, headers=config_module.settings.dashboard_token_dict)
     if not settings:
         log.info("No aggregate settings found for product %s on arch %s", data.product, data.arch)
         return []
@@ -242,13 +251,15 @@ def get_aggregate_settings_data(token: dict[str, str], data: Data) -> Sequence[D
     ]
 
 
-def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str | None = None) -> list[dict[str, Any]]:
+def get_aggregate_results(sub: int, submission_type: str | None = None) -> list[dict[str, Any]]:
     """Fetch all aggregate test results associated with a submission."""
-    settings = get_aggregate_settings(sub, token, submission_type=submission_type)
+    settings = get_aggregate_settings(sub, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific aggregate settings ID."""
-        data = dashboard.get_json("api/jobs/update/" + f"{job_aggr.id}", headers=token)
+        data = dashboard.get_json(
+            "api/jobs/update/" + f"{job_aggr.id}", headers=config_module.settings.dashboard_token_dict
+        )
         if "error" in data:
             raise ValueError(data["error"])
         return data
@@ -257,14 +268,16 @@ def get_aggregate_results(sub: int, token: dict[str, Any], submission_type: str 
     return list(chain.from_iterable(all_data))
 
 
-def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwargs: Any) -> int:  # noqa: ANN401
+def update_submissions(data: list[dict[str, Any]], **kwargs: Any) -> int:  # noqa: ANN401
     """Synchronize submission records with the dashboard."""
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
     while retry >= 0:
         retry -= 1
         try:
-            ret = dashboard.patch("api/incidents", headers=token, params=query_params, json=data)
+            ret = dashboard.patch(
+                "api/incidents", headers=config_module.settings.dashboard_token_dict, params=query_params, json=data
+            )
         except requests.exceptions.RequestException:
             log.exception("QEM Dashboard API request failed")
             return 1
@@ -280,10 +293,10 @@ def update_submissions(token: dict[str, str], data: list[dict[str, Any]], **kwar
     return 2
 
 
-def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
+def post_job(data: dict[str, Any]) -> None:
     """Create a new job record on the dashboard."""
     try:
-        result = dashboard.put("api/jobs", headers=token, json=data)
+        result = dashboard.put("api/jobs", headers=config_module.settings.dashboard_token_dict, json=data)
         if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not post job: %s", result.text)
 
@@ -291,10 +304,10 @@ def post_job(token: dict[str, str], data: dict[str, Any]) -> None:
         log.exception("QEM Dashboard API request failed")
 
 
-def update_job(token: dict[str, str], job_id: int, data: dict[str, Any]) -> None:
+def update_job(job_id: int, data: dict[str, Any]) -> None:
     """Update an existing job record on the dashboard."""
     try:
-        result = dashboard.patch(f"api/jobs/{job_id}", headers=token, json=data)
+        result = dashboard.patch(f"api/jobs/{job_id}", headers=config_module.settings.dashboard_token_dict, json=data)
         if result.status_code != HTTPStatus.OK:
             log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
 

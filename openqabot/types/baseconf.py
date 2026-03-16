@@ -37,7 +37,6 @@ class BaseConf(ABC):
     def __call__(
         self,
         submissions: list[Submission],
-        token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool,

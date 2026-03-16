@@ -50,8 +50,7 @@ class IncrementApprover:
     def __init__(self, args: Namespace) -> None:
         """Initialize the IncrementApprover class."""
         self.args = args
-        self.token = {"Authorization": f"Token {args.token}"}
-        self.client = OpenQAInterface(args)
+        self.client = OpenQAInterface()
         self.package_diff = {}
         self.requests_to_approve = {}
         # safeguard us from using same job ID for 2 requests

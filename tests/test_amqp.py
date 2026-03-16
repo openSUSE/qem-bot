@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 from argparse import Namespace
 from typing import TYPE_CHECKING, cast
-from urllib.parse import urlparse
 
 import pytest
 
@@ -31,7 +30,6 @@ def args() -> Namespace:
     return Namespace(
         dry=True,
         token="ToKeN",
-        openqa_instance=urlparse("http://instance.qa"),
         url="amqp://localhost",
         gitea_token=None,
     )

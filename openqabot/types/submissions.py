@@ -36,7 +36,6 @@ class SubContext(NamedTuple):
 class SubConfig(NamedTuple):
     """Configuration for a submission."""
 
-    token: dict[str, str]
     ci_url: str | None
     ignore_onetime: bool
 
@@ -78,26 +77,24 @@ class Submissions(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _get_scheduled_jobs(
-        token: dict[str, str], sub_id: int, submission_type: str | None = None
-    ) -> list[dict[str, Any]]:
+    def _get_scheduled_jobs(sub_id: int, submission_type: str | None = None) -> list[dict[str, Any]]:
         """Fetch scheduled jobs from the dashboard."""
         try:
             url = f"{settings.qem_dashboard_url}api/incident_settings/{sub_id}"
             params = {"type": submission_type} if submission_type else {}
-            res = retried_requests.get(url, headers=token, params=params).json()
+            res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
             return res if isinstance(res, list) else []
         except (requests.exceptions.RequestException, json.JSONDecodeError):
             log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub_id)
             return []
 
     @staticmethod
-    def is_scheduled_job(token: dict[str, str], ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
+    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
         """Check if a job is already scheduled in the dashboard."""
         if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
             return False
 
-        jobs = Submissions._get_scheduled_jobs(token, ctx.sub.id, submission_type)
+        jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
         return any(
             job["flavor"] == ctx.flavor
             and job["arch"] == ctx.arch
@@ -174,7 +171,7 @@ class Submissions(BaseConf):
             return True
 
         if not cfg.ignore_onetime and self.is_scheduled_job(
-            cfg.token, ctx, self.settings["VERSION"], submission_type=ctx.sub.type
+            ctx, self.settings["VERSION"], submission_type=ctx.sub.type
         ):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
             return True
@@ -322,13 +319,12 @@ class Submissions(BaseConf):
     def __call__(
         self,
         submissions: list[Submission],
-        token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
         """Process all submissions and return a list of posts for the dashboard."""
-        cfg = SubConfig(token=token, ci_url=ci_url, ignore_onetime=ignore_onetime)
+        cfg = SubConfig(ci_url=ci_url, ignore_onetime=ignore_onetime)
 
         active = [
             s for s in submissions if s.compute_revisions_for_product_repo(self.product_repo, self.product_version)

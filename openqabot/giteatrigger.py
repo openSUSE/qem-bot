@@ -39,7 +39,7 @@ class GiteaTrigger:
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         self.gitea_repo: Any = args.gitea_repo
         self.pr_number: int = args.pr_number
-        self.openqa: OpenQAInterface = OpenQAInterface(args)
+        self.openqa: OpenQAInterface = OpenQAInterface()
         self.pr_required_labels: set[str] = set(args.pr_label.split(","))
         self.flavor: str = "Online-Updates-Staging"
         self.distri: str = "sle"

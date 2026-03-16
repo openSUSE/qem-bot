@@ -143,6 +143,15 @@ def test_clone_dedup_latest_fails_blocks(mocker: MockerFixture) -> None:
     assert result is False
 
 
+def test_validate_job_qam_not_passed(mocker: MockerFixture) -> None:
+    mock_data = {"status": "failed", "id": 123}
+    mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_data)
+
+    approver_instance = Approver(args)
+
+    assert approver_instance.validate_job_qam(123) is False
+
+
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_qem")
 def test_clone_dedup_different_scenarios(mocker: MockerFixture) -> None:

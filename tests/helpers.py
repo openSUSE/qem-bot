@@ -37,7 +37,6 @@ class ReviewState(NamedTuple):
     by_group: str
 
 
-openqa_url = "http://openqa-instance/api/v1/isos/job_stats"
 obs_product_table_url = settings.obs_download_url + "/OBS:/PROJECT:/TEST/product/?jsontable=1"
 
 
@@ -108,12 +107,10 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
     ]
 
 
-openqa_instance_url = urlparse("http://instance.qa")
 args = Namespace(
     dry=False,
     token="123",
     all_submissions=False,
-    openqa_instance=openqa_instance_url,
     incident=None,
     gitea_token=None,
 )
@@ -226,7 +223,6 @@ def prepare_approver(
     args = Namespace(
         dry=False,
         token="not-secret",
-        openqa_instance=urlparse("http://openqa-instance"),
         accepted=True,
         request_id=request_id,
         project_base="OBS:PROJECT",
@@ -319,7 +315,9 @@ def make_passing_and_failing_job() -> dict:
     return {"done": {"passed": {"job_ids": [20]}, "failed": {"job_ids": [21]}}}
 
 
-def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> list[responses.BaseResponse]:
+def fake_openqa_responses_with_param_matching(
+    additional_builds_json: dict, fake_openqa_url_job_stat: str
+) -> list[responses.BaseResponse]:
     list_of_params = []
     base_params = {"distri": "sle", "version": "16.0", "build": "139.1", "product": "SLES"}
     json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
@@ -333,7 +331,7 @@ def fake_openqa_responses_with_param_matching(additional_builds_json: dict) -> l
     return [
         responses.add(
             responses.GET,
-            openqa_url,
+            fake_openqa_url_job_stat,
             json=json,
             match=[responses.matchers.query_param_matcher(merge_dicts(base_params, params))],
         )

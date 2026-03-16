@@ -108,6 +108,11 @@ class Settings(BaseSettings):
         """Return the set of OBS products to consider."""
         return set(self.obs_products.split(","))
 
+    @property
+    def dashboard_token_dict(self) -> dict[str, str]:
+        """Return QAM Dashboard token dict needed for HTTP header."""
+        return {"Authorization": f"Token {self.token}"}
+
 
 settings = Settings()
 

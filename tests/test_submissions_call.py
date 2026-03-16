@@ -34,7 +34,7 @@ def test_submissions_call() -> None:
         ),
         extrasettings=set(),
     )
-    res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
+    res = sub(submissions=[], ci_url="", ignore_onetime=False)
     assert res == []
 
 
@@ -51,7 +51,7 @@ def test_submissions_call_with_flavors() -> None:
         ),
         extrasettings=set(),
     )
-    res = sub(submissions=[], token={}, ci_url="", ignore_onetime=False)
+    res = sub(submissions=[], ci_url="", ignore_onetime=False)
     assert res == []
 
 
@@ -68,7 +68,7 @@ def test_submissions_call_with_submissions() -> None:
         ),
         extrasettings=set(),
     )
-    res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
+    res = sub(submissions=[MockSubmission()], ci_url="", ignore_onetime=False)
     assert res == []
 
 
@@ -85,7 +85,7 @@ def test_submissions_call_with_issues() -> None:
         ),
         extrasettings=set(),
     )
-    res = sub(submissions=[MockSubmission()], token={}, ci_url="", ignore_onetime=False)
+    res = sub(submissions=[MockSubmission()], ci_url="", ignore_onetime=False)
     assert res == []
 
 
@@ -117,7 +117,6 @@ def test_submissions_call_with_channels() -> None:
     )
     res = sub(
         submissions=[MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345)],
-        token={},
         ci_url="",
         ignore_onetime=False,
     )
@@ -143,7 +142,6 @@ def test_submissions_call_with_packages() -> None:
         submissions=[
             MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345, contains_package_value=True)
         ],
-        token={},
         ci_url="",
         ignore_onetime=False,
     )
@@ -194,7 +192,6 @@ def test_submissions_call_with_params_expand() -> None:
         submissions=[
             MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345, contains_package_value=True)
         ],
-        token={},
         ci_url="",
         ignore_onetime=False,
     )
@@ -255,7 +252,6 @@ def test_submissions_call_with_params_expand_distri_version() -> None:
         submissions=[
             MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345, contains_package_value=True)
         ],
-        token={},
         ci_url="",
         ignore_onetime=False,
     )
@@ -311,7 +307,6 @@ def test_submissions_call_with_params_expand_isolated() -> None:
         submissions=[
             MockSubmission(channels=[Repos("", "", "")], rev_fallback_value=12345, contains_package_value=True)
         ],
-        token={},
         ci_url="",
         ignore_onetime=False,
     )
@@ -356,5 +351,5 @@ def test_submissions_call_reproduction_of_repeated_schedule(mocker: MockerFixtur
         }
     ]
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = mock_jobs
-    res = sub_obj(submissions=[sub], token={}, ci_url="", ignore_onetime=False)
+    res = sub_obj(submissions=[sub], ci_url="", ignore_onetime=False)
     assert res == []

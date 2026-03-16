@@ -15,7 +15,6 @@ from responses import GET
 
 from .helpers import (
     obs_product_table_url,
-    openqa_url,
     prepare_approver,
 )
 
@@ -30,9 +29,11 @@ def test_no_approval_if_no_builds_found(caplog: pytest.LogCaptureFixture) -> Non
 
 
 @responses.activate
-def test_no_approval_if_one_of_two_configs_has_no_builds(caplog: pytest.LogCaptureFixture) -> None:
+def test_no_approval_if_one_of_two_configs_has_no_builds(
+    caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
+) -> None:
     responses.add(GET, obs_product_table_url, json={"data": [{"name": "SLES-16.0-Online-x86_64-Build139.1.spdx.json"}]})
-    responses.add(GET, openqa_url, json={"done": {"passed": {"job_ids": [100]}}})
+    responses.add(GET, fake_openqa_url_job_stat, json={"done": {"passed": {"job_ids": [100]}}})
 
     approver = prepare_approver(caplog)
     config2 = IncrementConfig(

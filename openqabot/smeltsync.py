@@ -25,7 +25,6 @@ class SMELTSync:
     def __init__(self, args: Namespace) -> None:
         """Initialize the SMELTSync class."""
         self.dry: bool = args.dry
-        self.token: dict[str, str] = {"Authorization": "Token " + args.token}
         self.submissions = get_submissions(get_active_submission_ids())
         self.retry = args.retry
 
@@ -40,7 +39,7 @@ class SMELTSync:
         if self.dry:
             log.info("Dry run: Skipping dashboard update")
             return 0
-        return update_submissions(self.token, data, retry=self.retry)
+        return update_submissions(data, retry=self.retry)
 
     @staticmethod
     def review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:

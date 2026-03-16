@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated
-from urllib.parse import urlparse
 
 import typer
 
@@ -167,10 +166,13 @@ def main(  # noqa: PLR0913
         insecure=insecure,
         token=token,
         gitea_token=gitea_token,
-        openqa_instance=urlparse(openqa_instance),
         singlearch=singlearch,
         retry=retry,
     )
+
+    config_module.settings.openqa_instance = openqa_instance
+    config_module.settings.dry = dry
+    config_module.settings.token = token
 
 
 @app.command()
@@ -410,8 +412,7 @@ def sub_comment(ctx: typer.Context) -> None:
     args = ctx.obj
     _require_token(args)
 
-    token = {"Authorization": f"Token {args.token}"}
-    submissions = get_submissions(token)
+    submissions = get_submissions()
     comment = Commenter(args, submissions)
     sys.exit(comment())
 

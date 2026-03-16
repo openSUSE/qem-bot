@@ -25,7 +25,6 @@ from .helpers import (
     fake_get_binary_file,
     fake_get_binarylist,
     fake_get_repos_of_project,
-    openqa_url,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
@@ -63,13 +62,15 @@ def test_skipping_if_rescheduling(mocker: MockerFixture, caplog: pytest.LogCaptu
 
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_ok_jobs", "fake_product_repo")
-def test_skipping_with_failing_openqa_jobs_for_one_config(caplog: pytest.LogCaptureFixture) -> None:
+def test_skipping_with_failing_openqa_jobs_for_one_config(
+    caplog: pytest.LogCaptureFixture, fake_openqa_url: str
+) -> None:
     increment_approver = prepare_approver(caplog)
     increment_approver.config.append(increment_approver.config[0])
     increment_approver()
     last_message = caplog.messages[-1]
     assert "have passed" not in last_message
-    assert "ended up with result 'failed':\n - http://openqa-instance/tests/21" in last_message
+    assert f"ended up with result 'failed':\n - {fake_openqa_url}/tests/21" in last_message
 
 
 @responses.activate
@@ -115,7 +116,7 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
         "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"
         in caplog.messages[-1]
     )
-    assert re.search(R".*openQA jobs.*with result 'failed':\n - http://openqa-instance/tests/21", caplog.messages[-1])
+    assert re.search(R".*openQA jobs.*with result 'failed':\n - http://instance.qa/tests/21", caplog.messages[-1])
 
 
 @responses.activate
@@ -218,16 +219,18 @@ def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest
 
 @responses.activate
 @pytest.mark.usefixtures("fake_not_ok_jobs", "fake_product_repo")
-def test_listing_not_ok_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_listing_not_ok_openqa_jobs(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url: str
+) -> None:
     run_approver(mocker, caplog)
     last_message = caplog.messages[-1]
     assert "The following openQA jobs ended up with result 'failed'" in last_message
-    assert "http://openqa-instance/tests/21" in last_message
-    assert "http://openqa-instance/tests/20" not in last_message
+    assert f"{fake_openqa_url}/tests/21" in last_message
+    assert f"{fake_openqa_url}/tests/20" not in last_message
 
 
 def test_evaluate_list_of_openqa_job_results(
-    caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
+    caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request, fake_openqa_url: str
 ) -> None:
     approver = prepare_approver(caplog)
     results = [
@@ -236,8 +239,8 @@ def test_evaluate_list_of_openqa_job_results(
     ]
     ok_jobs, reasons = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
     assert ok_jobs == {1, 3}
-    assert any("result 'failed':\n - http://openqa-instance/tests/2" in r for r in reasons)
-    assert any("result 'incomplete':\n - http://openqa-instance/tests/4" in r for r in reasons)
+    assert any(f"result 'failed':\n - {fake_openqa_url}/tests/2" in r for r in reasons)
+    assert any(f"result 'incomplete':\n - {fake_openqa_url}/tests/4" in r for r in reasons)
 
 
 def test_check_unique_jobid_request_pair_all_jobs_unique(
@@ -440,12 +443,12 @@ def test_issue_194074_specific_request_sles(
 @responses.activate
 @pytest.mark.usefixtures("fake_product_repo", "mock_osc")
 def test_approval_if_failing_jobs_are_in_development_group(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
 ) -> None:
     # 1. Setup: a failed job exists in job_stats
     responses.add(
         responses.GET,
-        openqa_url,
+        fake_openqa_url_job_stat,
         json={"done": {"failed": {"job_ids": [123]}}},
     )
 
@@ -473,11 +476,13 @@ def test_approval_if_failing_jobs_are_in_development_group(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_product_repo", "mock_osc")
-def test_approval_with_mixed_jobs_development_ignored(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_approval_with_mixed_jobs_development_ignored(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
+) -> None:
     # 1. Setup: one failed (devel) and one passed (prod) job
     responses.add(
         responses.GET,
-        openqa_url,
+        fake_openqa_url_job_stat,
         json={"done": {"failed": {"job_ids": [123]}, "passed": {"job_ids": [456]}}},
     )
 

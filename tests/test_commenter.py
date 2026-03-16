@@ -16,8 +16,6 @@ from openqabot.errors import EmptyCommentError, NoResultsError
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
 
-from .helpers import openqa_instance_url
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -62,7 +60,7 @@ def make_comment_api() -> Callable[..., MagicMock]:
 
 @pytest.fixture
 def mock_args() -> Namespace:
-    return Namespace(dry=True, token="test_token", gitea_token="gitea_token", openqa_instance=openqa_instance_url)
+    return Namespace(dry=True, gitea_token="gitea_token")
 
 
 @pytest.fixture
@@ -109,7 +107,6 @@ def test_commenter_init(commenter_setup: dict[str, MagicMock], mock_args: Namesp
     subs = [MagicMock(spec=Submission)]
     c = Commenter(mock_args, submissions=subs)
     assert c.dry == mock_args.dry
-    assert c.token == {"Authorization": "Token test_token"}
     assert c.gitea_token == {"Authorization": "token gitea_token"}
     assert c.client == commenter_setup["client"].return_value
     assert c.submissions == subs

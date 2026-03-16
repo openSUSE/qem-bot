@@ -335,7 +335,7 @@ def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.
     message = {"pull_request": {"id": 42, "base": {"repo": {"full_name": "products/SLFO"}}}}
     # check successful code path
     sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # noqa: SLF001
-    mock_update.assert_called_once_with(sync.dashboard_token, [mock_subm], params={"type": "git"}, retry=args.retry)
+    mock_update.assert_called_once_with([mock_subm], params={"type": "git"}, retry=args.retry)
     mock_update.reset_mock()
 
     # check dry run

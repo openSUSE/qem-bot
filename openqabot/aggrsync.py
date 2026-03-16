@@ -27,9 +27,7 @@ class AggregateResultsSync(SyncRes):
     def __call__(self) -> int:
         """Run the synchronization process."""
         log.info("Synchronizing results for %s products...", len(self.product))
-        update_setting = list(
-            chain.from_iterable(get_aggregate_settings_data(self.token, product) for product in self.product)
-        )
+        update_setting = list(chain.from_iterable(get_aggregate_settings_data(product) for product in self.product))
 
         job_results = {}
         with ThreadPoolExecutor() as executor:

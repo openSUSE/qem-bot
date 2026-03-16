@@ -5,7 +5,6 @@
 import logging
 from argparse import Namespace
 from collections.abc import Generator
-from urllib.parse import urlparse
 
 import pytest
 from pytest_mock import MockerFixture
@@ -41,7 +40,7 @@ def mock_dashboard_settings() -> None:
 
 @pytest.fixture
 def args() -> Namespace:
-    return Namespace(dry=False, token="ToKeN", openqa_instance=urlparse("http://instance.qa"))
+    return Namespace(dry=False, token="ToKeN")
 
 
 def prepare_syncer(caplog: pytest.LogCaptureFixture, args: Namespace) -> SubResultsSync:

@@ -29,8 +29,7 @@ class SyncRes:
     def __init__(self, args: Namespace) -> None:
         """Initialize the SyncRes class."""
         self.dry: bool = args.dry
-        self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
-        self.client = OpenQAInterface(args)
+        self.client = OpenQAInterface()
 
     @classmethod
     def normalize_data(cls, data: Data, job: dict[str, Any]) -> dict[str, Any]:
@@ -101,4 +100,4 @@ class SyncRes:
             log.warning("openQA client not configured - skipping dashboard update")
             return
 
-        post_job(self.token, result)
+        post_job(result)

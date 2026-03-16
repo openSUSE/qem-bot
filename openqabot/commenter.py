@@ -34,9 +34,8 @@ class Commenter:
     def __init__(self, args: Namespace, submissions: Sequence[Submission]) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry
-        self.token = {"Authorization": f"Token {args.token}"}
         self.gitea_token = gitea.make_token_header(args.gitea_token)
-        self.client = OpenQAInterface(args)
+        self.client = OpenQAInterface()
         self.submissions = submissions
         self.commentapi = CommentAPI(config.settings.obs_url)
 
@@ -56,13 +55,13 @@ class Commenter:
             return
 
         try:
-            s_jobs = get_submission_results(sub.id, self.token, submission_type=sub.type)
+            s_jobs = get_submission_results(sub.id, submission_type=sub.type)
         except (ValueError, NoResultsError) as e:
             log.debug(e)
             s_jobs = []
 
         try:
-            a_jobs = get_aggregate_results(sub.id, self.token, submission_type=sub.type)
+            a_jobs = get_aggregate_results(sub.id, submission_type=sub.type)
         except (ValueError, NoResultsError) as e:
             log.debug(e)
             a_jobs = []

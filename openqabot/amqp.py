@@ -32,7 +32,6 @@ class AMQP(SyncRes):
         """Initialize the AMQP class."""
         super().__init__(args)
         self.args = args
-        self.token: dict[str, str] = {"Authorization": f"Token {args.token}"}
         self.amqp_listener = AMQPListener(url=args.url, routing_keys=["suse.openqa.#"], handler=self.on_message)
 
     def __call__(self) -> int:
@@ -67,7 +66,7 @@ class AMQP(SyncRes):
         """Handle results for a specific submission and trigger approval."""
         # Load Data about current submission from dashboard database
         try:
-            settings: Sequence[Data] = get_submission_settings_data(self.token, sub_nr, submission_type=sub_type)
+            settings: Sequence[Data] = get_submission_settings_data(sub_nr, submission_type=sub_type)
         except ValueError:
             return
 

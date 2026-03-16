@@ -11,21 +11,33 @@ from urllib.parse import ParseResult, urlparse
 
 import pytest
 
-import openqabot.openqabot
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
+from openqabot.openqabot import OpenQABot
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 
 @pytest.fixture
-def mock_openqa_passed(mocker: MockerFixture) -> Any:
+def mocked_openqa_bot() -> Namespace:
+    return Namespace(
+        dry=False,
+        ignore_onetime=False,
+        singlearch="single",
+        configs=None,
+        disable_aggregates=False,
+        disable_submissions=False,
+        submission=None,
+    )
+
+
+@pytest.fixture
+def mock_openqa_passed(mocker: MockerFixture, fake_openqa_url: str) -> Any:
     class FakeClient:
-        def __init__(self, args: Namespace) -> None:
-            self.url: ParseResult = args.openqa_instance
-            self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
+        def __init__(self) -> None:
+            self.url: ParseResult = urlparse(fake_openqa_url)
 
         def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
@@ -75,21 +87,9 @@ def mock_runtime(mocker: MockerFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed(caplog: pytest.LogCaptureFixture) -> None:
+def test_passed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    args = Namespace(
-        dry=False,
-        ignore_onetime=False,
-        token="token",
-        singlearch="single",
-        openqa_instance=urlparse("https://openqa.suse.de"),
-        configs=None,
-        disable_aggregates=False,
-        disable_submissions=False,
-        submission=None,
-    )
-    bot = openqabot.openqabot.OpenQABot(args)
-
+    bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar", json={"id": 234})
     bot()
 
@@ -100,21 +100,9 @@ def test_passed(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
+def test_passed_non_osd(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    args = Namespace(
-        dry=False,
-        ignore_onetime=False,
-        token="token",
-        singlearch="single",
-        openqa_instance=urlparse("https://openqa.opensuse.org"),
-        configs=None,
-        disable_aggregates=False,
-        disable_submissions=False,
-        submission=None,
-    )
-    bot = openqabot.openqabot.OpenQABot(args)
-
+    bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
@@ -126,21 +114,9 @@ def test_passed_non_osd(caplog: pytest.LogCaptureFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_exception")
-def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
+def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
-    args = Namespace(
-        dry=False,
-        ignore_onetime=False,
-        token="token",
-        singlearch="single",
-        openqa_instance=urlparse("https://openqa.suse.de"),
-        configs=None,
-        disable_aggregates=False,
-        disable_submissions=False,
-        submission=None,
-    )
-    bot = openqabot.openqabot.OpenQABot(args)
-
+    bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
     bot()
 
@@ -148,3 +124,24 @@ def test_passed_post_osd_failed(caplog: pytest.LogCaptureFixture) -> None:
     assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
     assert "Triggering 1 products in openQA" in caplog.messages
     assert "Skipping dashboard update: Job post failed" in caplog.messages
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_success(mocked_openqa_bot: Namespace) -> None:
+
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = True
+    test_api = "api/jobs/incident/1"
+    test_data = {"status": "passed", "job_id": 999}
+    responses.add(
+        responses.PUT,
+        f"{QEM_DASHBOARD}{test_api}",
+        json={"id": 12345},
+        status=200,
+    )
+
+    bot.post_qem(test_data, test_api)
+
+    assert len(responses.calls) == 1
+    assert responses.calls[0].request.url == f"{QEM_DASHBOARD}{test_api}"

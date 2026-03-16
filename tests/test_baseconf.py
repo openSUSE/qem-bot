@@ -20,13 +20,12 @@ class FakeBaseConf(BaseConf):
     def __call__(
         self,
         submissions: list[Submission],
-        token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool,
     ) -> list[dict[str, Any]]:
         """Mock __call__."""
-        _ = (submissions, token, ci_url, ignore_onetime)
+        _ = (submissions, ci_url, ignore_onetime)
         return [{"foo": "bar"}]
 
     @staticmethod
@@ -48,7 +47,7 @@ def baseconf_gen() -> FakeBaseConf:
 def test_baseconf_init(baseconf_gen: FakeBaseConf) -> None:
     assert baseconf_gen.product == prod_name
     assert baseconf_gen.settings == settings
-    assert baseconf_gen([], {}, None, ignore_onetime=False), "can be called"
+    assert baseconf_gen([], None, ignore_onetime=False), "can be called"
     assert not baseconf_gen.normalize_repos({}), "static method can be called"
 
 

@@ -19,6 +19,7 @@ import osc.conf
 import osc.core
 from openqa_client.exceptions import RequestError
 
+import openqabot.config as config_module
 from openqabot import config, dashboard
 from openqabot.errors import JobNotFoundError, NoResultsError
 from openqabot.openqa import OpenQAInterface
@@ -118,17 +119,16 @@ class Approver:
             self.all_submissions = False
             self.submission_type = submission_type
         self.comment = getattr(args, "comment", False)
-        self.token = {"Authorization": f"Token {args.token}"}
-        self.client = OpenQAInterface(args)
+        self.client = OpenQAInterface()
         self.commenter = Commenter(args, submissions=[])
 
     def __call__(self) -> int:
         """Run the approval process."""
         log.info("Starting approving submissions in OBS or Gitea…")
         subreqs = (
-            get_single_submission(self.token, self.single_submission, submission_type=self.submission_type)
+            get_single_submission(self.single_submission, submission_type=self.submission_type)
             if self.single_submission
-            else get_submissions_approver(self.token)
+            else get_submissions_approver()
         )
 
         overall_result = True
@@ -156,14 +156,12 @@ class Approver:
     def approvable(self, sub: SubReq) -> bool:
         """Check if a submission is ready for approval."""
         try:
-            s_jobs = get_submission_settings(
-                sub.sub, self.token, all_submissions=self.all_submissions, submission_type=sub.type
-            )
+            s_jobs = get_submission_settings(sub.sub, all_submissions=self.all_submissions, submission_type=sub.type)
         except NoResultsError as e:
             log.info("Approval check for %s skipped: %s", ms2str(sub), e)
             return False
         try:
-            a_jobs = get_aggregate_settings(sub.sub, self.token, submission_type=sub.type)
+            a_jobs = get_aggregate_settings(sub.sub, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
                 log.info("Required aggregate tests missing for %s", ms2str(sub))
@@ -185,7 +183,10 @@ class Approver:
     def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
         """Mark a job as acceptable for a submission in the dashboard."""
         try:
-            dashboard.patch(f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}", headers=self.token)
+            dashboard.patch(
+                f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}",
+                headers=config_module.settings.dashboard_token_dict,
+            )
         except RequestError as e:
             log.info(
                 "Unable to mark job %i as acceptable for submission %s:%i: %s",
@@ -205,13 +206,14 @@ class Approver:
         except RequestError:
             return False
 
-    @lru_cache(maxsize=512)  # noqa: B019
-    def validate_job_qam(self, job: int) -> bool:
+    @staticmethod
+    @lru_cache(maxsize=512)
+    def validate_job_qam(job: int) -> bool:
         """Validate if a job is present and passed in dashboard."""
         # Check that valid test result is still present in the dashboard (see
         # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
         # request
-        qam_data = dashboard.get_json(f"api/jobs/{job}", headers=self.token)
+        qam_data = dashboard.get_json(f"api/jobs/{job}", headers=config_module.settings.dashboard_token_dict)
         if not qam_data:
             return False
         if "error" in qam_data:
@@ -370,7 +372,9 @@ class Approver:
         params = {}
         if submission_type:
             params["type"] = submission_type
-        job_results = dashboard.get_json(api + str(job_aggr.id), headers=self.token, params=params)
+        job_results = dashboard.get_json(
+            api + str(job_aggr.id), headers=config_module.settings.dashboard_token_dict, params=params
+        )
         if not job_results:
             log.info(
                 "Job setting %s not found for submission %s:%s",

@@ -87,14 +87,14 @@ def test_aggregate_printable(aggregate_factory: Any) -> None:
 def test_aggregate_call(aggregate_factory: Any) -> None:
     """Test for the bare minimal set of arguments needed by the callable."""
     acc = aggregate_factory()
-    assert acc([], {}, None) == []
+    assert acc([], None) == []
 
 
 @pytest.mark.usefixtures("request_mock")
 def test_aggregate_call_with_archs(aggregate_factory: Any, config: dict) -> None:
     """Configure an archs to enter in the function main loop."""
     acc = aggregate_factory(config=config)
-    assert acc(submissions=[], token={}, ci_url=None) == []
+    assert acc(submissions=[], ci_url=None) == []
 
 
 @pytest.mark.usefixtures("request_mock")
@@ -107,7 +107,7 @@ def test_aggregate_call_with_test_issues(
     sub = submission_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
     sub2 = submission_mock(product="EEEEEEEEE", version="FFFFFFFF", arch="ciao", sub_id=42)
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    res = acc(submissions=[sub, sub2], token={}, ci_url=None)
+    res = acc(submissions=[sub, sub2], ci_url=None)
     assert len(res) == 1
     settings = res[0]["openqa"]
     assert settings["BASE_TEST_ISSUES"] == "123", "BASE_TEST_ISSUES present"
@@ -124,7 +124,7 @@ def test_aggregate_call_pc_pint(aggregate_factory: Any, config: dict, mocker: Mo
         return_value={"PUBLIC_CLOUD_IMAGE_ID": "Hola", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "Base"},
     )
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    acc(submissions=[], token={}, ci_url=None)
+    acc(submissions=[], ci_url=None)
 
 
 @pytest.mark.usefixtures("request_mock")
@@ -140,7 +140,7 @@ def test_aggregate_call_pc_pint_with_submissions(
     )
     sub = submission_mock(product="BBBBBBBBB", version="CCCCCCCC", arch="ciao")
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"repohash": "old", "build": "old"}])
-    ret = acc(submissions=[sub], token={}, ci_url=None)
+    ret = acc(submissions=[sub], ci_url=None)
     assert ret[0]["openqa"]["PUBLIC_CLOUD_IMAGE_ID"] == "Hola"
 
 
@@ -152,7 +152,7 @@ def test_aggregate_call_no_job_settings(
     caplog.set_level(10)  # DEBUG
     acc = aggregate_factory(product="product", config=config)
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[])
-    res = acc(submissions=[], token={}, ci_url=None)
+    res = acc(submissions=[], ci_url=None)
     assert res == []
     assert "No aggregate jobs found for <Aggregate product: product> on arch ciao" in caplog.text
 
@@ -170,7 +170,7 @@ def test_aggregate_call_pc_tools_fail(
 
     sub = submission_mock(product="P", version="V", arch="ciao")
     sub.id = "I"
-    res = acc(submissions=[sub], token={}, ci_url=None)
+    res = acc(submissions=[sub], ci_url=None)
     assert res == []
     assert "No tools image found for query" in caplog.text
 
@@ -188,7 +188,7 @@ def test_aggregate_call_pc_pint_fail(
 
     sub = submission_mock(product="P", version="V", arch="ciao")
     sub.id = "I"
-    res = acc(submissions=[sub], token={}, ci_url=None)
+    res = acc(submissions=[sub], ci_url=None)
     assert res == []
     assert "No PINT image found for query" in caplog.text
 
@@ -239,7 +239,7 @@ def test_aggregate_call_ci_url(aggregate_factory: Any, submission_mock: Any, moc
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
-    res = acc([sub], {}, ci_url="http://ci")
+    res = acc([sub], ci_url="http://ci")
     assert len(res) == 1
     assert res[0]["openqa"]["__CI_JOB_URL"] == "http://ci"
 
@@ -250,7 +250,7 @@ def test_process_arch_json_error(
 ) -> None:
     acc = aggregate_factory("product", config=config)
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", side_effect=requests.JSONDecodeError("msg", "doc", 0))
-    assert acc(submissions=[], token={}, ci_url=None) == []
+    assert acc(submissions=[], ci_url=None) == []
     assert "Invalid JSON received for aggregate jobs" in caplog.text
 
 
@@ -260,7 +260,7 @@ def test_process_arch_request_error(
 ) -> None:
     acc = aggregate_factory("product", config=config)
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", side_effect=requests.RequestException("error"))
-    assert acc(submissions=[], token={}, ci_url=None) == []
+    assert acc(submissions=[], ci_url=None) == []
     assert "Could not fetch previous aggregate jobs" in caplog.text
 
 
@@ -272,7 +272,7 @@ def test_process_arch_onetime_skip(aggregate_factory: Any, config: dict, mocker:
     mocker.patch(
         "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "old"}]
     )
-    assert acc.process_arch("ciao", [], {}, None, ignore_onetime=False) is None
+    assert acc.process_arch("ciao", [], None, ignore_onetime=False) is None
 
 
 def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
@@ -283,7 +283,7 @@ def test_aggregate_call_deprioritize_limit(aggregate_factory: Any, submission_mo
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
-    res = acc([sub], {}, ci_url=None)
+    res = acc([sub], ci_url=None)
     assert res[0]["openqa"]["_DEPRIORITIZE_LIMIT"] == 10
 
 
@@ -294,7 +294,7 @@ def test_aggregate_call_pc_tools_success(aggregate_factory: Any, submission_mock
     mocker.patch("openqabot.pc_helper.apply_pc_tools_image", return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "Base"})
     sub = submission_mock(product="P", version="V", arch="A")
     sub.id = "I"
-    res = acc([sub], {}, ci_url=None)
+    res = acc([sub], ci_url=None)
     assert len(res) == 1
     assert res[0]["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "Base"
 
@@ -306,7 +306,7 @@ def test_aggregate_priority(aggregate_factory: Any, submission_mock: Any, mocker
 
     sub = submission_mock(product="P", version="V", arch="A")
     sub.priority = 100
-    res = acc([sub], {}, ci_url=None)
+    res = acc([sub], ci_url=None)
     assert res[0]["openqa"]["_PRIORITY"] == 45
 
 
@@ -323,7 +323,7 @@ def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: An
     sub2 = submission_mock(product="P", version="V", arch="A")
     sub2.id = 2
     sub2.priority = 200
-    res = acc([sub1, sub2], {}, ci_url=None)
+    res = acc([sub1, sub2], ci_url=None)
     assert res[0]["openqa"]["_PRIORITY"] == 40
 
 
@@ -338,7 +338,7 @@ def test_process_arch_same_build_exists(
     mocker.patch(
         "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "same"}]
     )
-    assert acc.process_arch("A", [], {}, None, ignore_onetime=False) is None
+    assert acc.process_arch("A", [], None, ignore_onetime=False) is None
     assert "A build with the same RepoHash already exists" in caplog.text
 
 

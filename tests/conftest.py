@@ -34,8 +34,6 @@ from .helpers import (
     fake_osc_get_config,
     make_passing_and_failing_job,
     obs_product_table_url,
-    openqa_instance_url,
-    openqa_url,
 )
 
 if TYPE_CHECKING:
@@ -71,6 +69,18 @@ def fake_responses_for_unblocking_submissions_via_openqa_comments(
         )
 
 
+@pytest.fixture(autouse=True)
+def fake_openqa_url() -> str:
+    settings.openqa_instance = "http://instance.qa"
+    return settings.openqa_instance
+
+
+@pytest.fixture(autouse=True)
+def fake_openqa_url_job_stat(fake_openqa_url: str) -> str:
+    settings.openqa_instance = "http://instance.qa"
+    return f"{fake_openqa_url}/api/v1/isos/job_stats"
+
+
 def with_fake_qem(mode: str) -> Any:
     def decorator(test_func: object) -> object:
         test_func = pytest.mark.qem_behavior(mode)(test_func)
@@ -104,7 +114,6 @@ def make_approver(submission: int = 0, *, mocker: MockerFixture | None = None, c
         dry=True,
         token="123",
         all_submissions=False,
-        openqa_instance=openqa_instance_url,
         incident=submission,
         gitea_token=None,
         comment=comment,
@@ -144,7 +153,7 @@ def _mock_load_dotenv(mocker: MockerFixture) -> None:
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
 
-    def f_sub_settins(sub: int, _token: str, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # noqa: ARG001
+    def f_sub_settins(sub: int, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # noqa: ARG001
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -163,7 +172,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def f_aggr_settings(sub: int, _token: str, submission_type: str | None = None) -> list[JobAggr]:  # noqa: ARG001
+    def f_aggr_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:  # noqa: ARG001
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -178,7 +187,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        side_effect=lambda _token, i, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
+        side_effect=lambda i, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
     )
     mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
@@ -201,35 +210,37 @@ def fake_two_passed_jobs() -> None:
 
 
 @pytest.fixture
-def fake_no_jobs() -> None:
-    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json={})
+def fake_no_jobs(fake_openqa_url_job_stat: str) -> None:
+    responses.add(responses.GET, re.compile(f"{fake_openqa_url_job_stat}.*"), json={})
 
 
 @pytest.fixture
-def fake_no_jobs_with_param_matching() -> list[responses.BaseResponse]:
-    return fake_openqa_responses_with_param_matching({})
+def fake_no_jobs_with_param_matching(fake_openqa_url_job_stat: str) -> list[responses.BaseResponse]:
+    return fake_openqa_responses_with_param_matching({}, fake_openqa_url_job_stat)
 
 
 @pytest.fixture
-def fake_only_jobs_of_additional_builds_with_param_matching() -> list[responses.BaseResponse]:
-    return fake_openqa_responses_with_param_matching(make_passing_and_failing_job())
+def fake_only_jobs_of_additional_builds_with_param_matching(
+    fake_openqa_url_job_stat: str,
+) -> list[responses.BaseResponse]:
+    return fake_openqa_responses_with_param_matching(make_passing_and_failing_job(), fake_openqa_url_job_stat)
 
 
 @pytest.fixture
-def fake_pending_jobs() -> None:
-    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json={"scheduled": {}, "running": {}})
+def fake_pending_jobs(fake_openqa_url_job_stat: str) -> None:
+    responses.add(responses.GET, re.compile(f"{fake_openqa_url_job_stat}.*"), json={"scheduled": {}, "running": {}})
 
 
 @pytest.fixture
-def fake_not_ok_jobs() -> None:
-    responses.add(responses.GET, re.compile(f"{openqa_url}.*"), json=make_passing_and_failing_job())
+def fake_not_ok_jobs(fake_openqa_url_job_stat: str) -> None:
+    responses.add(responses.GET, re.compile(f"{fake_openqa_url_job_stat}.*"), json=make_passing_and_failing_job())
 
 
 @pytest.fixture
-def fake_ok_jobs() -> None:
+def fake_ok_jobs(fake_openqa_url_job_stat: str) -> None:
     responses.add(
         responses.GET,
-        re.compile(f"{openqa_url}.*"),
+        re.compile(f"{fake_openqa_url_job_stat}.*"),
         json={"done": {"passed": {"job_ids": [22]}, "softfailed": {"job_ids": [24]}}},
     )
 

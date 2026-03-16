@@ -193,7 +193,6 @@ class Aggregate(BaseConf):
         self,
         arch: str,
         valid_submissions: list[Submission],
-        token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool,
@@ -212,7 +211,7 @@ class Aggregate(BaseConf):
             old_jobs = dashboard.get_json(
                 "api/update_settings",
                 params={"product": self.product, "arch": arch},
-                headers=token,
+                headers=config.settings.dashboard_token_dict,
             )
         except requests.exceptions.JSONDecodeError:
             log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
@@ -254,7 +253,6 @@ class Aggregate(BaseConf):
     def __call__(
         self,
         submissions: list[Submission],
-        token: dict[str, str],
         ci_url: str | None,
         *,
         ignore_onetime: bool = False,
@@ -263,8 +261,7 @@ class Aggregate(BaseConf):
         valid_submissions = self.filter_submissions(submissions)
 
         results = [
-            self.process_arch(arch, valid_submissions, token, ci_url, ignore_onetime=ignore_onetime)
-            for arch in self.archs
+            self.process_arch(arch, valid_submissions, ci_url, ignore_onetime=ignore_onetime) for arch in self.archs
         ]
 
         return [res for res in results if res is not None]

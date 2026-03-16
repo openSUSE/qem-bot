@@ -8,7 +8,6 @@ import logging
 from argparse import Namespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
-from urllib.parse import urlparse
 
 import osc.core
 import pytest
@@ -114,8 +113,6 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
     caplog.set_level(logging.INFO)
     args = Namespace(
         dry=True,
-        token="token",
-        openqa_instance=urlparse("http://instance.qa"),
         accepted=True,
         request_id=None,
         project_base="BASE",

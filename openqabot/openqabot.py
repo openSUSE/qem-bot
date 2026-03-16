@@ -8,6 +8,7 @@ from logging import getLogger
 from os import environ
 from typing import Any
 
+import openqabot.config as config_module
 from openqabot import dashboard
 
 from .errors import PostOpenQAError
@@ -26,9 +27,8 @@ class OpenQABot:
         log.info("Starting bot schedule")
         self.dry = args.dry
         self.ignore_onetime = args.ignore_onetime
-        self.token = {"Authorization": "Token " + args.token}
         self.submission_arg = args.submission if hasattr(args, "submission") else None
-        self.submissions = get_submissions(self.token, self.submission_arg)
+        self.submissions = get_submissions(self.submission_arg)
         log.info("Loaded %s submissions from QEM Dashboard", len(self.submissions))
 
         for sub in self.submissions:
@@ -43,7 +43,7 @@ class OpenQABot:
             extrasettings=extrasettings,
         )
 
-        self.openqa = OpenQAInterface(args)
+        self.openqa = OpenQAInterface()
         self.ci = environ.get("CI_JOB_URL")
 
     def post_qem(self, data: dict[str, Any], api: str) -> None:
@@ -52,7 +52,7 @@ class OpenQABot:
             log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
 
-        res = dashboard.put(api, headers=self.token, json=data)
+        res = dashboard.put(api, headers=config_module.settings.dashboard_token_dict, json=data)
         res_id = res.json().get("id", "unknown")
         log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
 
@@ -63,11 +63,7 @@ class OpenQABot:
     def __call__(self) -> int:
         """Run the bot schedule."""
         log.info("Entering bot main loop")
-        post = [
-            p
-            for w in self.workers
-            for p in w(self.submissions, self.token, self.ci, ignore_onetime=self.ignore_onetime)
-        ]
+        post = [p for w in self.workers for p in w(self.submissions, self.ci, ignore_onetime=self.ignore_onetime)]
 
         log.info("Triggering %d products in openQA", len(post))
 

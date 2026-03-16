@@ -9,11 +9,13 @@ from functools import lru_cache
 from http import HTTPStatus
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import requests
 from openqa_client.client import OpenQA_Client
 from openqa_client.exceptions import RequestError
 
+import openqabot.config as config_module
 from openqabot import config
 from openqabot.utils import number_of_retries
 
@@ -21,7 +23,6 @@ from .errors import JobNotFoundError, PostOpenQAError
 from .loader.qem import update_job
 
 if TYPE_CHECKING:
-    from argparse import Namespace
     from urllib.parse import ParseResult
 
     from .types.types import Data
@@ -33,15 +34,14 @@ log = logging.getLogger("bot.openqa")
 class OpenQAInterface:
     """Interface to openQA."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self) -> None:
         """Initialize the OpenQAInterface class."""
-        self.url: ParseResult = args.openqa_instance
-        self.dry: bool = args.dry
+        self.url: ParseResult = urlparse(config_module.settings.openqa_instance)
+        self.dry: bool = config_module.settings.dry
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
         self.retries = number_of_retries()
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)
-        self.qem_token: dict[str, str] = {"Authorization": f"Token {args.token}"}
 
     def __bool__(self) -> bool:
         """Return True only for the configured openQA instance.
@@ -70,10 +70,11 @@ class OpenQAInterface:
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
 
-    def handle_job_not_found(self, job_id: int) -> None:
+    @staticmethod
+    def handle_job_not_found(job_id: int) -> None:
         """Handle case where a job is not found on openQA."""
         log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
-        update_job(self.qem_token, job_id, {"obsolete": True})
+        update_job(job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         """Fetch openQA jobs matching the given criteria."""
