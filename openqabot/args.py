@@ -326,7 +326,7 @@ def gitea_trigger(
     gitea_repo: gitea_repo_arg = "products/SLFO",
     pr_label: Annotated[
         str,
-        typer.Option("--pr-label", help="Gitea PRs label for which to trigger tests"),
+        typer.Option("--pr-label", envvar="PR_LABEL", help="Gitea PRs label for which to trigger tests"),
     ] = "staging/In Progress",
     pr_number: pr_number_arg = None,
 ) -> None:

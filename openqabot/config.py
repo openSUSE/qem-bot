@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="QEM_BOT_DEBUG")
     token: str | None = Field(default=None, alias="QEM_BOT_TOKEN")
     gitea_token: str | None = Field(default=None, alias="QEM_BOT_GITEA_TOKEN")
+    gitea_pr_label: str | None = Field(default=None, alias="PR_LABEL")
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
