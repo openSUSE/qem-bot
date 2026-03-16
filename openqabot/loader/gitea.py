@@ -27,6 +27,7 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -557,6 +558,9 @@ def generate_repo_url(pullrequest: PullRequest, token: dict[str, str]) -> str:
     Returns:
         str: URL pointing to a folder with iso images generated for certain pullrequest
 
+    Raises:
+        NoRepoFoundError: raised when required_labels has more than one match in staging.config
+
     """
     response = retried_requests.get(
         staging_config_url(pullrequest.repo_name, pullrequest.branch),
@@ -564,8 +568,17 @@ def generate_repo_url(pullrequest: PullRequest, token: dict[str, str]) -> str:
         headers=token,
     )
     response.raise_for_status()
-    project = response.json()["StagingProject"].replace(":", ":/")
-    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{pullrequest.product}/product/iso"
+    response_json = response.json()
+    project = response_json["StagingProject"].replace(":", ":/")
+    qa_mapping = {item["Label"]: item["Name"] for item in response_json.get("QA", [])}
+    common_labels = set(qa_mapping.keys()) & pullrequest.labels
+
+    if len(common_labels) != 1:
+        log.error("Expected exactly one matching label but found %d: %s", len(common_labels), common_labels)
+        raise NoRepoFoundError
+
+    label = common_labels.pop()
+    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{qa_mapping[label]}/product/iso"
 
 
 def add_packages_from_patchinfo(

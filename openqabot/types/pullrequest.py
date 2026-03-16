@@ -13,7 +13,6 @@ class PullRequest:
     number: int
     repo_name: str
     branch: str
-    product: str
     raw_labels: list[dict[str, Any]] = field(repr=False)
 
     labels: set[str] = field(init=False)

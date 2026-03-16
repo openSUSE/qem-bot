@@ -36,7 +36,7 @@ def test_get_open_prs_specific_number_key_error(mocker: MockerFixture, caplog: p
 def test_pull_request_has_labels() -> None:
     """Verify that has_labels returns True only when all labels are present."""
     raw_data = [{"name": "bug", "id": 1}, {"name": "urgent", "id": 2}, {"name": "v1.0", "id": 3}]
-    pr = PullRequest(number=124, repo_name="os-autoinst", branch="master", product="SLES", raw_labels=raw_data)
+    pr = PullRequest(number=124, repo_name="os-autoinst", branch="master", raw_labels=raw_data)
 
     assert pr.has_labels({"bug", "urgent"})
     assert pr.has_labels({"v1.0"})
