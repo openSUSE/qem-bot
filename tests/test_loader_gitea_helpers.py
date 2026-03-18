@@ -26,15 +26,20 @@ def labeled_pr(mocker: MockerFixture) -> PullRequest:
 
 
 @pytest.fixture
-def mock_get(mocker: MockerFixture) -> MagicMock:
+def mocked_response() -> dict[str, str | list]:
+    return {
+        "StagingProject": "openQA:Staging:A",
+        "QA": [{"Name": "SLES", "Label": "label1"}, {"Name": "SLES", "Label": "label2"}],
+    }
+
+
+@pytest.fixture
+def mock_get(mocker: MockerFixture, mocked_response: dict[str, str | list]) -> MagicMock:
     mocker.patch("openqabot.config.settings.gitea_url", "https://gitea.com")
     mocker.patch("openqabot.config.settings.obs_download_url", "https://download.obs.com")
 
     mock_response = mocker.Mock()
-    mock_response.json.return_value = {
-        "StagingProject": "openQA:Staging:A",
-        "QA": [{"Name": "SLES", "Label": "label1"}, {"Name": "SLES", "Label": "label2"}],
-    }
+    mock_response.json.return_value = mocked_response
     return mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
 
 
@@ -190,15 +195,12 @@ def test_is_build_acceptable_success() -> None:
     assert gitea.is_build_acceptable_and_log_if_not(incident, 123)
 
 
-def test_generate_repo_url_success(mock_get: MagicMock, labeled_pr: PullRequest) -> None:
+def test_generate_repo_url_success(mocker: MockerFixture, labeled_pr: PullRequest) -> None:
     """Cover the actual logic of generate_repo_url."""
-    url = gitea.generate_repo_url(labeled_pr, {"Authorization": "token test"})
+    mocker.patch("openqabot.config.settings.obs_download_url", "https://download.obs.com")
+    url = gitea.generate_repo_url(labeled_pr, {"label1": "SLES"}, "openQA:/Staging:/A")
 
     assert url == "https://download.obs.com/openQA:/Staging:/A:/555:/SLES/product/iso"
-
-    expected_gitea_url = "https://gitea.com/products/products/sle/raw/branch/main/staging.config"
-    mock_get.assert_called_once()
-    assert mock_get.call_args[0][0] == expected_gitea_url
 
 
 @pytest.mark.usefixtures("mock_get")
@@ -206,4 +208,10 @@ def test_generate_repo_url_two_label_match(labeled_pr: PullRequest) -> None:
     """Cover the actual logic of generate_repo_url."""
     labeled_pr.labels.add("label2")
     with pytest.raises(NoRepoFoundError):
-        gitea.generate_repo_url(labeled_pr, {"Authorization": "token test"})
+        gitea.generate_repo_url(labeled_pr, {"label1": "SLES", "label2": "B"}, "openQA:/Staging:/A")
+
+
+@pytest.mark.usefixtures("mock_get")
+def test_get_gitea_staging_config(mocked_response: dict[str, str | list]) -> None:
+    conf = gitea.get_gitea_staging_config({"token": "token"})
+    assert conf == mocked_response

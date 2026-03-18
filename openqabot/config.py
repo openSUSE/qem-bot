@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     token: str | None = Field(default=None, alias="QEM_BOT_TOKEN")
     gitea_token: str | None = Field(default=None, alias="QEM_BOT_GITEA_TOKEN")
     gitea_pr_label: str | None = Field(default=None, alias="PR_LABEL")
+    gitea_repo_name: str | None = Field(default="SLFO", alias="GITEA_REPO_NAME")
+    gitea_branch_name: str | None = Field(default="slfo-main", alias="GITEA_BRANCH_NAME")
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
@@ -88,6 +90,11 @@ class Settings(BaseSettings):
     def obs_web_url(self) -> str:
         """Return the OBS web UI URL."""
         return self.obs_url.replace("api.", "build.")
+
+    @property
+    def gitea_staging_config_url(self) -> str:
+        """Generate url pointing to staging.config file for certain repo."""
+        return f"{self.gitea_url}/products/{self.gitea_repo_name}/raw/branch/{self.gitea_branch_name}/staging.config"
 
     @property
     def download_maintenance(self) -> str:

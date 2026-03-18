@@ -149,11 +149,6 @@ def comments_url(repo_name: str, number: int) -> str:
     return f"repos/{repo_name}/issues/{number}/comments"
 
 
-def staging_config_url(repo_name: str, branch: str) -> str:
-    """Generate url pointing to staging.config file for certain repo."""
-    return f"{config.settings.gitea_url}/products/{repo_name}/raw/branch/{branch}/staging.config"
-
-
 def get_product_name(obs_project: str) -> str:
     """Extract product name from an OBS project name."""
     product_match = PROJECT_PRODUCT_REGEX.search(obs_project)
@@ -546,12 +541,33 @@ def add_comments_and_referenced_build_results(
         )
 
 
-def generate_repo_url(pullrequest: PullRequest, token: dict[str, str]) -> str:
+def get_gitea_staging_config(token: dict[str, str]) -> dict:
+    """Get content of staging.config file from repository defined in settings.
+
+    Args:
+        token (dict[str, str]): security token for Gitea API
+
+    Returns:
+        dict: JSON content of staging.config
+
+    """
+    response = retried_requests.get(
+        config.settings.gitea_staging_config_url,
+        verify=False,
+        headers=token,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def generate_repo_url(pullrequest: PullRequest, staging_config_qa_labels: dict[str, str], project: str) -> str:
     """Generate repository URL for certain pull request.
 
     Args:
         pullrequest (PullRequest): pull request for which URL needs to be generated
-        token (dict[str, str]): security token for Gitea API
+        staging_config_qa_labels (dict[str, str]): List of labels identifying
+                                                    PRs needed testing taken from staging.config
+        project (str): "StagingProject" value taken from staging.config file
 
     Returns:
         str: URL pointing to a folder with iso images generated for certain pullrequest
@@ -560,23 +576,14 @@ def generate_repo_url(pullrequest: PullRequest, token: dict[str, str]) -> str:
         NoRepoFoundError: raised when required_labels has more than one match in staging.config
 
     """
-    response = retried_requests.get(
-        staging_config_url(pullrequest.repo_name, pullrequest.branch),
-        verify=not config.settings.insecure,
-        headers=token,
-    )
-    response.raise_for_status()
-    response_json = response.json()
-    project = response_json["StagingProject"].replace(":", ":/")
-    qa_mapping = {item["Label"]: item["Name"] for item in response_json.get("QA", [])}
-    common_labels = set(qa_mapping.keys()) & pullrequest.labels
+    common_labels = set(staging_config_qa_labels.keys()) & pullrequest.labels
 
     if len(common_labels) != 1:
         log.error("Expected exactly one matching label but found %d: %s", len(common_labels), common_labels)
         raise NoRepoFoundError
 
-    label = common_labels.pop()
-    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{qa_mapping[label]}/product/iso"
+    label = staging_config_qa_labels[common_labels.pop()]
+    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{label}/product/iso"
 
 
 def add_packages_from_patchinfo(

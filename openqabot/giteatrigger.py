@@ -15,6 +15,7 @@ from openqabot.types.pullrequest import PullRequest
 
 from .loader.gitea import (
     generate_repo_url,
+    get_gitea_staging_config,
     get_open_prs,
     make_token_header,
 )
@@ -41,6 +42,11 @@ class GiteaTrigger:
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface()
         self.pr_required_labels: set[str] = set(args.pr_label.split(","))
+        staging_config: Any = get_gitea_staging_config(self.gitea_token)
+        self.gitea_project = staging_config["StagingProject"].replace(":", ":/")
+        self.staging_config_qa_labels: dict[str, str] = {
+            item["Label"]: item["Name"] for item in staging_config.get("QA", [])
+        }
         self.flavor: str = "Online-Staging"
         self.distri: str = "sle"
         self.prs: list[PullRequest] = []
@@ -82,7 +88,7 @@ class GiteaTrigger:
 
         """
         log.info("Triggering tests for PR %s", pullrequest.number)
-        repo_url = generate_repo_url(pullrequest, self.gitea_token)
+        repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.gitea_project)
         matched_iso = Crawler(verify=True).get_regex_match_from_url(repo_url, ISO_REGEX)
 
         if matched_iso:
@@ -129,12 +135,14 @@ class GiteaTrigger:
                 pullrequest = PullRequest(
                     number=pr["number"],
                     raw_labels=pr["labels"],
-                    repo_name=pr["base"]["repo"]["name"],
-                    branch=pr["base"]["label"],
                 )
-                if pullrequest.has_labels(self.pr_required_labels):
+                # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
+                # at least one for labels defined in staging.config
+                if pullrequest.has_all_labels(self.pr_required_labels) and pullrequest.has_any_label(
+                    set(self.staging_config_qa_labels.keys())
+                ):
                     self.prs.append(pullrequest)
-            except Exception:
+            except KeyError:
                 log.exception("Unable to process PR git:%s", pr_id)
         log.debug(
             "Data for %d pullrequest: %s",

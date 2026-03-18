@@ -11,8 +11,6 @@ class PullRequest:
     """Represent all information to operate Gitea pull requests."""
 
     number: int
-    repo_name: str
-    branch: str
     raw_labels: list[dict[str, Any]] = field(repr=False)
 
     labels: set[str] = field(init=False)
@@ -21,6 +19,10 @@ class PullRequest:
         """Extract names from the raw label dictionaries into a set."""
         self.labels = {label["name"] for label in self.raw_labels}
 
-    def has_labels(self, required_labels: set[str]) -> bool:
+    def has_all_labels(self, required_labels: set[str]) -> bool:
         """Check if pull request has ALL labels provided in the input list."""
         return self.labels.issuperset(required_labels)
+
+    def has_any_label(self, search_labels: set[str]) -> bool:
+        """Check if pull request has at least one label from the input set."""
+        return not self.labels.isdisjoint(search_labels)

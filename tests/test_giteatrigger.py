@@ -27,7 +27,22 @@ def mock_args() -> Namespace:
 
 
 @pytest.fixture
-def trigger(mock_args: Namespace, mocker: MockerFixture) -> GiteaTrigger:
+def _fake_get_gitea_staging_config(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "openqabot.giteatrigger.get_gitea_staging_config",
+        return_value={
+            "StagingProject": "S:SL:M:PullRequest",
+            "QA": [
+                {"Name": "SLES", "Label": "qalabel1"},
+                {"Name": "SLES-2", "Label": "qalabel2"},
+                {"Name": "SLES-3", "Label": "qalabel3"},
+            ],
+        },
+    )
+
+
+@pytest.fixture
+def trigger(mock_args: Namespace, mocker: MockerFixture, _fake_get_gitea_staging_config: MockerFixture) -> GiteaTrigger:
     """Initialize GiteaTrigger with mocked external integrations."""
     mocker.patch("openqabot.giteatrigger.OpenQAInterface")
 
@@ -90,8 +105,18 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
     mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            {"number": 1, "labels": [{"name": "needs-testing"}], "base": {"repo": {"name": "r"}, "label": "l"}},
-            {"number": 2, "labels": [{"name": "wrong-label"}], "base": {"repo": {"name": "r"}, "label": "l"}},
+            {
+                "number": 1,
+                "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
+            },
+            {
+                "number": 2,
+                "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
+            },
+            {
+                "number": 3,
+                "labels": [{"name": "needs-testing"}],
+            },
         ],
     )
 
@@ -152,6 +177,7 @@ def test_trigger_call_execution(trigger: GiteaTrigger, mocker: MockerFixture) ->
     mock_check.assert_called_once_with(mock_pr)
 
 
+@pytest.mark.usefixtures("_fake_get_gitea_staging_config")
 def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFixture) -> None:
     """Cover user provides a specific PR number via CLI."""
     mock_args.pr_number = 1337
@@ -162,7 +188,11 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
     mock_get_pr = mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            {"number": 1337, "labels": [{"name": "needs-testing"}], "base": {"repo": {"name": "r"}, "label": "l"}}
+            {
+                "number": 1337,
+                "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
+                "base": {"repo": {"name": "r"}, "label": "l"},
+            }
         ],
     )
 
@@ -173,7 +203,9 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
     assert len(trigger.prs) == 1
 
 
-def test_get_prs_by_label_loop_exception(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
+def test_get_prs_by_label_loop_exception(
+    trigger: GiteaTrigger, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
     """Cover one PR in the list triggers an exception during processing."""
     mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
@@ -185,5 +217,4 @@ def test_get_prs_by_label_loop_exception(trigger: GiteaTrigger, mocker: MockerFi
 
     trigger.get_prs_by_label()
 
-    assert len(trigger.prs) == 1
-    assert trigger.prs[0].number == 2
+    assert "Unable to process PR git:1" in caplog.text
