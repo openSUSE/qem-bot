@@ -39,6 +39,14 @@ class NoResultsError(Error):
     """Raised when no test results are found."""
 
 
+class JobNotFoundError(Error):
+    """Raised when a job is not found on openQA."""
+
+    def __init__(self, job_id: int) -> None:
+        """Initialize with the job ID that was not found."""
+        super().__init__(f"Job {job_id} not found on openQA")
+
+
 class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 

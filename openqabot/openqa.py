@@ -17,7 +17,7 @@ from openqa_client.exceptions import RequestError
 from openqabot import config
 from openqabot.utils import number_of_retries
 
-from .errors import PostOpenQAError
+from .errors import JobNotFoundError, PostOpenQAError
 from .loader.qem import update_job
 
 if TYPE_CHECKING:
@@ -98,9 +98,8 @@ class OpenQAInterface:
         except RequestError as e:
             (_, _, status_code, *_) = e.args
             if status_code == HTTPStatus.NOT_FOUND:
-                self.handle_job_not_found(job_id)
-            else:
-                log.exception("openQA API error when fetching comments for job %s", job_id)
+                raise JobNotFoundError(job_id) from e
+            log.exception("openQA API error when fetching comments for job %s", job_id)
         except requests.exceptions.RequestException:
             log.exception("openQA API error when fetching comments for job %s", job_id)
         return []

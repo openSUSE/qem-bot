@@ -232,8 +232,8 @@ def test_one_submission_failed_with_comment(caplog: pytest.LogCaptureFixture, mo
     mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
     assert approver() == 0
     expected = [
-        "SUSE:Maintenance:1:100 has at least one not-ok job in submission tests",
-        "Found not-ok, not-ignored job http://instance.qa/t100001 for submission smelt:1",
+        "Ignoring obsolete job http://instance.qa/t100001 for submission smelt:1",
+        "* SUSE:Maintenance:1:100",
         "* SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
@@ -268,18 +268,16 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
     assert approver(comment=True) == 0
     expected = [
+        "Ignoring obsolete job http://instance.qa/t100003 for submission smelt:2",
         "* SUSE:Maintenance:1:100",
+        "* SUSE:Maintenance:2:200",
         "* SUSE:Maintenance:3:300",
         "* SUSE:Maintenance:4:400",
         "Submissions to approve:",
         "Submission approval process finished",
     ]
     assert_log_messages(caplog.messages, expected)
-    assert "* SUSE:Maintenance:2:200" not in caplog.messages
-    assert "Found not-ok, not-ignored job http://instance.qa/t100003 for submission smelt:2" in caplog.messages
-    mock_comment.assert_called()
-    # Check that it was called for submission 2
-    assert any(c.args[0].rr == 200 for c in mock_comment.call_args_list)
+    mock_comment.assert_not_called()
 
 
 @responses.activate

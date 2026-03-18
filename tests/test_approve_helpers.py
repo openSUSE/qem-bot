@@ -73,23 +73,28 @@ def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pyte
     ("older_jobs_data", "log_message"),
     [
         pytest.param(
-            {"build": "20240101XY", "result": "failed", "id": 123},
+            [{"build": "20240101XY", "result": "failed", "id": 123}],
             "No suitable older jobs found",
             id="no_suitable_older_jobs",
         ),
         pytest.param(
-            {"build": "invalid-date"},
+            [{"build": "invalid-date"}],
             "Could not parse build date",
             id="invalid_date",
+        ),
+        pytest.param(
+            [],
+            "Cannot find older jobs for not-ok job 1",
+            id="empty_data",
         ),
     ],
 )
 def test_was_ok_before_no_suitable_older_jobs(
-    older_jobs_data: dict, log_message: str, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+    older_jobs_data: list[dict], log_message: str, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     approver_instance = Approver(args)
     caplog.set_level(logging.INFO)
-    mocker.patch("openqabot.openqa.OpenQAInterface.get_older_jobs", return_value={"data": [older_jobs_data]})
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_older_jobs", return_value={"data": older_jobs_data})
     mocker.patch("openqabot.approver.Approver.was_older_job_ok")
     assert not approver_instance.was_ok_before(1, 1)
     assert any(log_message in m for m in caplog.messages)

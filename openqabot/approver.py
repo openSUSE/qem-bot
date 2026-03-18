@@ -20,7 +20,7 @@ import osc.core
 from openqa_client.exceptions import RequestError
 
 from openqabot import config, dashboard
-from openqabot.errors import NoResultsError
+from openqabot.errors import JobNotFoundError, NoResultsError
 from openqabot.openqa import OpenQAInterface
 
 from .commenter import Commenter
@@ -320,9 +320,13 @@ class Approver:
             if self.is_job_passing(job_result):
                 continue
             job_id = job_result["job_id"]
-            if self.is_job_marked_acceptable_for_submission(job_id, sub):
-                job_result[f"acceptable_for_{sub}"] = True
-                self.mark_job_as_acceptable_for_submission(job_id, sub)
+            try:
+                if self.is_job_marked_acceptable_for_submission(job_id, sub):
+                    job_result[f"acceptable_for_{sub}"] = True
+                    self.mark_job_as_acceptable_for_submission(job_id, sub)
+            except JobNotFoundError:
+                job_result["obsolete"] = True
+                self.client.handle_job_not_found(job_id)
 
     def is_job_acceptable(self, sub: int, api: str, job_result: dict, submission_type: str | None = None) -> bool:
         """Determine if a job result is acceptable for approval."""
