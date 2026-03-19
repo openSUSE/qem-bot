@@ -36,6 +36,68 @@ class GroupKey:
     flavor_suffix: str
 
 
+def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
+    """Create an IncrementConfig from a dictionary entry."""
+    return IncrementConfig(
+        distri=entry["distri"],
+        version=entry.get("version", "any"),
+        flavor=entry.get("flavor", "any"),
+        arch=entry.get("arch", "any"),
+        flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
+        project_base=entry["project_base"],
+        build_project_suffix=entry["build_project_suffix"],
+        diff_project_suffix=entry["diff_project_suffix"],
+        build_listing_sub_path=entry["build_listing_sub_path"],
+        build_regex=entry["build_regex"],
+        product_regex=entry["product_regex"],
+        version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
+        packages=entry.get("packages", []),
+        archs=set(entry.get("archs", [])),
+        settings=entry.get("settings", {}),
+        additional_builds=entry.get("additional_builds", []),
+        reference_repos=entry.get("reference_repos", {}),
+        build_repo_template=entry.get("build_repo_template", ""),
+        diff_repo_template=entry.get("diff_repo_template", ""),
+    )
+
+
+def _apply_cli_overrides(configs: list[IncrementConfig], args: Namespace) -> list[IncrementConfig]:
+    """Apply CLI argument overrides to loaded configs.
+
+    Only override when CLI args differ from expected defaults (not dataclass defaults).
+    This allows configs to specify their own values while still supporting CLI overrides.
+    """
+    cli_defaults = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
+    overrides = {}
+
+    for field_name, default_value in cli_defaults.items():
+        if hasattr(args, field_name) and (arg_value := getattr(args, field_name)) != default_value:
+            overrides[field_name] = arg_value
+
+    return [replace(config, **overrides) if overrides else config for config in configs]
+
+
+def _create_from_args(args: Namespace) -> IncrementConfig:
+    """Create a single IncrementConfig from CLI arguments."""
+    all_fields = {f.name for f in fields(IncrementConfig)}
+    config_args = {field_name: getattr(args, field_name) for field_name in all_fields if hasattr(args, field_name)}
+    return IncrementConfig(**config_args)
+
+
+def from_args(args: Namespace) -> list[IncrementConfig]:
+    """Create increment configurations from command line arguments."""
+    source = args.increment_config or (
+        args.configs if getattr(args, "configs", None) and args.configs.exists() else None
+    )
+
+    if source:
+        configs = get_configs_from_path(source, "product_increments", from_config_entry)
+        if configs:
+            return _apply_cli_overrides(configs, args)
+
+    return [_create_from_args(args)]
+
+
 @dataclass
 class IncrementConfig:
     """Configuration for product increments."""
@@ -138,65 +200,3 @@ class IncrementConfig:
         """Return a string representation of the increment configuration."""
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
         return f"{self.distri} ({settings_str})"
-
-    @classmethod
-    def from_config_entry(cls, entry: dict[str, Any]) -> IncrementConfig:
-        """Create an IncrementConfig from a dictionary entry."""
-        return cls(
-            distri=entry["distri"],
-            version=entry.get("version", "any"),
-            flavor=entry.get("flavor", "any"),
-            arch=entry.get("arch", "any"),
-            flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
-            project_base=entry["project_base"],
-            build_project_suffix=entry["build_project_suffix"],
-            diff_project_suffix=entry["diff_project_suffix"],
-            build_listing_sub_path=entry["build_listing_sub_path"],
-            build_regex=entry["build_regex"],
-            product_regex=entry["product_regex"],
-            version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
-            packages=entry.get("packages", []),
-            archs=set(entry.get("archs", [])),
-            settings=entry.get("settings", {}),
-            additional_builds=entry.get("additional_builds", []),
-            reference_repos=entry.get("reference_repos", {}),
-            build_repo_template=entry.get("build_repo_template", ""),
-            diff_repo_template=entry.get("diff_repo_template", ""),
-        )
-
-    @staticmethod
-    def from_args(args: Namespace) -> list[IncrementConfig]:
-        """Create increment configurations from command line arguments."""
-        source = args.increment_config or (
-            args.configs if getattr(args, "configs", None) and args.configs.exists() else None
-        )
-
-        if source:
-            configs = get_configs_from_path(source, "product_increments", IncrementConfig.from_config_entry)
-            if configs:
-                return IncrementConfig._apply_cli_overrides(configs, args)
-
-        return [IncrementConfig._create_from_args(args)]
-
-    @staticmethod
-    def _apply_cli_overrides(configs: list[IncrementConfig], args: Namespace) -> list[IncrementConfig]:
-        """Apply CLI argument overrides to loaded configs.
-
-        Only override when CLI args differ from expected defaults (not dataclass defaults).
-        This allows configs to specify their own values while still supporting CLI overrides.
-        """
-        cli_defaults = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
-        overrides = {}
-
-        for field_name, default_value in cli_defaults.items():
-            if hasattr(args, field_name) and (arg_value := getattr(args, field_name)) != default_value:
-                overrides[field_name] = arg_value
-
-        return [replace(config, **overrides) if overrides else config for config in configs]
-
-    @staticmethod
-    def _create_from_args(args: Namespace) -> IncrementConfig:
-        """Create a single IncrementConfig from CLI arguments."""
-        all_fields = {f.name for f in fields(IncrementConfig)}
-        config_args = {field_name: getattr(args, field_name) for field_name in all_fields if hasattr(args, field_name)}
-        return IncrementConfig(**config_args)

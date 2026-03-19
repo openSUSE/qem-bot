@@ -111,7 +111,9 @@ class Commenter:
         if revisions:
             info.update(revisions)
 
-        msg = truncate(add_marker(msg, bot_name, info).strip())
+        msg = add_marker(msg, bot_name, info)
+        msg = truncate(msg.strip())
+
         comments = self.commentapi.get_comments(request_id=request_id)
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
