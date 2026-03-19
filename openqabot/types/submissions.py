@@ -24,6 +24,75 @@ if TYPE_CHECKING:
 log = getLogger("bot.types.submissions")
 
 
+def _normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
+    """Normalize repository configuration from settings."""
+    return {
+        flavor: {
+            key: (
+                {template: ProdVer.from_issue_channel(channel) for template, channel in value.items()}
+                if key == "issues"
+                else value
+            )
+            for key, value in data.items()
+        }
+        for flavor, data in config.items()
+    }
+
+
+def repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
+    """Return repository components for openSUSE or other products."""
+    if chan.product == "openSUSE-SLE":
+        return chan.product, chan.version
+    return chan.product, chan.version, chan.arch
+
+
+def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
+    """Check if a job is already scheduled in the dashboard."""
+    if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
+        return False
+
+    try:
+        url = settings.dashboard_url("api", "incident_settings", ctx.sub.id)
+        params = {"type": submission_type} if submission_type else {}
+        res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
+        jobs = res if isinstance(res, list) else []
+    except (requests.exceptions.RequestException, json.JSONDecodeError):
+        log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", ctx.sub)
+        return False
+
+    return any(
+        job["flavor"] == ctx.flavor
+        and job["arch"] == ctx.arch
+        and job["version"] == ver
+        and job.get("settings", {}).get("REPOHASH") == revs
+        for job in jobs
+    )
+
+
+def _is_invalid_package_or_channel(ctx: SubContext, matches: dict[str, list[Repos]]) -> bool:
+    sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
+    if data.get("packages") is not None and not sub.contains_package(data["packages"]):
+        return True
+    if data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"]):
+        return True
+    if not matches:
+        log.debug("Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch)
+        return True
+    return bool("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
+
+
+def _is_kernel_missing_repo(sub: Submission, flavor: str, matches: dict[str, list[Repos]]) -> bool:
+    """Check if a Kernel submission is missing its product repository."""
+    if "Kernel" not in flavor or sub.livepatch or flavor.endswith("Azure"):
+        return False
+
+    allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
+    if set(matches).isdisjoint(allowed):
+        log.warning("Submission %s skipped: Kernel submission missing product repository", sub)
+        return True
+    return False
+
+
 class SubContext(NamedTuple):
     """Context for a submission."""
 
@@ -46,62 +115,13 @@ class Submissions(BaseConf):
     def __init__(self, config: JobConfig, extrasettings: set[str]) -> None:
         """Initialize the Submissions class."""
         super().__init__(config)
-        self.flavors = self.normalize_repos(config.config["FLAVOR"])
+        self.flavors = _normalize_repos(config.config["FLAVOR"])
         self.singlearch = extrasettings
         self.valid_archs = {arch for data in self.flavors.values() for arch in data["archs"]}
 
     def __repr__(self) -> str:
         """Return a string representation of the Submissions."""
         return f"<Submissions product: {self.product}>"
-
-    @staticmethod
-    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        """Normalize repository configuration from settings."""
-        return {
-            flavor: {
-                key: (
-                    {template: ProdVer.from_issue_channel(channel) for template, channel in value.items()}
-                    if key == "issues"
-                    else value
-                )
-                for key, value in data.items()
-            }
-            for flavor, data in config.items()
-        }
-
-    @staticmethod
-    def repo_osuse(chan: Repos) -> tuple[str, str, str] | tuple[str, str]:
-        """Return repository components for openSUSE or other products."""
-        if chan.product == "openSUSE-SLE":
-            return chan.product, chan.version
-        return chan.product, chan.version, chan.arch
-
-    @staticmethod
-    def _get_scheduled_jobs(sub_id: int, submission_type: str | None = None) -> list[dict[str, Any]]:
-        """Fetch scheduled jobs from the dashboard."""
-        try:
-            url = settings.dashboard_url("api", "incident_settings", sub_id)
-            params = {"type": submission_type} if submission_type else {}
-            res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
-            return res if isinstance(res, list) else []
-        except (requests.exceptions.RequestException, json.JSONDecodeError):
-            log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub_id)
-            return []
-
-    @staticmethod
-    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
-        """Check if a job is already scheduled in the dashboard."""
-        if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
-            return False
-
-        jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
-        return any(
-            job["flavor"] == ctx.flavor
-            and job["arch"] == ctx.arch
-            and job["version"] == ver
-            and job.get("settings", {}).get("REPOHASH") == revs
-            for job in jobs
-        )
 
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
@@ -110,7 +130,7 @@ class Submissions(BaseConf):
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
             if get_channel_type(chan.product) == ChannelType.SLFO
-            else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
+            else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(repo_osuse(chan))}"
         )
 
     def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # noqa: PLR6301
@@ -138,45 +158,19 @@ class Submissions(BaseConf):
             return True
         return sub.staging
 
-    @staticmethod
-    def _is_invalid_package_or_channel(ctx: SubContext, matches: dict[str, list[Repos]]) -> bool:
-        sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
-        if data.get("packages") is not None and not sub.contains_package(data["packages"]):
-            return True
-        if data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"]):
-            return True
-        if not matches:
-            log.debug("Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch)
-            return True
-        return bool("required_issues" in data and set(matches).isdisjoint(data["required_issues"]))
-
-    @staticmethod
-    def _is_kernel_missing_repo(sub: Submission, flavor: str, matches: dict[str, list[Repos]]) -> bool:
-        """Check if a Kernel submission is missing its product repository."""
-        if "Kernel" not in flavor or sub.livepatch or flavor.endswith("Azure"):
-            return False
-
-        allowed = {"OS_TEST_ISSUES", "LTSS_TEST_ISSUES", "BASE_TEST_ISSUES", "RT_TEST_ISSUES", "COCO_TEST_ISSUES"}
-        if set(matches).isdisjoint(allowed):
-            log.warning("Submission %s skipped: Kernel submission missing product repository", sub)
-            return True
-        return False
-
     def should_skip(self, ctx: SubContext, cfg: SubConfig, matches: dict[str, list[Repos]]) -> bool:
         """Check if a submission context should be skipped."""
         if self._is_invalid_status(ctx.sub, ctx.arch, ctx.flavor):
             return True
 
-        if self._is_invalid_package_or_channel(ctx, matches):
+        if _is_invalid_package_or_channel(ctx, matches):
             return True
 
-        if not cfg.ignore_onetime and self.is_scheduled_job(
-            ctx, self.settings["VERSION"], submission_type=ctx.sub.type
-        ):
+        if not cfg.ignore_onetime and is_scheduled_job(ctx, self.settings["VERSION"], submission_type=ctx.sub.type):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
             return True
 
-        return self._is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
+        return _is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
 
     def get_base_settings(self, ctx: SubContext, revs: int, cfg: SubConfig) -> dict[str, Any]:
         """Return base openQA settings for a submission."""

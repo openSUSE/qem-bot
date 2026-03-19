@@ -228,7 +228,7 @@ def test_sub_rev_non_matching_version(mocker: MockerFixture) -> None:
     assert ArchVer("x86_64", "unknown") in sub.revisions
 
 
-def test_sub_rev_empty_channels() -> None:
+def test_sub_rev_empty_channels(mocker: MockerFixture) -> None:
     sub = MagicMock(spec=Submission)
     sub.id = 123
     sub.channels = []
@@ -236,7 +236,7 @@ def test_sub_rev_empty_channels() -> None:
     sub.rev_logged = False
     sub.project = "project"
     sub.compute_revisions_for_product_repo = Submission.compute_revisions_for_product_repo.__get__(sub, Submission)
-    sub.rev = Submission.rev
+    mocker.patch("openqabot.types.submission.calculate_revisions", side_effect=NoRepoFoundError)
     assert not sub.compute_revisions_for_product_repo(None, None)
 
 
@@ -290,8 +290,8 @@ def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     submission.rev_cache_params = (None, None, None)
     submission.revisions = {"some": "data"}  # ty: ignore[invalid-assignment]
 
-    # Should return True without calling rev
-    mock_rev = mocker.patch.object(submission, "rev")
+    # Should return True without calling calculate_revisions
+    mock_rev = mocker.patch("openqabot.types.submission.calculate_revisions")
     assert submission.compute_revisions_for_product_repo(None, None)
     mock_rev.assert_not_called()
 
@@ -302,8 +302,8 @@ def test_compute_revisions_cache_hit_none(mocker: MockerFixture) -> None:
     # Trigger setting cache params
     submission.compute_revisions_for_product_repo(None, None)
     submission.revisions = None
-    # Should return False without calling rev
-    mock_rev = mocker.patch.object(submission, "rev")
+    # Should return False without calling calculate_revisions
+    mock_rev = mocker.patch("openqabot.types.submission.calculate_revisions")
     assert not submission.compute_revisions_for_product_repo(None, None)
     mock_rev.assert_not_called()
 
@@ -323,8 +323,8 @@ def test_compute_revisions_logging_once(mocker: MockerFixture, caplog: pytest.Lo
     data = deepcopy(test_data)
 
     sub = Submission(data)
-    # Mock rev to raise NoRepoFoundError
-    mocker.patch.object(sub, "rev", side_effect=NoRepoFoundError("test error"))
+    # Mock calculate_revisions to raise NoRepoFoundError
+    mocker.patch("openqabot.types.submission.calculate_revisions", side_effect=NoRepoFoundError("test error"))
 
     # First call should log
     assert not sub.compute_revisions_for_product_repo(None, None)

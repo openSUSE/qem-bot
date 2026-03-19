@@ -19,6 +19,39 @@ if TYPE_CHECKING:
 log = getLogger("bot.smeltsync")
 
 
+def review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Find the latest relevant release request from a set of requests."""
+    valid = ("new", "review", "accepted", "revoked")
+    if not request_set:
+        return None
+    rr = max(request_set, key=itemgetter("requestId"))
+    return rr if rr["status"]["name"] in valid else None
+
+
+def is_inreview(rr_number: dict[str, Any]) -> bool:
+    """Check if a release request is currently in review."""
+    return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
+
+
+def is_revoked(rr_number: dict[str, Any]) -> bool:
+    """Check if a release request has been revoked."""
+    return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
+
+
+def is_accepted(rr_number: dict[str, Any]) -> bool:
+    """Check if a release request has been accepted or is new."""
+    return rr_number["status"]["name"] in {"accepted", "new"}
+
+
+def has_qam_review(rr_number: dict[str, Any]) -> bool:
+    """Check if a release request has an active QAM review."""
+    if not rr_number["reviewSet"]:
+        return False
+    rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
+    review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
+    return bool(review) and review[0]["status"]["name"] in {"review", "new"}
+
+
 class SMELTSync:
     """Synchronization of SMELT incidents to dashboard."""
 
@@ -41,39 +74,6 @@ class SMELTSync:
             return 0
         return update_submissions(data, retry=self.retry)
 
-    @staticmethod
-    def review_rrequest(request_set: list[dict[str, Any]]) -> dict[str, Any] | None:
-        """Find the latest relevant release request from a set of requests."""
-        valid = ("new", "review", "accepted", "revoked")
-        if not request_set:
-            return None
-        rr = max(request_set, key=itemgetter("requestId"))
-        return rr if rr["status"]["name"] in valid else None
-
-    @staticmethod
-    def is_inreview(rr_number: dict[str, Any]) -> bool:
-        """Check if a release request is currently in review."""
-        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "review"
-
-    @staticmethod
-    def is_revoked(rr_number: dict[str, Any]) -> bool:
-        """Check if a release request has been revoked."""
-        return bool(rr_number["reviewSet"]) and rr_number["status"]["name"] == "revoked"
-
-    @staticmethod
-    def is_accepted(rr_number: dict[str, Any]) -> bool:
-        """Check if a release request has been accepted or is new."""
-        return rr_number["status"]["name"] in {"accepted", "new"}
-
-    @staticmethod
-    def has_qam_review(rr_number: dict[str, Any]) -> bool:
-        """Check if a release request has an active QAM review."""
-        if not rr_number["reviewSet"]:
-            return False
-        rr = (r for r in rr_number["reviewSet"] if r["assignedByGroup"])
-        review = [r for r in rr if r["assignedByGroup"]["name"] == "qam-openqa"]
-        return bool(review) and review[0]["status"]["name"] in {"review", "new"}
-
     @classmethod
     def create_record(cls, sub: dict[str, Any]) -> dict[str, Any]:
         """Create a dashboard-compatible record from a SMELT incident."""
@@ -86,12 +86,12 @@ class SMELTSync:
         revoked = False
         rr_id = None
 
-        rr = cls.review_rrequest(sub["requestSet"])
+        rr = review_rrequest(sub["requestSet"])
         if rr:
-            in_review = cls.is_inreview(rr)
-            approved = cls.is_accepted(rr)
-            in_review_qam = cls.has_qam_review(rr)
-            revoked = cls.is_revoked(rr)
+            in_review = is_inreview(rr)
+            approved = is_accepted(rr)
+            in_review_qam = has_qam_review(rr)
+            revoked = is_revoked(rr)
             rr_id = rr["requestId"]
 
         if approved or revoked:

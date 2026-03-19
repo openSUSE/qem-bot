@@ -10,7 +10,12 @@ from unittest.mock import ANY
 import pytest
 from pytest_mock import MockerFixture
 
-from openqabot.loader.incrementconfig import IncrementConfig
+from openqabot.loader.incrementconfig import (
+    from_args,
+    from_config_entry,
+    from_config_file,
+    from_config_path,
+)
 
 
 def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -18,7 +23,7 @@ def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) ->
     invalid_yaml_file.write_text("key: value:")
 
     mock_logger = mocker.patch("openqabot.loader.incrementconfig.log")
-    configs = list(IncrementConfig.from_config_file(invalid_yaml_file))
+    configs = list(from_config_file(invalid_yaml_file))
 
     assert configs == []
     mock_logger.info.assert_any_call("Increment configuration skipped: Could not load '%s': %s", invalid_yaml_file, ANY)
@@ -27,7 +32,7 @@ def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) ->
 def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_config")
     path = Path("tests/fixtures/config-increment-approver")
-    configs = [*IncrementConfig.from_config_path(path)]
+    configs = [*from_config_path(path)]
     assert configs[0].distri == "foo"
     assert configs[0].version == "any"
     assert configs[0].flavor == "any"
@@ -50,16 +55,14 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
 
     path = Path("tests/fixtures/config")
     caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
-    configs = IncrementConfig.from_config_path(path)
+    configs = from_config_path(path)
     assert [*configs] == []
     assert "File 'tests/fixtures/config/01_single.yml' skipped: Not a valid increment configuration" in caplog.text
     assert "Loading increment configuration from 'tests/fixtures/config/03_no_tes" in caplog.text
 
 
 def test_config_parsing_from_args() -> None:
-    config = IncrementConfig.from_args(
-        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
-    )
+    config = from_args(Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments"))
     assert len(config) == 1
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"
@@ -72,9 +75,7 @@ def test_config_parsing_from_args() -> None:
 @pytest.mark.parametrize(("config_index", "expected_distri"), [(0, "foo"), (1, "bar")])
 def test_config_parsing_from_args_with_path(config_index: int, expected_distri: str) -> None:
     path = Path("tests/fixtures/config-increment-approver")
-    configs = IncrementConfig.from_args(
-        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
-    )
+    configs = from_args(Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments"))
     assert len(configs) == 2
     config = configs[config_index]
     assert config.distri == expected_distri
@@ -96,5 +97,5 @@ def test_config_parsing_reference_repos() -> None:
         "product_regex": "pregex",
         "reference_repos": {"SLES": "REPO1", "SLES-SAP": "REPO2"},
     }
-    config = IncrementConfig.from_config_entry(entry)
+    config = from_config_entry(entry)
     assert config.reference_repos == {"SLES": "REPO1", "SLES-SAP": "REPO2"}

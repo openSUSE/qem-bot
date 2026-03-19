@@ -11,7 +11,7 @@ from functools import lru_cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import osc.conf
 import osc.core
@@ -24,7 +24,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import IncrementConfig
+from .loader.incrementconfig import IncrementConfig, from_args
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
@@ -37,6 +37,122 @@ if TYPE_CHECKING:
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
+
+
+@lru_cache(maxsize=128)
+def get_regex_match(pattern: str, string: str) -> re.Match | None:
+    """Compile and match a regex pattern."""
+    match = None
+    try:
+        match = re.search(pattern, string)
+    except re.error:
+        log.warning(
+            "Pattern `%s` did not compile successfully. Considering as non-match and returning empty result.",
+            pattern,
+        )
+    return match
+
+
+def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
+    """Check if all openQA jobs are finished."""
+    actual_states = {state for result in results for state in result}
+    pending_states = actual_states - final_states
+    if len(actual_states) == 0:
+        build_info.log_no_jobs(params)
+        return None
+    if len(pending_states):
+        build_info.log_pending_jobs(pending_states)
+        return False
+    return True
+
+
+def populate_params_from_env(params: dict[str, str], env_var: str) -> None:
+    """Populate parameters from an environment variable."""
+    value = os.environ.get(env_var, "")
+    if len(value) > 0:
+        params["__" + env_var] = value
+
+
+def match_packages(package_diff: set[Package], packages_to_find: list[str]) -> bool:
+    """Check if any of the packages to find are present in the package diff."""
+    if len(packages_to_find) == 0:
+        return True
+    names_of_changed_packages = {p.name for p in package_diff}
+    return any(package in names_of_changed_packages for package in packages_to_find)
+
+
+def _get_diff_project(config_inc: IncrementConfig, build_info: BuildInfo | None) -> tuple[str, bool]:
+    """Return the project to compute diff against and whether it is a reference repo."""
+    diff_project = config_inc.diff_project()
+    if build_info and build_info.flavor in config_inc.reference_repos:
+        return config_inc.reference_repos[build_info.flavor], True
+    return diff_project, False
+
+
+def _match_package_name_and_version(package: Package, additional_build: dict[str, Any]) -> re.Match | None:
+    """Match package name and version against regexes."""
+    package_name_regex = additional_build.get("package_name_regex") or additional_build.get("regex", "")
+    match = get_regex_match(package_name_regex, package.name)
+    if match is None:
+        return None
+    package_version_regex = additional_build.get("package_version_regex")
+    if package_version_regex is not None and not get_regex_match(package_version_regex, package.version):
+        return None
+    return match
+
+
+def _match_additional_build(
+    package: Package,
+    additional_build: dict[str, Any],
+    build_info: BuildInfo,
+) -> dict[str, str] | None:
+    """Check if an additional build matches a package and return extra parameters."""
+    package_name_match = _match_package_name_and_version(package, additional_build)
+    if package_name_match is None:
+        return None
+
+    groups = package_name_match.groupdict()
+    extra_build = [build_info.build, additional_build["build_suffix"]]
+    extra_params: dict[str, str] = {}
+
+    if kind := groups.get("kind"):
+        extra_build.append(kind)
+
+    if kernel_version := groups.get("kernel_version"):
+        kernel_version = kernel_version.replace("_", ".")
+        extra_build.append(kernel_version)
+        extra_params["KERNEL_VERSION"] = kernel_version
+
+    extra_params["BUILD"] = "-".join(extra_build)
+    extra_params.update(cast("dict[str, str]", additional_build["settings"]))
+    return extra_params
+
+
+def extra_builds_for_package(
+    package: Package,
+    config_inc: IncrementConfig,
+    build_info: BuildInfo,
+) -> dict[str, str] | None:
+    """Determine extra build parameters for a specific package."""
+    if re.match(r"^1(?:\..*)?$", package.version):
+        return None
+    if "debug" in package.name or package.arch in {"src", "nosrc"}:
+        return None
+
+    for additional_build in config_inc.additional_builds:
+        if (res := _match_additional_build(package, additional_build, build_info)) is not None:
+            return res
+    return None
+
+
+def extra_builds_for_additional_builds(
+    package_diff: set[Package],
+    config_inc: IncrementConfig,
+    build_info: BuildInfo,
+) -> list[dict[str, str]]:
+    """Determine extra builds for all additional builds in the configuration."""
+    return [b for p in package_diff if (b := extra_builds_for_package(p, config_inc, build_info)) is not None]
+
 
 OpenQAResult = dict[str, dict[str, dict[str, Any]]]
 OpenQAResults = list[OpenQAResult]
@@ -60,7 +176,7 @@ class IncrementApprover:
         self.requests_to_approve = {}
         # safeguard us from using same job ID for 2 requests
         self.unique_jobid_request_pair = {}
-        self.config = IncrementConfig.from_args(args)
+        self.config = from_args(args)
         self.comment = getattr(args, "comment", False)
 
         self.commenter = Commenter(args, submissions=[])
@@ -87,20 +203,6 @@ class IncrementApprover:
                     f"{self.unique_jobid_request_pair[jobid]}, but now requested for {request.reqid}"
                 )
                 raise AmbiguousApprovalStatusError(msg)
-
-    @staticmethod
-    @lru_cache(maxsize=128)
-    def get_regex_match(pattern: str, string: str) -> re.Match | None:
-        """Compile and match a regex pattern."""
-        match = None
-        try:
-            match = re.search(pattern, string)
-        except re.error:
-            log.warning(
-                "Pattern `%s` did not compile successfully. Considering as non-match and returning empty result.",
-                pattern,
-            )
-        return match
 
     def _filter_jobs(self, jobs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Filter jobs within a state, removing those in devel groups."""
@@ -130,19 +232,6 @@ class IncrementApprover:
         ]
         log.debug("Job statistics:\n%s", pformat(res))
         return res
-
-    @staticmethod
-    def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
-        """Check if all openQA jobs are finished."""
-        actual_states = {state for result in results for state in result}
-        pending_states = actual_states - final_states
-        if len(actual_states) == 0:
-            build_info.log_no_jobs(params)
-            return None
-        if len(pending_states):
-            build_info.log_pending_jobs(pending_states)
-            return False
-        return True
 
     def is_in_devel_group(self, job_id: int) -> bool:
         """Fetch job details and check if it belongs to a development group."""
@@ -222,85 +311,6 @@ class IncrementApprover:
             log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
 
-    def _match_additional_build(
-        self,
-        package: Package,
-        additional_build: dict[str, Any],
-        build_info: BuildInfo,
-    ) -> dict[str, str] | None:
-        """Check if an additional build matches a package and return extra parameters."""
-        package_name_match = self._match_package_name_and_version(package, additional_build)
-        if package_name_match is None:
-            return None
-
-        groups = package_name_match.groupdict()
-        extra_build = [f"PI-{build_info.build}", additional_build["build_suffix"]]
-        extra_params: dict[str, str] = {}
-
-        if kind := groups.get("kind"):
-            extra_build.append(kind)
-
-        if kernel_version := groups.get("kernel_version"):
-            kernel_version = kernel_version.replace("_", ".")
-            extra_build.append(kernel_version)
-            extra_params["KERNEL_VERSION"] = kernel_version
-
-        extra_params["BUILD"] = "-".join(extra_build)
-        extra_params.update(additional_build["settings"])
-        return extra_params
-
-    def _match_package_name_and_version(self, package: Package, additional_build: dict[str, Any]) -> re.Match | None:
-        """Match package name and version against regexes."""
-        package_name_regex = additional_build.get("package_name_regex") or additional_build.get("regex", "")
-        match = self.get_regex_match(package_name_regex, package.name)
-        if match is None:
-            return None
-        package_version_regex = additional_build.get("package_version_regex")
-        if package_version_regex is not None and not self.get_regex_match(package_version_regex, package.version):
-            return None
-        return match
-
-    def extra_builds_for_package(
-        self,
-        package: Package,
-        config_inc: IncrementConfig,
-        build_info: BuildInfo,
-    ) -> dict[str, str] | None:
-        """Determine extra build parameters for a specific package."""
-        if re.match(r"^1(?:\..*)?$", package.version):
-            return None
-        if "debug" in package.name or package.arch in {"src", "nosrc"}:
-            return None
-
-        for additional_build in config_inc.additional_builds:
-            if (res := self._match_additional_build(package, additional_build, build_info)) is not None:
-                return res
-        return None
-
-    def extra_builds_for_additional_builds(
-        self,
-        package_diff: set[Package],
-        config_inc: IncrementConfig,
-        build_info: BuildInfo,
-    ) -> list[dict[str, str]]:
-        """Determine extra builds for all additional builds in the configuration."""
-        return [b for p in package_diff if (b := self.extra_builds_for_package(p, config_inc, build_info)) is not None]
-
-    @staticmethod
-    def populate_params_from_env(params: dict[str, str], env_var: str) -> None:
-        """Populate parameters from an environment variable."""
-        value = os.environ.get(env_var, "")
-        if len(value) > 0:
-            params["__" + env_var] = value
-
-    @staticmethod
-    def match_packages(package_diff: set[Package], packages_to_find: list[str]) -> bool:
-        """Check if any of the packages to find are present in the package diff."""
-        if len(packages_to_find) == 0:
-            return True
-        names_of_changed_packages = {p.name for p in package_diff}
-        return any(package in names_of_changed_packages for package in packages_to_find)
-
     def get_package_diff_from_source_report(self, request: osc.core.Request) -> defaultdict[str, set[Package]]:
         """Compute package diff using source reports."""
         diff_key = "request:" + str(request.reqid)
@@ -318,6 +328,7 @@ class IncrementApprover:
     ) -> defaultdict[str, set[Package]]:
         """Compute package diff by comparing repositories."""
         build_project = config_inc.build_project() + repo_sub_path
+        diff_project, is_reference_repo = _get_diff_project(config_inc, build_info)
 
         is_reference_repo = False
         diff_project = config_inc.diff_project()
@@ -392,17 +403,17 @@ class IncrementApprover:
             "INCREMENT_REPO": config_inc.build_project_url(config.settings.download_base_url) + repo_sub_path,
             **OBSOLETE_PARAMS,
         }
-        IncrementApprover.populate_params_from_env(base_params, "CI_JOB_URL")
+        populate_params_from_env(base_params, "CI_JOB_URL")
         base_params.update(config_inc.settings)
         extra_params = []
         if config_inc.diff_project_suffix != "none":
             package_diff = self.get_package_diff(request, config_inc, repo_sub_path, build_info)
             relevant_diff = package_diff[build_info.arch] | package_diff["noarch"]
             # schedule base params if package filter is empty for matching
-            if IncrementApprover.match_packages(relevant_diff, config_inc.packages):
+            if match_packages(relevant_diff, config_inc.packages):
                 extra_params.append({})
             # schedule additional builds based on changed packages
-            extra_params.extend(self.extra_builds_for_additional_builds(relevant_diff, config_inc, build_info))
+            extra_params.extend(extra_builds_for_additional_builds(relevant_diff, config_inc, build_info))
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
@@ -497,7 +508,7 @@ class IncrementApprover:
             approval_status.reasons_to_disapprove.append(f"Re-scheduling jobs for {info_str}")
             return self.schedule_openqa_jobs(build_info, params)
 
-        openqa_jobs_ready = self.check_openqa_jobs(filtered_results, build_info, params)
+        openqa_jobs_ready = check_openqa_jobs(filtered_results, build_info, params)
         if openqa_jobs_ready:
             ok_jobs, reasons, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
             builds = {BuildIdentifier.from_params(p) for p in params if "BUILD" in p}
@@ -535,7 +546,7 @@ class IncrementApprover:
             config_inc.build_regex,
             config_inc.product_regex,
             config_inc.version_regex,
-            self.get_regex_match,
+            get_regex_match,
         ):
             if len(config_inc.archs) > 0 and build_info.arch not in config_inc.archs:
                 continue

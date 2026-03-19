@@ -14,7 +14,7 @@ import osc.core
 from lxml import etree  # ty: ignore[unresolved-import]
 
 from openqabot import config
-from openqabot.repodiff import Package, RepoDiff
+from openqabot.repodiff import Package, compute_diff_for_packages
 from openqabot.types.types import OBSBinary
 
 log = getLogger("bot.loader.sourcereport")
@@ -105,4 +105,4 @@ def compute_packages_of_request_from_source_report(
         load_packages_from_source_report(
             action, OBSBinary(action.src_project, action.src_package, "product", "local"), repo_b
         )
-    return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
+    return compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)

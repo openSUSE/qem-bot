@@ -33,6 +33,34 @@ arch_tag = ns + "arch"
 primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
 
 
+def decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
+    """Decompress repository metadata if it is compressed."""
+    if repo_data_file.endswith(".gz"):
+        return gzip.decompress(repo_data_raw)
+    if repo_data_file.endswith(".zst"):
+        return pyzstd.decompress(repo_data_raw)
+    return repo_data_raw
+
+
+def compute_diff_for_packages(
+    repo_a: str,
+    packages_by_arch_a: defaultdict[str, set[Package]],
+    repo_b: str,
+    packages_by_arch_b: defaultdict[str, set[Package]],
+) -> tuple[defaultdict[str, set[Package]], int]:
+    """Compute the difference between two sets of packages grouped by architecture."""
+    diff_by_arch = defaultdict(set)
+    count = 0
+    for arch, packages_b in packages_by_arch_b.items():
+        packages_a = packages_by_arch_a[arch]
+        log.debug("Found %d packages for architecture %s in repository %s", len(packages_a), arch, repo_a)
+        log.debug("Found %d packages for architecture %s in repository %s", len(packages_b), arch, repo_b)
+        diff = packages_b - packages_a
+        count += len(diff)
+        diff_by_arch[arch] = diff
+    return (diff_by_arch, count)
+
+
 class Package(NamedTuple):
     """Information about a package."""
 
@@ -58,15 +86,6 @@ class RepoDiff:
     def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
         """Find the primary XML metadata file in a list of repository files."""
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
-
-    @staticmethod
-    def decompress(repo_data_file: str, repo_data_raw: bytes) -> bytes:
-        """Decompress repository metadata if it is compressed."""
-        if repo_data_file.endswith(".gz"):
-            return gzip.decompress(repo_data_raw)
-        if repo_data_file.endswith(".zst"):
-            return pyzstd.decompress(repo_data_raw)
-        return repo_data_raw
 
     def request_and_dump(
         self,
@@ -123,7 +142,7 @@ class RepoDiff:
         repo_data_raw = self.request_and_dump(url + repo_data_file, repo_data_file)
         if not isinstance(repo_data_raw, bytes):
             return None
-        repo_data = RepoDiff.decompress(repo_data_file, repo_data_raw)
+        repo_data = decompress(repo_data_file, repo_data_raw)
         log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 
@@ -147,31 +166,12 @@ class RepoDiff:
             packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
         return packages_by_arch
 
-    @staticmethod
-    def compute_diff_for_packages(
-        repo_a: str,
-        packages_by_arch_a: defaultdict[str, set[Package]],
-        repo_b: str,
-        packages_by_arch_b: defaultdict[str, set[Package]],
-    ) -> tuple[defaultdict[str, set[Package]], int]:
-        """Compute the difference between two sets of packages grouped by architecture."""
-        diff_by_arch = defaultdict(set)
-        count = 0
-        for arch, packages_b in packages_by_arch_b.items():
-            packages_a = packages_by_arch_a[arch]
-            log.debug("Found %d packages for architecture %s in repository %s", len(packages_a), arch, repo_a)
-            log.debug("Found %d packages for architecture %s in repository %s", len(packages_b), arch, repo_b)
-            diff = packages_b - packages_a
-            count += len(diff)
-            diff_by_arch[arch] = diff
-        return (diff_by_arch, count)
-
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
         """Compute the package diff between two OBS projects."""
         try:
             packages_by_arch_a = self.load_packages(repo_a)
             packages_by_arch_b = self.load_packages(repo_b)
-            return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
+            return compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
         except Exception:
             log.exception("Repo diff computation failed for projects %s and %s", repo_a, repo_b)
             return defaultdict(set), 0

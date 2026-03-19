@@ -44,12 +44,6 @@ class BaseConf(ABC):
         """Run the configuration's main processing logic."""
         # pragma: no cover
 
-    @staticmethod
-    @abstractmethod
-    def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:
-        """Normalize repository configuration."""
-        # pragma: no cover
-
     def filter_embargoed(self, flavor: str) -> bool:
         """Check if embargoed submissions should be filtered out for a given flavor."""
         return any(k.startswith("PUBLIC") for k in self.settings) or any(

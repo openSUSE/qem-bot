@@ -26,6 +26,100 @@ DEFAULT_FLAVOR_SUFFIX = "Increments"
 DEFAULT_VERSION_REGEX = r"[\d.]+"
 
 
+def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
+    """Create an IncrementConfig from a dictionary entry."""
+    return IncrementConfig(
+        distri=entry["distri"],
+        version=entry.get("version", "any"),
+        flavor=entry.get("flavor", "any"),
+        arch=entry.get("arch", "any"),
+        flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
+        project_base=entry["project_base"],
+        build_project_suffix=entry["build_project_suffix"],
+        diff_project_suffix=entry["diff_project_suffix"],
+        build_listing_sub_path=entry["build_listing_sub_path"],
+        build_regex=entry["build_regex"],
+        product_regex=entry["product_regex"],
+        version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
+        packages=entry.get("packages", []),
+        archs=set(entry.get("archs", [])),
+        settings=entry.get("settings", {}),
+        additional_builds=entry.get("additional_builds", []),
+        reference_repos=entry.get("reference_repos", {}),
+        build_repo_template=entry.get("build_repo_template", ""),
+        diff_repo_template=entry.get("diff_repo_template", ""),
+    )
+
+
+def from_config_file(file_path: Path, *, load_defaults: bool = True) -> Iterator[IncrementConfig]:
+    """Load increment configurations from a YAML file."""
+    try:
+        log.debug("Loading increment configuration from '%s'", file_path)
+        yaml = YAML(typ="safe").load(file_path)
+        items = list(
+            map(
+                from_config_entry,
+                yaml.get("product_increments", []),
+            )
+        )
+        # Apply default settings to all items
+        if load_defaults:
+            defaults = yaml.get("settings", {})
+            for item in items:
+                item.settings = defaults | item.settings
+    except AttributeError:
+        log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
+        return iter(())
+    except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
+        log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
+        return iter(())
+    else:
+        return iter(items)
+
+
+def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
+    """Load increment configurations from a file or directory."""
+    return chain.from_iterable(from_config_file(p) for p in get_yml_list(file_or_dir_path))
+
+
+def from_args(args: Namespace) -> list[IncrementConfig]:
+    """Create increment configurations from command line arguments."""
+    if args.increment_config:
+        configs = list(from_config_path(args.increment_config))
+        # Apply CLI filter overrides to YAML-loaded configs if they differ from defaults
+        overrides = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
+        for c in configs:
+            for field, default in overrides.items():
+                if (val := getattr(args, field, default)) != default:
+                    setattr(c, field, val)
+        return configs
+    # Create a dictionary from arguments for IncrementConfig
+    config_args = {
+        field_name: getattr(args, field_name)
+        for field_name in [
+            "distri",
+            "version",
+            "flavor",
+            "arch",
+            "flavor_suffix",
+            "project_base",
+            "build_project_suffix",
+            "diff_project_suffix",
+            "build_listing_sub_path",
+            "build_regex",
+            "product_regex",
+            "version_regex",
+            "packages",
+            "archs",
+            "settings",
+            "additional_builds",
+            "reference_repos",
+        ]
+        if hasattr(args, field_name)
+    }
+    return [IncrementConfig(**config_args)]
+
+
 @dataclass
 class IncrementConfig:
     """Configuration for product increments."""
@@ -74,97 +168,3 @@ class IncrementConfig:
         """Return a string representation of the increment configuration."""
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
         return f"{self.distri} ({settings_str})"
-
-    @staticmethod
-    def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
-        """Create an IncrementConfig from a dictionary entry."""
-        return IncrementConfig(
-            distri=entry["distri"],
-            version=entry.get("version", "any"),
-            flavor=entry.get("flavor", "any"),
-            arch=entry.get("arch", "any"),
-            flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
-            project_base=entry["project_base"],
-            build_project_suffix=entry["build_project_suffix"],
-            diff_project_suffix=entry["diff_project_suffix"],
-            build_listing_sub_path=entry["build_listing_sub_path"],
-            build_regex=entry["build_regex"],
-            product_regex=entry["product_regex"],
-            version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
-            packages=entry.get("packages", []),
-            archs=set(entry.get("archs", [])),
-            settings=entry.get("settings", {}),
-            additional_builds=entry.get("additional_builds", []),
-            reference_repos=entry.get("reference_repos", {}),
-            build_repo_template=entry.get("build_repo_template", ""),
-            diff_repo_template=entry.get("diff_repo_template", ""),
-        )
-
-    @staticmethod
-    def from_config_file(file_path: Path, *, load_defaults: bool = True) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a YAML file."""
-        try:
-            log.debug("Loading increment configuration from '%s'", file_path)
-            yaml = YAML(typ="safe").load(file_path)
-            items = list(
-                map(
-                    IncrementConfig.from_config_entry,
-                    yaml.get("product_increments", []),
-                )
-            )
-            # Apply default settings to all items
-            if load_defaults:
-                defaults = yaml.get("settings", {})
-                for item in items:
-                    item.settings = defaults | item.settings
-        except AttributeError:
-            log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
-            return iter(())
-        except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
-            log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
-            return iter(())
-        else:
-            return iter(items)
-
-    @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a file or directory."""
-        return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
-
-    @staticmethod
-    def from_args(args: Namespace) -> list[IncrementConfig]:
-        """Create increment configurations from command line arguments."""
-        if args.increment_config:
-            configs = list(IncrementConfig.from_config_path(args.increment_config))
-            # Apply CLI filter overrides to YAML-loaded configs if they differ from defaults
-            overrides = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
-            for c in configs:
-                for field, default in overrides.items():
-                    if (val := getattr(args, field, default)) != default:
-                        setattr(c, field, val)
-            return configs
-        # Create a dictionary from arguments for IncrementConfig
-        config_args = {
-            field_name: getattr(args, field_name)
-            for field_name in [
-                "distri",
-                "version",
-                "flavor",
-                "arch",
-                "flavor_suffix",
-                "project_base",
-                "build_project_suffix",
-                "diff_project_suffix",
-                "build_listing_sub_path",
-                "build_regex",
-                "product_regex",
-                "version_regex",
-                "packages",
-                "archs",
-                "settings",
-                "additional_builds",
-                "reference_repos",
-            ]
-            if hasattr(args, field_name)
-        }
-        return [IncrementConfig(**config_args)]

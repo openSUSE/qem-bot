@@ -45,6 +45,10 @@ check-conventions: ## Check for banned coding patterns
 		echo "   Fix: Use the 'mocker' fixture (pytest-mock) or a 'with patch():' context manager."; \
 		exit 1; \
 	fi
+	@if git grep -nE '^\s*@staticmethod' openqabot/; then \
+		echo "Error: @staticmethod detected. Use free functions instead."; \
+		exit 1; \
+	fi
 
 .PHONY: check-code-health
 check-code-health: ## Find dead code (vulture)
