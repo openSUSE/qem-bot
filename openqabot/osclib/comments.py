@@ -28,6 +28,20 @@ def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
     }
 
 
+def _parse_info(info_str: str) -> dict[str, str]:
+    """Parse the info string from a comment marker."""
+    if not (stripped := info_str.strip()):
+        return {}
+    return dict(pair.split("=") for pair in stripped.split())
+
+
+def _info_matches(info: dict[str, str], info_match: dict[str, Any] | None) -> bool:
+    """Check if parsed info matches the criteria."""
+    if not info_match:
+        return True
+    return all(value is None or info.get(key) == value for key, value in info_match.items())
+
+
 def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
     """Add bot marker to comment that can be used to find comment."""
     info_str = ""
@@ -141,20 +155,6 @@ class CommentAPI:
             comments[c["id"]] = c
         return comments
 
-    @staticmethod
-    def _parse_info(info_str: str) -> dict[str, str]:
-        """Parse the info string from a comment marker."""
-        if not (stripped := info_str.strip()):
-            return {}
-        return dict(pair.split("=") for pair in stripped.split())
-
-    @staticmethod
-    def _info_matches(info: dict[str, str], info_match: dict[str, Any] | None) -> bool:
-        """Check if parsed info matches the criteria."""
-        if not info_match:
-            return True
-        return all(value is None or info.get(key) == value for key, value in info_match.items())
-
     def comment_find(
         self,
         comments: dict[str, Any],
@@ -170,16 +170,11 @@ class CommentAPI:
             if bot != m.group("bot").lower():
                 continue
 
-            info = self._parse_info(m.group("info"))
-            if self._info_matches(info, info_match):
+            info = _parse_info(m.group("info"))
+            if _info_matches(info, info_match):
                 return c, info
 
         return None, None
-
-    @staticmethod
-    def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
-        """Add bot marker to comment that can be used to find comment."""
-        return add_marker(comment, bot, info)
 
     def add_comment(
         self,
@@ -200,16 +195,11 @@ class CommentAPI:
         if not comment:
             raise OscCommentsEmptyError
 
-        comment = self.truncate(comment.strip())
+        comment = truncate(comment.strip())
 
         query = {"parent_id": parent_id} if parent_id else {}
         url = self.prepare_url(request_id, project_name, package_name, query)
         return http_POST(url, data=comment)
-
-    @staticmethod
-    def truncate(comment: str, suffix: str = "...", length: int = 65535) -> str:
-        """Truncate a comment to a specific length, preserving markdown pre tags."""
-        return truncate(comment, suffix, length)
 
     def delete(self, comment_id: str | int) -> None:
         """Remove a comment object.

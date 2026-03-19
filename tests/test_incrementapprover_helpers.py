@@ -10,7 +10,7 @@ import pytest
 import responses
 
 from openqabot.errors import PostOpenQAError
-from openqabot.incrementapprover import BuildInfo
+from openqabot.incrementapprover import BuildInfo, extra_builds_for_package, get_regex_match
 from openqabot.repodiff import Package
 
 from .helpers import prepare_approver
@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 @responses.activate
 @pytest.mark.usefixtures("fake_product_repo")
 def testget_regex_match_invalid_pattern(caplog: pytest.LogCaptureFixture) -> None:
-    approver = prepare_approver(caplog)
-    approver.get_regex_match("[", "some string")
+    get_regex_match("[", "some string")
     assert "Pattern `[` did not compile successfully" in caplog.text
 
 
@@ -104,7 +103,7 @@ def test_extra_builds_for_package_parametrized(
     config.additional_builds = additional_builds
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
 
-    res = approver.extra_builds_for_package(pkg, config, build_info)
+    res = extra_builds_for_package(pkg, config, build_info)
     if expected_build is None:
         assert res is None
     else:
