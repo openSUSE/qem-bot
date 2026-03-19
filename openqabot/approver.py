@@ -48,6 +48,25 @@ def ms2str(sub: SubReq) -> str:
     return f"{config.settings.obs_maint_prj}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
+def osc_approve(sub: SubReq, msg: str) -> bool:
+    """Approve a submission in OBS."""
+    try:
+        osc.core.change_review_state(
+            apiurl=config.settings.obs_url,
+            reqid=str(sub.req),
+            newstate="accepted",
+            by_group=config.settings.obs_group,
+            message=msg,
+        )
+    except HTTPError as e:
+        return handle_http_error(e, sub)
+    except Exception:
+        log.exception("OBS API error: Failed to approve request %s", sub.req)
+        return False
+
+    return True
+
+
 def deduplicate_jobs_by_scenario(job_results: list[dict]) -> list[dict]:
     """Keep only the most recent job (highest job_id) per scenario name.
 
@@ -417,26 +436,7 @@ class Approver:
         """Approve a submission in OBS or Gitea."""
         msg = f"Request accepted for '{config.settings.obs_group}' based on data in {config.settings.dashboard_url()}"
         log.info("Approving %s", ms2str(sub))
-        return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
-
-    @staticmethod
-    def osc_approve(sub: SubReq, msg: str) -> bool:
-        """Approve a submission in OBS."""
-        try:
-            osc.core.change_review_state(
-                apiurl=config.settings.obs_url,
-                reqid=str(sub.req),
-                newstate="accepted",
-                by_group=config.settings.obs_group,
-                message=msg,
-            )
-        except HTTPError as e:
-            return handle_http_error(e, sub)
-        except Exception:
-            log.exception("OBS API error: Failed to approve request %s", sub.req)
-            return False
-
-        return True
+        return self.git_approve(sub, msg) if sub.type == "git" else osc_approve(sub, msg)
 
     def git_approve(self, sub: SubReq, msg: str) -> bool:
         """Approve a submission in Gitea."""
