@@ -20,8 +20,6 @@ import osc.conf
 import osc.core
 import osc.util.xml
 import requests
-import urllib3
-import urllib3.exceptions
 from lxml import etree  # type: ignore[unresolved-import]
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
@@ -41,8 +39,6 @@ ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 JsonType = dict[str, Any] | list[Any]
 
 log = getLogger("bot.loader.gitea")
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 @dataclass

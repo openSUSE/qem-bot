@@ -46,7 +46,7 @@ updates information about submissions and related openQA tests.
     │ --insecure             --no-insecure             Disable TLS verification    │
     │                                                  for all API calls           │
     │                                                  [env var: QEM_BOT_INSECURE] │
-    │                                                  [default: insecure]         │
+    │                                                  [default: no-insecure]      │
     │ --token            -t                   TEXT     Token for qem dashboard api │
     │                                                  [env var: QEM_BOT_TOKEN]    │
     │ --gitea-token      -g                   TEXT     Token for Gitea api         │

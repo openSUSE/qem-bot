@@ -8,8 +8,6 @@ from concurrent import futures
 from logging import getLogger
 from typing import Any, cast
 
-import urllib3
-import urllib3.exceptions
 from jsonschema import ValidationError, validate
 
 from openqabot import config
@@ -18,7 +16,6 @@ from openqabot.utils import walk
 
 log = getLogger("bot.loader.smelt")
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 ACTIVE_FST = '{ incidents(status_Name_Iexact:"active", first: 100 ) { pageInfo \
 { hasNextPage endCursor} edges { node { incidentId }}}}'

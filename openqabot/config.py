@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     qem_dashboard_url: str = Field(default="http://dashboard.qam.suse.de/", alias="QEM_DASHBOARD_URL")
     smelt_url: str = Field(default="https://smelt.suse.de", alias="SMELT_URL")
     gitea_url: str = Field(default="https://src.suse.de", alias="GITEA_URL")
-    insecure: bool = Field(default=True, alias="QEM_BOT_INSECURE")
+    insecure: bool = Field(default=False, alias="QEM_BOT_INSECURE")
     obs_url: str = Field(default_factory=get_default_obs_url, alias="OBS_URL")
     obs_download_url: str = Field(default="http://download.suse.de/ibs", alias="OBS_DOWNLOAD_URL")
     obs_repo_type: str | None = Field(default="product", alias="OBS_REPO_TYPE")

@@ -111,7 +111,7 @@ def main(  # noqa: PLR0913
             envvar="QEM_BOT_INSECURE",
             help="Disable TLS verification for all API calls",
         ),
-    ] = True,
+    ] = False,
     token: Annotated[
         str | None,
         typer.Option("-t", "--token", envvar="QEM_BOT_TOKEN", help="Token for qem dashboard api"),
