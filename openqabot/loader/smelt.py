@@ -131,7 +131,7 @@ INCIDENT_SCHEMA = {
 def get_json(query: str, host: str | None = None) -> dict[str, Any]:
     """Fetch JSON data from SMELT using a GraphQL query."""
     host = host or config.settings.smelt_graphql
-    return retried_requests.get(host, params={"query": query}, verify=False).json()
+    return retried_requests.get(host, params={"query": query}, verify=not config.settings.insecure).json()
 
 
 def get_active_submission_ids() -> set[int]:

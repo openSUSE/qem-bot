@@ -104,6 +104,14 @@ def main(  # noqa: PLR0913
         ),
     ] = False,
     debug: Annotated[bool, typer.Option("-d", "--debug", envvar="QEM_BOT_DEBUG", help="Enable debug output")] = False,
+    insecure: Annotated[
+        bool,
+        typer.Option(
+            "--insecure/--no-insecure",
+            envvar="QEM_BOT_INSECURE",
+            help="Disable TLS verification for all API calls",
+        ),
+    ] = True,
     token: Annotated[
         str | None,
         typer.Option("-t", "--token", envvar="QEM_BOT_TOKEN", help="Token for qem dashboard api"),
@@ -138,6 +146,9 @@ def main(  # noqa: PLR0913
     if debug:
         log_obj.setLevel(logging.DEBUG)
 
+    # Update global configuration
+    config_module.settings.insecure = insecure
+
     # Check if help is in the arguments
     if any(arg in sys.argv for arg in ctx.help_option_names):
         return
@@ -153,6 +164,7 @@ def main(  # noqa: PLR0913
         fake_data=fake_data,
         dump_data=dump_data,
         debug=debug,
+        insecure=insecure,
         token=token,
         gitea_token=gitea_token,
         openqa_instance=urlparse(openqa_instance),

@@ -80,3 +80,12 @@ def test_obs_web_url_property() -> None:
 
     settings = Settings(obs_url="https://some.api.server.com")
     assert settings.obs_web_url == "https://some.build.server.com"
+
+
+def test_insecure_setting() -> None:
+    """Test the insecure setting."""
+    settings = Settings(insecure=True)
+    assert settings.insecure is True
+
+    settings = Settings(insecure=False)
+    assert settings.insecure is False
