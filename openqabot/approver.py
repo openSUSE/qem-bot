@@ -166,9 +166,9 @@ class Approver:
             a_jobs = get_aggregate_settings(sub.sub, self.token, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
-                log.info("No aggregate test results found for %s", ms2str(sub))
+                log.info("Required aggregate tests missing for %s", ms2str(sub))
                 return False
-            log.info(e)
+            log.debug("Aggregate tests optional and not found: %s", e)
             a_jobs = []
 
         if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):

@@ -161,9 +161,9 @@ def test_sub_passed_aggr_without_results(caplog: pytest.LogCaptureFixture, mocke
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=[{"job_id": 100000, "status": "passed"}])
     assert approver() == 0
     expected = [
-        "No aggregate test results found for SUSE:Maintenance:1:100",
-        "No aggregate test results found for SUSE:Maintenance:2:200",
-        "No aggregate test results found for SUSE:Maintenance:3:300",
+        "Aggregate tests optional and not found: No results for settings",
+        "Aggregate tests optional and not found: No results for settings",
+        "Aggregate tests optional and not found: No results for settings",
         "Starting approving submissions in OBS or Gitea…",
         "Submissions to approve:",
         "* SUSE:Maintenance:4:400",
