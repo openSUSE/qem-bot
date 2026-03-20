@@ -106,7 +106,7 @@ def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
     mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
     comment.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-comment"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "sub-comment"])
     assert result.exit_code == 0
     comment.assert_called_once()
 
@@ -165,7 +165,7 @@ def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
     repo_diff = mocker.patch("openqabot.args.RepoDiff")
     repo_diff.return_value.return_value = 0
     # Provide a valid configs directory to avoid Configuration error in main callback
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "repo-diff"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "repo-diff"])
     assert result.exit_code == 0
     repo_diff.assert_called_once()
 

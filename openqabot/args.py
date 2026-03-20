@@ -37,6 +37,13 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+advanced_app = typer.Typer(
+    name="advanced",
+    help="Advanced and low-level commands for debugging and testing.",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(advanced_app)
 log = logging.getLogger("bot")
 
 pr_number_arg = Annotated[
@@ -455,9 +462,10 @@ def sub_approve(  # noqa: PLR0913
     sys.exit(approve())
 
 
-@app.command("sub-comment")
+@advanced_app.command("sub-comment")
 def sub_comment(
     ctx: typer.Context,
+    *,
     enable_detailed_comments: enable_detailed_comments_option = None,
     fallback_contact: fallback_contact_option = None,
     generic_tool_issues_contact: generic_tool_issues_contact_option = None,
@@ -625,7 +633,7 @@ def increment_approve(  # noqa: PLR0913
     sys.exit(approve())
 
 
-@app.command("repo-diff")
+@advanced_app.command("repo-diff")
 def repo_diff(
     ctx: typer.Context,
     *,
