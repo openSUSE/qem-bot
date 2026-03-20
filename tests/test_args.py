@@ -161,42 +161,6 @@ def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
     assert amqp.call_args[0][0].url == "amqps://suse:suse@rabbit.suse.de"
 
 
-def test_incidents_run(mocker: MockerFixture, tmp_path: Path) -> None:
-    bot = mocker.patch("openqabot.args.OpenQABot")
-    bot.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "incidents-run"])
-    assert result.exit_code == 0
-    bot.assert_called_once()
-    args = bot.call_args[0][0]
-    assert args.disable_aggregates
-    assert not args.disable_submissions
-
-
-def test_inc_approve(mocker: MockerFixture, tmp_path: Path) -> None:
-    approve = mocker.patch("openqabot.args.Approver")
-    approve.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "inc-approve"])
-    assert result.exit_code == 0
-    approve.assert_called_once()
-
-
-def test_inc_comment(mocker: MockerFixture, tmp_path: Path) -> None:
-    mocker.patch("openqabot.args.get_submissions", return_value=[])
-    comment = mocker.patch("openqabot.args.Commenter")
-    comment.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "inc-comment"])
-    assert result.exit_code == 0
-    comment.assert_called_once()
-
-
-def test_inc_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.SubResultsSync")
-    syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "inc-sync-results"])
-    assert result.exit_code == 0
-    syncer.assert_called_once()
-
-
 def test_configs_non_existent_all_commands(mocker: MockerFixture, tmp_path: Path) -> None:
     non_existent = tmp_path / "does_not_exist"
     mock_log = mocker.patch("openqabot.args.log")

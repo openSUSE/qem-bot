@@ -233,27 +233,6 @@ def submissions_run(
     sys.exit(bot())
 
 
-@app.command("incidents-run", hidden=True)
-def incidents_run(
-    ctx: typer.Context,
-    *,
-    ignore_onetime: Annotated[
-        bool,
-        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
-    ] = False,
-    submission: Annotated[
-        str | None,
-        typer.Option(
-            "-I",
-            "--submission",
-            help="Submission ID (to process only a single submission)",
-        ),
-    ] = None,
-) -> None:
-    """DEPRECATED: Submissions only schedule for Maintenance Submissions in openQA (use submissions-run)."""  # noqa: D401
-    submissions_run(ctx, ignore_onetime=ignore_onetime, submission=submission)
-
-
 @app.command("updates-run")
 def updates_run(
     ctx: typer.Context,
@@ -384,28 +363,6 @@ def sub_approve(
     sys.exit(approve())
 
 
-@app.command("inc-approve", hidden=True)
-def inc_approve(
-    ctx: typer.Context,
-    *,
-    all_submissions: Annotated[
-        bool,
-        typer.Option("--all-submissions", help="use all submissions without care about rrid"),
-    ] = False,
-    incident: Annotated[
-        str | None,
-        typer.Option(
-            "-I",
-            "--incident",
-            help="Submission ID (to approve only a single submission)",
-        ),
-    ] = None,
-    comment: comment_option = False,
-) -> None:
-    """DEPRECATED: Approve submissions which passed tests (use sub-approve)."""  # noqa: D401
-    sub_approve(ctx, all_submissions=all_submissions, submission=incident, comment=comment)
-
-
 @app.command("sub-comment")
 def sub_comment(ctx: typer.Context) -> None:
     """Comment submissions in BuildService."""
@@ -417,12 +374,6 @@ def sub_comment(ctx: typer.Context) -> None:
     sys.exit(comment())
 
 
-@app.command("inc-comment", hidden=True)
-def inc_comment(ctx: typer.Context) -> None:
-    """DEPRECATED: Comment submissions in BuildService (use sub-comment)."""  # noqa: D401
-    sub_comment(ctx)
-
-
 @app.command("sub-sync-results")
 def sub_sync_results(ctx: typer.Context) -> None:
     """Sync results of openQA submission jobs to Dashboard."""
@@ -431,12 +382,6 @@ def sub_sync_results(ctx: typer.Context) -> None:
 
     syncer = SubResultsSync(args)
     sys.exit(syncer())
-
-
-@app.command("inc-sync-results", hidden=True)
-def inc_sync_results(ctx: typer.Context) -> None:
-    """DEPRECATED: Sync results of openQA submission jobs to Dashboard (use sub-sync-results)."""  # noqa: D401
-    sub_sync_results(ctx)
 
 
 @app.command("aggr-sync-results")
