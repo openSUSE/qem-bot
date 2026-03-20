@@ -8,6 +8,7 @@ import tempfile
 from collections import defaultdict
 from logging import getLogger
 from typing import Any
+from urllib.error import HTTPError
 
 import osc.core
 from lxml import etree  # type: ignore[unresolved-import]
@@ -80,9 +81,12 @@ def load_packages_from_source_report(
         binary.repo,
         binary.arch,
     )
-    source_reports = find_source_reports(binary.project, action.src_package)
-    for source_report in source_reports:
-        parse_source_report(binary, source_report, packages)
+    try:
+        source_reports = find_source_reports(binary.project, action.src_package)
+        for source_report in source_reports:
+            parse_source_report(binary, source_report, packages)
+    except HTTPError as e:
+        log.warning("Failed to add packages from source report: %s", e)
 
 
 def compute_packages_of_request_from_source_report(
