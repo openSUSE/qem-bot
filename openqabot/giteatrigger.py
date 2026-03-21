@@ -12,7 +12,9 @@ from osc import conf
 from openqabot import config
 from openqabot.loader.crawler import Crawler
 from openqabot.types.pullrequest import PullRequest
+from openqabot.types.types import Data
 
+from .commenter import Commenter
 from .loader.gitea import (
     generate_repo_url,
     get_gitea_staging_config,
@@ -23,7 +25,10 @@ from .openqa import OpenQAInterface
 
 log = getLogger("bot.giteatrigger")
 
-ISO_REGEX = r"(?P<product>SLES)-(?P<version>[\d\.]+)-Online-(?P<arch>x86_64)-Build(?P<build>[0-9\.]+)\.install.iso$"
+ISO_REGEX = (
+    r"(?P<product>SLES)-(?P<version>[\d\.]+)-Online-"
+    r"(?P<arch>x86_64)-Build(?P<build>[0-9\.]+)\.install.iso$"
+)
 
 
 class GiteaTrigger:
@@ -50,6 +55,8 @@ class GiteaTrigger:
         self.flavor: str = "Online-Staging"
         self.distri: str = "sle"
         self.prs: list[PullRequest] = []
+        self.comment: bool = getattr(args, "comment", False)
+        self.commenter: Commenter = Commenter(args, submissions=[])
         conf.get_config(override_apiurl=config.settings.obs_url)
 
     def is_openqa_triggering_needed(self, version: str, arch: str, build: str) -> bool:
@@ -72,8 +79,7 @@ class GiteaTrigger:
             "distri": self.distri,
             "build": build,
         }
-        previous_trigger = self.openqa.get_scheduled_product_stats(openqa_settings)
-        return len(previous_trigger.keys()) == 0
+        return not self.openqa.get_scheduled_product_stats(openqa_settings)
 
     def check_pullrequest(self, pullrequest: PullRequest) -> None:
         """Evaluate a pull request and triggers openQA tests if new artifacts are available.
@@ -87,33 +93,47 @@ class GiteaTrigger:
             pullrequest (PullRequest): The pull request object to validate and test.
 
         """
-        log.info("Triggering tests for PR %s", pullrequest.number)
+        log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
         repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.gitea_project)
         matched_iso = Crawler(verify=True).get_regex_match_from_url(repo_url, ISO_REGEX)
 
-        if matched_iso:
-            product = matched_iso.group("product")
-            version = matched_iso.group("version")
-            arch = matched_iso.group("arch")
-            build_num = matched_iso.group("build")
-            unique_version = f"{version}:PR-{pullrequest.number}"
-            build = f"PR-{pullrequest.number}-{build_num}:{product}-{version}"
-            if self.is_openqa_triggering_needed(unique_version, arch, build):
-                openqa_settings = {
-                    "ISO_URL": f"{repo_url}/{matched_iso.group(0)}",
-                    "_GITEA_PR": str(pullrequest.number),
-                    "VERSION": unique_version,
-                    "FLAVOR": self.flavor,
-                    "ARCH": arch,
-                    "DISTRI": self.distri,
-                    "BUILD": build,
-                }
-                self.openqa.post_job(openqa_settings)
-                log.info("Triggered openQA job for PR %s on %s", pullrequest.number, arch)
-            else:
-                log.debug("Build %s already covered", build)
-        else:
+        if not matched_iso:
             log.warning("No ISO found for %s in %s", pullrequest, repo_url)
+            return
+
+        product, version, arch, build_num = (matched_iso.group(k) for k in ("product", "version", "arch", "build"))
+        unique_version = f"{version}:PR-{pullrequest.number}"
+        build = f"PR-{pullrequest.number}-{build_num}:{product}-{version}"
+
+        if self.is_openqa_triggering_needed(unique_version, arch, build):
+            openqa_settings = {
+                "ISO_URL": f"{repo_url}/{matched_iso.group(0)}",
+                "_GITEA_PR": str(pullrequest.number),
+                "VERSION": unique_version,
+                "FLAVOR": self.flavor,
+                "ARCH": arch,
+                "DISTRI": self.distri,
+                "BUILD": build,
+            }
+            self.openqa.post_job(openqa_settings)
+            log.info("Triggered openQA tests for PR %s on %s", pullrequest.number, arch)
+        else:
+            log.info("openQA tests for PR %s (build %s) are already covered", pullrequest.number, build)
+            if self.comment:
+                self.comment_on_pr(pullrequest, product, unique_version, arch, build)
+
+    def comment_on_pr(self, pullrequest: PullRequest, product: str, version: str, arch: str, build: str) -> None:
+        """Comment on PR if openQA results are available."""
+        data = Data(pullrequest.number, "git", 0, self.flavor, arch, self.distri, version, build, product)
+
+        try:
+            jobs = self.openqa.get_jobs(data)
+        except Exception:
+            log.exception("Failed to fetch jobs for PR %s", pullrequest.number)
+            return
+
+        if res := self.commenter.generate_comment(pullrequest, jobs):
+            self.commenter.gitea_comment(pullrequest, *res)
 
     def get_prs_by_label(self) -> None:
         """Get all open PRs and filter them by defined label."""
@@ -137,7 +157,7 @@ class GiteaTrigger:
                     raw_labels=pr["labels"],
                     repo_name=pr["base"]["repo"]["name"],
                     branch=pr["base"]["label"],
-                    url=pr["url"],
+                    url=pr["html_url"],
                 )
                 # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
                 # at least one for labels defined in staging.config

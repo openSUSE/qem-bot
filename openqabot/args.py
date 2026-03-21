@@ -322,12 +322,14 @@ def gitea_trigger(
         typer.Option("--pr-label", envvar="PR_LABEL", help="Gitea PRs label for which to trigger tests"),
     ] = "staging/In Progress",
     pr_number: pr_number_arg = None,
+    comment: comment_option = False,
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
     args.gitea_repo = gitea_repo
     args.pr_number = pr_number
     args.pr_label = pr_label
+    args.comment = comment
 
     syncer = GiteaTrigger(args)
     sys.exit(syncer())

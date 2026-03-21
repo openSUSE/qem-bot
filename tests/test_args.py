@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
@@ -263,3 +264,18 @@ def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> N
     bot.return_value.return_value = 0
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 0
+
+
+def test_debug_flag(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Verify that --debug flag sets logger level to DEBUG."""
+    mocker.patch("openqabot.args.OpenQABot").return_value.return_value = 0
+    # Capture the logger used in args.py
+    logger = logging.getLogger("bot")
+    original_level = logger.level
+
+    try:
+        result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "--debug", "full-run"])
+        assert result.exit_code == 0
+        assert logger.level == logging.DEBUG
+    finally:
+        logger.setLevel(original_level)
