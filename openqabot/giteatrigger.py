@@ -86,14 +86,17 @@ class GiteaTrigger:
         matched_iso = Crawler(verify=True).get_regex_match_from_url(repo_url, ISO_REGEX)
 
         if matched_iso:
-            version = matched_iso[1]
-            arch = matched_iso[2]
-            build = f"PR-{pullrequest.number}-{matched_iso[3]}"
-            if self.is_openqa_triggering_needed(version, arch, build):
+            product = matched_iso.group("product")
+            version = matched_iso.group("version")
+            arch = matched_iso.group("arch")
+            build_num = matched_iso.group("build")
+            unique_version = f"{version}:PR-{pullrequest.number}"
+            build = f"PR-{pullrequest.number}-{build_num}:{product}-{version}"
+            if self.is_openqa_triggering_needed(unique_version, arch, build):
                 openqa_settings = {
-                    "ISO_URL": f"{repo_url}/{matched_iso[0]}",
+                    "ISO_URL": f"{repo_url}/{matched_iso.group(0)}",
                     "_GITEA_PR": str(pullrequest.number),
-                    "VERSION": version,
+                    "VERSION": unique_version,
                     "FLAVOR": self.flavor,
                     "ARCH": arch,
                     "DISTRI": self.distri,
