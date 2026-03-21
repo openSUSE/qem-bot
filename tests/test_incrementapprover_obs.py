@@ -8,14 +8,16 @@ import logging
 from argparse import Namespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import osc.core
 import pytest
 
 import responses
 from openqabot.config import BUILD_REGEX, OBS_GROUP, settings
-from openqabot.incrementapprover import ApprovalStatus, IncrementApprover
+from openqabot.incrementapprover import IncrementApprover
 from openqabot.requests import find_request_on_obs, get_obs_request_list
+from openqabot.types.increment import ApprovalStatus
 
 from .helpers import (
     ReviewState,
@@ -113,6 +115,9 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
     caplog.set_level(logging.INFO)
     args = Namespace(
         dry=True,
+        token="token",
+        gitea_token=None,
+        openqa_instance=urlparse("http://instance.qa"),
         accepted=True,
         request_id=None,
         project_base="BASE",
@@ -137,7 +142,7 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         approver = IncrementApprover(args)
         req = mocker.Mock(spec=osc.core.Request)
         req.reqid = 123
-        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[], processed_jobs=set())
+        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
         mock_osc_change = mocker.patch("osc.core.change_review_state")
 
         approver.handle_approval(status)
@@ -160,7 +165,7 @@ def testhandle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mock
     approver = prepare_approver(caplog)
     req = mocker.Mock(spec=osc.core.Request)
     req.reqid = 123
-    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[], processed_jobs=set())
+    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
 
     approver.handle_approval(status)
     assert "No openQA jobs were found/checked for this request." in caplog.text

@@ -223,6 +223,8 @@ def prepare_approver(
     args = Namespace(
         dry=False,
         token="not-secret",
+        gitea_token=None,
+        openqa_instance=urlparse("http://openqa-instance"),
         accepted=True,
         request_id=request_id,
         project_base="OBS:PROJECT",

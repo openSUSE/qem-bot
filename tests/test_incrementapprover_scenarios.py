@@ -19,8 +19,8 @@ from pytest_mock import MockerFixture
 import responses
 from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import IncrementApprover
-from openqabot.loader.incrementconfig import IncrementConfig
-from openqabot.types.increment import ApprovalStatus, BuildInfo
+from openqabot.loader.incrementconfig import IncrementConfig, from_config_file
+from openqabot.types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
 
 from .helpers import (
     Action,
@@ -183,7 +183,7 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = IncrementConfig.from_config_file(path, load_defaults=False)
+    configs = from_config_file(path, load_defaults=False)
     (errors, jobs) = run_approver(
         mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=next(configs)
     )
@@ -202,7 +202,7 @@ def test_scheduling_extra_livepatching_builds_based_on_source_report(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = IncrementConfig.from_config_file(path, load_defaults=False)
+    configs = from_config_file(path, load_defaults=False)
     mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
     mocker.patch("osc.core.get_binarylist", side_effect=fake_get_binarylist)
     mocker.patch("osc.core.get_binary_file", side_effect=fake_get_binary_file)
@@ -240,7 +240,7 @@ def test_evaluate_list_of_openqa_job_results(
         {"done": {"passed": {"job_ids": [1]}, "failed": {"job_ids": [2]}}},
         {"done": {"softfailed": {"job_ids": [3]}, "incomplete": {"job_ids": [4]}}},
     ]
-    ok_jobs, reasons = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
+    ok_jobs, reasons, jobs = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
     assert ok_jobs == {1, 3}
     assert any(f"result 'failed':\n - {fake_openqa_url}/tests/2" in r for r in reasons)
     assert any(f"result 'incomplete':\n - {fake_openqa_url}/tests/4" in r for r in reasons)
@@ -266,7 +266,9 @@ def test_check_unique_jobid_request_pair_ambiguity_found(
 
 def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
-    status = ApprovalStatus(fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[], processed_jobs=set())
+    status = ApprovalStatus(
+        fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[]
+    )
     approver.handle_approval(status)
     assert (
         "Approving OBS request https://build.suse.de/request/show/42: All 2 openQA jobs have passed/softfailed"
@@ -277,7 +279,12 @@ def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake
 def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
     status = ApprovalStatus(
-        fake_osc_request, ok_jobs=set(), reasons_to_disapprove=["failed jobs"], processed_jobs=set()
+        fake_osc_request,
+        ok_jobs=set(),
+        reasons_to_disapprove=["failed jobs"],
+        processed_jobs=set(),
+        builds=set(),
+        jobs=[],
     )
     approver.handle_approval(status)
     assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
@@ -587,3 +594,29 @@ def test_approval_if_running_jobs_are_in_development_group(
     # The request should be approved.
     assert "All 1 openQA jobs have passed/softfailed" in caplog.text
     mock_osc_approve.assert_called()
+
+
+def test_handle_approval_with_comment_flag(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
+) -> None:
+    approver = prepare_approver(caplog)
+    approver.comment = True
+    approver.args.dry = False
+    mock_replace = mocker.patch.object(approver.commenter, "osc_comment_on_request")
+    mocker.patch.object(approver, "approve_on_obs")
+    status = ApprovalStatus(
+        fake_osc_request,
+        ok_jobs={1, 2},
+        reasons_to_disapprove=[],
+        processed_jobs=set(),
+        builds={BuildIdentifier("fake_build", "", "")},
+        jobs=[],
+    )
+
+    approver.handle_approval(status)
+
+    mock_replace.assert_called_once()
+    args = mock_replace.call_args[0]
+    assert args[0] == "42"
+    assert args[2] == "passed"
+    assert "fake_build" in args[1]

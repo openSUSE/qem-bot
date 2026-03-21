@@ -5,12 +5,30 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
     import osc.core
 
 log = getLogger("bot.increment_approver")
+
+
+class BuildIdentifier(NamedTuple):
+    """Identifier for a build."""
+
+    build: str
+    distri: str
+    version: str
+
+    @classmethod
+    def from_job(cls, job: dict[str, Any]) -> BuildIdentifier:
+        """Create a BuildIdentifier from an openQA job dictionary."""
+        return cls(job["build"], job.get("distri", ""), job.get("version", ""))
+
+    @classmethod
+    def from_params(cls, params: dict[str, str]) -> BuildIdentifier:
+        """Create a BuildIdentifier from scheduling parameters."""
+        return cls(params["BUILD"], params["DISTRI"], params["VERSION"])
 
 
 class BuildInfo(NamedTuple):
@@ -64,8 +82,18 @@ class ApprovalStatus(NamedTuple):
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
     processed_jobs: set[tuple[str, str, str, str, str, str]]
+    builds: set[BuildIdentifier]
+    jobs: list[dict[str, Any]]
 
-    def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
+    def add(
+        self,
+        ok_jobs: set[int],
+        reasons_to_disapprove: list[str],
+        builds: set[BuildIdentifier],
+        jobs: list[dict[str, Any]],
+    ) -> None:
         """Add jobs and reasons to the status."""
         self.ok_jobs.update(ok_jobs)
         self.reasons_to_disapprove.extend(reasons_to_disapprove)
+        self.builds.update(builds)
+        self.jobs.extend(jobs)
