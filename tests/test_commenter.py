@@ -628,3 +628,27 @@ def test_comment_on_submission_no_jobs(
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
     c.comment_on_submission(sub)
     assert "No jobs found for submission smelt:1" in caplog.text
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
+    """Test generating comment from raw openQA jobs lacking status key."""
+    c = Commenter(mock_args, submissions=[])
+    raw_jobs = [
+        {"id": 1, "state": "done", "result": "passed", "build": "1"},
+        {"id": 2, "state": "running", "build": "1"},
+    ]
+    # Should postpone due to running job
+    assert c.generate_comment(MagicMock(), raw_jobs) is None
+
+    # All done
+    raw_jobs_done = [
+        {"id": 1, "state": "done", "result": "passed", "build": "1"},
+        {"id": 2, "state": "done", "result": "softfailed", "build": "1"},
+    ]
+    c.client.openqa.baseurl = "https://openqa"
+    res = c.generate_comment(MagicMock(), raw_jobs_done)
+    assert res is not None
+    msg, state = res
+    assert state == "passed"
+    assert "build=1" in msg

@@ -18,11 +18,13 @@ from .loader import gitea
 from .loader.qem import get_aggregate_results, get_submission_results
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
+from .utils import normalize_results
 
 if TYPE_CHECKING:
     from argparse import Namespace
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
+    from .types.pullrequest import GiteaPullRequestProtocol
     from .types.submission import Submission
 
 log = getLogger("bot.commenter")
@@ -54,40 +56,48 @@ class Commenter:
             log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
             return
 
-        try:
-            s_jobs = get_submission_results(sub.id, submission_type=sub.type)
-        except (ValueError, NoResultsError) as e:
-            log.debug(e)
-            s_jobs = []
+        def get_jobs(func: Callable[[int, str | None], list[dict[str, Any]]]) -> list[dict[str, Any]]:
+            try:
+                return func(sub.id, sub.type)
+            except (ValueError, NoResultsError) as e:
+                log.debug(e)
+                return []
 
-        try:
-            a_jobs = get_aggregate_results(sub.id, submission_type=sub.type)
-        except (ValueError, NoResultsError) as e:
-            log.debug(e)
-            a_jobs = []
+        all_jobs = get_jobs(get_submission_results) + get_jobs(get_aggregate_results)
 
-        all_jobs = s_jobs + a_jobs
+        if res := self.generate_comment(sub, all_jobs):
+            handlers = {config.settings.default_submission_type: self.osc_comment, "git": self.gitea_comment}
+            handlers[sub.type](sub, *res)
 
-        if not all_jobs:
+    def calculate_state(self, jobs: list[dict[str, Any]]) -> str:  # noqa: PLR6301
+        """Calculate overall state of jobs."""
+        return "passed" if all(j["status"] in {"passed", "softfailed"} for j in jobs) else "failed"
+
+    def generate_comment(self, sub: GiteaPullRequestProtocol, jobs: list[dict[str, Any]]) -> tuple[str, str] | None:
+        """Generate comment message and state for a set of jobs."""
+        if not jobs:
             log.debug("No jobs found for submission %s", sub)
-            return
+            return None
 
-        if any(j["status"] == "running" for j in all_jobs):
+        def get_stat(j: dict[str, Any]) -> str:
+            if "status" in j:
+                return j["status"]
+            return normalize_results(j.get("result", "none")) if j.get("state") == "done" else "running"
+
+        jobs = [{**j, "status": get_stat(j)} for j in jobs]
+
+        if any(j["status"] == "running" for j in jobs):
             log.info("Postponing comment for %s: Some tests are still running", sub)
-            return
+            return None
 
-        state = "failed" if any(j["status"] not in {"passed", "softfailed"} for j in all_jobs) else "passed"
+        state = self.calculate_state(jobs)
         log.debug("Determined comment state for %s: %s", sub, state)
 
-        msg = self.summarize_message(all_jobs)
+        msg = self.summarize_message(jobs)
         if not msg:
             raise EmptyCommentError(sub)
 
-        handlers = {
-            config.settings.default_submission_type: self.osc_comment,
-            "git": self.gitea_comment,
-        }
-        handlers[sub.type](sub, msg, state)
+        return msg, state
 
     def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
         """Comment a submission in OBS."""
@@ -98,20 +108,15 @@ class Commenter:
 
         bot_name = "openqa"
         info: dict[str, Any] = {"state": state}
-        if sub.revisions:
-            for key in sub.revisions:
-                info[f"revision_{key.version}_{key.arch}"] = sub.revisions[key]
+        info.update({f"revision_{k.version}_{k.arch}": v for k, v in sub.revisions.items()}) if sub.revisions else None
 
-        msg = self.commentapi.add_marker(msg, bot_name, info)
-        msg = self.commentapi.truncate(msg.strip())
-
-        kw = {"request_id": str(sub.rr)}
-        comments = self.commentapi.get_comments(**kw)
+        msg = self.commentapi.truncate(self.commentapi.add_marker(msg, bot_name, info).strip())
+        comments = self.commentapi.get_comments(request_id=str(sub.rr))
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
-        if comment is not None and comment["comment"].count("\n") == msg.count("\n"):
+        if comment and comment["comment"].count("\n") == msg.count("\n"):
             log.debug("Comment skipped: Previous comment is too similar")
             return
 
@@ -127,12 +132,12 @@ class Commenter:
             log.info("Dry run: Would delete comment %s", comment["id"])
 
         if not self.dry:
-            self.commentapi.add_comment(comment=msg, **kw)
+            self.commentapi.add_comment(comment=msg, request_id=str(sub.rr))
         else:
             log.info("Dry run: Would write comment to request %s", sub)
             log.debug(pformat(msg))
 
-    def gitea_comment(self, sub: Submission, msg: str, state: str) -> None:
+    def gitea_comment(self, sub: GiteaPullRequestProtocol, msg: str, state: str) -> None:
         """Comment a submission in Gitea."""
         if not self.gitea_token:
             log.warning("Gitea token missing, skipping comment for %s", sub)
@@ -144,23 +149,18 @@ class Commenter:
 
         # Derive owner/repo from the PR URL (e.g. https://host/owner/repo/pulls/N)
         # sub.project holds the OBS project name, not the Gitea owner/repo path.
-        parts = urlparse(sub.url).path.strip("/").split("/")
-        repo = "/".join(parts[:2])
+        repo = "/".join(urlparse(sub.url).path.strip("/").split("/")[:2])
 
-        bot_name = "openqa"
-        info = {"state": state}
         # Add a marker so we can find our own comments later
-        msg = self.commentapi.add_marker(msg, bot_name, info)
+        msg = self.commentapi.add_marker(msg, "openqa", {"state": state})
 
         comments = gitea.get_json_list(gitea.comments_url(repo, sub.id), self.gitea_token)
-        # Convert Gitea comments to CommentAPI format
-        formatted_comments = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
-
-        comment, _ = self.commentapi.comment_find(formatted_comments, bot_name, info)
+        formatted = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
+        comment, _ = self.commentapi.comment_find(formatted, "openqa", {"state": state})
 
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
-        if comment is not None and comment["comment"].count("\n") == msg.count("\n"):
+        if comment and comment["comment"].count("\n") == msg.count("\n"):
             log.debug("Comment skipped: Previous comment is too similar")
             return
 
