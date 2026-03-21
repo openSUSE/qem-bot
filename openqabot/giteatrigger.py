@@ -41,7 +41,7 @@ class GiteaTrigger:
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface()
         self.pr_required_labels: set[str] = set(args.pr_label.split(","))
-        self.flavor: str = "Online-Updates-Staging"
+        self.flavor: str = "Online-Staging"
         self.distri: str = "sle"
         self.prs: list[PullRequest] = []
         conf.get_config(override_apiurl=config.settings.obs_url)

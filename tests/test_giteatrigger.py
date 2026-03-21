@@ -53,6 +53,8 @@ def test_check_pullrequest_triggers_job(trigger: GiteaTrigger, mocker: MockerFix
     mock_pr = MagicMock(number=123)
     trigger.check_pullrequest(mock_pr)
     cast("MagicMock", trigger.openqa.post_job).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    assert args[0]["FLAVOR"] == "Online-Staging"
 
 
 def test_is_openqatriggering_needed_false(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
