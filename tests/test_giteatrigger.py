@@ -237,6 +237,19 @@ def test_check_pullrequest_comments_when_no_trigger_needed(trigger: GiteaTrigger
     mock_comment_on_pr.assert_called_once()
 
 
+def test_comment_on_pr_build_injection(trigger: GiteaTrigger) -> None:
+    """Tests that the build string is injected into raw openQA jobs."""
+    mock_jobs = [{"id": 1, "state": "done", "result": "passed"}]
+    cast("MagicMock", trigger.openqa.get_jobs).return_value = mock_jobs
+    cast("MagicMock", trigger.commenter.generate_comment).return_value = ("Summary", "passed")
+
+    mock_pr = MagicMock(number=123, url="http://fake.url/123")
+    trigger.comment_on_pr(mock_pr, "product", "version", "arch", "PR-BUILD")
+
+    assert mock_jobs[0]["build"] == "PR-BUILD"
+    cast("MagicMock", trigger.commenter.generate_comment).assert_called_once_with(mock_pr, mock_jobs)
+
+
 def test_comment_on_pr_no_jobs(trigger: GiteaTrigger) -> None:
     """Tests comment_on_pr when no jobs are found."""
     cast("MagicMock", trigger.openqa.get_jobs).return_value = []
