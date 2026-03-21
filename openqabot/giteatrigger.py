@@ -22,7 +22,7 @@ from .openqa import OpenQAInterface
 
 log = getLogger("bot.giteatrigger")
 
-ISO_REGEX = r"SLES-(?P<version>[\d\.]+)-Online-(?P<arch>x86_64)-Build(?P<build>[0-9\.]+)\.install.iso$"
+ISO_REGEX = r"(?P<product>SLES)-(?P<version>[\d\.]+)-Online-(?P<arch>x86_64)-Build(?P<build>[0-9\.]+)\.install.iso$"
 
 
 class GiteaTrigger:

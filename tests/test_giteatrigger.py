@@ -42,6 +42,7 @@ def test_check_pullrequest_triggers_job(trigger: GiteaTrigger, mocker: MockerFix
     mock_crawler = mocker.patch("openqabot.giteatrigger.Crawler")
     mock_crawler.return_value.get_regex_match_from_url.return_value = [
         "SLES-15.5-Online-x86_64-Build1.1.install.iso",
+        "SLES",
         "15.5",
         "x86_64",
         "1.1",
@@ -58,6 +59,7 @@ def test_is_openqatriggering_needed_false(trigger: GiteaTrigger, mocker: MockerF
     """Verifies that post_job is not called when openQA triggering is already satisfied."""
     mocker.patch("openqabot.giteatrigger.Crawler").return_value.get_regex_match_from_url.return_value = [
         "iso_name",
+        "SLES",
         "15.5",
         "x86_64",
         "1.1",
@@ -89,7 +91,7 @@ def test_check_pullrequest_dry_run(trigger: GiteaTrigger, mocker: MockerFixture)
     """Verifies that post_job is NOT called during a dry run."""
     trigger.dry = True
     mock_crawler = mocker.patch("openqabot.giteatrigger.Crawler")
-    mock_crawler.return_value.get_regex_match_from_url.return_value = ["iso", "15", "x86_64", "1"]
+    mock_crawler.return_value.get_regex_match_from_url.return_value = ["iso", "SLES", "15", "x86_64", "1"]
     mocker.patch("openqabot.giteatrigger.generate_repo_url", return_value="http://fake.url/")
     mock_pr = MagicMock(number=456)
     trigger.check_pullrequest(mock_pr)
