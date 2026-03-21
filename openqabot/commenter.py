@@ -7,7 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote, urlparse
+from urllib.parse import urlencode, urlparse
 
 import osc.conf
 
@@ -17,14 +17,15 @@ from openqabot.errors import EmptyCommentError, NoResultsError
 from .loader import gitea
 from .loader.qem import get_aggregate_results, get_submission_results
 from .openqa import OpenQAInterface
-from .osclib.comments import CommentAPI
+from .osclib.comments import CommentAPI, add_marker, truncate
+from .types.increment import BuildIdentifier
 from .utils import extract_contact_from_description, normalize_results
 
 if TYPE_CHECKING:
     from argparse import Namespace
     from collections.abc import Callable, Sequence
 
-    from .types.pullrequest import GiteaPullRequestProtocol
+    from .types.pullrequest import CommentableProtocol
     from .types.submission import Submission
 
 log = getLogger("bot.commenter")
@@ -73,7 +74,7 @@ class Commenter:
         """Calculate overall state of jobs."""
         return "passed" if all(j["status"] in {"passed", "softfailed"} for j in jobs) else "failed"
 
-    def generate_comment(self, sub: GiteaPullRequestProtocol, jobs: list[dict[str, Any]]) -> tuple[str, str] | None:
+    def generate_comment(self, sub: CommentableProtocol, jobs: list[dict[str, Any]]) -> tuple[str, str] | None:
         """Generate comment message and state for a set of jobs."""
         if not jobs:
             log.debug("No jobs found for submission %s", sub)
@@ -93,25 +94,25 @@ class Commenter:
         state = self.calculate_state(jobs)
         log.debug("Determined comment state for %s: %s", sub, state)
 
-        msg = self.summarize_message(jobs)
+        builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
+        msg = self.summarize_message(builds, jobs)
         if not msg:
             raise EmptyCommentError(sub)
 
         return msg, state
 
-    def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
-        """Comment a submission in OBS."""
+    def osc_comment_on_request(
+        self, request_id: str, msg: str, state: str, revisions: dict[str, Any] | None = None
+    ) -> None:
+        """Comment on an OBS request."""
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
-        if sub.rr is None:
-            log.debug("Comment skipped for submission %s: No release request defined", sub)
-            return
-
         bot_name = "openqa"
         info: dict[str, Any] = {"state": state}
-        info.update({f"revision_{k.version}_{k.arch}": v for k, v in sub.revisions.items()}) if sub.revisions else None
+        if revisions:
+            info.update(revisions)
 
-        msg = self.commentapi.truncate(self.commentapi.add_marker(msg, bot_name, info).strip())
-        comments = self.commentapi.get_comments(request_id=str(sub.rr))
+        msg = truncate(add_marker(msg, bot_name, info).strip())
+        comments = self.commentapi.get_comments(request_id=request_id)
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
         # To prevent spam, assume same state/result
@@ -132,12 +133,21 @@ class Commenter:
             log.info("Dry run: Would delete comment %s", comment["id"])
 
         if not self.dry:
-            self.commentapi.add_comment(comment=msg, request_id=str(sub.rr))
+            self.commentapi.add_comment(comment=msg, request_id=request_id)
         else:
-            log.info("Dry run: Would write comment to request %s", sub)
+            log.info("Dry run: Would write comment to request %s", request_id)
             log.debug(pformat(msg))
 
-    def gitea_comment(self, sub: GiteaPullRequestProtocol, msg: str, state: str) -> None:
+    def osc_comment(self, sub: Submission, msg: str, state: str) -> None:
+        """Comment a submission in OBS."""
+        if sub.rr is None:
+            log.debug("Comment skipped for submission %s: No release request defined", sub)
+            return
+
+        revisions = {f"revision_{k.version}_{k.arch}": v for k, v in sub.revisions.items()} if sub.revisions else None
+        self.osc_comment_on_request(str(sub.rr), msg, state, revisions=revisions)
+
+    def gitea_comment(self, sub: CommentableProtocol, msg: str, state: str) -> None:
         """Comment a submission in Gitea."""
         if not self.gitea_token:
             log.warning("Gitea token missing, skipping comment for %s", sub)
@@ -152,7 +162,7 @@ class Commenter:
         repo = "/".join(urlparse(sub.url).path.strip("/").split("/")[:2])
 
         # Add a marker so we can find our own comments later
-        msg = self.commentapi.add_marker(msg, "openqa", {"state": state})
+        msg = add_marker(msg, "openqa", {"state": state})
 
         comments = gitea.get_json_list(gitea.comments_url(repo, sub.id), self.gitea_token)
         formatted = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
@@ -176,16 +186,9 @@ class Commenter:
         else:
             gitea.patch_json(f"repos/{repo}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
 
-    def summarize_message(self, jobs: list[dict[str, Any]]) -> str:
+    def summarize_message(self, builds: set[BuildIdentifier], jobs: list[dict[str, Any]]) -> str:
         """Create markdown containing openQA badges."""
-        base_url = self.client.openqa.baseurl
-        builds = sorted({j["build"] for j in jobs if "build" in j})
-        suffix = "" if config.settings.allow_development_groups else "&not_group_glob=*Devel*%2C*Test*"
-        badge_msg = "".join(
-            f"[![Test Results]({base_url}/tests/overview/badge?build={b}{suffix})]"
-            f"({base_url}/tests/overview?build={b}{suffix})\n"
-            for b in builds
-        ).strip()
+        badge_msg = self._generate_badge_section(builds)
 
         if not config.settings.enable_detailed_comments:
             return badge_msg
@@ -194,11 +197,36 @@ class Commenter:
         if not job_groups:
             return badge_msg
 
+        return badge_msg + "\n\n" + self._generate_detail_section(job_groups, sorted(builds))
+
+    def _generate_badge_section(self, builds: set[BuildIdentifier]) -> str:
+        """Generate markdown for openQA badges."""
+        base_url = self.client.openqa.baseurl
+        badge_msg = ""
+        for b in sorted(builds):
+            params = {"build": b.build}
+            if b.distri:
+                params["distri"] = b.distri
+            if b.version:
+                params["version"] = b.version
+            if not config.settings.allow_development_groups:
+                params["not_group_glob"] = "*Devel*,*Test*"
+
+            query = urlencode(params, safe="*")
+            badge_url = f"{base_url}/tests/overview/badge?{query}"
+            link_url = f"{base_url}/tests/overview?{query}"
+            badge_msg += f"[![Test Results]({badge_url})]({link_url})\n"
+        return badge_msg.strip()
+
+    def _generate_detail_section(self, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier]) -> str:
+        """Generate markdown for detailed failure information."""
         max_entries = config.settings.max_detailed_comment_entries
         display_groups = job_groups[:max_entries]
         excluded_count = len(job_groups) - max_entries
 
         fallback = config.settings.fallback_contact
+        base_url = self.client.openqa.baseurl
+
         table_rows = [
             f"| {g['name']}: [![openQA Test Results]({g['badge_url']})]({g['overview_url']}) | "
             f"{g['contact'] or f'No contact provided: {fallback}'} |"
@@ -209,20 +237,27 @@ class Commenter:
         detail_msg += "\n".join(table_rows)
 
         if excluded_count > 0:
-            first_build = builds[0] if builds else ""
-            overview_link = f"{base_url}/tests/overview?build={first_build}{suffix}"
+            first_b = sorted_builds[0]
+            params = {"build": first_b.build}
+            if first_b.distri:
+                params["distri"] = first_b.distri
+            if first_b.version:
+                params["version"] = first_b.version
+            if not config.settings.allow_development_groups:
+                params["not_group_glob"] = "*Devel*,*Test*"
+
+            query = urlencode(params, safe="*")
+            overview_link = f"{base_url}/tests/overview?{query}"
             detail_msg += (
                 f"\n\n*... and {excluded_count} more job groups. See [Test Results]({overview_link}) for details.*"
             )
 
         detail_msg += f"\n\nFor generic tool issues, contact {config.settings.generic_tool_issues_contact}."
+        return detail_msg.strip()
 
-        return badge_msg + "\n\n" + detail_msg
-
-    def get_job_groups_with_failures(self, jobs: list[dict[str, Any]]) -> list[dict[str, str]]:
+    def get_job_groups_with_failures(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Get job groups with blocking failures and their contact info."""
         base_url = self.client.openqa.baseurl
-        suffix = "" if config.settings.allow_development_groups else "&not_group_glob=*Devel*%2C*Test*"
 
         groups: dict[int, dict[str, Any]] = {}
         for job in jobs:
@@ -240,6 +275,8 @@ class Commenter:
                     "description": group_info.get("description") if group_info else None,
                     "contact": None,
                     "build": job.get("build", ""),
+                    "distri": job.get("distri", ""),
+                    "version": job.get("version", ""),
                     "status": status,
                 }
                 if group_info:
@@ -252,10 +289,23 @@ class Commenter:
                 "contact": g["contact"],
                 "build": g["build"],
                 "status": g["status"],
-                "overview_url": (
-                    u := f"{base_url}/tests/overview?build={g['build']}&group={quote(name, safe='')}{suffix}"
-                ),
-                "badge_url": u.replace("/tests/overview?", "/tests/overview/badge?"),
+                "overview_url": self._generate_overview_url(base_url, g, name),
+                "badge_url": self._generate_overview_url(base_url, g, name, badge=True),
             }
             for g in groups.values()
         ]
+
+    @staticmethod
+    def _generate_overview_url(base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False) -> str:
+        params = {"build": group["build"]}
+        if group["distri"]:
+            params["distri"] = group["distri"]
+        if group["version"]:
+            params["version"] = group["version"]
+        params["group"] = group_name
+        if not config.settings.allow_development_groups:
+            params["not_group_glob"] = "*Devel*,*Test*"
+
+        query = urlencode(params, safe="*")
+        path = "/tests/overview/badge" if badge else "/tests/overview"
+        return f"{base_url}{path}?{query}"

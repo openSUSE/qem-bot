@@ -28,6 +28,51 @@ def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:
     }
 
 
+def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
+    """Add bot marker to comment that can be used to find comment."""
+    info_str = ""
+    if info:
+        infos = ["=".join((str(key), str(value))) for key, value in info.items()]
+        info_str = " " + " ".join(infos)
+
+    marker = f"<!-- {bot}{info_str} -->"
+    return marker + "\n\n" + comment
+
+
+def truncate(comment: str, suffix: str = "...", length: int = 65535) -> str:
+    """Truncate a comment to a specific length, preserving markdown pre tags."""
+    # Handle very short length by dropping suffix and just chopping comment.
+    if length <= len(suffix) + len("\n</pre>"):
+        return comment[:length]
+    if len(comment) <= length:
+        return comment
+
+    # Determine the point at which to end by leaving room for suffix.
+    end = length - len(suffix)
+    if comment.find("<pre>", 0, end) != -1:
+        # For the sake of simplicity leave space for closing pre tag even if
+        # after truncation it may no longer be necessary. Otherwise, it
+        # requires recursion with some fun edge cases.
+        end -= len("\n</pre>")
+
+    # Check for the end location landing inside a pre tag and correct by
+    # moving in front of the tag. Landing on the ends is a noop.
+    pre_index = max(
+        comment.rfind("<pre>", end - 4, end + 4),
+        comment.rfind("</pre>", end - 5, end + 5),
+    )
+    if pre_index != -1:
+        end = pre_index
+
+    comment = comment[:end]
+
+    # Check for unbalanced pre tag and add a closing tag.
+    if comment.count("<pre>") > comment.count("</pre>"):
+        suffix += "\n</pre>"
+
+    return comment + suffix
+
+
 class OscCommentsValueError(ValueError):
     """Raised when an invalid value is provided to OscComments."""
 
@@ -134,13 +179,7 @@ class CommentAPI:
     @staticmethod
     def add_marker(comment: str, bot: str, info: dict[str, Any] | None = None) -> str:
         """Add bot marker to comment that can be used to find comment."""
-        info_str = ""
-        if info:
-            infos = ["=".join((str(key), str(value))) for key, value in info.items()]
-            info_str = " " + " ".join(infos)
-
-        marker = f"<!-- {bot}{info_str} -->"
-        return marker + "\n\n" + comment
+        return add_marker(comment, bot, info)
 
     def add_comment(
         self,
@@ -170,36 +209,7 @@ class CommentAPI:
     @staticmethod
     def truncate(comment: str, suffix: str = "...", length: int = 65535) -> str:
         """Truncate a comment to a specific length, preserving markdown pre tags."""
-        # Handle very short length by dropping suffix and just chopping comment.
-        if length <= len(suffix) + len("\n</pre>"):
-            return comment[:length]
-        if len(comment) <= length:
-            return comment
-
-        # Determine the point at which to end by leaving room for suffix.
-        end = length - len(suffix)
-        if comment.find("<pre>", 0, end) != -1:
-            # For the sake of simplicity leave space for closing pre tag even if
-            # after truncation it may no longer be necessary. Otherwise, it
-            # requires recursion with some fun edge cases.
-            end -= len("\n</pre>")
-
-        # Check for the end location landing inside a pre tag and correct by
-        # moving in front of the tag. Landing on the ends is a noop.
-        pre_index = max(
-            comment.rfind("<pre>", end - 4, end + 4),
-            comment.rfind("</pre>", end - 5, end + 5),
-        )
-        if pre_index != -1:
-            end = pre_index
-
-        comment = comment[:end]
-
-        # Check for unbalanced pre tag and add a closing tag.
-        if comment.count("<pre>") > comment.count("</pre>"):
-            suffix += "\n</pre>"
-
-        return comment + suffix
+        return truncate(comment, suffix, length)
 
     def delete(self, comment_id: str | int) -> None:
         """Remove a comment object.
