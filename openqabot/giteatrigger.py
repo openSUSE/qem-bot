@@ -135,6 +135,9 @@ class GiteaTrigger:
                 pullrequest = PullRequest(
                     number=pr["number"],
                     raw_labels=pr["labels"],
+                    repo_name=pr["base"]["repo"]["name"],
+                    branch=pr["base"]["label"],
+                    url=pr["url"],
                 )
                 # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
                 # at least one for labels defined in staging.config

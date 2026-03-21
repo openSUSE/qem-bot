@@ -3,7 +3,21 @@
 """Gitea Pullrequest type definition."""
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
+
+
+class GiteaPullRequestProtocol(Protocol):
+    """Protocol for objects representing a Gitea pull request."""
+
+    @property
+    def id(self) -> int:
+        """The identifier of the pull request."""
+        ...
+
+    @property
+    def url(self) -> str | None:
+        """The URL of the pull request."""
+        ...
 
 
 @dataclass
@@ -11,9 +25,17 @@ class PullRequest:
     """Represent all information to operate Gitea pull requests."""
 
     number: int
+    repo_name: str
+    branch: str
+    url: str
     raw_labels: list[dict[str, Any]] = field(repr=False)
 
     labels: set[str] = field(init=False)
+
+    @property
+    def id(self) -> int:
+        """Alias for number for consistency with Submission."""
+        return self.number
 
     def __post_init__(self) -> None:
         """Extract names from the raw label dictionaries into a set."""
