@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 from urllib.parse import urlparse
 
 import pytest
+import requests
 from pytest_mock import MockerFixture
 
 from openqabot.giteatrigger import GiteaTrigger
@@ -290,7 +291,7 @@ def test_comment_on_pr_no_jobs(trigger: GiteaTrigger) -> None:
 
 def test_comment_on_pr_exception(trigger: GiteaTrigger) -> None:
     """Tests comment_on_pr when fetching jobs fails."""
-    cast("MagicMock", trigger.openqa.get_jobs).side_effect = Exception("openQA Down")
+    cast("MagicMock", trigger.openqa.get_jobs).side_effect = requests.exceptions.RequestException("openQA Down")
 
     mock_pr = MagicMock(number=123)
     trigger.comment_on_pr(mock_pr, "product", "version", "arch", "build")

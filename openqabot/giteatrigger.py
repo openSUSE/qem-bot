@@ -7,6 +7,8 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any
 
+import requests
+from openqa_client.exceptions import RequestError
 from osc import conf
 
 from openqabot import config
@@ -129,9 +131,7 @@ class GiteaTrigger:
 
         try:
             jobs = self.openqa.get_jobs(data)
-            for j in jobs:
-                j.setdefault("build", build)
-        except Exception:
+        except (requests.exceptions.RequestException, RequestError):
             log.exception("Failed to fetch jobs for PR %s", pullrequest.number)
             return
 
