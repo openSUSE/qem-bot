@@ -242,6 +242,7 @@ def test_evaluate_list_of_openqa_job_results(
     ]
     ok_jobs, reasons, jobs = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
     assert ok_jobs == {1, 3}
+    assert len(jobs) == 4
     assert any(f"result 'failed':\n - {fake_openqa_url}/tests/2" in r for r in reasons)
     assert any(f"result 'incomplete':\n - {fake_openqa_url}/tests/4" in r for r in reasons)
 
@@ -269,6 +270,7 @@ def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake
     status = ApprovalStatus(
         fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[]
     )
+
     approver.handle_approval(status)
     assert (
         "Approving OBS request https://build.suse.de/request/show/42: All 2 openQA jobs have passed/softfailed"
@@ -286,6 +288,7 @@ def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_r
         builds=set(),
         jobs=[],
     )
+
     approver.handle_approval(status)
     assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
     assert "failed jobs" in caplog.text
@@ -610,7 +613,7 @@ def test_handle_approval_with_comment_flag(
         reasons_to_disapprove=[],
         processed_jobs=set(),
         builds={BuildIdentifier("fake_build", "fake_distri", "fake_version")},
-        jobs=[],
+        jobs=[{"build": "fake_build", "distri": "fake_distri", "version": "fake_version", "status": "passed"}],
     )
 
     approver.handle_approval(status)

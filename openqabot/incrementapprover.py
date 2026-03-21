@@ -99,7 +99,7 @@ class IncrementApprover:
     def _filter_jobs(self, jobs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Filter jobs within a state, removing those in devel groups."""
         return {
-            name: {"job_ids": ids}
+            name: {**info, "job_ids": ids}
             for name, info in jobs.items()
             if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
         }
@@ -215,10 +215,7 @@ class IncrementApprover:
 
         if self.comment and approval_status.builds:
             state = "passed" if not reasons_to_disapprove else "failed"
-        if self.comment and approval_status.builds:
-            state = "passed" if not reasons_to_disapprove else "failed"
             msg = self.commenter.summarize_message(approval_status.builds, approval_status.jobs)
-            self.commenter.osc_comment_on_request(str(reqid), msg, state)
             self.commenter.osc_comment_on_request(str(reqid), msg, state)
 
         if not reasons_to_disapprove:

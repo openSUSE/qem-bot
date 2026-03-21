@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock, patch
-from urllib.parse import urlparse
 
 import osc.core
 
@@ -224,7 +223,6 @@ def prepare_approver(
         dry=False,
         token="not-secret",
         gitea_token=None,
-        openqa_instance=urlparse("http://openqa-instance"),
         accepted=True,
         request_id=request_id,
         project_base="OBS:PROJECT",
@@ -346,7 +344,6 @@ def make_approver_args(**kwargs: Any) -> Namespace:
         "gitea_token": None,
         "token": "dummy_token",
         "dry": False,
-        "openqa_instance": urlparse("http://openqa.example.com"),
         "all_submissions": False,
     }
     defaults.update(kwargs)

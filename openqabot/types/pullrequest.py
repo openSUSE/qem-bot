@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
-class GiteaPullRequestProtocol(Protocol):
-    """Protocol for objects representing a Gitea pull request."""
+class CommentableProtocol(Protocol):
+    """Protocol for objects representing a commentable entity."""
 
     @property
     def id(self) -> int:

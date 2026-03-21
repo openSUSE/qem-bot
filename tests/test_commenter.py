@@ -13,6 +13,7 @@ import pytest
 
 from openqabot.commenter import Commenter
 from openqabot.errors import EmptyCommentError, NoResultsError
+from openqabot.types.increment import BuildIdentifier
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
 
@@ -334,8 +335,8 @@ def test_summarize_message(
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
     mocker.patch("openqabot.config.settings.allow_development_groups", new=None)
     c = Commenter(mock_args, submissions=[])
-    jobs = [{"build": "1.1", "distri": "sle", "version": "15"}, {"build": "1.2"}]
-    result = c.summarize_message(jobs)
+    builds = [BuildIdentifier("1.1", "sle", "15"), BuildIdentifier("1.2", "", "")]
+    result = c.summarize_message(set(builds), [])
     suffix = "&not_group_glob=*Devel*%2C*Test*"
     assert (
         f"[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1{suffix}&distri=sle&version=15)](https://openqa.opensuse.org/tests/overview?build=1.1{suffix}&distri=sle&version=15)"
@@ -356,8 +357,8 @@ def test_summarize_message_allow_devel(
     commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
     mocker.patch("openqabot.config.settings.allow_development_groups", new="1")
     c = Commenter(mock_args, submissions=[])
-    jobs = [{"build": "1.1", "distri": "opensuse", "version": "Tumbleweed"}]
-    result = c.summarize_message(jobs)
+    builds = [BuildIdentifier("1.1", "opensuse", "Tumbleweed")]
+    result = c.summarize_message({builds[0]}, [])
     assert "not_group_glob" not in result
     assert (
         "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=opensuse&version=Tumbleweed)](https://openqa.opensuse.org/tests/overview?build=1.1&distri=opensuse&version=Tumbleweed)"
