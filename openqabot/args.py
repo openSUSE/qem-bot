@@ -13,6 +13,7 @@ from typing import Annotated
 import typer
 
 import openqabot.config as config_module
+import responses
 
 from .aggrsync import AggregateResultsSync
 from .amqp import AMQP
@@ -23,6 +24,7 @@ from .giteasync import GiteaSync
 from .giteatrigger import GiteaTrigger
 from .incrementapprover import IncrementApprover
 from .loader.qem import get_submissions
+from .mock_interceptor import MockInterceptorState, setup_mock_responses
 from .openqabot import OpenQABot
 from .repodiff import RepoDiff
 from .smeltsync import SMELTSync
@@ -210,6 +212,15 @@ def main(  # noqa: PLR0913
     if not configs.exists():
         log.error("Configuration error: %s does not exist", configs)
         sys.exit(1)
+
+    if fake_data:
+        setup_mock_responses()
+
+        def teardown_mocks() -> None:
+            responses.stop()
+            MockInterceptorState.started = False
+
+        ctx.call_on_close(teardown_mocks)
 
     # Store global options in context
     ctx.obj = SimpleNamespace(

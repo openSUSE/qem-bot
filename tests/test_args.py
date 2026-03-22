@@ -304,3 +304,13 @@ def test_debug_flag(mocker: MockerFixture, tmp_path: Path) -> None:
         assert logger.level == logging.DEBUG
     finally:
         logger.setLevel(original_level)
+
+
+def test_main_fake_data(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that mock responses are set up when --fake-data is provided."""
+    setup_mock = mocker.patch("openqabot.args.setup_mock_responses")
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(app, ["--fake-data", "--token", "foo", "--configs", str(tmp_path), "full-run"])
+    assert result.exit_code == 0
+    setup_mock.assert_called_once()
