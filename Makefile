@@ -17,16 +17,16 @@ all: help
 # Detect if pytest-xdist is installed for parallel testing
 PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
-.PHONY: only-test
-only-test: ## Run dynamic tests with coverage report
+.PHONY: test-unit
+test-unit: ## Run dynamic tests with coverage report
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
 
-.PHONY: only-test-no-coverage
-only-test-no-coverage: ## Run dynamic tests without coverage analysis and without style checks
+.PHONY: test-unit-no-coverage
+test-unit-no-coverage: ## Run dynamic tests without coverage analysis and without style checks
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST)
 
 .PHONY: only-test-with-coverage
-only-test-with-coverage: only-test  ## Alias for "only-test"
+only-test-with-coverage: test-unit  ## Alias for "test-unit"
 
 .PHONY: check-ruff
 check-ruff: ## Run ruff linting and formatting checks
@@ -75,11 +75,11 @@ checkstyle-all: ## Run all style and static analysis checks
 
 .PHONY: test
 test: ## Run all tests with coverage analysis and style checks
-	@$(MAKE) -j only-test-with-coverage checkstyle-all
+	@$(MAKE) -j test-unit checkstyle-all
 
 .PHONY: test-no-coverage
 test-no-coverage: ## Run all tests *without* coverage analysis and style checks (faster)
-	@$(MAKE) -j only-test checkstyle-all
+	@$(MAKE) -j test-unit-no-coverage checkstyle-all
 
 .PHONY: test-with-coverage
 test-with-coverage: test  ## Alias for "test"
