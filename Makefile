@@ -87,7 +87,7 @@ test-with-coverage: test  ## Alias for "test"
 BOT_COMMANDS ?= $(shell python3 -c "from openqabot.args import app; from typer.main import get_command_name; print(' '.join(get_command_name(c.name or c.callback.__name__) for c in app.registered_commands if not c.hidden))")
 TIMEOUT ?= 30
 QEM_DASHBOARD_URL ?= "http://localhost:3000/"
-GITEA_TOKEN_CMD ?= cat ./.gitea_token
+GITEA_TOKEN_CMD ?= sh -c 'cat ./.gitea_token 2>/dev/null || echo dummy-token'
 TEST_QEM_BOT_INTEGRATION_ARGS ?= -t s3cret -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --gitea-token $$($(GITEA_TOKEN_CMD)) --retry 0
 TEST_QEM_BOT_INTEGRATION_EXTRA_ARGS ?=
 QEM_BOT_BASE_CMD = env QEM_DASHBOARD_URL=$(QEM_DASHBOARD_URL) python3 ./qem-bot.py $(TEST_QEM_BOT_INTEGRATION_ARGS) $(TEST_QEM_BOT_INTEGRATION_EXTRA_ARGS)
@@ -100,13 +100,28 @@ test-all-commands-unstable: ## Test all bot commands with fake data
 		{ ret=$$?; [ $$ret -eq 124 ] || [ $$ret -eq 0 ] || exit $$ret; }; \
 	done
 
+.PHONY: start-dashboard-env
+start-dashboard-env: ## Start a local qem-dashboard and database using podman for integration testing
+	python3 ./scripts/manage_dashboard.py start
+
+.PHONY: stop-dashboard-env
+stop-dashboard-env: ## Stop the local qem-dashboard and database environment
+	python3 ./scripts/manage_dashboard.py stop
+
 .PHONY: run-dashboard-local
 run-dashboard-local:  ## Run a qem-dashboard instance for testing from ../qem-dashboard (Needs to be checked out manually)
 	make -C ../qem-dashboard run-dashboard-local
 
 .PHONY: check_for_dashboard
-check_for_dashboard:  ## Check for a responsive qem-dashboard instance for testing
-	@curl -s -o /dev/null -w "%{http_code}\n" $(QEM_DASHBOARD_URL) || { echo "No responsive server found on $(QEM_DASHBOARD_URL). Make sure to start a qem-dashboard manually or with 'make run-dashboard-local'" ; exit 1; }
+check_for_dashboard:  ## Check for a responsive qem-dashboard instance for testing (with retries)
+	@echo "Waiting for qem-dashboard to become responsive on $(QEM_DASHBOARD_URL)..."
+	@retry -r 15 -s 2 -- curl -s -o /dev/null $(QEM_DASHBOARD_URL) || { echo "No responsive server found on $(QEM_DASHBOARD_URL). Make sure to start a qem-dashboard manually or with 'make run-dashboard-local'" ; exit 1; }
+
+.PHONY: run-integration-tests
+run-integration-tests: ## Automatically start environment, run integration tests, and clean up
+	@$(MAKE) start-dashboard-env
+	@$(MAKE) test-dashboard-integration || ( $(MAKE) stop-dashboard-env; exit 1 )
+	@$(MAKE) stop-dashboard-env
 
 .PHONY: test-dashboard-integration
 test-dashboard-integration: check_for_dashboard  ## Test qem-bot against a local dashboard instance
