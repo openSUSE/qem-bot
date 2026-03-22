@@ -138,12 +138,12 @@ following automated targets:
 1.  **Start a local dashboard:** If you have a `qem-dashboard` checkout in the
     neighboring directory (`../qem-dashboard`), you can start it with:
     ```bash
-    make run-dashboard-local
+    make env-dashboard-local
     ```
 2.  **Run integration tests:** To run a suite of sync and run commands against
     a local dashboard (defaulting to `http://localhost:3000/`), use:
     ```bash
-    make test-dashboard-integration
+    make test-integration
     ```
     This will verify `gitea-sync`, `smelt-sync`, and dry-runs of
     `submissions-run` and `sub-approve`.

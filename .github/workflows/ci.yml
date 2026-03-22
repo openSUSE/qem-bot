@@ -60,4 +60,4 @@ jobs:
         run: |
           curl --retry 3 -sS -o /usr/local/bin/retry https://raw.githubusercontent.com/okurz/retry/refs/heads/main/retry
           chmod +x /usr/local/bin/retry
-          uv run make ISOLATE=0 run-integration-tests
+          uv run make ISOLATE=0 test-integration

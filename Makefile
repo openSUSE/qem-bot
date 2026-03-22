@@ -100,31 +100,31 @@ test-all-commands-unstable: ## Test all bot commands with fake data
 		{ ret=$$?; [ $$ret -eq 124 ] || [ $$ret -eq 0 ] || exit $$ret; }; \
 	done
 
-.PHONY: start-dashboard-env
-start-dashboard-env: ## Start a local qem-dashboard and database using podman for integration testing
+.PHONY: env-dashboard-start
+env-dashboard-start: ## Start a local qem-dashboard and database using podman for integration testing
 	python3 ./scripts/manage_dashboard.py start
 
-.PHONY: stop-dashboard-env
-stop-dashboard-env: ## Stop the local qem-dashboard and database environment
+.PHONY: env-dashboard-stop
+env-dashboard-stop: ## Stop the local qem-dashboard and database environment
 	python3 ./scripts/manage_dashboard.py stop
 
-.PHONY: run-dashboard-local
-run-dashboard-local:  ## Run a qem-dashboard instance for testing from ../qem-dashboard (Needs to be checked out manually)
+.PHONY: env-dashboard-local
+env-dashboard-local:  ## Run a qem-dashboard instance for testing from ../qem-dashboard (Needs to be checked out manually)
 	make -C ../qem-dashboard run-dashboard-local
 
-.PHONY: check_for_dashboard
-check_for_dashboard:  ## Check for a responsive qem-dashboard instance for testing (with retries)
+.PHONY: env-dashboard-wait
+env-dashboard-wait:  ## Check for a responsive qem-dashboard instance for testing (with retries)
 	@echo "Waiting for qem-dashboard to become responsive on $(QEM_DASHBOARD_URL)..."
-	@retry -r 15 -s 2 -- curl -s -o /dev/null $(QEM_DASHBOARD_URL) || { echo "No responsive server found on $(QEM_DASHBOARD_URL). Make sure to start a qem-dashboard manually or with 'make run-dashboard-local'" ; exit 1; }
+	@retry -r 15 -s 2 -- curl -s -o /dev/null $(QEM_DASHBOARD_URL) || { echo "No responsive server found on $(QEM_DASHBOARD_URL). Make sure to start a qem-dashboard manually or with 'make env-dashboard-local'" ; exit 1; }
 
-.PHONY: run-integration-tests
-run-integration-tests: ## Automatically start environment, run integration tests, and clean up
-	@$(MAKE) start-dashboard-env
-	@$(MAKE) test-dashboard-integration || ( $(MAKE) stop-dashboard-env; exit 1 )
-	@$(MAKE) stop-dashboard-env
+.PHONY: test-integration
+test-integration: ## Automatically start environment, run integration tests, and clean up
+	@$(MAKE) env-dashboard-start
+	@$(MAKE) test-integration-payload || ( $(MAKE) env-dashboard-stop; exit 1 )
+	@$(MAKE) env-dashboard-stop
 
-.PHONY: test-dashboard-integration
-test-dashboard-integration: check_for_dashboard  ## Test qem-bot against a local dashboard instance
+.PHONY: test-integration-payload
+test-integration-payload: env-dashboard-wait  ## Test qem-bot against a local dashboard instance
 	$(QEM_BOT_BASE_CMD) gitea-sync
 	$(QEM_BOT_BASE_CMD) smelt-sync
 	$(QEM_BOT_BASE_CMD) --dry submissions-run
