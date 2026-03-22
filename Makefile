@@ -28,8 +28,8 @@ only-test-no-coverage: ## Run dynamic tests without coverage analysis and withou
 .PHONY: only-test-with-coverage
 only-test-with-coverage: only-test  ## Alias for "only-test"
 
-.PHONY: ruff
-ruff: ## Run ruff linting and formatting checks
+.PHONY: check-ruff
+check-ruff: ## Run ruff linting and formatting checks
 	ruff check
 	ruff format --check
 
@@ -56,18 +56,18 @@ check-maintainability: ## Check maintainability index (radon)
 	@echo "Checking maintainability (grade B or worse) …"
 	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
 
-.PHONY: typecheck-ty
-typecheck-ty: ## Run ty type checker
+.PHONY: check-types-ty
+check-types-ty: ## Run ty type checker
 	ty check
 
-.PHONY: typecheck
-typecheck: typecheck-ty
+.PHONY: check-types
+check-types: check-types-ty
 
 # aggregate targets
 
 .PHONY: checkstyle
 checkstyle: ## Run fast style and static analysis checks
-	@$(MAKE) -j ruff check-conventions typecheck
+	@$(MAKE) -j check-ruff check-conventions check-types
 
 .PHONY: checkstyle-all
 checkstyle-all: ## Run all style and static analysis checks
