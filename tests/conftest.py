@@ -5,6 +5,10 @@
 from __future__ import annotations
 
 import os
+
+# Ensure that we don't load .env file during tests
+os.environ["QEM_BOT_TESTING"] = "1"
+
 import re
 from argparse import Namespace
 from collections import defaultdict

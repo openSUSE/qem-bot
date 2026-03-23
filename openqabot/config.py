@@ -8,6 +8,7 @@ Most of these constants can be overridden by environment variables.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -74,7 +75,7 @@ class Settings(BaseSettings):
     url_timeout: int = 60
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=None if os.environ.get("QEM_BOT_TESTING") else ".env",
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
