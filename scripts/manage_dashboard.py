@@ -126,6 +126,10 @@ def start(
                 ),
             )
             content = content.replace("COPY . .", "COPY . .\nRUN cpanm -n MCP::Server")
+
+            # Remove playwright installation which downloads ~500MB of browsers we don't need for API testing
+            content = content.replace(" && \\\n    npx playwright install", "")
+
             containerfile.write_text(content)
 
     # Build dashboard
