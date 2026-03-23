@@ -1,0 +1,17 @@
+product: MOCK_PRODUCT
+settings:
+  DISTRI: sle
+  VERSION: 15-SP3
+aggregate:
+  FLAVOR: Mock-Flavor
+  archs:
+    - x86_64
+  test_issues:
+    BASE_TEST_ISSUES: Mock:15-SP3
+incidents:
+  FLAVOR:
+    Mock-Flavor:
+      archs:
+        - x86_64
+      issues:
+        BASE_TEST_ISSUES: Mock:15-SP3

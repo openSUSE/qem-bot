@@ -88,7 +88,7 @@ BOT_COMMANDS ?= $(shell python3 -c "from openqabot.args import app; from typer.m
 TIMEOUT ?= 30
 QEM_DASHBOARD_URL ?= "http://localhost:3000/"
 GITEA_TOKEN_CMD ?= sh -c 'cat ./.gitea_token 2>/dev/null || echo dummy-token'
-TEST_QEM_BOT_INTEGRATION_ARGS ?= --fake-data -t s3cret -c metadata/qem-bot --singlearch metadata/qem-bot/singlearch.yml --gitea-token $$($(GITEA_TOKEN_CMD)) --retry 0
+TEST_QEM_BOT_INTEGRATION_ARGS ?= --fake-data -t s3cret -c tests/fixtures/metadata/qem-bot --singlearch tests/fixtures/metadata/qem-bot/singlearch.yml --gitea-token $$($(GITEA_TOKEN_CMD)) --retry 0
 TEST_QEM_BOT_INTEGRATION_EXTRA_ARGS ?=
 QEM_BOT_BASE_CMD = env QEM_DASHBOARD_URL=$(QEM_DASHBOARD_URL) python3 ./qem-bot.py $(TEST_QEM_BOT_INTEGRATION_ARGS) $(TEST_QEM_BOT_INTEGRATION_EXTRA_ARGS)
 

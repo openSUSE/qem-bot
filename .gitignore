@@ -139,5 +139,5 @@ dmypy.json
 cython_debug/
 
 # Meta-data as cloned following the README instructions
-metadata/
+/metadata/
 .tmp/
