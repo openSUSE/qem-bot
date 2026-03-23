@@ -67,7 +67,7 @@ def test_extra_builds_for_package_filtering(caplog: pytest.LogCaptureFixture) ->
     pkg2 = Package("kernel-livepatch-6.4.0-150600.10", "0", "20240101", "1.1", "x86_64")
     res = approver.extra_builds_for_package(pkg2, config, build_info)
     assert res is not None
-    assert res["BUILD"] == "1.1-test-build"
+    assert res["BUILD"] == "PI-1.1-test-build"
 
     # debuginfo package
     pkg3 = Package("kernel-livepatch-debuginfo", "0", "20240101", "1.1", "x86_64")

@@ -89,13 +89,13 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
 
     for arch in ("aarch64", "x86_64", "ppc64le", "s390x"):
         assert re.search(
-            f"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@{arch}.*Online-Increments", caplog.text
+            f"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@{arch}.*Online-Increments", caplog.text
         )
     expected_log_message = R"Skipping approval.*no relevant jobs"
-    expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
-    expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
+    expected_log_message += ".*SLESv16.0.*PI-139.1@x86_64.*Foo-Increments"
+    expected_log_message += ".*SLESv16.0.*PI-139.1-additional-build@x86_64.*Additional-Foo-Increments"
     assert re.search(expected_log_message, caplog.text, re.DOTALL)
-    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@s390x.*Foo-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@s390x.*Foo-Increments", caplog.text)
     assert (
         "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"
         in caplog.messages[-1]
@@ -113,8 +113,8 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
     for resp in fake_only_jobs_of_additional_builds_with_param_matching:
         assert resp.call_count == 1
 
-    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@x86_64.*Online-Increments", caplog.text)
-    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@ppc64le.*Foo-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@x86_64.*Online-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@ppc64le.*Foo-Increments", caplog.text)
     assert (
         "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"
         in caplog.messages[-1]
@@ -134,7 +134,7 @@ def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.Lo
             "DISTRI": "sle",
             "VERSION": "16.0",
             "FLAVOR": "Online-Increments",
-            "BUILD": "139.1",
+            "BUILD": "PI-139.1",
             "ARCH": arch,
             "PRODUCT": "SLES",
             "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
@@ -152,7 +152,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         "DISTRI": "sle",
         "VERSION": "16.0",
         "FLAVOR": "Online-Increments",
-        "BUILD": "139.1",
+        "BUILD": "PI-139.1",
         "PRODUCT": "SLES",
         "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "FOO": "bar",
@@ -166,7 +166,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
     def assert_livepatch(flavor: str, build_suffix: str, kernel_version: str) -> None:
         expected_params = base_params | {
             "FLAVOR": flavor,
-            "BUILD": f"139.1-{build_suffix}",
+            "BUILD": f"PI-139.1-{build_suffix}",
             "KERNEL_VERSION": kernel_version,
             "KGRAFT": "1",
         }

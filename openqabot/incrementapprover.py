@@ -231,7 +231,7 @@ class IncrementApprover:
             return None
 
         groups = package_name_match.groupdict()
-        extra_build = [build_info.build, additional_build["build_suffix"]]
+        extra_build = [f"PI-{build_info.build}", additional_build["build_suffix"]]
         extra_params: dict[str, str] = {}
 
         if kind := groups.get("kind"):
@@ -384,7 +384,7 @@ class IncrementApprover:
             "VERSION": build_info.version,
             "FLAVOR": build_info.flavor,
             "ARCH": build_info.arch,
-            "BUILD": build_info.build,
+            "BUILD": f"PI-{build_info.build}",
             "PRODUCT": build_info.product,
             "INCREMENT_REPO": config_inc.build_project_url(config.settings.download_base_url) + repo_sub_path,
             **OBSOLETE_PARAMS,
