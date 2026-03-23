@@ -609,7 +609,7 @@ def test_handle_approval_with_comment_flag(
         ok_jobs={1, 2},
         reasons_to_disapprove=[],
         processed_jobs=set(),
-        builds={BuildIdentifier("fake_build", "", "")},
+        builds={BuildIdentifier("fake_build", "fake_distri", "fake_version")},
         jobs=[],
     )
 
