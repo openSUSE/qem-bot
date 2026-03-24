@@ -60,7 +60,7 @@ def test_check_pullrequest_triggers_job(trigger: GiteaTrigger, mocker: MockerFix
     args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
     settings = args[0]
     assert settings["FLAVOR"] == "Online-Staging"
-    assert settings["VERSION"] == "15.5:PR-123"
+    assert settings["VERSION"] == "15.5"
     assert settings["BUILD"] == "PR-123-1.1:SLES-15.5"
     assert settings["ISO_URL"] == "http://fake.url//SLES-15.5-Online-x86_64-Build1.1.install.iso"
 

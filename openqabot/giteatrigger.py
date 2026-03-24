@@ -90,13 +90,12 @@ class GiteaTrigger:
             version = matched_iso.group("version")
             arch = matched_iso.group("arch")
             build_num = matched_iso.group("build")
-            unique_version = f"{version}:PR-{pullrequest.number}"
             build = f"PR-{pullrequest.number}-{build_num}:{product}-{version}"
-            if self.is_openqa_triggering_needed(unique_version, arch, build):
+            if self.is_openqa_triggering_needed(version, arch, build):
                 openqa_settings = {
                     "ISO_URL": f"{repo_url}/{matched_iso.group(0)}",
                     "_GITEA_PR": str(pullrequest.number),
-                    "VERSION": unique_version,
+                    "VERSION": version,
                     "FLAVOR": self.flavor,
                     "ARCH": arch,
                     "DISTRI": self.distri,
