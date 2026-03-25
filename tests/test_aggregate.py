@@ -7,6 +7,7 @@ from __future__ import annotations
 import datetime
 import logging
 from collections import defaultdict
+from datetime import UTC
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -18,7 +19,6 @@ from openqabot.types.aggregate import Aggregate, PostData
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
 from openqabot.types.types import Repos
-from openqabot.utc import UTC
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock

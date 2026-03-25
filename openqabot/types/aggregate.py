@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import datetime
 from collections import defaultdict
+from datetime import UTC
 from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -16,7 +17,6 @@ from openqabot import config, dashboard
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_public_cloud_settings
-from openqabot.utc import UTC
 
 from .baseconf import BaseConf, JobConfig
 from .types import ChannelType, ProdVer, Repos, get_channel_type

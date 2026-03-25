@@ -5,14 +5,12 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_DELETE, http_GET, http_POST
 from osc.core import makeurl
-
-from openqabot.utc import UTC
 
 
 def comment_as_dict(comment_element: etree.Element) -> dict[str, Any]:

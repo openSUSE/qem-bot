@@ -7,7 +7,7 @@ from __future__ import annotations
 import operator
 import re
 import string
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from http import HTTPStatus
 from logging import getLogger
@@ -34,7 +34,6 @@ from .loader.qem import (
     get_submission_settings,
     get_submissions_approver,
 )
-from .utc import UTC
 
 if TYPE_CHECKING:
     from argparse import Namespace

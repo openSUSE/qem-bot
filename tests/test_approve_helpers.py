@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, NoReturn
 
 import pytest
@@ -13,7 +13,6 @@ from openqa_client.exceptions import RequestError
 
 from openqabot.approver import Approver
 from openqabot.loader.qem import JobAggr
-from openqabot.utc import UTC
 
 from .helpers import args, make_approver_args
 
