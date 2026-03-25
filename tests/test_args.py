@@ -81,7 +81,7 @@ def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("extra_args", "env", "expected_comment"),
     [
-        ([], {}, False),
+        ([], {}, True),
         (["--no-comment"], {}, False),
         (["--comment"], {}, True),
         ([], {"QEM_BOT_APPROVE_COMMENT": "True"}, True),

@@ -322,7 +322,7 @@ def gitea_trigger(
         typer.Option("--pr-label", envvar="PR_LABEL", help="Gitea PRs label for which to trigger tests"),
     ] = "staging/In Progress",
     pr_number: pr_number_arg = None,
-    comment: comment_option = False,
+    comment: comment_option = True,
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
@@ -351,7 +351,7 @@ def sub_approve(
             help="Submission ID (to approve only a single submission)",
         ),
     ] = None,
-    comment: comment_option = False,
+    comment: comment_option = True,
 ) -> None:
     """Approve submissions which passed tests."""
     args = ctx.obj
