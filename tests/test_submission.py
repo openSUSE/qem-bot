@@ -198,7 +198,7 @@ def test_sub_rev_no_repo_found(mocker: MockerFixture) -> None:
 
 def test_sub_repr_no_rrid() -> None:
     data = deepcopy(test_data)
-    data["rr_number"] = None  # type: ignore[assignment]
+    data["rr_number"] = None  # ty: ignore[invalid-assignment]
     sub = Submission(data)
     assert repr(sub) == f"<Submission: smelt:{data['project']}>"
 
@@ -288,7 +288,7 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
 def test_compute_revisions_cache_hit(mocker: MockerFixture) -> None:
     submission = Submission(test_data)
     submission.rev_cache_params = (None, None, None)
-    submission.revisions = {"some": "data"}  # type: ignore[assignment]
+    submission.revisions = {"some": "data"}  # ty: ignore[invalid-assignment]
 
     # Should return True without calling rev
     mock_rev = mocker.patch.object(submission, "rev")

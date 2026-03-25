@@ -164,7 +164,7 @@ def test_handle_submission_embargoed_skip() -> None:
         extrasettings=set(),
     )
     # Patch filter_embargoed to return True
-    submissions_obj.filter_embargoed = lambda _: True  # type: ignore[invalid-assignment]
+    submissions_obj.filter_embargoed = lambda _: True  # ty: ignore[invalid-assignment]
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
     assert submissions_obj.handle_submission(ctx, cfg) is None

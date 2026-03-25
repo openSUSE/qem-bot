@@ -11,7 +11,7 @@ from typing import Any
 from urllib.error import HTTPError
 
 import osc.core
-from lxml import etree  # type: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[unresolved-import]
 
 from openqabot import config
 from openqabot.repodiff import Package, RepoDiff

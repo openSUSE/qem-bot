@@ -13,7 +13,7 @@ from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 
 import pytest
-from lxml import etree  # noqa: TC002  # type: ignore[unresolved-import]
+from lxml import etree  # noqa: TC002  # ty: ignore[unresolved-import]
 
 import responses
 from openqabot.config import settings

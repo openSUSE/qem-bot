@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from lxml import etree  # type: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_DELETE, http_GET, http_POST
 from osc.core import makeurl
 

@@ -38,7 +38,7 @@ def test_listener_full_workflow(mocker: MagicMock) -> None:
     mock_channel.queue_bind.assert_called_with(exchange="pubsub", queue="tmp-queue", routing_key="test.key")
     fake_body = json.dumps({"foo": "bar"}).encode("utf-8")
     fake_method = MagicMock(routing_key="test.key")
-    listener._on_message(None, fake_method, None, fake_body)  # type: ignore[invalid-argument-type]  # noqa: SLF001
+    listener._on_message(None, fake_method, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
 
     assert received_data[0] == ({"foo": "bar"}, "test.key")
 

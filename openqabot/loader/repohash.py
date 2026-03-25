@@ -9,7 +9,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, NamedTuple
 
 import requests
-from lxml import etree  # type: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[unresolved-import]
 from requests.exceptions import RetryError
 
 from openqabot import config

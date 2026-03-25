@@ -20,7 +20,7 @@ import osc.conf
 import osc.core
 import osc.util.xml
 import requests
-from lxml import etree  # type: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 

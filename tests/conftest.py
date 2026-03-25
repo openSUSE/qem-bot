@@ -261,7 +261,7 @@ def fakeget_package_diff(mocker: MockerFixture) -> None:
 def mock_osc(mocker: MockerFixture) -> None:
     # Clear caches to ensure isolation between tests
 
-    find_request_on_obs.cache_clear()  # type: ignore[attr-defined]
+    find_request_on_obs.cache_clear()  # ty: ignore[unresolved-attribute]
     get_obs_request_list.cache_clear()
 
     mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)

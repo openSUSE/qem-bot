@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from urllib.error import HTTPError
 
 import pytest
-from lxml import etree  # type: ignore[unresolved-import]
+from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.loader.sourcereport import find_source_reports, load_packages_from_source_report, parse_source_report

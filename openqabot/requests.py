@@ -71,4 +71,4 @@ def find_request_on_obs(args: Namespace, build_project: str) -> osc.core.Request
     return _find_request_on_obs_cached(args.request_id, accepted=args.accepted, build_project=build_project)
 
 
-find_request_on_obs.cache_clear = _find_request_on_obs_cached.cache_clear  # type: ignore[attr-defined]
+find_request_on_obs.cache_clear = _find_request_on_obs_cached.cache_clear  # ty: ignore[unresolved-attribute]
