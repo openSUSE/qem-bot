@@ -1,0 +1,11 @@
+product: SLES
+settings:
+  DISTRI: sle
+  VERSION: "15.99"
+incidents:
+  FLAVOR:
+    Mock-Flavor:
+      archs:
+        - x86_64
+      issues:
+        BASE_TEST_ISSUES: SLFO:1.1.99:PullRequest:124:SLES#15.99

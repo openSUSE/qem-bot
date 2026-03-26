@@ -15,6 +15,7 @@ from openqabot.mock_interceptor import (
     gitea_pr_details_callback,
     gitea_pulls_callback,
     mock_http_get,
+    openqa_jobs_callback,
     patchinfo_callback,
     read_fixture,
     setup_mock_responses,
@@ -117,6 +118,15 @@ def test_smelt_graphql_callback() -> None:
     status, _, data = smelt_graphql_callback(MockRequest("http://test"))
     assert status == 200
     assert "incidents" in data
+    assert "SUSE:Maintenance:100" in data
+
+
+def test_openqa_jobs_callback() -> None:
+    """Test openQA jobs mock callback."""
+    status, _, data = openqa_jobs_callback(MockRequest("http://test"))
+    assert status == 200
+    assert "jobs" in data
+    assert "mock_job_git" in data
 
 
 def test_patchinfo_callback() -> None:

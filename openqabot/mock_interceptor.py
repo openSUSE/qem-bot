@@ -3,6 +3,7 @@
 """Mock interceptor for fake_data testing."""
 
 import importlib.util
+import json
 import logging
 import re
 from io import BytesIO
@@ -53,6 +54,30 @@ def mock_smelt_graphql() -> None:
     )
 
 
+def mock_openqa_jobs() -> None:
+    """Mock openQA jobs API."""
+    responses.add_callback(
+        responses.GET,
+        re.compile(r".*/api/v1/jobs.*"),
+        callback=openqa_jobs_callback,
+    )
+    responses.add(
+        responses.GET,
+        re.compile(r".*/api/v1/job_groups/\d+"),
+        json=[{"id": 1, "parent_id": 100}],
+    )
+
+
+def mock_repomd() -> None:
+    """Mock repomd.xml API."""
+    responses.add(
+        responses.GET,
+        re.compile(r".*repomd\.xml$"),
+        body='<?xml version="1.0" encoding="UTF-8"?><repomd xmlns="http://linux.duke.edu/metadata/repo"><revision>42</revision></repomd>',
+        content_type="text/xml",
+    )
+
+
 def mock_patchinfo() -> None:
     """Mock openSUSE OBS patchinfo API."""
     responses.add_callback(
@@ -96,6 +121,8 @@ def setup_mock_responses() -> None:
     mock_gitea_pulls()
     mock_gitea_pr_details()
     mock_smelt_graphql()
+    mock_openqa_jobs()
+    mock_repomd()
     mock_patchinfo()
     allow_localhost_passthrough()
     mock_obs_osc()
@@ -131,7 +158,77 @@ def gitea_pr_details_callback(request: requests.PreparedRequest) -> tuple[int, d
 
 def smelt_graphql_callback(_request: requests.PreparedRequest) -> tuple[int, dict[str, str], str]:
     """Return SMELT GraphQL API mock response."""
-    return (200, {}, '{"data": {"incidents": {"edges": [], "pageInfo": {"hasNextPage": false, "endCursor": ""}}}}')
+    return (
+        200,
+        {},
+        json.dumps({
+            "data": {
+                "incidents": {
+                    "edges": [
+                        {
+                            "node": {
+                                "incidentId": 100,
+                                "emu": False,
+                                "project": "SUSE:Maintenance:100",
+                                "repositories": {"edges": [{"node": {"name": "SUSE:Updates:Mock:15-SP3"}}]},
+                                "requestSet": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "requestId": 1000,
+                                                "status": {"name": "review"},
+                                                "reviewSet": {
+                                                    "edges": [
+                                                        {
+                                                            "node": {
+                                                                "assignedByGroup": {"name": "qam-openqa"},
+                                                                "status": {"name": "new"},
+                                                            },
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                                "packages": {"edges": [{"node": {"name": "mock-package"}}]},
+                                "crd": None,
+                                "priority": 50,
+                            },
+                        },
+                    ],
+                    "pageInfo": {"hasNextPage": False, "endCursor": ""},
+                }
+            }
+        }),
+    )
+
+
+def openqa_jobs_callback(_request: requests.PreparedRequest) -> tuple[int, dict[str, str], str]:
+    """Return openQA jobs mock response."""
+    return (
+        200,
+        {},
+        json.dumps({
+            "jobs": [
+                {
+                    "id": 2,
+                    "status": "passed",
+                    "result": "passed",
+                    "name": "mock_job_git",
+                    "group": "Mock Group",
+                    "group_id": 1,
+                    "clone_id": None,
+                    "settings": {
+                        "BUILD": ":git:124:tree",
+                        "FLAVOR": "Mock-Flavor",
+                        "REPOHASH": "42",
+                        "VERSION": "15.99",
+                    },
+                }
+            ]
+        }),
+    )
 
 
 def patchinfo_callback(_request: requests.PreparedRequest) -> tuple[int, dict[str, str], str]:

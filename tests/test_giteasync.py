@@ -184,7 +184,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     for arch in ["aarch64", "x86_64"]:  # ppc64le skipped as not present in _multibuild
         channel = "#".join([f"{expected_repo}:{arch}", "15.99"])
         assert channel in channels
-        assert channel in failed_or_unpublished
+        assert channel not in failed_or_unpublished
     assert submission["project"] == "products/SLFO"
     assert submission["url"] == "https://src.suse.de/products/SLFO/pulls/124"
     assert submission["inReview"]

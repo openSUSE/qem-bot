@@ -1,4 +1,4 @@
-product: MOCK_PRODUCT
+product: Mock
 settings:
   DISTRI: sle
   VERSION: 15-SP3
