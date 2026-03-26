@@ -139,6 +139,32 @@ def testload_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker
     assert res == set()
 
 
+def testload_build_info_filter_source_debug(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    """Test that builds ending with -Source or -Debug are filtered out."""
+    approver = prepare_approver(caplog)
+    config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="any",
+        project_base="BASE",
+        build_project_suffix="TEST",
+        build_regex=BUILD_REGEX,
+        product_regex="SLES",
+    )
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
+        "data": [
+            {"name": "SLES-16.0-Online-x86_64-Build36.1.spdx.json"},
+            {"name": "SLES-16.0-Online-x86_64-Build36.1-Source.spdx.json"},
+            {"name": "SLES-16.0-Online-x86_64-Build36.1-Debug.spdx.json"},
+        ]
+    }
+    res = load_build_info(
+        config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
+    )
+    assert len(res) == 1
+    assert next(iter(res)).build == "36.1"
+
+
 def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFixture) -> None:
     approver = prepare_approver(caplog)
     package = Package("foo", "1", "2", "3", "arch")

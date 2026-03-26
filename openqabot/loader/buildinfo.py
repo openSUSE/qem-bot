@@ -7,6 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
+from openqabot.config import INCREMENT_BUILD_EXCLUDE_SUFFIXES
 from openqabot.types.increment import BuildInfo
 from openqabot.utils import retry10 as retried_requests
 
@@ -52,6 +53,9 @@ def load_build_info(
             return None
         arch = m.group("arch")
         build = m.group("build")
+        if build.endswith(INCREMENT_BUILD_EXCLUDE_SUFFIXES):
+            log.debug("Skipping build '%s' (ends with %s)", build, " or ".join(INCREMENT_BUILD_EXCLUDE_SUFFIXES))
+            return None
         try:
             flavor = m.group("flavor")
         except IndexError:
