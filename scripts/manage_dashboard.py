@@ -31,6 +31,10 @@ def run_command(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:  # noq
 def start(
     podman_bin: str = typer.Option(os.environ.get("PODMAN_BIN", "podman"), help="Podman executable to use"),
     postgres_image: str = typer.Option("docker.io/library/postgres:15-alpine", help="PostgreSQL image to use"),
+    dashboard_image: str = typer.Option(
+        "registry.opensuse.org/devel/openqa/qem-dashboard/containers/opensuse/qem-dashboard_devel",
+        help="qem-dashboard base image to use",
+    ),
     dashboard_repo: str = typer.Option(
         "https://github.com/openSUSE/qem-dashboard.git", help="qem-dashboard repository URL"
     ),
@@ -107,33 +111,23 @@ def start(
         typer.echo("Updating qem-dashboard repository...")
         run_command(["git", "pull", "origin", dashboard_branch], cwd=str(dashboard_dir))
 
-    # Temporary fix: Containerfile is missing MCP::Server and Mojolicious::Plugin::OpenAPI
-    containerfile = dashboard_dir / "Containerfile"
-    if containerfile.exists():
-        content = containerfile.read_text()
-        if "cpanm -n MCP::Server" not in content:
-            typer.echo("Applying temporary fixes to Containerfile...")
-            content = content.replace(
-                "perl-IO-Socket-SSL \\",
-                (
-                    "perl-IO-Socket-SSL \\\n"
-                    "    perl-App-cpanminus \\\n"
-                    "    make \\\n"
-                    "    gcc \\\n"
-                    "    perl-CryptX \\\n"
-                    "    perl-IPC-Run \\\n"
-                    "    perl-Mojolicious-Plugin-OpenAPI \\"
-                ),
-            )
-            content = content.replace("COPY . .", "COPY . .\nRUN cpanm -n MCP::Server")
+    # Build dashboard using the base image to speed up
+    containerfile = dashboard_dir / "Containerfile.qem-bot"
+    missing_pkgs = [
+        "perl-App-cpanminus",
+        "make",
+        "gcc",
+        "perl-CryptX",
+        "perl-IPC-Run",
+        "perl-Mojolicious-Plugin-OpenAPI",
+    ]
+    containerfile.write_text(
+        f"FROM {dashboard_image}\n"
+        "COPY . .\n"
+        f"RUN zypper in -y {' '.join(missing_pkgs)} && cpanm -n MCP::Server && zypper clean -a\n"
+    )
 
-            # Remove playwright installation which downloads ~500MB of browsers we don't need for API testing
-            content = content.replace(" && \\\n    npx playwright install", "")
-
-            containerfile.write_text(content)
-
-    # Build dashboard
-    typer.echo("Building qem-dashboard container image (this may take a few minutes)...")
+    typer.echo(f"Building qem-dashboard container image based on {dashboard_image}...")
     run_command([podman_bin, "build", "-t", "qem-dashboard:latest", "-f", str(containerfile), str(dashboard_dir)])
 
     # Start Dashboard
