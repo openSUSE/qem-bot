@@ -25,7 +25,7 @@ def get_help_output() -> str:
     env["COLUMNS"] = "80"
     env["NO_COLOR"] = "1"
     env["TERM"] = "dumb"
-    process = subprocess.run(  # noqa: S603
+    process = subprocess.run(  # noqa: S603, RUF100
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
         text=True,
