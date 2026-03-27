@@ -328,7 +328,7 @@ class IncrementApprover:
         if diff_key in self.package_diff:
             return self.package_diff[diff_key]
 
-        log.debug("Comuting repo diff to project %s", diff_project)
+        log.debug("Computing repo diff to project %s", diff_project)
         package_diff = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
         self.package_diff[diff_key] = package_diff
         return package_diff
