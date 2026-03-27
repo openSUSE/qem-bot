@@ -71,22 +71,27 @@ class RepoDiff:
         """Fetch data from a URL and optionally dump it to a file for fake data usage."""
         log.debug("Fetching repository data from %s", url)
         name = "responses/" + name.replace("/", "_")
+        fake_data = self.args is not None and self.args.fake_data
+        source = name if fake_data else url
         try:
-            if self.args is not None and self.args.fake_data:
-                if as_json:
-                    return json.loads(Path(name).read_text(encoding="utf8"))
-                return Path(name).read_bytes()
-            resp = retried_requests.get(url)
-            if self.args is not None and self.args.dump_data and not self.args.fake_data:
-                Path(name).write_bytes(resp.content)
-            return resp.json() if as_json else resp.content
+            if fake_data:
+                content = Path(name).read_bytes()
+            else:
+                resp = retried_requests.get(url)
+                if not resp.ok:
+                    log.info("Failed to fetch data from %s: %s %s", source, resp.status_code, resp.reason)
+                    return None
+                content = resp.content
+                if self.args is not None and self.args.dump_data:
+                    Path(name).write_bytes(content)
+
+            return json.loads(content) if as_json else content
         except (FileNotFoundError, PermissionError):
-            log.exception("Failed to read %s", name)
-        # Catching both because requests' JSONDecodeError might not inherit from json's
+            log.info("Failed to read %s: File not found", source)
         except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
-            log.exception("Failed to parse %s", name)
+            log.info("Failed to parse %s", source)
         except Exception:
-            log.exception("Failed to fetch or dump data from %s", url)
+            log.exception("Failed to fetch or dump data from %s", source)
         return None
 
     def load_repodata(self, project: str) -> etree.Element | None:

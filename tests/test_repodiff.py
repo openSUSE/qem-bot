@@ -13,6 +13,15 @@ from pytest_mock import MockerFixture
 from openqabot.repodiff import RepoDiff
 
 
+@pytest.fixture
+def diff(mocker: MockerFixture) -> RepoDiff:
+    """Fixture for RepoDiff instance."""
+    args = mocker.Mock()
+    args.fake_data = False
+    args.dump_data = False
+    return RepoDiff(args)
+
+
 def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
     diff = RepoDiff(None)
     assert diff() == 1
@@ -45,46 +54,43 @@ def test_repodiff_compression(capsys: pytest.CaptureFixture[str]) -> None:
     assert set(res.keys()) == {"aarch64", "ppc64le", "noarch"}
 
 
-def test_request_and_dump_not_found(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.parametrize(
+    ("side_effect", "method", "expected_msg"),
+    [
+        (FileNotFoundError, "read_bytes", "Failed to read responses/name: File not found"),
+        (json.JSONDecodeError("msg", "doc", 0), "read_bytes", "Failed to parse responses/name"),
+    ],
+)
+def test_request_and_dump_fake_data_errors(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, side_effect: Exception, method: str, expected_msg: str
+) -> None:
+    caplog.set_level("INFO")
     args = mocker.Mock()
     args.fake_data = True
     diff = RepoDiff(args)
-    mocker.patch("openqabot.repodiff.Path.read_bytes", side_effect=FileNotFoundError)
-    res = diff.request_and_dump("http://url", "name")
-    assert res is None
-    assert "Failed to read responses/name" in caplog.text
-
-
-def test_request_and_dump_invalid_json(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    args.fake_data = True
-    diff = RepoDiff(args)
-    mocker.patch("openqabot.repodiff.Path.read_text", return_value="invalid json")
+    if isinstance(side_effect, json.JSONDecodeError):
+        mocker.patch(f"openqabot.repodiff.Path.{method}", return_value=b"invalid json")
+    else:
+        mocker.patch(f"openqabot.repodiff.Path.{method}", side_effect=side_effect)
     res = diff.request_and_dump("http://url", "name", as_json=True)
     assert res is None
-    assert "Failed to parse responses/name" in caplog.text
+    assert expected_msg in caplog.text
 
 
-def test_load_repodata_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_load_repodata_error(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocker.patch.object(diff, "request_and_dump", return_value=None)
     res = diff.load_repodata("project")
     assert res is None
     assert "Could not load repo data for project project" in caplog.text
 
 
-def test_load_packages_empty(mocker: MockerFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_load_packages_empty(diff: RepoDiff, mocker: MockerFixture) -> None:
     mocker.patch.object(diff, "load_repodata", return_value=None)
     res = diff.load_packages("project")
     assert res == {}
 
 
-def test_load_packages_invalid_data(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_load_packages_invalid_data(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     # Return a dict instead of etree.Element
     mocker.patch.object(diff, "load_repodata", return_value={"invalid": "data"})
     res = diff.load_packages("project")
@@ -92,20 +98,14 @@ def test_load_packages_invalid_data(mocker: MockerFixture, caplog: pytest.LogCap
     assert "Could not load repo data for project project" in caplog.text
 
 
-def test_request_and_dump_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    args.fake_data = False
-    args.dump_data = False
-    diff = RepoDiff(args)
+def test_request_and_dump_exception(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocker.patch("openqabot.repodiff.retried_requests.get", side_effect=Exception("foo"))
     res = diff.request_and_dump("http://url", "name")
     assert res is None
     assert "Failed to fetch or dump data from http://url" in caplog.text
 
 
-def test_compute_diff_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_compute_diff_exception(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocker.patch.object(diff, "load_packages", side_effect=Exception("foo"))
     res = diff.compute_diff("repo_a", "repo_b")
     assert res == (defaultdict(set), 0)
@@ -127,11 +127,7 @@ def test_request_and_dump_dump_data(mocker: MockerFixture) -> None:
     mock_write.assert_called_once_with(b"content")
 
 
-def test_request_and_dump_no_dump(mocker: MockerFixture) -> None:
-    args = mocker.Mock()
-    args.fake_data = False
-    args.dump_data = False
-    diff = RepoDiff(args)
+def test_request_and_dump_no_dump(diff: RepoDiff, mocker: MockerFixture) -> None:
     mock_resp = mocker.Mock()
     mock_resp.content = b"content"
     mock_resp.status_code = 200
@@ -156,9 +152,33 @@ def test_repodiff_exit(mocker: MockerFixture) -> None:
         diff()
 
 
-def test_find_primary_repodata_none(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+@pytest.mark.parametrize(
+    ("status_code", "reason", "expected_msg"),
+    [
+        (404, "Not Found", "Failed to fetch data from http://url: 404 Not Found"),
+        (500, "Internal Server Error", "Failed to fetch data from http://url: 500 Internal Server Error"),
+    ],
+)
+def test_request_and_dump_not_ok(
+    diff: RepoDiff,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    status_code: int,
+    reason: str,
+    expected_msg: str,
+) -> None:
+    caplog.set_level("INFO")
+    mock_resp = mocker.Mock()
+    mock_resp.ok = False
+    mock_resp.status_code = status_code
+    mock_resp.reason = reason
+    mocker.patch("openqabot.repodiff.retried_requests.get", return_value=mock_resp)
+    res = diff.request_and_dump("http://url", "name")
+    assert res is None
+    assert expected_msg in caplog.text
+
+
+def test_find_primary_repodata_none(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     # no primary repodata in rows
     mocker.patch.object(diff, "request_and_dump", return_value={"data": [{"name": "other.xml"}]})
     res = diff.load_repodata("project")
@@ -166,18 +186,14 @@ def test_find_primary_repodata_none(mocker: MockerFixture, caplog: pytest.LogCap
     assert "Repository metadata not found" in caplog.text
 
 
-def test_load_repodata_request_failed(mocker: MockerFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_load_repodata_request_failed(diff: RepoDiff, mocker: MockerFixture) -> None:
     # repo_data_listing found, but subsequent request fails
     mocker.patch.object(diff, "request_and_dump", side_effect=[{"data": [{"name": "foo-primary.xml"}]}, None])
     res = diff.load_repodata("project")
     assert res is None
 
 
-def test_load_packages_not_rpm(mocker: MockerFixture) -> None:
-    args = mocker.Mock()
-    diff = RepoDiff(args)
+def test_load_packages_not_rpm(diff: RepoDiff, mocker: MockerFixture) -> None:
     # mock repo_data with non-rpm package
     xml = etree.fromstring(
         '<metadata xmlns="http://linux.duke.edu/metadata/common">'
