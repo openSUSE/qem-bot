@@ -46,6 +46,8 @@ class IncrementConfig:
     settings: dict[str, str] = field(default_factory=dict)
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
     reference_repos: dict[str, str] = field(default_factory=dict)
+    build_repo_template: str = ""
+    diff_repo_template: str = ""
 
     def _concat_project(self, project: str) -> str:
         if not self.project_base:
@@ -92,6 +94,8 @@ class IncrementConfig:
             settings=entry.get("settings", {}),
             additional_builds=entry.get("additional_builds", []),
             reference_repos=entry.get("reference_repos", {}),
+            build_repo_template=entry.get("build_repo_template", ""),
+            diff_repo_template=entry.get("diff_repo_template", ""),
         )
 
     @staticmethod

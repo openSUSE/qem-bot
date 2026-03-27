@@ -82,6 +82,14 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     )
     assert res == {"x86_64": {"pkg"}, "noarch": {"npkg"}}
 
+    # flavor SLES-Increments with templates
+    config.build_repo_template = "{base}/repo/{product}-{version}-{arch}"
+    config.diff_repo_template = "{base}/{version}/{arch}/{suffix}"
+    approver.get_package_diff(None, config, "/product", build_info_sles)
+    mock_diff.return_value.compute_diff.assert_called_with(
+        "REF_REPO_SLES/16.0/x86_64/DIFF", "BASE:BUILD/product/repo/SLES-16.0-x86_64"
+    )
+
     # flavor OTHER should use default DIFF_PROJECT without augmentation (because not in reference_repos)
     mock_diff.return_value.compute_diff.reset_mock()
     build_info_other = BuildInfo("sle", "SLES", "16.0", "OTHER", "x86_64", "123")

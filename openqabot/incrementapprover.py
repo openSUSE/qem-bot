@@ -252,7 +252,7 @@ class IncrementApprover:
         """Determine extra build parameters for a specific package."""
         if re.match(r"^1(?:\..*)?$", package.version):
             return None
-        if "-debuginfo" in package.name or package.arch in {"src", "nosrc"}:
+        if "debug" in package.name or package.arch in {"src", "nosrc"}:
             return None
 
         for additional_build in config_inc.additional_builds:
@@ -317,8 +317,24 @@ class IncrementApprover:
 
         if build_info and is_reference_repo:
             channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
-            build_project = f"{build_project}/{channel}/{build_info.arch}"
-            diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
+            params = {
+                "base": "",
+                "version": build_info.version,
+                "arch": build_info.arch,
+                "channel": channel,
+                "suffix": config_inc.diff_project_suffix,
+                "product": build_info.product,
+            }
+
+            if config_inc.build_repo_template:
+                build_project = config_inc.build_repo_template.format(**(params | {"base": build_project}))
+            else:
+                build_project = f"{build_project}/{channel}/{build_info.arch}"
+
+            if config_inc.diff_repo_template:
+                diff_project = config_inc.diff_repo_template.format(**(params | {"base": diff_project}))
+            else:
+                diff_project = f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
 
         if not is_reference_repo and any(s in diff_project for s in ("-Debug", "-Source")):
             log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_project)
