@@ -446,7 +446,9 @@ class IncrementApprover:
             log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
             return error_count
 
-        info_str = "or".join([build_info.string_with_params(p) for p in params])
+        info_str = " or ".join([build_info.string_with_params(p) for p in params])
+        if len(params) > 1:
+            info_str = "\n - " + "\n - ".join([build_info.string_with_params(p) for p in params])
         log.debug(
             "Requesting openQA job results for OBS request %s/request/show/%s for %s",
             config.settings.obs_web_url,

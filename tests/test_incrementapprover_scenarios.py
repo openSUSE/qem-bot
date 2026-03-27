@@ -91,7 +91,7 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
     expected_log_message = R"Skipping approval.*no relevant jobs"
     expected_log_message += ".*SLESv16.0.*139.1@x86_64.*Foo-Increments"
     expected_log_message += ".*SLESv16.0.*139.1-additional-build@x86_64.*Additional-Foo-Increments"
-    assert re.search(expected_log_message, caplog.text)
+    assert re.search(expected_log_message, caplog.text, re.DOTALL)
     assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*139.1@s390x.*Foo-Increments", caplog.text)
     assert (
         "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"

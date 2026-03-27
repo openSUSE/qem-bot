@@ -37,10 +37,14 @@ class BuildInfo(NamedTuple):
 
     def log_no_jobs(self, params: list[dict[str, str]]) -> None:
         """Log that no relevant jobs were found."""
-        log.info(
-            "Skipping approval: There are no relevant jobs on openQA for %s",
-            (" or ".join([self.string_with_params(param) for param in params]) if len(params) > 0 else {}),
-        )
+        build_strings = [self.string_with_params(param) for param in params]
+        if len(build_strings) > 1:
+            info_str = "\n - " + "\n - ".join(build_strings)
+        elif build_strings:
+            info_str = build_strings[0]
+        else:
+            info_str = "{}"
+        log.info("Skipping approval: There are no relevant jobs on openQA for %s", info_str)
 
     def log_pending_jobs(self, pending_states: set[str]) -> None:
         """Log that some jobs are still pending."""
