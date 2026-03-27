@@ -220,7 +220,7 @@ class IncrementApprover:
         extra_build = [build_info.build, additional_build["build_suffix"]]
         extra_params: dict[str, str] = {}
 
-        if (kind := groups.get("kind")) and kind != "default":
+        if kind := groups.get("kind"):
             extra_build.append(kind)
 
         if kernel_version := groups.get("kernel_version"):
@@ -319,6 +319,7 @@ class IncrementApprover:
             channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
             params = {
                 "base": "",
+                "project": config_inc.build_project(),
                 "version": build_info.version,
                 "arch": build_info.arch,
                 "channel": channel,

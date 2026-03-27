@@ -169,7 +169,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         }
         assert expected_params | {"ARCH": "ppc64le"} in jobs
 
-    assert_livepatch("Default-qcow-Updates", "kernel-livepatch-6.12.0-160000.5", "6.12.0-160000.5")
+    assert_livepatch("Default-qcow-Updates", "kernel-livepatch-default-6.12.0-160000.5", "6.12.0-160000.5")
     assert_livepatch("Base-RT-Updates", "kernel-livepatch-rt-6.12.0-160000.5", "6.12.0-160000.5")
     assert base_params | {"ARCH": "aarch64"} in jobs
 
