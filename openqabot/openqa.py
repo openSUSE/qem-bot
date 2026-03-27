@@ -150,3 +150,9 @@ class OpenQAInterface:
     def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         """Fetch scheduling statistics for a product."""
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)
+
+    def update_scheduled_product_note(self, search_params: dict[str, Any], note: str) -> None:
+        """Update the note of a scheduled product."""
+        params = search_params.copy()
+        params["note"] = note
+        return self.openqa.openqa_request("PUT", "experimental/isos/note", params, retries=self.retries)
