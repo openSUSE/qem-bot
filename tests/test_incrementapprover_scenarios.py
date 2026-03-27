@@ -6,18 +6,21 @@ from __future__ import annotations
 
 import logging
 import re
+from argparse import Namespace
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import osc.core
 import pytest
+from pytest_mock import MockerFixture
 
 import responses
 from openqabot.errors import AmbiguousApprovalStatusError
-from openqabot.incrementapprover import ApprovalStatus
+from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
-from openqabot.types.increment import BuildInfo
+from openqabot.types.increment import ApprovalStatus, BuildInfo
 
 from .helpers import (
     Action,
@@ -263,7 +266,7 @@ def test_check_unique_jobid_request_pair_ambiguity_found(
 
 def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
-    status = ApprovalStatus(fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[])
+    status = ApprovalStatus(fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[], processed_jobs=set())
     approver.handle_approval(status)
     assert (
         "Approving OBS request https://build.suse.de/request/show/42: All 2 openQA jobs have passed/softfailed"
@@ -273,7 +276,9 @@ def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake
 
 def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
-    status = ApprovalStatus(fake_osc_request, ok_jobs=set(), reasons_to_disapprove=["failed jobs"])
+    status = ApprovalStatus(
+        fake_osc_request, ok_jobs=set(), reasons_to_disapprove=["failed jobs"], processed_jobs=set()
+    )
     approver.handle_approval(status)
     assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
     assert "failed jobs" in caplog.text
@@ -296,6 +301,40 @@ def make_test_config(suffix: str, product: str, arch: str) -> IncrementConfig:
         version_regex=r"[\d.]+",
         archs={arch},
     )
+
+
+def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    """Test skipping when packages are filtered out."""
+    # This should trigger line 431-432 in incrementapprover.py
+    caplog.set_level("INFO")
+    configs = [make_test_config("TEST", "SLES", "x86_64")]
+    configs[0].packages = ["nonexistent-package"]
+
+    with patch("openqabot.incrementapprover.load_build_info") as mock_load:
+        mock_load.return_value = [BuildInfo("sle", "SLES", "16.0", "Online-Increments", "x86_64", "139.1")]
+
+        approver = IncrementApprover(
+            Namespace(
+                dry=True,
+                accepted=True,
+                request_id=None,
+                fake_data=True,
+                schedule=False,
+                reschedule=False,
+                increment_config=None,
+                distri="any",
+                version="any",
+                flavor="any",
+            )
+        )
+        req = mocker.Mock(spec=osc.core.Request)
+        req.reqid = "42"
+        # mock get_package_diff to return empty diff
+        mocker.patch.object(approver, "get_package_diff", return_value=defaultdict(set))
+        approver.process_request_for_config(req, configs[0])
+
+    assert "Skipping" in caplog.text
+    assert "filtered out via 'packages' or 'archs' setting" in caplog.text
 
 
 @pytest.fixture

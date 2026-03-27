@@ -28,7 +28,7 @@ from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
 from .types.increment import ApprovalStatus, BuildInfo
-from .utils import merge_dicts
+from .utils import merge_dicts, unique_dicts
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -267,11 +267,7 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> list[dict[str, str]]:
         """Determine extra builds for all additional builds in the configuration."""
-
-        def handle_package(p: Package) -> dict[str, str] | None:
-            return self.extra_builds_for_package(p, config_inc, build_info)
-
-        return [b for p in package_diff if (b := handle_package(p)) is not None]
+        return [b for p in package_diff if (b := self.extra_builds_for_package(p, config_inc, build_info)) is not None]
 
     @staticmethod
     def populate_params_from_env(params: dict[str, str], env_var: str) -> None:
@@ -398,7 +394,7 @@ class IncrementApprover:
         else:
             # schedule always just base params if not computing the package diff
             extra_params.append({})
-        return [merge_dicts(base_params, p) for p in extra_params]
+        return unique_dicts([merge_dicts(base_params, p) for p in extra_params])
 
     def schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:
         """Schedule jobs on openQA."""
@@ -442,14 +438,34 @@ class IncrementApprover:
         """Process a single build and update its approval status."""
         error_count = 0
         params = self.make_scheduling_parameters(request, config_inc, build_info)
-        log.debug("Prepared scheduling parameters: %s", params)
+
         if len(params) < 1:
             log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
             return error_count
 
-        info_str = " or ".join([build_info.string_with_params(p) for p in params])
-        if len(params) > 1:
-            info_str = "\n - " + "\n - ".join([build_info.string_with_params(p) for p in params])
+        # Global de-duplication: skip jobs already processed for this request
+        params = [
+            p
+            for p in params
+            if (p["DISTRI"], p["VERSION"], p["FLAVOR"], p["ARCH"], p["BUILD"], p.get("PRODUCT", ""))
+            not in approval_status.processed_jobs
+        ]
+        for p in params:
+            approval_status.processed_jobs.add((
+                p["DISTRI"],
+                p["VERSION"],
+                p["FLAVOR"],
+                p["ARCH"],
+                p["BUILD"],
+                p.get("PRODUCT", ""),
+            ))
+
+        if not params:
+            return error_count
+
+        info_str = build_info.format_multi_build(params)
+        log.debug("Prepared scheduling parameters: %s", params)
+
         log.debug(
             "Requesting openQA job results for OBS request %s/request/show/%s for %s",
             config.settings.obs_web_url,
@@ -483,7 +499,7 @@ class IncrementApprover:
         if request_id in self.requests_to_approve:
             return self.requests_to_approve[request_id]
 
-        status = ApprovalStatus(request, set(), [])
+        status = ApprovalStatus(request, set(), [], set())
         self.requests_to_approve[request_id] = status
         return status
 

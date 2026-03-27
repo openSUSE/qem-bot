@@ -18,6 +18,7 @@ from openqabot.utils import (
     get_yml_list,
     make_retry_session,
     normalize_results,
+    unique_dicts,
     walk,
 )
 from responses import registries
@@ -171,6 +172,15 @@ def test_get_yml_list_folder_with_multiple_files(tmp_path: Path) -> None:
     res = get_yml_list(Path(d))
     # only 5 yml + 5 yaml files over 15 total files
     assert len(res) == 10
+
+
+def test_unique_dicts() -> None:
+    """Test unique_dicts with and without duplicates."""
+    data = [{"a": "1", "b": "2"}, {"b": "2", "a": "1"}, {"c": "3"}]
+    res = unique_dicts(data)
+    # The first two are identical (order of keys doesn't matter)
+    assert res == [{"a": "1", "b": "2"}, {"c": "3"}]
+    assert len(res) == 2
 
 
 def test_create_logger_duplicate_handlers() -> None:

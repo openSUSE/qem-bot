@@ -108,6 +108,20 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
     return copy
 
 
+def unique_dicts(dicts: list[dict[Any, Any]]) -> list[dict[Any, Any]]:
+    """De-duplicate a list of dictionaries while preserving order."""
+    seen: set[tuple[tuple[Any, Any], ...]] = set()
+    unique = []
+    for d in dicts:
+        # Convert dict to sorted tuple of items for hashability.
+        # This assumes values are hashable (strings, numbers, etc.)
+        items = tuple(sorted(d.items()))
+        if items not in seen:
+            seen.add(items)
+            unique.append(d)
+    return unique
+
+
 def number_of_retries(fallback: int = 3) -> int:
     """Determine the number of retries from environment or fallback."""
     return int(os.environ.get("QEM_BOT_RETRIES", 0 if "PYTEST_VERSION" in os.environ else fallback))

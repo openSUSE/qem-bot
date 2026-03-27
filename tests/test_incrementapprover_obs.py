@@ -137,7 +137,7 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         approver = IncrementApprover(args)
         req = mocker.Mock(spec=osc.core.Request)
         req.reqid = 123
-        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[])
+        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[], processed_jobs=set())
         mock_osc_change = mocker.patch("osc.core.change_review_state")
 
         approver.handle_approval(status)
@@ -160,7 +160,7 @@ def testhandle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mock
     approver = prepare_approver(caplog)
     req = mocker.Mock(spec=osc.core.Request)
     req.reqid = 123
-    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[])
+    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[], processed_jobs=set())
 
     approver.handle_approval(status)
     assert "No openQA jobs were found/checked for this request." in caplog.text

@@ -35,16 +35,18 @@ class BuildInfo(NamedTuple):
         build = params.get("BUILD", self.build)
         return f"{self.product}v{version} build {build}@{arch} of flavor {flavor}"
 
-    def log_no_jobs(self, params: list[dict[str, str]]) -> None:
-        """Log that no relevant jobs were found."""
+    def format_multi_build(self, params: list[dict[str, str]]) -> str:
+        """Format a list of builds for logging."""
         build_strings = [self.string_with_params(param) for param in params]
         if len(build_strings) > 1:
-            info_str = "\n - " + "\n - ".join(build_strings)
-        elif build_strings:
-            info_str = build_strings[0]
-        else:
-            info_str = "{}"
-        log.info("Skipping approval: There are no relevant jobs on openQA for %s", info_str)
+            return "\n - " + "\n - ".join(build_strings)
+        if build_strings:
+            return build_strings[0]
+        return "{}"
+
+    def log_no_jobs(self, params: list[dict[str, str]]) -> None:
+        """Log that no relevant jobs were found."""
+        log.info("Skipping approval: There are no relevant jobs on openQA for %s", self.format_multi_build(params))
 
     def log_pending_jobs(self, pending_states: set[str]) -> None:
         """Log that some jobs are still pending."""
@@ -61,6 +63,7 @@ class ApprovalStatus(NamedTuple):
     request: osc.core.Request
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
+    processed_jobs: set[tuple[str, str, str, str, str, str]]
 
     def add(self, ok_jobs: set[int], reasons_to_disapprove: list[str]) -> None:
         """Add jobs and reasons to the status."""
