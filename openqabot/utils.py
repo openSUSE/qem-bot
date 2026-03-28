@@ -132,3 +132,17 @@ def make_retry_session(retries: int, backoff_factor: float) -> Session:
 retry3 = make_retry_session(3, 2)
 retry5 = make_retry_session(5, 1)
 retry10 = make_retry_session(10, 0.1)
+
+
+CONTACT_PATTERN = re.compile(
+    r"^\s*(?:[rR]esponsible(?:\s+(?:[pP]erson|[tT]eam|[mM]aintainer))?|(?:[pP]erson|[tT]eam|[mM]aintainer)):\s+(.*)",
+    re.MULTILINE,
+)
+
+
+def extract_contact_from_description(description: str | None) -> str | None:
+    """Extract contact information from job group description."""
+    if not description:
+        return None
+    match = CONTACT_PATTERN.search(description)
+    return match.group(1).strip() if match else None

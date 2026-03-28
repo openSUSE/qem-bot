@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     oldest_approval_job_days: int = 6
     # How long to wait for http(s) call in seconds
     url_timeout: int = 60
+    # Detailed comments settings
+    enable_detailed_comments: bool = Field(default=False, alias="QEM_ENABLE_DETAILED_COMMENTS")
+    fallback_contact: str = Field(default="Contact openQA test maintainers", alias="QEM_FALLBACK_CONTACT")
+    generic_tool_issues_contact: str = Field(
+        default="Contact qem-bot maintainers for generic questions", alias="QEM_GENERIC_TOOL_ISSUES_CONTACT"
+    )
+    max_detailed_comment_entries: int = Field(default=7, alias="QEM_MAX_DETAILED_COMMENT_ENTRIES")
 
     model_config = SettingsConfigDict(
         env_file=".env",

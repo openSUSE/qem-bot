@@ -126,3 +126,43 @@ def test_is_in_devel_group_no_group_id() -> None:
         assert not client.is_in_devel_group({"group": "Production"})
         # No group_id but "Devel" in name -> should return True
         assert client.is_in_devel_group({"group": "Devel Group"})
+
+
+@responses.activate
+def test_get_job_group_info_success(fake_openqa_url: str) -> None:
+    """Test get_job_group_info returns group data on success."""
+    group_data = [{"id": 42, "name": "TestGroup", "description": "Test description"}]
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/job_groups/42",
+        json=group_data,
+        status=200,
+    )
+    client = oQAI()
+    result = client.get_job_group_info(42)
+    assert result == {"id": 42, "name": "TestGroup", "description": "Test description"}
+
+
+@responses.activate
+def test_get_job_group_info_empty_response(fake_openqa_url: str) -> None:
+    """Test get_job_group_info returns None on empty response."""
+    responses.add(responses.GET, f"{fake_openqa_url}/api/v1/job_groups/42", json=[], status=200)
+    client = oQAI()
+    result = client.get_job_group_info(42)
+    assert result is None
+
+
+@responses.activate
+def test_get_job_group_info_error(fake_openqa_url: str, caplog: pytest.LogCaptureFixture) -> None:
+    """Test get_job_group_info returns None on API error."""
+    caplog.set_level(logging.ERROR, logger="bot.openqa")
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/job_groups/42",
+        json={"error": "not found"},
+        status=404,
+    )
+    client = oQAI()
+    result = client.get_job_group_info(42)
+    assert result is None
+    assert "openQA API error when fetching job group 42" in caplog.text

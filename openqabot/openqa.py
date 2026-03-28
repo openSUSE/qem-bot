@@ -150,3 +150,14 @@ class OpenQAInterface:
     def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
         """Fetch scheduling statistics for a product."""
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)
+
+    @lru_cache(maxsize=256)  # noqa: B019
+    def get_job_group_info(self, group_id: int) -> dict[str, Any] | None:
+        """Fetch job group details including description."""
+        try:
+            ret = self.openqa.openqa_request("GET", f"job_groups/{group_id}")
+            if ret and len(ret) > 0:
+                return ret[0]
+        except RequestError:
+            log.exception("openQA API error when fetching job group %s", group_id)
+        return None

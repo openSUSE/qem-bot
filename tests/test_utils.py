@@ -14,6 +14,7 @@ from openqabot.types.types import Data
 from openqabot.utils import (
     compare_submission_data,
     create_logger,
+    extract_contact_from_description,
     get_yml_list,
     make_retry_session,
     normalize_results,
@@ -182,3 +183,23 @@ def test_create_logger_duplicate_handlers() -> None:
     log2 = create_logger(name)
     assert log is log2
     assert len(log.handlers) == 1
+
+
+@pytest.mark.parametrize(
+    ("description", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("Some random text without contact info", None),
+        ("Responsible: qe-team@suse.de", "qe-team@suse.de"),
+        ("Person: test@suse.de", "test@suse.de"),
+        ("Team: #qe-team on Slack", "#qe-team on Slack"),
+        ("Maintainer: maintainer@suse.de", "maintainer@suse.de"),
+        ("responsible: lowercase@example.com", "lowercase@example.com"),
+        ("Multiple lines\nResponsible: contact@example.com\nOther text", "contact@example.com"),
+        ("Leading text\nPerson: middle@example.com\nTrailing text", "middle@example.com"),
+    ],
+)
+def test_extract_contact_from_description(description: str | None, expected: str | None) -> None:
+    """Test extraction of contact information from job group descriptions."""
+    assert extract_contact_from_description(description) == expected

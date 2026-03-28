@@ -7,7 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import osc.conf
 
@@ -18,7 +18,7 @@ from .loader import gitea
 from .loader.qem import get_aggregate_results, get_submission_results
 from .openqa import OpenQAInterface
 from .osclib.comments import CommentAPI
-from .utils import normalize_results
+from .utils import extract_contact_from_description, normalize_results
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -181,8 +181,81 @@ class Commenter:
         base_url = self.client.openqa.baseurl
         builds = sorted({j["build"] for j in jobs if "build" in j})
         suffix = "" if config.settings.allow_development_groups else "&not_group_glob=*Devel*%2C*Test*"
-        return "".join(
+        badge_msg = "".join(
             f"[![Test Results]({base_url}/tests/overview/badge?build={b}{suffix})]"
             f"({base_url}/tests/overview?build={b}{suffix})\n"
             for b in builds
         ).strip()
+
+        if not config.settings.enable_detailed_comments:
+            return badge_msg
+
+        job_groups = self.get_job_groups_with_failures(jobs)
+        if not job_groups:
+            return badge_msg
+
+        max_entries = config.settings.max_detailed_comment_entries
+        display_groups = job_groups[:max_entries]
+        excluded_count = len(job_groups) - max_entries
+
+        fallback = config.settings.fallback_contact
+        table_rows = [
+            f"| {g['name']}: [![openQA Test Results]({g['badge_url']})]({g['overview_url']}) | "
+            f"{g['contact'] or f'No contact provided: {fallback}'} |"
+            for g in display_groups
+        ]
+
+        detail_msg = "\n\n| *Job Group with blocking failures* | *Group Owner's contact information*\n| --- | --- |\n"
+        detail_msg += "\n".join(table_rows)
+
+        if excluded_count > 0:
+            first_build = builds[0] if builds else ""
+            overview_link = f"{base_url}/tests/overview?build={first_build}{suffix}"
+            detail_msg += (
+                f"\n\n*... and {excluded_count} more job groups. See [Test Results]({overview_link}) for details.*"
+            )
+
+        detail_msg += f"\n\nFor generic tool issues, contact {config.settings.generic_tool_issues_contact}."
+
+        return badge_msg + "\n\n" + detail_msg
+
+    def get_job_groups_with_failures(self, jobs: list[dict[str, Any]]) -> list[dict[str, str]]:
+        """Get job groups with blocking failures and their contact info."""
+        base_url = self.client.openqa.baseurl
+        suffix = "" if config.settings.allow_development_groups else "&not_group_glob=*Devel*%2C*Test*"
+
+        groups: dict[int, dict[str, Any]] = {}
+        for job in jobs:
+            status = job.get("status", "")
+            if status in {"passed", "softfailed"}:
+                continue
+            group_id = job.get("group_id")
+            if not group_id:
+                continue
+            if group_id not in groups:
+                group_info = self.client.get_job_group_info(group_id)
+                groups[group_id] = {
+                    "id": group_id,
+                    "name": group_info.get("name", "Unknown") if group_info else "Unknown",
+                    "description": group_info.get("description") if group_info else None,
+                    "contact": None,
+                    "build": job.get("build", ""),
+                    "status": status,
+                }
+                if group_info:
+                    groups[group_id]["contact"] = extract_contact_from_description(group_info.get("description"))
+
+        return [
+            {
+                "id": g["id"],
+                "name": (name := str(g["name"])),
+                "contact": g["contact"],
+                "build": g["build"],
+                "status": g["status"],
+                "overview_url": (
+                    u := f"{base_url}/tests/overview?build={g['build']}&group={quote(name, safe='')}{suffix}"
+                ),
+                "badge_url": u.replace("/tests/overview?", "/tests/overview/badge?"),
+            }
+            for g in groups.values()
+        ]

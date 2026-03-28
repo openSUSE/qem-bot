@@ -652,3 +652,133 @@ def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
     msg, state = res
     assert state == "passed"
     assert "build=1" in msg
+
+
+@pytest.fixture
+def detailed_comment_mocks(
+    commenter_setup: dict[str, MagicMock],
+    mocker: MockerFixture,
+) -> dict[str, MagicMock]:
+    """Set up common mocks for detailed comments tests."""
+    commenter_setup["client"].return_value.openqa.baseurl = "https://openqa.opensuse.org"
+    mocker.patch("openqabot.config.settings.allow_development_groups", new=None)
+    mocker.patch("openqabot.config.settings.fallback_contact", new="Contact openQA test maintainer")
+    mocker.patch("openqabot.config.settings.generic_tool_issues_contact", new="our cool qem-bot admins")
+    mocker.patch("openqabot.config.settings.enable_detailed_comments", new=True)
+    mocker.patch("openqabot.config.settings.max_detailed_comment_entries", new=7)
+    return commenter_setup
+
+
+@pytest.mark.parametrize(
+    ("enabled", "jobs", "group_info", "expected_contains", "expected_not_contains"),
+    [
+        pytest.param(
+            False,
+            [{"build": "1.1", "status": "failed", "group_id": 42}],
+            {"id": 42, "name": "Functional", "description": "Responsible: qe@test.com"},
+            [],
+            ["Job Group with blocking failures", "generic tool issues"],
+            id="disabled",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "passed", "group_id": 42}],
+            {"id": 42, "name": "Functional", "description": "Responsible: qe@test.com"},
+            [],
+            ["Job Group with blocking failures"],
+            id="enabled_no_failures",
+        ),
+        pytest.param(
+            True,
+            [
+                {"build": "1.1", "status": "failed", "group_id": 42},
+                {"build": "1.1", "status": "passed", "group_id": 42},
+            ],
+            {"id": 42, "name": "Functional", "description": "Responsible: qe-functional@example.com"},
+            ["Job Group with blocking failures", "Functional", "qe-functional@example.com"],
+            [],
+            id="enabled_with_failures",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "failed", "group_id": 42}],
+            {"id": 42, "name": "Functional", "description": "Responsible: qe-functional@example.com"},
+            ["generic tool issues", "our cool qem-bot admins"],
+            [],
+            id="generic_contact",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "failed", "group_id": 42}],
+            {"id": 42, "name": "Kernel", "description": "No contact info here"},
+            ["Kernel", "No contact provided", "Contact openQA test maintainer"],
+            [],
+            id="fallback_contact",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "failed", "group_id": 42}],
+            None,
+            ["Job Group with blocking failures", "Unknown", "No contact provided"],
+            [],
+            id="api_error",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "failed"}],
+            {"id": 42, "name": "Functional", "description": "Responsible: qe@test.com"},
+            [],
+            ["Job Group with blocking failures"],
+            id="no_group_id",
+        ),
+        pytest.param(
+            True,
+            [{"build": "1.1", "status": "failed", "group_id": i} for i in range(10)],
+            {"id": 0, "name": "Group", "description": "Responsible: qe@test.com"},
+            ["... and 2 more job groups"],
+            [],
+            id="exceeds_max_entries",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("commenter_setup")
+def test_summarize_message_detailed_comments(
+    mock_args: Namespace,
+    detailed_comment_mocks: dict[str, MagicMock],
+    mocker: MockerFixture,
+    enabled: bool,  # noqa: FBT001
+    jobs: list[dict],
+    group_info: dict | None,
+    expected_contains: list[str],
+    expected_not_contains: list[str],
+) -> None:
+    """Test summarize_message with detailed comments in various scenarios."""
+    mocker.patch("openqabot.config.settings.enable_detailed_comments", new=enabled)
+    detailed_comment_mocks["client"].return_value.get_job_group_info.return_value = group_info
+    c = Commenter(mock_args, submissions=[])
+    result = c.summarize_message(jobs)
+    for text in expected_contains:
+        assert text in result
+    for text in expected_not_contains:
+        assert text not in result
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_summarize_message_detailed_comments_duplicate_group(
+    mock_args: Namespace,
+    detailed_comment_mocks: dict[str, MagicMock],
+) -> None:
+    """Test summarize_message when multiple jobs have the same group_id."""
+    detailed_comment_mocks["client"].return_value.get_job_group_info.return_value = {
+        "id": 42,
+        "name": "Functional",
+        "description": "Responsible: qe-functional@example.com",
+    }
+    c = Commenter(mock_args, submissions=[])
+    jobs = [
+        {"build": "1.1", "status": "failed", "group_id": 42},
+        {"build": "1.1", "status": "failed", "group_id": 42},
+    ]
+    result = c.summarize_message(jobs)
+    assert "Functional" in result
+    assert result.count("| Functional:") == 1

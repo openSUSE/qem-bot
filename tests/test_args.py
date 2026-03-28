@@ -111,6 +111,31 @@ def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
     comment.assert_called_once()
 
 
+def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:
+    mocker.patch("openqabot.args.get_submissions", return_value=[])
+    comment = mocker.patch("openqabot.args.Commenter")
+    comment.return_value.return_value = 0
+    result = runner.invoke(
+        app,
+        [
+            "--token",
+            "foo",
+            "--configs",
+            str(tmp_path),
+            "sub-comment",
+            "--enable-detailed-comments",
+            "--fallback-contact",
+            "Test Contact",
+            "--generic-tool-issues-contact",
+            "@test",
+            "--max-detailed-comment-entries",
+            "5",
+        ],
+    )
+    assert result.exit_code == 0
+    comment.assert_called_once()
+
+
 def test_sub_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.SubResultsSync")
     syncer.return_value.return_value = 0
