@@ -142,7 +142,7 @@ CONTACT_PATTERN = re.compile(
 
 def extract_contact_from_description(description: str | None) -> str | None:
     """Extract contact information from job group description."""
-    if not description:
+    if not isinstance(description, str):
         return None
     match = CONTACT_PATTERN.search(description)
     return match.group(1).strip() if match else None

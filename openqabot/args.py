@@ -55,6 +55,61 @@ comment_option = Annotated[
     ),
 ]
 
+enable_detailed_comments_option = Annotated[
+    bool | None,
+    typer.Option(
+        "--enable-detailed-comments/--disable-detailed-comments",
+        envvar="QEM_ENABLE_DETAILED_COMMENTS",
+        help="Add job group contact details to comments",
+    ),
+]
+
+fallback_contact_option = Annotated[
+    str | None,
+    typer.Option(
+        "--fallback-contact",
+        envvar="QEM_FALLBACK_CONTACT",
+        help="Fallback contact when no maintainer found",
+    ),
+]
+
+generic_tool_issues_contact_option = Annotated[
+    str | None,
+    typer.Option(
+        "--generic-tool-issues-contact",
+        envvar="QEM_GENERIC_TOOL_ISSUES_CONTACT",
+        help="Contact for generic tool issues",
+    ),
+]
+
+max_detailed_comment_entries_option = Annotated[
+    int | None,
+    typer.Option(
+        "--max-detailed-comment-entries",
+        envvar="QEM_MAX_DETAILED_COMMENT_ENTRIES",
+        help="Max entries in job groups table",
+    ),
+]
+
+
+def _apply_detailed_comment_options(
+    args: SimpleNamespace,
+    *,
+    enable_detailed_comments: bool | None,
+    fallback_contact: str | None,
+    generic_tool_issues_contact: str | None,
+    max_detailed_comment_entries: int | None,
+) -> None:
+    for k, v in {
+        "enable_detailed_comments": enable_detailed_comments,
+        "fallback_contact": fallback_contact,
+        "generic_tool_issues_contact": generic_tool_issues_contact,
+        "max_detailed_comment_entries": max_detailed_comment_entries,
+    }.items():
+        if v is not None:
+            setattr(args, k, v)
+            setattr(config_module.settings, k, v)
+
 
 def _require_token(args: SimpleNamespace) -> None:
     """Enforce that a qem-dashboard token is present before entering a command.
@@ -313,7 +368,7 @@ def gitea_sync(  # noqa: PLR0913
 
 
 @app.command("gitea-trigger")
-def gitea_trigger(
+def gitea_trigger(  # noqa: PLR0913
     ctx: typer.Context,
     *,
     gitea_repo: gitea_repo_arg = "products/SLFO",
@@ -323,6 +378,10 @@ def gitea_trigger(
     ] = "staging/In Progress",
     pr_number: pr_number_arg = None,
     comment: comment_option = True,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
@@ -331,12 +390,20 @@ def gitea_trigger(
     args.pr_label = pr_label
     args.comment = comment
 
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
+
     syncer = GiteaTrigger(args)
     sys.exit(syncer())
 
 
 @app.command("sub-approve")
-def sub_approve(
+def sub_approve(  # noqa: PLR0913
     ctx: typer.Context,
     *,
     all_submissions: Annotated[
@@ -352,6 +419,10 @@ def sub_approve(
         ),
     ] = None,
     comment: comment_option = True,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
 ) -> None:
     """Approve submissions which passed tests."""
     args = ctx.obj
@@ -361,6 +432,14 @@ def sub_approve(
     args.incident = submission
     args.comment = comment
 
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
+
     approve = Approver(args)
     sys.exit(approve())
 
@@ -368,55 +447,22 @@ def sub_approve(
 @app.command("sub-comment")
 def sub_comment(
     ctx: typer.Context,
-    enable_detailed_comments: Annotated[
-        bool | None,
-        typer.Option(
-            "--enable-detailed-comments/--disable-detailed-comments",
-            envvar="QEM_ENABLE_DETAILED_COMMENTS",
-            help="Add job group contact details to comments",
-        ),
-    ] = None,
-    fallback_contact: Annotated[
-        str | None,
-        typer.Option(
-            "--fallback-contact",
-            envvar="QEM_FALLBACK_CONTACT",
-            help="Fallback contact when no maintainer found",
-        ),
-    ] = None,
-    generic_tool_issues_contact: Annotated[
-        str | None,
-        typer.Option(
-            "--generic-tool-issues-contact",
-            envvar="QEM_GENERIC_TOOL_ISSUES_CONTACT",
-            help="Contact for generic tool issues",
-        ),
-    ] = None,
-    max_detailed_comment_entries: Annotated[
-        int | None,
-        typer.Option(
-            "--max-detailed-comment-entries",
-            envvar="QEM_MAX_DETAILED_COMMENT_ENTRIES",
-            help="Max entries in job groups table",
-        ),
-    ] = None,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
 ) -> None:
     """Comment submissions in BuildService."""
     args = ctx.obj
     _require_token(args)
 
-    if enable_detailed_comments is not None:
-        args.enable_detailed_comments = enable_detailed_comments
-        config_module.settings.enable_detailed_comments = enable_detailed_comments
-    if fallback_contact is not None:
-        args.fallback_contact = fallback_contact
-        config_module.settings.fallback_contact = fallback_contact
-    if generic_tool_issues_contact is not None:
-        args.generic_tool_issues_contact = generic_tool_issues_contact
-        config_module.settings.generic_tool_issues_contact = generic_tool_issues_contact
-    if max_detailed_comment_entries is not None:
-        args.max_detailed_comment_entries = max_detailed_comment_entries
-        config_module.settings.max_detailed_comment_entries = max_detailed_comment_entries
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
 
     submissions = get_submissions()
     comment = Commenter(args, submissions)
