@@ -80,3 +80,13 @@ def test_extra_builds_for_package_filtering(caplog: pytest.LogCaptureFixture) ->
     # nosrc architecture
     pkg5 = Package("kernel-livepatch", "0", "20240101", "1.1", "nosrc")
     assert approver.extra_builds_for_package(pkg5, config, build_info) is None
+
+
+def test_filter_results(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    mocker.patch.object(approver.client, "is_in_devel_group", side_effect=lambda j: j.get("id") == 2)
+    mocker.patch.object(approver.client, "get_single_job", side_effect=lambda j: {"id": j})
+
+    results = [{"passed": {"j1": {"job_ids": [1]}, "j2": {"job_ids": [1, 2]}}, "failed": {"j3": {"job_ids": [2]}}}]
+    expected = [{"passed": {"j1": {"job_ids": [1]}, "j2": {"job_ids": [1]}}}]
+    assert approver._filter_results(results) == expected  # noqa: SLF001

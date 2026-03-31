@@ -93,22 +93,21 @@ class IncrementApprover:
             )
         return match
 
+    def _filter_jobs(self, jobs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Filter jobs within a state, removing those in devel groups."""
+        return {
+            name: {"job_ids": ids}
+            for name, info in jobs.items()
+            if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
+        }
+
+    def _filter_result(self, res: OpenQAResult) -> OpenQAResult:
+        """Filter a single OpenQAResult by state and job groups."""
+        return {state: filtered for state, jobs in res.items() if (filtered := self._filter_jobs(jobs))}
+
     def _filter_results(self, results: OpenQAResults) -> OpenQAResults:
         """Remove jobs belonging to development groups from openQA results."""
-        return [
-            {
-                state: filtered
-                for state, jobs in res.items()
-                if (
-                    filtered := {
-                        name: {"job_ids": ids}
-                        for name, info in jobs.items()
-                        if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
-                    }
-                )
-            }
-            for res in results
-        ]
+        return [self._filter_result(res) for res in results]
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
