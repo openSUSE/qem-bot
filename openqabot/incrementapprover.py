@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
 final_states = {"done", "cancelled"}
-default_flavor = "Online"
 
 
 OpenQAResult = dict[str, dict[str, dict[str, Any]]]
@@ -94,6 +93,23 @@ class IncrementApprover:
             )
         return match
 
+    def _filter_results(self, results: OpenQAResults) -> OpenQAResults:
+        """Remove jobs belonging to development groups from openQA results."""
+        return [
+            {
+                state: filtered
+                for state, jobs in res.items()
+                if (
+                    filtered := {
+                        name: {"job_ids": ids}
+                        for name, info in jobs.items()
+                        if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
+                    }
+                )
+            }
+            for res in results
+        ]
+
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
@@ -136,14 +152,11 @@ class IncrementApprover:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
         for result, info in all_items:
-            # Filter out jobs that belong to a development group
-            relevant_job_ids = [job_id for job_id in info["job_ids"] if not self.is_in_devel_group(job_id)]
-            if not relevant_job_ids:
-                continue
-
+            # Filtering is now done upfront in process_build_info
+            job_ids = info["job_ids"]
             destination = ok_jobs if result in ok_results else not_ok_jobs[result]
-            self.check_unique_jobid_request_pair(relevant_job_ids, request)
-            destination.update(relevant_job_ids)
+            self.check_unique_jobid_request_pair(job_ids, request)
+            destination.update(job_ids)
 
     def evaluate_list_of_openqa_job_results(
         self, list_of_results: OpenQAResults, request: osc.core.Request
@@ -426,6 +439,7 @@ class IncrementApprover:
             info_str,
         )
         res = self.request_openqa_job_results(params, info_str)
+        res = self._filter_results(res)
 
         if self.args.reschedule:
             approval_status.reasons_to_disapprove.append("Re-scheduling jobs for " + info_str)

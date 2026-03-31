@@ -228,7 +228,11 @@ def fake_only_jobs_of_additional_builds_with_param_matching(
 
 @pytest.fixture
 def fake_pending_jobs(fake_openqa_url_job_stat: str) -> None:
-    responses.add(responses.GET, re.compile(f"{fake_openqa_url_job_stat}.*"), json={"scheduled": {}, "running": {}})
+    responses.add(
+        responses.GET,
+        re.compile(f"{fake_openqa_url_job_stat}.*"),
+        json={"scheduled": {"job1": {"job_ids": [1]}}, "running": {"job2": {"job_ids": [2]}}},
+    )
 
 
 @pytest.fixture

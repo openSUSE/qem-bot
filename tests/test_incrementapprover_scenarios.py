@@ -468,10 +468,10 @@ def test_approval_if_failing_jobs_are_in_development_group(
 
     # 4. Verification:
     # Since the only job was in a development group, it should be ignored.
-    # The IncrementApprover should report "No openQA jobs were found/checked for this request"
-    # because the failed job was filtered out.
+    # The IncrementApprover should report "No jobs scheduled for ..."
+    # because the failed job was filtered out upfront.
     assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
-    assert "No openQA jobs were found/checked for this request." in caplog.text
+    assert "No jobs scheduled for" in caplog.text
 
 
 @responses.activate
@@ -514,3 +514,37 @@ def test_approval_with_mixed_jobs_development_ignored(
         "Approving OBS request https://build.suse.de/request/show/42: All 1 openQA jobs have passed/softfailed"
         in caplog.text
     )
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_approval_if_running_jobs_are_in_development_group(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
+) -> None:
+    # 1. Setup: a running job in devel group and a passed job in prod group
+    responses.add(
+        responses.GET,
+        fake_openqa_url_job_stat,
+        json={"running": {"some_job": {"job_ids": [123]}}, "done": {"passed": {"job_ids": [456]}}},
+    )
+
+    def mock_get_single_job(job_id: int) -> dict[str, Any]:
+        if job_id == 123:
+            return {"id": 123, "group": "Development", "group_id": 9, "state": "running"}
+        return {"id": 456, "group": "Production", "group_id": 1, "state": "done", "result": "passed"}
+
+    def mock_is_in_devel_group(job: dict[str, Any]) -> bool:
+        return "Development" in job.get("group", "")
+
+    mock_osc_approve = mocker.patch("osc.core.change_review_state")
+
+    increment_approver = prepare_approver(caplog)
+    increment_approver.client.get_single_job = mocker.Mock(side_effect=mock_get_single_job)
+    increment_approver.client.is_in_devel_group = mocker.Mock(side_effect=mock_is_in_devel_group)
+    increment_approver()
+
+    # 4. Verification:
+    # Job 123 (running) is ignored. Job 456 (passed) is counted.
+    # The request should be approved.
+    assert "All 1 openQA jobs have passed/softfailed" in caplog.text
+    mock_osc_approve.assert_called()
