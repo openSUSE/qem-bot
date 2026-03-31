@@ -339,7 +339,7 @@ def test_summarize_message(
     result = c.summarize_message(set(builds), [])
     suffix = "&not_group_glob=*Devel*%2C*Test*"
     assert (
-        f"[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1{suffix}&distri=sle&version=15)](https://openqa.opensuse.org/tests/overview?build=1.1{suffix}&distri=sle&version=15)"
+        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*)](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*)"
         in result
     )
     assert (
