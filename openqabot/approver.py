@@ -21,7 +21,7 @@ from openqa_client.exceptions import RequestError
 import openqabot.config as config_module
 from openqabot import config, dashboard
 from openqabot.errors import JobNotFoundError, NoResultsError
-from openqabot.openqa import OpenQAInterface
+from openqabot.openqa import OpenQAInterface, handle_job_not_found
 
 from .commenter import Commenter
 from .loader.gitea import approve_pr, make_token_header
@@ -113,6 +113,24 @@ def sanitize_comment_text(text: str) -> str:
     text = "".join(x for x in text if x in string.printable)
     text = text.replace("\r", " ").replace("\n", " ")
     return text.strip()
+
+
+@lru_cache(maxsize=512)
+def validate_job_qam(job: int) -> bool:
+    """Validate if a job is present and passed in dashboard."""
+    # Check that valid test result is still present in the dashboard (see
+    # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
+    # request
+    qam_data = dashboard.get_json(f"api/jobs/{job}", headers=config_module.settings.dashboard_token_dict)
+    if not qam_data:
+        return False
+    if "error" in qam_data:
+        log.info("Job %s not found in dashboard database, cannot validate", job)
+        return False
+    if qam_data["status"] != "passed":
+        log.info("Job %s not 'passed' in dashboard database", job)
+        return False
+    return True
 
 
 class Approver:
@@ -223,24 +241,6 @@ class Approver:
         except RequestError:
             return False
 
-    @staticmethod
-    @lru_cache(maxsize=512)
-    def validate_job_qam(job: int) -> bool:
-        """Validate if a job is present and passed in dashboard."""
-        # Check that valid test result is still present in the dashboard (see
-        # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
-        # request
-        qam_data = dashboard.get_json(f"api/jobs/{job}", headers=config_module.settings.dashboard_token_dict)
-        if not qam_data:
-            return False
-        if "error" in qam_data:
-            log.info("Job %s not found in dashboard database, cannot validate", job)
-            return False
-        if qam_data["status"] != "passed":
-            log.info("Job %s not 'passed' in dashboard database", job)
-            return False
-        return True
-
     @lru_cache(maxsize=16384)  # noqa: B019
     def job_contains_submission(self, job_id: int, sub: int) -> bool:
         """Check if a job settings contain the submission under test."""
@@ -287,7 +287,7 @@ class Approver:
             )
             return False
 
-        if not self.validate_job_qam(job["id"]):
+        if not validate_job_qam(job["id"]):
             log.info(
                 "Ignoring not-ok aggregate %s using %s for aggregate %s skipped: "
                 "Job not present in qem-dashboard, likely belongs to an older request",
@@ -345,7 +345,7 @@ class Approver:
                     self.mark_job_as_acceptable_for_submission(job_id, sub)
             except JobNotFoundError:
                 job_result["obsolete"] = True
-                self.client.handle_job_not_found(job_id)
+                handle_job_not_found(job_id)
 
     def is_job_acceptable(self, sub: int, api: str, job_result: dict, submission_type: str | None = None) -> bool:
         """Determine if a job result is acceptable for approval."""
