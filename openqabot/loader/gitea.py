@@ -246,6 +246,16 @@ def review_pr(  # noqa: PLR0913
     post_json(review_url, token, review_data)
 
 
+def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str, msg: str) -> bool:
+    """Approve a PR on Gitea using its repository name and commit ID."""
+    try:
+        review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
+    except Exception:
+        log.exception("Gitea API error: Failed to approve PR %s", pr_number)
+        return False
+    return True
+
+
 def get_name(review: dict[str, Any], of: str, via: str) -> str:
     """Extract a name from a Gitea review entity."""
     entity = review.get(of)

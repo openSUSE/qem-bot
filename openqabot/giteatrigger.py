@@ -16,6 +16,7 @@ from openqabot.types.types import Data
 
 from .commenter import Commenter
 from .loader.gitea import (
+    approve_pr,
     generate_repo_url,
     get_gitea_staging_config,
     get_open_prs,
@@ -136,6 +137,15 @@ class GiteaTrigger:
 
         if res := self.commenter.generate_comment(pullrequest, jobs):
             self.commenter.gitea_comment(pullrequest, *res)
+            if res[1] == "passed":
+                if self.dry:
+                    log.info("Dry run: Would approve PR %s", pullrequest.number)
+                else:
+                    msg = (
+                        f"Request accepted for '{config.settings.obs_group}' "
+                        f"based on data in {config.settings.qem_dashboard_url}"
+                    )
+                    approve_pr(self.gitea_token, pullrequest.repo_name, pullrequest.number, pullrequest.commit_sha, msg)
 
     def get_prs_by_label(self) -> None:
         """Get all open PRs and filter them by defined label."""
@@ -160,6 +170,7 @@ class GiteaTrigger:
                     repo_name=pr["base"]["repo"]["name"],
                     branch=pr["base"]["label"],
                     url=pr["html_url"],
+                    commit_sha=pr["head"]["sha"],
                 )
                 # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
                 # at least one for labels defined in staging.config

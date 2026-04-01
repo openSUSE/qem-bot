@@ -93,7 +93,7 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
                 "type": "git",
                 "url": "https://src.suse.de/products/SLFO/pulls/124",
                 "scm_info": "...",
-                "project": "SLFO",
+                "project": "products/SLFO",
                 "inReview": True,
                 "isActive": True,
                 "approved": False,

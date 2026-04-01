@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Tests GiteaTrigger class."""
 
+import logging
 from argparse import Namespace
 from typing import cast
 from unittest.mock import MagicMock
@@ -114,18 +115,21 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r"}, "label": "l"},
                 "html_url": "u",
+                "head": {"sha": "xyz"},
             },
             {
                 "number": 2,
                 "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r"}, "label": "l"},
                 "html_url": "u",
+                "head": {"sha": "xyz"},
             },
             {
                 "number": 3,
                 "labels": [{"name": "needs-testing"}],
                 "base": {"repo": {"name": "r"}, "label": "l"},
                 "html_url": "u",
+                "head": {"sha": "xyz"},
             },
         ],
     )
@@ -203,6 +207,7 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r"}, "label": "l"},
                 "html_url": "u",
+                "head": {"sha": "xyz"},
             }
         ],
     )
@@ -237,17 +242,37 @@ def test_check_pullrequest_comments_when_no_trigger_needed(trigger: GiteaTrigger
     mock_comment_on_pr.assert_called_once()
 
 
-def test_comment_on_pr_build_injection(trigger: GiteaTrigger) -> None:
+def test_comment_on_pr_build_injection(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
     """Tests that the build string is injected into raw openQA jobs."""
+    mock_approve_pr = mocker.patch("openqabot.giteatrigger.approve_pr")
     mock_jobs = [{"id": 1, "state": "done", "result": "passed"}]
     cast("MagicMock", trigger.openqa.get_jobs).return_value = mock_jobs
     cast("MagicMock", trigger.commenter.generate_comment).return_value = ("Summary", "passed")
 
-    mock_pr = MagicMock(number=123, url="http://fake.url/123")
+    mock_pr = MagicMock(number=123, url="http://fake.url/123", commit_sha="sha123", repo_name="fake_repo")
     trigger.comment_on_pr(mock_pr, "product", "version", "arch", "PR-BUILD")
 
     assert mock_jobs[0]["build"] == "PR-BUILD"
     cast("MagicMock", trigger.commenter.generate_comment).assert_called_once_with(mock_pr, mock_jobs)
+    mock_approve_pr.assert_called_once_with(trigger.gitea_token, "fake_repo", 123, "sha123", mocker.ANY)
+
+
+def test_comment_on_pr_dry_run_approves(
+    trigger: GiteaTrigger, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Tests that approve_pr is not called during a dry run."""
+    caplog.set_level(logging.INFO)
+    trigger.dry = True
+    mock_approve_pr = mocker.patch("openqabot.giteatrigger.approve_pr")
+    mock_jobs = [{"id": 1, "state": "done", "result": "passed"}]
+    cast("MagicMock", trigger.openqa.get_jobs).return_value = mock_jobs
+    cast("MagicMock", trigger.commenter.generate_comment).return_value = ("Summary", "passed")
+
+    mock_pr = MagicMock(number=123, url="http://fake.url/123", commit_sha="sha123", repo_name="fake_repo")
+    trigger.comment_on_pr(mock_pr, "product", "version", "arch", "PR-BUILD")
+
+    mock_approve_pr.assert_not_called()
+    assert "Dry run: Would approve PR 123" in caplog.text
 
 
 def test_comment_on_pr_no_jobs(trigger: GiteaTrigger) -> None:

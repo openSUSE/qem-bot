@@ -122,7 +122,7 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=[{"job_id": 100000, "status": "passed"}])
     mocker.patch("osc.core.change_review_state")
-    mock_review_pr = mocker.patch("openqabot.approver.review_pr")
+    mock_review_pr = mocker.patch("openqabot.approver.approve_pr")
 
     assert Approver(args)() == 0
     expected = [

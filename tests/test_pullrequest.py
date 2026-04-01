@@ -41,6 +41,7 @@ def test_pull_request_has_labels() -> None:
         repo_name="os-autoinst",
         branch="master",
         url="http://gitea/pull/124",
+        commit_sha="abcd123",
         raw_labels=raw_data,
     )
 
@@ -57,6 +58,7 @@ def test_pull_request_id_property() -> None:
         repo_name="os-autoinst",
         branch="master",
         url="http://gitea/pull/124",
+        commit_sha="abcd123",
         raw_labels=[],
     )
     assert pr.id == 124
