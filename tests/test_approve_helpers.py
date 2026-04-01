@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 import pytest
 from openqa_client.exceptions import RequestError
 
-from openqabot.approver import Approver
+from openqabot.approver import Approver, validate_job_qam
 from openqabot.loader.qem import JobAggr
 
 from .helpers import args, make_approver_args
@@ -47,9 +47,8 @@ def test_mark_job_as_acceptable_for_submission_request_error(
     "json_data", [pytest.param(None, id="no_qam_data"), pytest.param({"status": "failed"}, id="status_not_passed")]
 )
 def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) -> None:
-    approver_instance = Approver(args)
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=json_data)
-    assert not approver_instance.validate_job_qam(1)
+    assert not validate_job_qam(1)
 
 
 @pytest.mark.parametrize(
@@ -146,9 +145,7 @@ def test_validate_job_qam_not_passed(mocker: MockerFixture) -> None:
     mock_data = {"status": "failed", "id": 123}
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_data)
 
-    approver_instance = Approver(args)
-
-    assert approver_instance.validate_job_qam(123) is False
+    assert validate_job_qam(123) is False
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")

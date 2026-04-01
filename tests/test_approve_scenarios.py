@@ -113,7 +113,8 @@ def test_no_comment_suppresses_commenting(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=[])
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.handle_job_not_found")
+
     approver(submission=1)  # default comment=False
     mock_comment.assert_not_called()
     mock_handle_job_not_found.assert_not_called()
@@ -232,7 +233,8 @@ def test_one_submission_failed_with_comment(caplog: pytest.LogCaptureFixture, mo
 
     mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.handle_job_not_found")
+
     assert approver() == 0
     expected = [
         "Ignoring obsolete job http://instance.qa/t100001 for submission smelt:1",
@@ -271,7 +273,8 @@ def test_one_aggr_failed(caplog: pytest.LogCaptureFixture, mocker: MockerFixture
     responses.add(responses.PATCH, f"{settings.qem_dashboard_url}api/jobs/100003")
     mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.handle_job_not_found")
+
     assert approver(comment=True) == 0
     expected = [
         "Ignoring obsolete job http://instance.qa/t100003 for submission smelt:2",
@@ -303,7 +306,8 @@ def test_single_submission_not_ok_no_data(caplog: pytest.LogCaptureFixture, mock
     )
     mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
-    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.handle_job_not_found")
+
     approver(submission=1)
     assert "smelt:1 has at least one not-ok job in submission tests" in caplog.messages
     mock_comment.assert_not_called()
@@ -335,7 +339,8 @@ def test_single_submission_aggr_not_ok_no_data(caplog: pytest.LogCaptureFixture,
         "openqabot.approver.get_submission_settings",
         return_value=[JobAggr(1000, aggregate=False, with_aggregate=True)],
     )
-    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.handle_job_not_found")
+
     approver(submission=1)
     assert "smelt:1 has at least one not-ok job in aggregate tests" in caplog.messages
     mock_comment.assert_not_called()
