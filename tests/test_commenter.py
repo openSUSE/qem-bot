@@ -337,13 +337,12 @@ def test_summarize_message(
     c = Commenter(mock_args, submissions=[])
     builds = [BuildIdentifier("1.1", "sle", "15"), BuildIdentifier("1.2", "", "")]
     result = c.summarize_message(set(builds), [])
-    suffix = "&not_group_glob=*Devel*%2C*Test*"
     assert (
-        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*)](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*)"
+        "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1"
         in result
     )
     assert (
-        f"[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.2{suffix})](https://openqa.opensuse.org/tests/overview?build=1.2{suffix})"
+        "https://openqa.opensuse.org/tests/overview/badge?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2"
         in result
     )
 
@@ -361,7 +360,7 @@ def test_summarize_message_allow_devel(
     result = c.summarize_message({builds[0]}, [])
     assert "not_group_glob" not in result
     assert (
-        "[![Test Results](https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=opensuse&version=Tumbleweed)](https://openqa.opensuse.org/tests/overview?build=1.1&distri=opensuse&version=Tumbleweed)"
+        "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1"
         in result
     )
 
@@ -657,6 +656,7 @@ def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
     msg, state = res
     assert state == "passed"
     assert "build=1" in msg
+    assert "label=Build+1" in msg
 
 
 @pytest.fixture
@@ -816,4 +816,5 @@ def test_summarize_message_detailed_comments_duplicate_group(
     builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
     result = c.summarize_message(builds, jobs)
     assert "Functional" in result
-    assert result.count("| Functional:") == 1
+    assert result.count("![Functional Test Results]") == 1
+    assert "label=Functional" in result

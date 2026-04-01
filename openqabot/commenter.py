@@ -212,10 +212,12 @@ class Commenter:
             if not config.settings.allow_development_groups:
                 params["not_group_glob"] = "*Devel*,*Test*"
 
+            label = f"Build {b.build}"
+            params["label"] = label
             query = urlencode(params, safe="*")
             badge_url = f"{base_url}/tests/overview/badge?{query}"
             link_url = f"{base_url}/tests/overview?{query}"
-            badge_msg += f"[![Test Results]({badge_url})]({link_url})\n"
+            badge_msg += f"[![{label} Results]({badge_url})]({link_url})\n"
         return badge_msg.strip()
 
     def _generate_detail_section(self, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier]) -> str:
@@ -228,7 +230,7 @@ class Commenter:
         base_url = self.client.openqa.baseurl
 
         table_rows = [
-            f"| {g['name']}: [![openQA Test Results]({g['badge_url']})]({g['overview_url']}) | "
+            f"| [![{g['name']} Test Results]({g['badge_url']})]({g['overview_url']}) | "
             f"{g['contact'] or f'No contact provided: {fallback}'} |"
             for g in display_groups
         ]
@@ -290,21 +292,25 @@ class Commenter:
                 "build": g["build"],
                 "status": g["status"],
                 "overview_url": self._generate_overview_url(base_url, g, name),
-                "badge_url": self._generate_overview_url(base_url, g, name, badge=True),
+                "badge_url": self._generate_overview_url(base_url, g, name, badge=True, label=name),
             }
             for g in groups.values()
         ]
 
     @staticmethod
-    def _generate_overview_url(base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False) -> str:
+    def _generate_overview_url(
+        base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False, label: str | None = None
+    ) -> str:
         params = {"build": group["build"]}
-        if group["distri"]:
+        if group.get("distri"):
             params["distri"] = group["distri"]
-        if group["version"]:
+        if group.get("version"):
             params["version"] = group["version"]
         params["group"] = group_name
         if not config.settings.allow_development_groups:
             params["not_group_glob"] = "*Devel*,*Test*"
+        if label:
+            params["label"] = label
 
         query = urlencode(params, safe="*")
         path = "/tests/overview/badge" if badge else "/tests/overview"
