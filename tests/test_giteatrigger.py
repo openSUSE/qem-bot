@@ -113,21 +113,21 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
             {
                 "number": 1,
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r"}, "label": "l"},
+                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
             },
             {
                 "number": 2,
                 "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r"}, "label": "l"},
+                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
             },
             {
                 "number": 3,
                 "labels": [{"name": "needs-testing"}],
-                "base": {"repo": {"name": "r"}, "label": "l"},
+                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
             },
@@ -137,6 +137,7 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
     trigger.get_prs_by_label()
     assert len(trigger.prs) == 1
     assert trigger.prs[0].number == 1
+    assert trigger.prs[0].repo_name == "owner/r"
 
 
 def test_check_pullrequest_dry_run(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
@@ -205,7 +206,7 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
             {
                 "number": 1337,
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r"}, "label": "l"},
+                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
             }
@@ -217,6 +218,7 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
 
     mock_get_pr.assert_called_once()
     assert len(trigger.prs) == 1
+    assert trigger.prs[0].repo_name == "owner/r"
 
 
 def test_check_pullrequest_comments_when_no_trigger_needed(trigger: GiteaTrigger, mocker: MockerFixture) -> None:

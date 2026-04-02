@@ -167,7 +167,7 @@ class GiteaTrigger:
                 pullrequest = PullRequest(
                     number=pr["number"],
                     raw_labels=pr["labels"],
-                    repo_name=pr["base"]["repo"]["name"],
+                    repo_name=pr["base"]["repo"]["full_name"],
                     branch=pr["base"]["label"],
                     url=pr["html_url"],
                     commit_sha=pr["head"]["sha"],
