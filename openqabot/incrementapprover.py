@@ -11,7 +11,7 @@ from functools import lru_cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
@@ -24,7 +24,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import IncrementConfig, from_args
+from .loader.incrementconfig import IncrementConfig
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
@@ -44,7 +44,13 @@ ScheduleParams = list[dict[str, str]]
 
 
 class IncrementApprover:
-    """Logic for approving product increments."""
+    """Logic for approving product increments.
+
+    This class handles the verification of product increment requests on OBS/IBS.
+    It fetches test results from openQA based on scheduling parameters,
+    filters out development jobs, and decides whether to approve or
+    disapprove the request.
+    """
 
     def __init__(self, args: Namespace) -> None:
         """Initialize the IncrementApprover class."""
@@ -54,7 +60,7 @@ class IncrementApprover:
         self.requests_to_approve = {}
         # safeguard us from using same job ID for 2 requests
         self.unique_jobid_request_pair = {}
-        self.config = from_args(args)
+        self.config = IncrementConfig.from_args(args)
         self.comment = getattr(args, "comment", False)
 
         self.commenter = Commenter(args, submissions=[])
@@ -104,13 +110,9 @@ class IncrementApprover:
             if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
         }
 
-    def _filter_result(self, res: OpenQAResult) -> OpenQAResult:
-        """Filter a single OpenQAResult by state and job groups."""
-        return {state: filtered for state, jobs in res.items() if (filtered := self._filter_jobs(jobs))}
-
     def _filter_results(self, results: OpenQAResults) -> OpenQAResults:
         """Remove jobs belonging to development groups from openQA results."""
-        return [self._filter_result(res) for res in results]
+        return [{s: f for s, j in res.items() if (f := self._filter_jobs(j))} for res in results]
 
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
@@ -156,24 +158,12 @@ class IncrementApprover:
         request: osc.core.Request,
     ) -> None:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
-        all_items = chain.from_iterable(results.get(s, {}).items() for s in final_states)
-        for result, info in all_items:
-            # Filtering is now done upfront in process_build_info
-            job_ids = info["job_ids"]
-            jobs.extend(
-                {
-                    "id": job_id,
-                    "status": result,
-                    "group_id": info.get("group_id"),
-                    "build": info.get("build"),
-                    "distri": info.get("distri"),
-                    "version": info.get("version"),
-                }
-                for job_id in job_ids
-            )
-            destination = ok_jobs if result in ok_results else not_ok_jobs[result]
-            self.check_unique_jobid_request_pair(job_ids, request)
-            destination.update(job_ids)
+        for result, info in chain.from_iterable(results.get(s, {}).items() for s in final_states):
+            ids = info["job_ids"]
+            common = {k: info.get(k) for k in ("group_id", "build", "distri", "version")}
+            jobs.extend({**common, "id": j, "status": result} for j in ids)
+            (ok_jobs if result in ok_results else not_ok_jobs[result]).update(ids)
+            self.check_unique_jobid_request_pair(ids, request)
 
     def evaluate_list_of_openqa_job_results(
         self, list_of_results: OpenQAResults, request: osc.core.Request
@@ -253,7 +243,7 @@ class IncrementApprover:
             extra_params["KERNEL_VERSION"] = kernel_version
 
         extra_params["BUILD"] = "-".join(extra_build)
-        extra_params.update(cast("dict[str, str]", additional_build["settings"]))
+        extra_params.update(additional_build["settings"])
         return extra_params
 
     def _match_package_name_and_version(self, package: Package, additional_build: dict[str, Any]) -> re.Match | None:
