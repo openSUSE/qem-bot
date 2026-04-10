@@ -215,3 +215,84 @@ def test_generate_repo_url_two_label_match(labeled_pr: PullRequest) -> None:
 def test_get_gitea_staging_config(mocked_response: dict[str, str | list]) -> None:
     conf = gitea.get_gitea_staging_config({"token": "token"})
     assert conf == mocked_response
+
+
+@pytest.fixture
+def mock_review_pr(mocker: MockerFixture) -> MagicMock:
+    return mocker.patch("openqabot.loader.gitea.review_pr")
+
+
+@pytest.fixture
+def mock_settings(mocker: MockerFixture) -> MagicMock:
+    return mocker.patch("openqabot.loader.gitea.config.settings")
+
+
+@pytest.mark.parametrize(
+    ("bot_user", "api_response", "expected_log", "should_call_review"),
+    [
+        # Case 1: Already approved via official review
+        (
+            None,
+            [{"commit_id": "sha123", "state": "APPROVED", "user": {"login": "openqa"}}],
+            "PR 123 already approved for commit sha123",
+            False,
+        ),
+        # Case 2: Not yet approved (no reviews)
+        (None, [], None, True),
+        # Case 3: Already approved via bot comment
+        (
+            "bot",
+            [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "bot"}}],
+            "PR 123 already approved via comment for commit sha123",
+            False,
+        ),
+        # Case 4: Comment matches but author is wrong (spoofing attempt)
+        (
+            "bot",
+            [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "imposter"}}],
+            None,
+            True,
+        ),
+        # Case 5: No bot comments found
+        ("bot", [], None, True),
+    ],
+)
+def test_approve_pr_scenarios(
+    *,
+    mock_review_pr: MagicMock,
+    mock_settings: MagicMock,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    bot_user: str | None,
+    api_response: list[dict],
+    expected_log: str | None,
+    should_call_review: bool,
+) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
+    mocker.patch("openqabot.loader.gitea.get_json_list", return_value=api_response)
+
+    mock_settings.obs_group = "openqa"
+    mock_settings.git_review_bot_user = bot_user
+
+    res = gitea.approve_pr({}, "repo", 123, "sha123", "msg")
+
+    assert res is True
+    if expected_log:
+        assert expected_log in caplog.text
+    if should_call_review:
+        mock_review_pr.assert_called_once_with({}, "repo", 123, "msg", "sha123", approve=True)
+    else:
+        mock_review_pr.assert_not_called()
+
+
+def test_approve_pr_exception(
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    mocker.patch("openqabot.loader.gitea.get_json_list", side_effect=Exception("API fail"))
+    caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
+
+    res = gitea.approve_pr({}, "repo", 123, "sha123", "msg")
+
+    assert res is False
+    assert "Gitea API error: Failed to approve PR 123" in caplog.text

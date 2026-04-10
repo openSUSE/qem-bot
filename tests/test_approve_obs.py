@@ -52,7 +52,11 @@ def f_osconf(mocker: MockerFixture) -> Any:
 
 @pytest.fixture
 def fake_responses_for_creating_pr_review() -> None:
-
+    responses.add(
+        responses.GET,
+        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
+        json=[],
+    )
     responses.add(
         responses.POST,
         "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",

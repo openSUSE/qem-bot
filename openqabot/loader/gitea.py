@@ -218,6 +218,19 @@ def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> lis
         return []
 
 
+def _approval_identifiers(bot_user: str, commit_id: str, *, approve: bool = True) -> tuple[str, str]:
+    action = "approved" if approve else "decline"
+    return f"@{bot_user}: {action}", f"Tested commit: {commit_id}"
+
+
+def _is_bot_approval_comment(comment: dict[str, Any], bot_user: str, commit_id: str) -> bool:
+    """Check if a comment is an authentic approval from the bot."""
+    body = comment.get("body", "")
+    is_author = comment.get("user", {}).get("login") == bot_user
+    review_cmd, commit_str = _approval_identifiers(bot_user, commit_id)
+    return is_author and review_cmd in body and commit_str in body
+
+
 def review_pr(  # noqa: PLR0913
     token: dict[str, str],
     repo_name: str,
@@ -228,11 +241,11 @@ def review_pr(  # noqa: PLR0913
     approve: bool = True,
 ) -> None:
     """Post a review or comment on a Gitea PR."""
-    if config.settings.git_review_bot_user:
+    bot_user = config.settings.git_review_bot_user
+    if bot_user:
         review_url = comments_url(repo_name, pr_number)
-        review_cmd = f"@{config.settings.git_review_bot_user}: "
-        review_cmd += "approved" if approve else "decline"
-        review_data = {"body": f"{review_cmd}\n{msg}\nTested commit: {commit_id}"}
+        review_cmd, commit_str = _approval_identifiers(bot_user, commit_id, approve=approve)
+        review_data = {"body": f"{review_cmd}\n{msg}\n{commit_str}"}
     else:
         review_url = reviews_url(repo_name, pr_number)
         review_data = {
@@ -247,6 +260,21 @@ def review_pr(  # noqa: PLR0913
 def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str, msg: str) -> bool:
     """Approve a PR on Gitea using its repository name and commit ID."""
     try:
+        bot_user = config.settings.git_review_bot_user
+        if bot_user:
+            comments = get_json_list(comments_url(repo_name, pr_number), token)
+            if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
+                log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
+                return True
+        else:
+            reviews = get_json_list(reviews_url(repo_name, pr_number), token)
+            if any(
+                r.get("commit_id") == commit_id and r.get("state") == "APPROVED" and is_review_requested_by(r)
+                for r in reviews
+            ):
+                log.info("PR %s already approved for commit %s", pr_number, commit_id)
+                return True
+
         review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
     except Exception:
         log.exception("Gitea API error: Failed to approve PR %s", pr_number)
