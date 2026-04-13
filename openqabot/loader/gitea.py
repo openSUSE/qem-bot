@@ -66,17 +66,28 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
-def get_json(query: str, token: dict[str, str], host: str | None = None) -> JsonType:
+def get_json(
+    query: str,
+    token: dict[str, str],
+    host: str | None = None,
+    params: dict[str, Any] | None = None,
+) -> JsonType:
     """Fetch JSON data from Gitea API."""
     host = host or config.settings.gitea_url
-    response = retried_requests.get(host + "/api/v1/" + query, verify=not config.settings.insecure, headers=token)
+    url = f"{host}/api/v1/{query}"
+    response = retried_requests.get(url, verify=not config.settings.insecure, headers=token, params=params)
     response.raise_for_status()
     return response.json()
 
 
-def get_json_list(query: str, token: dict[str, str], host: str | None = None) -> list[Any]:
+def get_json_list(
+    query: str,
+    token: dict[str, str],
+    host: str | None = None,
+    params: dict[str, Any] | None = None,
+) -> list[Any]:
     """Fetch a list of JSON data from Gitea API."""
-    res = get_json(query, token, host)
+    res = get_json(query, token, host, params=params)
     if not isinstance(res, list):
         msg = f"Gitea API returned {type(res).__name__} instead of list for query: {query}"
         raise TypeError(msg)
@@ -199,7 +210,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> lis
         page = 1
         while True:
             # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
-            prs_on_page = get_json(f"repos/{repo}/pulls?state=open&page={page}", token)
+            prs_on_page = get_json(f"repos/{repo}/pulls", token, params={"state": "open", "page": page})
             if not isinstance(prs_on_page, list):
                 msg = f"Gitea API returned {type(prs_on_page).__name__} instead of list for PR pages"
                 raise TypeError(msg)
@@ -330,10 +341,10 @@ def _extract_version(name: str, prefix: str) -> str:
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
-    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo?jsontable"
+    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo"
     start = f"{product_name}-"
     try:
-        r = retried_requests.get(url)
+        r = retried_requests.get(url, params={"jsontable": 1})
         r.raise_for_status()
         data = r.json()["data"]
     except requests.exceptions.HTTPError as e:

@@ -77,9 +77,9 @@ def fake_dashboard_replyback() -> None:
 
 @pytest.fixture
 def fake_repo() -> None:
-    url = f"{settings.obs_download_url}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
+    url = f"{settings.obs_download_url}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo"
     listing = Path("tests/fixtures/responses/test-product-repo.json").read_bytes()
-    responses.add(GET, url, body=listing)
+    responses.add(GET, url, body=listing, match=[matchers.query_param_matcher({"jsontable": "1"})])
 
 
 def fake_osc_http_get(url: str) -> etree.ElementTree:

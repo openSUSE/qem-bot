@@ -141,7 +141,10 @@ class OpenQAInterface:
         """Fetch older jobs for a specific job."""
         try:
             return self.openqa.openqa_request(
-                "GET", f"/tests/{job_id}/ajax?previous_limit={limit}&next_limit=0", retries=self.retries
+                "GET",
+                f"/tests/{job_id}/ajax",
+                {"previous_limit": limit, "next_limit": 0},
+                retries=self.retries,
             )
         except RequestError:
             log.exception("openQA API error when fetching older jobs for job %s", job_id)

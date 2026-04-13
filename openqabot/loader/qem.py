@@ -226,8 +226,11 @@ def get_aggregate_settings(sub: int, submission_type: str | None = None) -> list
 
 def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     """Fetch aggregate job settings data for a product and architecture."""
-    url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
-    settings = dashboard.get_json(url, headers=config_module.settings.dashboard_token_dict)
+    settings = dashboard.get_json(
+        "api/update_settings",
+        headers=config_module.settings.dashboard_token_dict,
+        params={"product": data.product, "arch": data.arch},
+    )
     if not settings:
         log.info("No aggregate settings found for product %s on arch %s", data.product, data.arch)
         return []

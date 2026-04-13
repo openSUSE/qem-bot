@@ -301,7 +301,9 @@ def test_get_aggregate_settings_data(mock_get_json: MagicMock) -> None:
     assert len(res) == 1
     assert res[0].settings_id == 1
     mock_get_json.assert_called_once_with(
-        "api/update_settings?product=product&arch=arch", headers=settings.dashboard_token_dict
+        "api/update_settings",
+        headers=settings.dashboard_token_dict,
+        params={"product": "product", "arch": "arch"},
     )
 
 
