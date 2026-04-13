@@ -542,6 +542,13 @@ def increment_approve(  # noqa: PLR0913
             help="Monitor and schedule only products with the specified FLAVOR parameter",
         ),
     ] = "any",
+    arch: Annotated[
+        str,
+        typer.Option(
+            "--arch",
+            help="Monitor and schedule only products with the specified ARCH parameter",
+        ),
+    ] = "any",
     schedule: Annotated[
         bool,
         typer.Option(
@@ -611,6 +618,7 @@ def increment_approve(  # noqa: PLR0913
     args.distri = distri
     args.version = version
     args.flavor = flavor
+    args.arch = arch
     args.schedule = schedule
     args.reschedule = reschedule
     args.accepted = accepted

@@ -60,7 +60,12 @@ def load_build_info(
             flavor = default_flavor
         flavor = f"{flavor}-{config.flavor_suffix}"
 
-        if config.distri in {"any", distri} and config.flavor in {"any", flavor} and config.version in {"any", version}:
+        if (
+            config.distri in {"any", distri}
+            and config.flavor in {"any", flavor}
+            and config.version in {"any", version}
+            and config.arch in {"any", arch}
+        ):
             return BuildInfo(distri, product, version, flavor, arch, build)
         return None
 

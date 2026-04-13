@@ -33,6 +33,7 @@ class IncrementConfig:
     distri: str
     version: str
     flavor: str
+    arch: str = "any"
     flavor_suffix: str = DEFAULT_FLAVOR_SUFFIX
     project_base: str = ""
     build_project_suffix: str = ""
@@ -82,6 +83,7 @@ class IncrementConfig:
             distri=entry["distri"],
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
+            arch=entry.get("arch", "any"),
             flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
             project_base=entry["project_base"],
             build_project_suffix=entry["build_project_suffix"],
@@ -143,6 +145,7 @@ class IncrementConfig:
                 "distri",
                 "version",
                 "flavor",
+                "arch",
                 "flavor_suffix",
                 "project_base",
                 "build_project_suffix",
