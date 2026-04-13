@@ -592,7 +592,7 @@ def increment_approve(  # noqa: PLR0913
             help="Use configuration from the specified YAML document instead of arguments",
         ),
     ] = None,
-    comment: comment_option = False,
+    comment: comment_option = True,
 ) -> None:
     """Approve the most recent product increment for an OBS project if tests passed."""
     args = ctx.obj
