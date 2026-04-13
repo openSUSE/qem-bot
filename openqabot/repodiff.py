@@ -67,7 +67,14 @@ class RepoDiff:
             return pyzstd.decompress(repo_data_raw)
         return repo_data_raw
 
-    def request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
+    def request_and_dump(
+        self,
+        url: str,
+        name: str,
+        *,
+        as_json: bool = False,
+        params: dict[str, Any] | None = None,
+    ) -> bytes | dict[str, Any] | None:
         """Fetch data from a URL and optionally dump it to a file for fake data usage."""
         log.debug("Fetching repository data from %s", url)
         name = "tests/fixtures/responses/" + name.replace("/", "_")
@@ -77,7 +84,7 @@ class RepoDiff:
             if fake_data:
                 content = Path(name).read_bytes()
             else:
-                resp = retried_requests.get(url)
+                resp = retried_requests.get(url, params=params)
                 if not resp.ok:
                     log.info("Failed to fetch data from %s: %s %s", source, resp.status_code, resp.reason)
                     return None
@@ -98,9 +105,10 @@ class RepoDiff:
         """Load and parse repository primary metadata for an OBS project."""
         url = self.make_repodata_url(project)
         repo_data_listing = self.request_and_dump(
-            url + "?P=*-primary.xml*&jsontable=1",
+            url,
             f"repodata-listing-{project}.json",
             as_json=True,
+            params={"P": "*-primary.xml*", "jsontable": 1},
         )
         if not repo_data_listing or not isinstance(repo_data_listing, dict):
             log.error("Could not load repo data for project %s", project)

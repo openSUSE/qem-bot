@@ -30,9 +30,10 @@ def load_build_info(
     """Determine build information from the project's repository listing."""
     build_project_url = config.build_project_url()
     sub_path = config.build_listing_sub_path
-    url = f"{build_project_url}/{sub_path}/?P=*spdx.json&jsontable=1"
-    log.debug("Checking for '%s' files on %s", build_regex, url)
-    rows = retried_requests.get(url).json().get("data", [])
+    url = f"{build_project_url}/{sub_path}/"
+    params = {"P": "*spdx.json", "jsontable": 1}
+    log.debug("Checking for '%s' files on %s with params %s", build_regex, url, params)
+    rows = retried_requests.get(url, params=params).json().get("data", [])
 
     def get_build_info_from_row(row: dict[str, Any]) -> BuildInfo | None:
         name = row.get("name", "")
