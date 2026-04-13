@@ -98,7 +98,7 @@ class RepoDiff:
         """Load and parse repository primary metadata for an OBS project."""
         url = self.make_repodata_url(project)
         repo_data_listing = self.request_and_dump(
-            url + "?jsontable=1",
+            url + "?P=*-primary.xml*&jsontable=1",
             f"repodata-listing-{project}.json",
             as_json=True,
         )
