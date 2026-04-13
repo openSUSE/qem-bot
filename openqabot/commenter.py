@@ -164,13 +164,13 @@ class Commenter:
         # Add a marker so we can find our own comments later
         msg = add_marker(msg, "openqa", {"state": state})
 
-        comments = gitea.get_json_list(gitea.comments_url(repo, sub.id), self.gitea_token)
+        comments = gitea.iter_gitea_items(gitea.comments_url(repo, sub.id), self.gitea_token)
         formatted = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
-        comment, _ = self.commentapi.comment_find(formatted, "openqa", {"state": state})
+        comment, info = self.commentapi.comment_find(formatted, "openqa")
 
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
-        if comment and comment["comment"].count("\n") == msg.count("\n"):
+        if comment and info and info.get("state") == state and comment["comment"].count("\n") == msg.count("\n"):
             log.debug("Comment skipped: Previous comment is too similar")
             return
 

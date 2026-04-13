@@ -157,18 +157,45 @@ def test_add_channel_for_build_result_local() -> None:
     assert len(projects) == 0
 
 
-def test_get_json_list_success(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.get_json", return_value=[{"id": 1}])
-    res = gitea.get_json_list("some/query", {"Authorization": "token test"})
-    assert res == [{"id": 1}]
+def test_get_json_success(mocker: MockerFixture) -> None:
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"id": 1}
+    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
+    res = gitea.get_json("some/query", {"Authorization": "token test"})
+    assert res == {"id": 1}
 
 
-def test_get_json_list_throws_on_dict(mocker: MockerFixture) -> None:
-    # Mock get_json to return a dict instead of a list
-    mocker.patch("openqabot.loader.gitea.get_json", return_value={"message": "Not Found"})
+def test_iter_gitea_items_success(mocker: MockerFixture) -> None:
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = [{"id": 1}]
+    mock_response.links = {}
+    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
+    res = gitea.iter_gitea_items("some/query", {"Authorization": "token test"})
+    assert list(res) == [{"id": 1}]
+
+
+def test_iter_gitea_items_pagination(mocker: MockerFixture) -> None:
+    mock_response1 = mocker.Mock()
+    mock_response1.json.return_value = [{"id": 1}]
+    mock_response1.links = {"next": {"url": "https://gitea.com/api/v1/some/query?page=2"}}
+    mock_response2 = mocker.Mock()
+    mock_response2.json.return_value = [{"id": 2}]
+    mock_response2.links = {}
+    mock_responses = [mock_response1, mock_response2]
+    mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get", side_effect=mock_responses)
+    res = gitea.iter_gitea_items("some/query", {"Authorization": "token test"})
+    assert list(res) == [{"id": 1}, {"id": 2}]
+    assert mock_get.call_count == 2
+
+
+def test_iter_gitea_items_throws_on_dict(mocker: MockerFixture) -> None:
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"message": "Not Found"}
+    mock_response.links = {}
+    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
     # New behavior: throws TypeError
     with pytest.raises(TypeError, match="Gitea API returned dict instead of list"):
-        gitea.get_json_list("some/query", {"Authorization": "token test"})
+        list(gitea.iter_gitea_items("some/query", {"Authorization": "token test"}))
 
 
 def test_read_json_file_list_success(mocker: MockerFixture) -> None:
@@ -253,7 +280,14 @@ def mock_settings(mocker: MockerFixture) -> MagicMock:
             None,
             True,
         ),
-        # Case 5: No bot comments found
+        # Case 5: Already approved via bot comment using obs_group name
+        (
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "openqa"}}],
+            "PR 123 already approved via comment for commit sha123",
+            False,
+        ),
+        # Case 6: No bot comments found
         ("bot", [], None, True),
     ],
 )
@@ -269,7 +303,7 @@ def test_approve_pr_scenarios(
     should_call_review: bool,
 ) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.get_json_list", return_value=api_response)
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=api_response)
 
     mock_settings.obs_group = "openqa"
     mock_settings.git_review_bot_user = bot_user
@@ -289,7 +323,7 @@ def test_approve_pr_exception(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    mocker.patch("openqabot.loader.gitea.get_json_list", side_effect=Exception("API fail"))
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", side_effect=Exception("API fail"))
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
 
     res = gitea.approve_pr({}, "repo", 123, "sha123", "msg")

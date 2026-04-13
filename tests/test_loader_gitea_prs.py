@@ -26,32 +26,37 @@ def test_get_open_prs_metadata_error(mocker: MockerFixture, caplog: pytest.LogCa
 
 
 def test_get_open_prs_iter_pages(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.get_json", side_effect=[[1], [2], []])
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[1, 2])
     res = gitea.get_open_prs({}, "repo", number=None)
     assert res == [1, 2]
 
 
-def test_get_open_prs_iter_pages_unexpected_dict(mocker: MockerFixture) -> None:
+def test_get_open_prs_iter_pages_unexpected_dict(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     """Cover the case where pagination returns a dict instead of a list."""
-    mocker.patch("openqabot.loader.gitea.get_json", return_value={"message": "error"})
-    with pytest.raises(TypeError, match="Gitea API returned dict instead of list for PR pages"):
-        gitea.get_open_prs({}, "repo", number=None)
+    caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
+    mocker.patch(
+        "openqabot.loader.gitea.iter_gitea_items", side_effect=TypeError("Gitea API returned dict instead of list")
+    )
+    res = gitea.get_open_prs({}, "repo", number=None)
+    assert res == []
+    assert "Gitea API error: Could not fetch open PRs from repo" in caplog.text
 
 
 def test_get_open_prs_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.JSONDecodeError("msg", "doc", 0))
+    # iter_gitea_items uses requests which might throw JSONDecodeError
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", side_effect=requests.exceptions.RequestException("error"))
     res = gitea.get_open_prs({}, "repo", number=None)
     assert res == []
-    assert "Gitea API error: Invalid JSON received for open PRs" in caplog.text
+    assert "Gitea API error: Could not fetch open PRs from repo" in caplog.text
 
 
 def test_get_open_prs_request_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.RequestException("error"))
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", side_effect=requests.exceptions.RequestException("error"))
     res = gitea.get_open_prs({}, "repo", number=None)
     assert res == []
-    assert "Gitea API error: Could not fetch open PRs" in caplog.text
+    assert "Gitea API error: Could not fetch open PRs from repo" in caplog.text
 
 
 def test_get_open_prs_specific_number_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:

@@ -80,24 +80,33 @@ def get_json(
     return response.json()
 
 
-def get_json_list(
-    query: str,
-    token: dict[str, str],
-    host: str | None = None,
-    params: dict[str, Any] | None = None,
-) -> list[Any]:
-    """Fetch a list of JSON data from Gitea API."""
-    res = get_json(query, token, host, params=params)
-    if not isinstance(res, list):
-        msg = f"Gitea API returned {type(res).__name__} instead of list for query: {query}"
-        raise TypeError(msg)
-    return res
+def iter_gitea_items(query: str, token: dict[str, str], host: str | None = None) -> Iterator[Any]:
+    """Fetch a list of JSON data from Gitea API with pagination support.
+
+    Yields:
+        JSON items from the paginated response.
+
+    """
+    host = host or config.settings.gitea_url
+    url = f"{host}/api/v1/{query}"
+
+    while url:
+        response = retried_requests.get(url, verify=not config.settings.insecure, headers=token)
+        response.raise_for_status()
+        res = response.json()
+
+        if not isinstance(res, list):
+            msg = f"Gitea API returned {type(res).__name__} instead of list for query: {query}"
+            raise TypeError(msg)
+
+        yield from res
+        url = response.links.get("next", {}).get("url")
 
 
 def _request_json(method: str, query: str, token: dict[str, str], post_data: JsonType, host: str | None = None) -> None:
     """Send a JSON request to Gitea API."""
     host = host or config.settings.gitea_url
-    url = host + "/api/v1/" + query
+    url = f"{host}/api/v1/{query}"
     res = getattr(retried_requests, method.lower())(
         url, verify=not config.settings.insecure, headers=token, json=post_data
     )
@@ -200,32 +209,11 @@ def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> lis
         log.debug("PR git:%i: %s", number, pr)
         return [cast("dict[str, Any]", pr)]
 
-    def iter_pr_pages() -> Iterator[list[dict[str, Any]]]:
-        """Iterate through all pages of open PRs.
-
-        Yields:
-            Lists of open PRs.
-
-        """
-        page = 1
-        while True:
-            # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
-            prs_on_page = get_json(f"repos/{repo}/pulls", token, params={"state": "open", "page": page})
-            if not isinstance(prs_on_page, list):
-                msg = f"Gitea API returned {type(prs_on_page).__name__} instead of list for PR pages"
-                raise TypeError(msg)
-            if not prs_on_page:
-                return
-            yield prs_on_page
-            page += 1
-
     try:
-        return [pr for page in iter_pr_pages() for pr in page]
-    except requests.exceptions.JSONDecodeError:
-        log.exception("Gitea API error: Invalid JSON received for open PRs")
-        return []
-    except requests.exceptions.RequestException:
-        log.exception("Gitea API error: Could not fetch open PRs")
+        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
+        return list(iter_gitea_items(f"repos/{repo}/pulls?state=open", token))
+    except (requests.exceptions.RequestException, TypeError):
+        log.exception("Gitea API error: Could not fetch open PRs from %s", repo)
         return []
 
 
@@ -237,7 +225,8 @@ def _approval_identifiers(bot_user: str, commit_id: str, *, approve: bool = True
 def _is_bot_approval_comment(comment: dict[str, Any], bot_user: str, commit_id: str) -> bool:
     """Check if a comment is an authentic approval from the bot."""
     body = comment.get("body", "")
-    is_author = comment.get("user", {}).get("login") == bot_user
+    allowed_authors = {bot_user, config.settings.obs_group}
+    is_author = comment.get("user", {}).get("login") in allowed_authors
     review_cmd, commit_str = _approval_identifiers(bot_user, commit_id)
     return is_author and review_cmd in body and commit_str in body
 
@@ -273,12 +262,12 @@ def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id:
     try:
         bot_user = config.settings.git_review_bot_user
         if bot_user:
-            comments = get_json_list(comments_url(repo_name, pr_number), token)
+            comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
             if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
                 log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
                 return True
         else:
-            reviews = get_json_list(reviews_url(repo_name, pr_number), token)
+            reviews = iter_gitea_items(reviews_url(repo_name, pr_number), token)
             if any(
                 r.get("commit_id") == commit_id and r.get("state") == "APPROVED" and is_review_requested_by(r)
                 for r in reviews
@@ -286,6 +275,7 @@ def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id:
                 log.info("PR %s already approved for commit %s", pr_number, commit_id)
                 return True
 
+        log.info("PR %s approved for commit %s", pr_number, commit_id)
         review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
     except Exception:
         log.exception("Gitea API error: Failed to approve PR %s", pr_number)
@@ -689,9 +679,9 @@ def _fetch_details(
             )
         return [], [], []
     return (
-        get_json_list(reviews_url(repo_name, number), token),
-        get_json_list(comments_url(repo_name, number), token),
-        get_json_list(changed_files_url(repo_name, number), token),
+        list(iter_gitea_items(reviews_url(repo_name, number), token)),
+        list(iter_gitea_items(comments_url(repo_name, number), token)),
+        list(iter_gitea_items(changed_files_url(repo_name, number), token)),
     )
 
 

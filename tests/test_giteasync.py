@@ -44,7 +44,7 @@ def fake_gitea_api() -> None:
     # ruff: noqa: E501 line-too-long
     patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
     patchinfo_data = Path("tests/fixtures/responses/patch-info.xml").read_bytes()
-    responses.add(GET, pulls_url + "?state=open&page=1", json=read_json_file("pulls"))
+    responses.add(GET, pulls_url + "?state=open", json=read_json_file("pulls"))
     responses.add(GET, re.compile(pulls_url + r"\?state=open&page=.*"), json=[])
     responses.add(GET, pulls_url + "/124/reviews", json=read_json_file("reviews-124"))
     responses.add(GET, pulls_url + "/124/files", json=read_json_file("files-124"))
@@ -174,7 +174,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     assert "Loaded 7 active PRs from products/SLFO" in caplog.messages
     assert "Fetching info for PR git:131 from Gitea" in caplog.messages
     assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 submissions" in caplog.messages
-    assert len(responses.calls) == 25
+    assert len(responses.calls) == 24
     assert len(cast("Any", responses.calls[-1].response).json()) == 1
     submission = cast("Any", responses.calls[-1].response).json()[0]
     assert submission["number"] == 124

@@ -33,7 +33,7 @@ def test_make_submission_from_gitea_pr_dry(mocker: MockerFixture) -> None:
 def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
-    mocker.patch("openqabot.loader.gitea.get_json", return_value=[])
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
 
     # Skip due to no channels
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
@@ -61,6 +61,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
 
 def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFixture) -> None:
     pr = {"number": 999, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=1)
 
     def mock_add_chan(inc: dict, *_: Any, **__: Any) -> None:
@@ -81,7 +82,7 @@ def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFix
 def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     pr = {"number": 123, "state": "open", "url": "url", "base": {"repo": {"full_name": "owner/repo", "name": "repo"}}}
-    mocker.patch("openqabot.loader.gitea.get_json", return_value=[])
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=0)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=True, dry=False)
     assert res is None
