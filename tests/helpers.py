@@ -36,7 +36,7 @@ class ReviewState(NamedTuple):
     by_group: str
 
 
-obs_product_table_url = settings.obs_download_url + "/OBS:/PROJECT:/TEST/product/?jsontable=1"
+obs_product_table_url = settings.obs_download_url + "/OBS:/PROJECT:/TEST/product/?P=*spdx.json&jsontable=1"
 
 
 @dataclass
