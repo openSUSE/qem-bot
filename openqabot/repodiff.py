@@ -70,7 +70,7 @@ class RepoDiff:
     def request_and_dump(self, url: str, name: str, *, as_json: bool = False) -> bytes | dict[str, Any] | None:
         """Fetch data from a URL and optionally dump it to a file for fake data usage."""
         log.debug("Fetching repository data from %s", url)
-        name = "responses/" + name.replace("/", "_")
+        name = "tests/fixtures/responses/" + name.replace("/", "_")
         fake_data = self.args is not None and self.args.fake_data
         source = name if fake_data else url
         try:

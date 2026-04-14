@@ -8,12 +8,12 @@ from argparse import Namespace
 from typing import Any, cast
 
 import pytest
-from pytest_mock import MockerFixture
-
 import responses
+from pytest_mock import MockerFixture
+from responses import matchers
+
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync
-from responses import matchers
 
 
 @pytest.fixture

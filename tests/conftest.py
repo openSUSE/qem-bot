@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
 import pytest
+import responses
 
 import openqabot.config as config_module
-import responses
 from openqabot.approver import Approver
 from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache

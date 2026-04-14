@@ -107,7 +107,7 @@ def patch_json(query: str, token: dict[str, str], post_data: JsonType, host: str
 @lru_cache(maxsize=128)
 def read_utf8(name: str) -> str:
     """Read a UTF-8 encoded response file."""
-    return Path(f"responses/{name}").read_text(encoding="utf8")
+    return Path(f"tests/fixtures/responses/{name}").read_text(encoding="utf8")
 
 
 @lru_cache(maxsize=128)

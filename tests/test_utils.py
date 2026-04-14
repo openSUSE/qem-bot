@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 import responses
+from responses import registries
+
 from openqabot.types.types import Data
 from openqabot.utils import (
     compare_submission_data,
@@ -21,7 +22,6 @@ from openqabot.utils import (
     unique_dicts,
     walk,
 )
-from responses import registries
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture

@@ -7,9 +7,9 @@ from argparse import Namespace
 from collections.abc import Generator
 
 import pytest
+import responses
 from pytest_mock import MockerFixture
 
-import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.subsyncres import SubResultsSync
 

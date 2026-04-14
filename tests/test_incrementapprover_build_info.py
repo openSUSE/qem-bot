@@ -3,15 +3,15 @@
 """Test increment approver build info."""
 
 import pytest
-from pytest_mock import MockerFixture
-
 import responses
+from pytest_mock import MockerFixture
+from responses import GET
+
 from openqabot.config import BUILD_REGEX
 from openqabot.loader.buildinfo import load_build_info
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.repodiff import Package
 from openqabot.types.increment import BuildInfo
-from responses import GET
 
 from .helpers import (
     obs_product_table_url,

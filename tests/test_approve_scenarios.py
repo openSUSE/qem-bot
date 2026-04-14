@@ -9,8 +9,8 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 import responses
+
 from openqabot.config import settings
 from openqabot.loader.qem import JobAggr, SubReq
 

@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 import pytest
-
 import responses
+
 from openqabot.config import settings
 
 from .conftest import make_approver, with_fake_qem

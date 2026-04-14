@@ -9,13 +9,13 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from openqa_client.exceptions import RequestError
-
 import responses
+from openqa_client.exceptions import RequestError
+from responses import matchers
+
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import OpenQAInterface as oQAI
-from responses import matchers
 
 
 @pytest.fixture

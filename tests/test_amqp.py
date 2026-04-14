@@ -9,8 +9,8 @@ from argparse import Namespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
-
 import responses
+
 from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 
