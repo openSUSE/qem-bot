@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
-
 import responses
+
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqabot import OpenQABot

@@ -12,8 +12,8 @@ from urllib.parse import urlparse
 
 import osc.core
 import pytest
-
 import responses
+
 from openqabot.config import BUILD_REGEX, OBS_GROUP, settings
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.requests import find_request_on_obs, get_obs_request_list

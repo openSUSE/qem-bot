@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 import requests
-
 import responses
+
 from openqabot.mock_interceptor import (
     MockInterceptorState,
     gitea_pr_details_callback,

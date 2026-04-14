@@ -8,12 +8,12 @@ from typing import Any
 from urllib.error import HTTPError
 
 import pytest
-from pytest_mock import MockerFixture
-
 import responses
+from pytest_mock import MockerFixture
+from responses import matchers
+
 from openqabot.approver import Approver
 from openqabot.config import settings
-from responses import matchers
 
 from .helpers import (
     args,

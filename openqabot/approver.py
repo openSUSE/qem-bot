@@ -211,7 +211,7 @@ class Approver:
         # Check that valid test result is still present in the dashboard (see
         # https://github.com/openSUSE/qem-dashboard/pull/78/files) to avoid using results related to an old release
         # request
-        qam_data = dashboard.get_json(f"api/jobs/{job}", headers=config_module.settings.dashboard_token_dict)
+        qam_data = dashboard.get_json(f"api/jobs/{job}")
         if not qam_data:
             return False
         if "error" in qam_data:
@@ -370,9 +370,7 @@ class Approver:
         params = {}
         if submission_type:
             params["type"] = submission_type
-        job_results = dashboard.get_json(
-            api + str(job_aggr.id), headers=config_module.settings.dashboard_token_dict, params=params
-        )
+        job_results = dashboard.get_json(api + str(job_aggr.id), params=params)
         if not job_results:
             log.info(
                 "Job setting %s not found for submission %s:%s",

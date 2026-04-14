@@ -10,10 +10,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated
 
+import responses
 import typer
 
 import openqabot.config as config_module
-import responses
 
 from .aggrsync import AggregateResultsSync
 from .amqp import AMQP

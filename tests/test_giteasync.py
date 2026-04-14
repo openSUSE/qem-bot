@@ -13,9 +13,10 @@ from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 
 import pytest
-from lxml import etree  # noqa: TC002  # ty: ignore[unresolved-import]
-
 import responses
+from lxml import etree  # noqa: TC002  # ty: ignore[unresolved-import]
+from responses import GET, matchers
+
 from openqabot.config import settings
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
@@ -30,7 +31,6 @@ from openqabot.loader.gitea import (
     review_pr,
 )
 from openqabot.types.types import ProdVer, Repos
-from responses import GET, matchers
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture

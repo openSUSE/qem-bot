@@ -5,10 +5,10 @@
 import re
 
 import pytest
+import responses
 from pytest_mock import MockerFixture
 
 import openqabot.pc_helper
-import responses
 from openqabot.pc_helper import (
     apply_pc_tools_image,
     apply_publiccloud_pint_image,

@@ -3,6 +3,7 @@
 """Test Submissions Gitea."""
 
 import responses
+
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import ArchVer, Repos

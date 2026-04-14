@@ -11,7 +11,6 @@ from typing import Any
 from unittest.mock import patch
 
 import requests
-
 import responses
 
 HAS_OSC = importlib.util.find_spec("osc") is not None

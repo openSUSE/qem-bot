@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock, patch
 
 import osc.core
-
 import responses
+
 from openqabot.config import BUILD_REGEX, settings
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig

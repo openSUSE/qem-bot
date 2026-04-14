@@ -208,11 +208,7 @@ class Aggregate(BaseConf):
         )
 
         try:
-            old_jobs = dashboard.get_json(
-                "api/update_settings",
-                params={"product": self.product, "arch": arch},
-                headers=config.settings.dashboard_token_dict,
-            )
+            old_jobs = dashboard.get_json("api/update_settings", params={"product": self.product, "arch": arch})
         except requests.exceptions.JSONDecodeError:
             log.exception("Dashboard API error: Invalid JSON received for aggregate jobs")
             old_jobs = None

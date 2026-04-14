@@ -10,11 +10,11 @@ from unittest.mock import ANY
 
 import pytest
 import requests
+import responses
 from requests import ConnectionError as RequestsConnectionError
 from requests import HTTPError as RequestsHTTPError
 
 import openqabot.loader.repohash as rp
-import responses
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
 from openqabot.types.types import Repos

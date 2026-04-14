@@ -12,7 +12,7 @@ import pytest
 import requests
 
 from openqabot import dashboard
-from openqabot.config import DEFAULT_SUBMISSION_TYPE, settings
+from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.loader.qem import (
     LoaderQemError,
     NoAggregateResultsError,
@@ -74,7 +74,7 @@ def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
 
     assert len(res) == 1
     assert res[0].id == 1
-    mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, verify=True)
+    mock_get_json.assert_called_once_with("api/incidents", verify=True)
 
 
 def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:
@@ -119,9 +119,7 @@ def test_get_active_submissions(mock_get_json: MagicMock) -> None:
 
     assert len(res) == 2
     assert res == [1, 2]
-    mock_get_json.assert_called_once_with(
-        "api/incidents", headers=settings.dashboard_token_dict, params={"type": "git"}
-    )
+    mock_get_json.assert_called_once_with("api/incidents", params={"type": "git"})
 
 
 _FULL_INCIDENT: dict = {
@@ -166,9 +164,7 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
     assert res[0].req == 123
     assert res[0].type == DEFAULT_SUBMISSION_TYPE
     assert res[0].submission is not None
-    mock_get_json.assert_called_once_with(
-        "api/incidents/1", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
-    )
+    mock_get_json.assert_called_once_with("api/incidents/1", params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_submission_settings_no_settings(mock_get_json: MagicMock) -> None:
@@ -240,9 +236,7 @@ def test_get_submission_settings_data(mock_get_json: MagicMock) -> None:
     assert res[0].distri == "distri"
     assert res[0].version == "version"
     assert res[0].build == "build"
-    mock_get_json.assert_called_once_with(
-        "api/incident_settings/1", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
-    )
+    mock_get_json.assert_called_once_with("api/incident_settings/1", params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_submission_settings_data_error(mock_get_json: MagicMock) -> None:
@@ -262,7 +256,7 @@ def test_get_submission_results(mock_get_json: MagicMock, mocker: MockerFixture)
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
     mock_settings.assert_called_once_with(1, all_submissions=False, submission_type=None)
-    mock_get_json.assert_called_once_with("api/jobs/incident/1", headers=settings.dashboard_token_dict)
+    mock_get_json.assert_called_once_with("api/jobs/incident/1")
 
 
 def test_get_submission_results_error(mock_get_json: MagicMock, mocker: MockerFixture) -> None:
@@ -300,9 +294,7 @@ def test_get_aggregate_settings_data(mock_get_json: MagicMock) -> None:
 
     assert len(res) == 1
     assert res[0].settings_id == 1
-    mock_get_json.assert_called_once_with(
-        "api/update_settings?product=product&arch=arch", headers=settings.dashboard_token_dict
-    )
+    mock_get_json.assert_called_once_with("api/update_settings?product=product&arch=arch")
 
 
 def test_get_aggregate_results(mock_get_json: MagicMock, mocker: MockerFixture) -> None:
@@ -314,7 +306,7 @@ def test_get_aggregate_results(mock_get_json: MagicMock, mocker: MockerFixture) 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
     mock_settings.assert_called_once_with(1, submission_type=None)
-    mock_get_json.assert_called_once_with("api/jobs/update/1", headers=settings.dashboard_token_dict)
+    mock_get_json.assert_called_once_with("api/jobs/update/1")
 
 
 def test_get_aggregate_results_error(mock_get_json: MagicMock, mocker: MockerFixture) -> None:
@@ -430,16 +422,14 @@ def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions(submission_type=DEFAULT_SUBMISSION_TYPE)
     assert res == [123]
-    mock_get_json.assert_called_once_with(
-        "api/incidents", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
-    )
+    mock_get_json.assert_called_once_with("api/incidents", params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_active_submissions_no_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions()
     assert res == [123]
-    mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, params={})
+    mock_get_json.assert_called_once_with("api/incidents", params={})
 
 
 def test_get_single_submission_with_type(mock_get_json: MagicMock) -> None:
@@ -448,9 +438,7 @@ def test_get_single_submission_with_type(mock_get_json: MagicMock) -> None:
     assert len(res) == 1
     assert res[0].sub == 123
     assert res[0].submission is not None
-    mock_get_json.assert_called_once_with(
-        "api/incidents/123", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
-    )
+    mock_get_json.assert_called_once_with("api/incidents/123", params={"type": DEFAULT_SUBMISSION_TYPE})
 
 
 def test_get_single_submission_no_type(mock_get_json: MagicMock) -> None:
@@ -459,7 +447,7 @@ def test_get_single_submission_no_type(mock_get_json: MagicMock) -> None:
     assert len(res) == 1
     assert res[0].sub == 123
     assert res[0].submission is not None
-    mock_get_json.assert_called_once_with("api/incidents/123", headers=settings.dashboard_token_dict, params={})
+    mock_get_json.assert_called_once_with("api/incidents/123", params={})
 
 
 def test_dashboard_put(mocker: MagicMock) -> None:

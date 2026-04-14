@@ -69,9 +69,7 @@ def _get_submission(submission_id: int, submission_type: str | None = None) -> d
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return dashboard.get_json(
-        f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
-    )
+    return dashboard.get_json(f"api/incidents/{submission_id}", params=params)
 
 
 def get_submissions(submission: str | None = None) -> list[Submission]:
@@ -80,9 +78,7 @@ def get_submissions(submission: str | None = None) -> list[Submission]:
         s_type, s_id = submission.split(":")
         submissions = [_get_submission(int(s_id), s_type)]
     else:
-        submissions = dashboard.get_json(
-            "api/incidents", headers=config_module.settings.dashboard_token_dict, verify=True
-        )
+        submissions = dashboard.get_json("api/incidents", verify=True)
 
     if "error" in submissions:
         raise LoaderQemError(submissions)
@@ -95,13 +91,13 @@ def get_active_submissions(submission_type: str | None = None) -> Sequence[int]:
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict, params=params)
+    data = dashboard.get_json("api/incidents", params=params)
     return list({i["number"] for i in data})
 
 
 def get_submissions_approver() -> list[SubReq]:
     """Fetch submissions that are ready for QAM review."""
-    submissions = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict)
+    submissions = dashboard.get_json("api/incidents")
     return [
         SubReq(
             i["number"],
@@ -136,9 +132,7 @@ def get_submission_settings(
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = dashboard.get_json(
-        f"api/incident_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
-    )
+    settings = dashboard.get_json(f"api/incident_settings/{sub}", params=params)
     if not settings:
         raise NoSubmissionResultsError(sub)
 
@@ -160,9 +154,7 @@ def get_submission_settings_data(number: int, submission_type: str | None = None
     params = {}
     if submission_type:
         params["type"] = submission_type
-    data = dashboard.get_json(
-        "api/incident_settings/" + f"{number}", headers=config_module.settings.dashboard_token_dict, params=params
-    )
+    data = dashboard.get_json("api/incident_settings/" + f"{number}", params=params)
     if "error" in data:
         log.warning(
             "Submission %s:%s error: %s",
@@ -194,9 +186,7 @@ def get_submission_results(sub: int, submission_type: str | None = None) -> list
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific settings ID."""
-        data = dashboard.get_json(
-            "api/jobs/incident/" + f"{job_aggr.id}", headers=config_module.settings.dashboard_token_dict
-        )
+        data = dashboard.get_json("api/jobs/incident/" + f"{job_aggr.id}")
         if "error" in data:
             raise ValueError(data["error"])
         return data
@@ -210,9 +200,7 @@ def get_aggregate_settings(sub: int, submission_type: str | None = None) -> list
     params = {}
     if submission_type:
         params["type"] = submission_type
-    settings = dashboard.get_json(
-        f"api/update_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
-    )
+    settings = dashboard.get_json(f"api/update_settings/{sub}", params=params)
     if not settings:
         raise NoAggregateResultsError(sub)
 
@@ -227,7 +215,7 @@ def get_aggregate_settings(sub: int, submission_type: str | None = None) -> list
 def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     """Fetch aggregate job settings data for a product and architecture."""
     url = "api/update_settings" + f"?product={data.product}&arch={data.arch}"
-    settings = dashboard.get_json(url, headers=config_module.settings.dashboard_token_dict)
+    settings = dashboard.get_json(url)
     if not settings:
         log.info("No aggregate settings found for product %s on arch %s", data.product, data.arch)
         return []
@@ -257,9 +245,7 @@ def get_aggregate_results(sub: int, submission_type: str | None = None) -> list[
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific aggregate settings ID."""
-        data = dashboard.get_json(
-            "api/jobs/update/" + f"{job_aggr.id}", headers=config_module.settings.dashboard_token_dict
-        )
+        data = dashboard.get_json("api/jobs/update/" + f"{job_aggr.id}")
         if "error" in data:
             raise ValueError(data["error"])
         return data

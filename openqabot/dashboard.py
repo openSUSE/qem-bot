@@ -17,8 +17,19 @@ def clear_cache() -> None:
     _GET_CACHE.clear()
 
 
-def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
+def get_json(
+    route: str,
+    *,
+    params: dict[str, Any] | None = None,
+    verify: bool | None = None,
+) -> Any:  # noqa: ANN401
     """Fetch JSON data from the dashboard with caching."""
+    kwargs: dict[str, Any] = {"headers": settings.dashboard_token_dict}
+    if params is not None:
+        kwargs["params"] = params
+    if verify is not None:
+        kwargs["verify"] = verify
+
     # Use simple key based on route and stringified kwargs
     cache_key = route + str(sorted(kwargs.items()))
     if cache_key in _GET_CACHE:
