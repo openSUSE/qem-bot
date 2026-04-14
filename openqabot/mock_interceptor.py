@@ -104,7 +104,7 @@ def setup_mock_responses() -> None:
 
 def read_fixture(name: str) -> str:
     """Read a local fixture file from disk."""
-    path = Path(f"responses/{name}")
+    path = Path(f"tests/fixtures/responses/{name}")
     if path.exists():
         return path.read_text(encoding="utf8")
     return ""

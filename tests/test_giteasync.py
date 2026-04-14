@@ -43,7 +43,7 @@ def fake_gitea_api() -> None:
     issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
     # ruff: noqa: E501 line-too-long
     patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
-    patchinfo_data = Path("responses/patch-info.xml").read_bytes()
+    patchinfo_data = Path("tests/fixtures/responses/patch-info.xml").read_bytes()
     responses.add(GET, pulls_url + "?state=open&page=1", json=read_json_file("pulls"))
     responses.add(GET, re.compile(pulls_url + r"\?state=open&page=.*"), json=[])
     responses.add(GET, pulls_url + "/124/reviews", json=read_json_file("reviews-124"))
@@ -78,7 +78,7 @@ def fake_dashboard_replyback() -> None:
 @pytest.fixture
 def fake_repo() -> None:
     url = f"{settings.obs_download_url}/SUSE:/SLFO:/1.1.99:/PullRequest:/124:/SLES/standard/repo?jsontable"
-    listing = Path("responses/test-product-repo.json").read_bytes()
+    listing = Path("tests/fixtures/responses/test-product-repo.json").read_bytes()
     responses.add(GET, url, body=listing)
 
 
@@ -99,7 +99,7 @@ def fake_osc_xml_parse(data: Any) -> Any:
 
 
 def fake_urllib_http_error(data: Any) -> Any:
-    with Path("responses/empty-build-results.xml").open("rb") as fp:
+    with Path("tests/fixtures/responses/empty-build-results.xml").open("rb") as fp:
         raise HTTPError(data, 404, "Not found", cast("Any", {}), fp)
 
 
