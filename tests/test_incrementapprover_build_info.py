@@ -38,6 +38,7 @@ def test_no_approval_if_one_of_two_configs_has_no_builds(
     approver = prepare_approver(caplog)
     config2 = IncrementConfig(
         distri="sle",
+        devel=False,
         version="16.0",
         flavor="Full-Increments",
         project_base="OBS:PROJECT",
@@ -62,6 +63,7 @@ def testload_build_info_no_match(caplog: pytest.LogCaptureFixture, mocker: Mocke
     approver = prepare_approver(caplog)
     config = IncrementConfig(
         distri="other",
+        devel=True,
         version="any",
         flavor="any",
         project_base="BASE",

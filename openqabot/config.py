@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     gitea_branch_name: str | None = Field(default="slfo-main", alias="GITEA_BRANCH_NAME")
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
+    devel: bool = Field(default=False, alias="QEM_BOT_DEVEL")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
     approve_comment: bool = Field(default=False, alias="QEM_BOT_APPROVE_COMMENT")
 

@@ -229,6 +229,7 @@ def prepare_approver(
         build_project_suffix="TEST",
         diff_project_suffix=diff_project_suffix,
         distri="sle",
+        devel=False if config is None else config.devel,
         version="16.0",
         flavor="Online-Increments",
         schedule=schedule,
@@ -262,6 +263,7 @@ def prepare_approver_with_additional_config(caplog: pytest.LogCaptureFixture) ->
     increment_approver.config[0].product_regex = product_regex
     additional_config = IncrementConfig(
         distri="sle",
+        devel=True,
         version="16.0",
         flavor="Online-Increments",
         project_base="OBS:PROJECT",

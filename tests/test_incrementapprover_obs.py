@@ -142,7 +142,15 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         approver = IncrementApprover(args)
         req = mocker.Mock(spec=osc.core.Request)
         req.reqid = 123
-        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
+        status = ApprovalStatus(
+            req,
+            devel=False,
+            ok_jobs={1},
+            reasons_to_disapprove=[],
+            processed_jobs=set(),
+            builds=set(),
+            jobs=[],
+        )
         mock_osc_change = mocker.patch("osc.core.change_review_state")
 
         approver.handle_approval(status)
@@ -165,11 +173,38 @@ def testhandle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mock
     approver = prepare_approver(caplog)
     req = mocker.Mock(spec=osc.core.Request)
     req.reqid = 123
-    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
+    status = ApprovalStatus(
+        req,
+        devel=False,
+        ok_jobs=set(),
+        reasons_to_disapprove=[],
+        processed_jobs=set(),
+        builds=set(),
+        jobs=[],
+    )
 
     approver.handle_approval(status)
     assert "No openQA jobs were found/checked for this request." in caplog.text
     assert "Not approving OBS request https://build.suse.de/request/show/123 for the following reasons:" in caplog.text
+
+
+def test_handle_approval_devel_skip(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = 123
+    status = ApprovalStatus(
+        req,
+        devel=True,
+        ok_jobs=set(),
+        reasons_to_disapprove=[],
+        processed_jobs=set(),
+        builds=set(),
+        jobs=[],
+    )
+
+    res = approver.handle_approval(status)
+    assert res == 0
+    assert "Skip approval status because IncrementConfig has devel=True" in caplog.text
 
 
 @responses.activate

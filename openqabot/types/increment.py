@@ -79,6 +79,7 @@ class ApprovalStatus(NamedTuple):
     """Status of an approval request."""
 
     request: osc.core.Request
+    devel: bool
     ok_jobs: set[int]
     reasons_to_disapprove: list[str]
     processed_jobs: set[tuple[str, str, str, str, str, str]]

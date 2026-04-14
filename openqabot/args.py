@@ -528,6 +528,10 @@ def increment_approve(  # noqa: PLR0913
             help="Monitor and schedule only products with the specified DISTRI parameter",
         ),
     ] = "sle",
+    devel: Annotated[
+        bool,
+        typer.Option("--devel", envvar="QEM_BOT_DEVEL", help="Include development openQA jobs"),
+    ] = False,
     version: Annotated[
         str,
         typer.Option(
@@ -601,6 +605,7 @@ def increment_approve(  # noqa: PLR0913
     args.build_project_suffix = build_project_suffix
     args.diff_project_suffix = diff_project_suffix
     args.distri = distri
+    args.devel = devel
     args.version = version
     args.flavor = flavor
     args.schedule = schedule

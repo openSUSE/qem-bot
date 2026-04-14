@@ -102,18 +102,6 @@ class IncrementApprover:
             )
         return match
 
-    def _filter_jobs(self, jobs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        """Filter jobs within a state, removing those in devel groups."""
-        return {
-            name: {**info, "job_ids": ids}
-            for name, info in jobs.items()
-            if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
-        }
-
-    def _filter_results(self, results: OpenQAResults) -> OpenQAResults:
-        """Remove jobs belonging to development groups from openQA results."""
-        return [{s: f for s, j in res.items() if (f := self._filter_jobs(j))} for res in results]
-
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
@@ -143,11 +131,6 @@ class IncrementApprover:
             build_info.log_pending_jobs(pending_states)
             return False
         return True
-
-    def is_in_devel_group(self, job_id: int) -> bool:
-        """Fetch job details and check if it belongs to a development group."""
-        job = self.client.get_single_job(job_id)
-        return self.client.is_in_devel_group(job) if job else False
 
     def evaluate_openqa_job_results(
         self,
@@ -196,6 +179,9 @@ class IncrementApprover:
 
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
         """Process approval or disapproval based on job results."""
+        if approval_status.devel:
+            log.info("Skip approval status because IncrementConfig has devel=True")
+            return 0
         reasons_to_disapprove = approval_status.reasons_to_disapprove
         reqid = approval_status.request.reqid
         id_msg = f"OBS request {config.settings.obs_web_url}/request/show/{reqid}"
@@ -469,7 +455,7 @@ class IncrementApprover:
             request.reqid,
             info_str,
         )
-        res = self._filter_results(self.request_openqa_job_results(params, info_str))
+        res = self.request_openqa_job_results(params, info_str)
 
         if self.args.reschedule:
             approval_status.reasons_to_disapprove.append(f"Re-scheduling jobs for {info_str}")
@@ -486,13 +472,13 @@ class IncrementApprover:
             build_info, params, info_str, openqa_jobs_ready=openqa_jobs_ready, approval_status=approval_status
         )
 
-    def _get_approval_status(self, request: osc.core.Request) -> ApprovalStatus:
+    def _get_approval_status(self, request: osc.core.Request, *, devel: bool) -> ApprovalStatus:
         """Get or create the approval status for an OBS request."""
         request_id = request.reqid
         if request_id in self.requests_to_approve:
             return self.requests_to_approve[request_id]
 
-        status = ApprovalStatus(request, set(), [], set(), set(), [])
+        status = ApprovalStatus(request, devel, set(), [], set(), set(), [])
         self.requests_to_approve[request_id] = status
         return status
 
@@ -501,7 +487,7 @@ class IncrementApprover:
         if request is None:
             return 0
 
-        approval_status = self._get_approval_status(request)
+        approval_status = self._get_approval_status(request, devel=config_inc.devel)
         error_count = 0
         found_relevant_build = False
         for build_info in load_build_info(

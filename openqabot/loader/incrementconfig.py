@@ -33,6 +33,7 @@ class IncrementConfig:
     distri: str
     version: str
     flavor: str
+    devel: bool = False
     flavor_suffix: str = DEFAULT_FLAVOR_SUFFIX
     project_base: str = ""
     build_project_suffix: str = ""
@@ -79,6 +80,7 @@ class IncrementConfig:
         """Create an IncrementConfig from a dictionary entry."""
         return IncrementConfig(
             distri=entry["distri"],
+            devel=entry.get("devel", False),
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
             flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
@@ -139,6 +141,7 @@ class IncrementConfig:
             field_name: getattr(args, field_name)
             for field_name in [
                 "distri",
+                "devel",
                 "version",
                 "flavor",
                 "flavor_suffix",
