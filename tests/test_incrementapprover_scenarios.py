@@ -14,9 +14,9 @@ from unittest.mock import patch
 
 import osc.core
 import pytest
+import responses
 from pytest_mock import MockerFixture
 
-import responses
 from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
@@ -353,7 +353,7 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
 def mock_osc_requests(mocker: MockerFixture) -> None:
     def fake_get_request_list(_url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
         req = osc.core.Request()
-        req.state = "review"  # ty: ignore[invalid-assignment]
+        req.state = "review"
         req.reviews = [ReviewState("review", "qam-openqa")]
         if "SL-Micro" in project:
             req.reqid = "399766"

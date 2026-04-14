@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
 import responses
+
 from openqabot.errors import PostOpenQAError
 from openqabot.incrementapprover import BuildInfo
 from openqabot.repodiff import Package

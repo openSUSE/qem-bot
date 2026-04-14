@@ -57,8 +57,8 @@ def test_repodiff_compression(capsys: pytest.CaptureFixture[str]) -> None:
 @pytest.mark.parametrize(
     ("side_effect", "method", "expected_msg"),
     [
-        (FileNotFoundError, "read_bytes", "Failed to read responses/name: File not found"),
-        (json.JSONDecodeError("msg", "doc", 0), "read_bytes", "Failed to parse responses/name"),
+        (FileNotFoundError, "read_bytes", "Failed to read tests/fixtures/responses/name: File not found"),
+        (json.JSONDecodeError("msg", "doc", 0), "read_bytes", "Failed to parse tests/fixtures/responses/name"),
     ],
 )
 def test_request_and_dump_fake_data_errors(

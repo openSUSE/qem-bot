@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock, patch
 
 import osc.core
-
 import responses
+
 from openqabot.config import BUILD_REGEX, settings
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
@@ -151,7 +151,7 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
     assert "OBS:PROJECT" in project
     req = osc.core.Request()
     req.reqid = 42
-    req.state = "review"  # ty: ignore[invalid-assignment]
+    req.state = "review"
     req.reviews = [ReviewState("review", settings.obs_group)]
     req.actions = [
         Action(
@@ -193,7 +193,7 @@ def fake_get_binary_file(
     assert arch == "local"
     assert repo in {"images", "product"}
     assert filename == "SLES-16.0-aarch64-Build160.4-Source.report"
-    Path(target_filename).symlink_to(Path(f"responses/source-report-{prj}.xml").absolute())
+    Path(target_filename).symlink_to(Path(f"tests/fixtures/responses/source-report-{prj}.xml").absolute())
 
 
 def fake_change_review_state(apiurl: str, reqid: str, newstate: str, by_group: str, message: str) -> None:
