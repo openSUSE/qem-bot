@@ -1,0 +1,9 @@
+# **ACTUAL CODEOWNERS are defined in file located on root level. PLEASE IGNORE THIS FILE IF YOU WANT TO KNOW WHO OWNS PROJECT**
+# This file is used as a workaround to ensure that users defined here are
+# automatically notified and assigned as a reviewer to all
+# Pull Requests created in this repository.
+#
+# While CODEOWNERS is typically for defining domain expertise,
+# it is used here globally to automate the PR notification process.
+
+@asmorodskyi
