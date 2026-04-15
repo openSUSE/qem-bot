@@ -151,7 +151,7 @@ def fake_get_request_list(url: str, project: str, **_kwargs: Any) -> list[osc.co
     assert "OBS:PROJECT" in project
     req = osc.core.Request()
     req.reqid = 42
-    req.state = "review"
+    req.state = "review"  # ty: ignore[invalid-assignment]
     req.reviews = [ReviewState("review", settings.obs_group)]
     req.actions = [
         Action(

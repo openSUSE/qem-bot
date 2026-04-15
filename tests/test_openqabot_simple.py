@@ -14,6 +14,7 @@ import pytest
 import responses
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
+from openqabot.openqa import OpenQAInterface
 from openqabot.openqabot import OpenQABot
 
 if TYPE_CHECKING:
@@ -128,10 +129,10 @@ def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.Log
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_post_qem_success(mocked_openqa_bot: Namespace) -> None:
+def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> None:
 
     bot = OpenQABot(mocked_openqa_bot)
-    bot.openqa = True
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
     test_api = "api/jobs/incident/1"
     test_data = {"status": "passed", "job_id": 999}
     responses.add(

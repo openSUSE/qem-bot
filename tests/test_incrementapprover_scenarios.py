@@ -353,7 +353,7 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
 def mock_osc_requests(mocker: MockerFixture) -> None:
     def fake_get_request_list(_url: str, project: str, **_kwargs: Any) -> list[osc.core.Request]:
         req = osc.core.Request()
-        req.state = "review"
+        req.state = "review"  # ty: ignore[invalid-assignment]
         req.reviews = [ReviewState("review", "qam-openqa")]
         if "SL-Micro" in project:
             req.reqid = "399766"
