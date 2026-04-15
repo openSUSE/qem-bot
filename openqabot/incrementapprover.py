@@ -428,7 +428,20 @@ class IncrementApprover:
         approval_status: ApprovalStatus,
         jobs_were_filtered: bool = False,
     ) -> int:
-        """Handle cases where openQA jobs are not ready or missing."""
+        """Manage disapproval reasons and optional rescheduling for incomplete openQA results.
+
+        Args:
+            build_info (BuildInfo): Metadata regarding the product and build version.
+            params (ScheduleParams): The parameters required to identify or schedule openQA jobs.
+            openqa_jobs_ready (bool | None): Job state (None for missing, False for pending).
+            approval_status (ApprovalStatus): The status container updated with disapproval reasons.
+            jobs_were_filtered (bool): Controls if some jobs were filtered which would mean that we
+                should exclude them from approval status.
+
+        Returns:
+            int: The number of failed job postings if rescheduling is performed; otherwise 0.
+
+        """
         info_str = build_info.format_multi_build(params)
         if openqa_jobs_ready is False:
             approval_status.reasons_to_disapprove.append(f"Not all jobs ready for {info_str}")
