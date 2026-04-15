@@ -111,7 +111,7 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture, args: Namespace) ->
 @responses.activate
 @pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_no_embragoed_and_priority_value(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_no_embargoed_and_priority_value(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(args)() == 0
     assert len(responses.calls) == 2
