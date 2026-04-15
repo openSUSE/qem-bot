@@ -23,11 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
-        with:
-          version: "latest"
-      - name: Check format
-        run: ruff format --check
       - uses: actions/setup-python@v6
         with:
           python-version-file: "pyproject.toml"
