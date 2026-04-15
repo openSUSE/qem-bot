@@ -423,17 +423,22 @@ class IncrementApprover:
         self,
         build_info: BuildInfo,
         params: ScheduleParams,
-        info_str: str,
         *,
         openqa_jobs_ready: bool | None,
         approval_status: ApprovalStatus,
+        jobs_were_filtered: bool = False,
     ) -> int:
         """Handle cases where openQA jobs are not ready or missing."""
+        info_str = build_info.format_multi_build(params)
         if openqa_jobs_ready is None:
-            approval_status.reasons_to_disapprove.append("No jobs scheduled for " + info_str)
+            if jobs_were_filtered:
+                approval_status.reasons_to_disapprove.append(f"No jobs for evaluation (filtered) for {info_str}")
+                return 0
+
+            approval_status.reasons_to_disapprove.append(f"No jobs scheduled for {info_str}")
             return self.schedule_openqa_jobs(build_info, params) if self.args.schedule else 0
 
-        approval_status.reasons_to_disapprove.append("Not all jobs ready for " + info_str)
+        approval_status.reasons_to_disapprove.append(f"Not all jobs ready for {info_str}")
         return 0
 
     def process_build_info(
@@ -469,21 +474,26 @@ class IncrementApprover:
             request.reqid,
             info_str,
         )
-        res = self._filter_results(self.request_openqa_job_results(params, info_str))
+        unfiltered_results = self.request_openqa_job_results(params, info_str)
+        filtered_results = self._filter_results(unfiltered_results)
 
         if self.args.reschedule:
             approval_status.reasons_to_disapprove.append(f"Re-scheduling jobs for {info_str}")
             return self.schedule_openqa_jobs(build_info, params)
 
-        openqa_jobs_ready = self.check_openqa_jobs(res, build_info, params)
+        openqa_jobs_ready = self.check_openqa_jobs(filtered_results, build_info, params)
         if openqa_jobs_ready:
-            ok_jobs, reasons, jobs = self.evaluate_list_of_openqa_job_results(res, request)
+            ok_jobs, reasons, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
             builds = {BuildIdentifier.from_params(p) for p in params if "BUILD" in p}
             approval_status.add(ok_jobs, reasons, builds, jobs)
             return 0
 
         return self._handle_not_ready_jobs(
-            build_info, params, info_str, openqa_jobs_ready=openqa_jobs_ready, approval_status=approval_status
+            build_info,
+            params,
+            openqa_jobs_ready=openqa_jobs_ready,
+            approval_status=approval_status,
+            jobs_were_filtered=unfiltered_results != filtered_results,
         )
 
     def _get_approval_status(self, request: osc.core.Request) -> ApprovalStatus:
