@@ -430,16 +430,18 @@ class IncrementApprover:
     ) -> int:
         """Handle cases where openQA jobs are not ready or missing."""
         info_str = build_info.format_multi_build(params)
-        if openqa_jobs_ready is None:
-            if jobs_were_filtered:
-                approval_status.reasons_to_disapprove.append(f"No jobs for evaluation (filtered) for {info_str}")
-                return 0
+        if openqa_jobs_ready is False:
+            approval_status.reasons_to_disapprove.append(f"Not all jobs ready for {info_str}")
+            return 0
 
-            approval_status.reasons_to_disapprove.append(f"No jobs scheduled for {info_str}")
-            return self.schedule_openqa_jobs(build_info, params) if self.args.schedule else 0
+        if jobs_were_filtered:
+            approval_status.reasons_to_disapprove.append(
+                f"No jobs left for evaluation (all were filtered) for {info_str}"
+            )
+            return 0
 
-        approval_status.reasons_to_disapprove.append(f"Not all jobs ready for {info_str}")
-        return 0
+        approval_status.reasons_to_disapprove.append(f"No jobs scheduled for {info_str}")
+        return self.schedule_openqa_jobs(build_info, params) if self.args.schedule else 0
 
     def process_build_info(
         self,

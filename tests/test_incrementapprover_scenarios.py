@@ -520,7 +520,7 @@ def test_approval_if_failing_jobs_are_in_development_group(
     # regardless of schedule flag, filtered-out jobs must never trigger post_job
     mock_post_job.assert_not_called()
     assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
-    assert "No jobs for evaluation (filtered) for" in caplog.text
+    assert "No jobs left for evaluation (all were filtered) for" in caplog.text
     assert "Scheduling jobs for" not in caplog.text
 
 
