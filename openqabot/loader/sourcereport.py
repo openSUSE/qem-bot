@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import tempfile
 from collections import defaultdict
+from functools import lru_cache
 from logging import getLogger
 from typing import Any
 from urllib.error import HTTPError
@@ -58,14 +59,20 @@ def parse_source_report(
         packages["noarch"].add(Package(b.get("package"), "", "", "", "noarch"))
 
 
+@lru_cache(maxsize=128)
+def get_repos_of_project(prj: str) -> list[Any]:
+    """Cache OBS repository lookups for a project."""
+    return list(osc.core.get_repos_of_project(config.settings.obs_url, prj=prj))
+
+
 def find_source_reports(project: str, package: str) -> list[str]:
     """Find source reports for a package in a project."""
-    repos = osc.core.get_repos_of_project(config.settings.obs_url, prj=project)
+    repos = get_repos_of_project(project)
     binaries = [
         osc.core.get_binarylist(config.settings.obs_url, prj=project, repo=repo.name, arch=repo.arch, package=package)
         for repo in repos
     ]
-    return [b for binary_list in binaries for b in binary_list if b.endswith("Source.report")]
+    return [b for binary_list in binaries for b in binary_list if b and b.endswith("Source.report")]
 
 
 def load_packages_from_source_report(
@@ -95,8 +102,9 @@ def compute_packages_of_request_from_source_report(
     """Compute the package diff of a request based on source reports."""
     repo_a: defaultdict[str, set[Package]] = defaultdict(set)
     repo_b: defaultdict[str, set[Package]] = defaultdict(set)
+
     for action in request.actions:
-        log.debug("Checking action '%s' -> '%s' of request %s", action.src_project, action.tgt_project, request.id)
+        log.debug("Checking action '%s' -> '%s' of request %s", action.src_project, action.tgt_project, request.reqid)
         # add packages for target project (e.g. `SUSE:Products:SLE-Product-SLES:16.0:aarch64`), that is repo "A"
         load_packages_from_source_report(
             action, OBSBinary(action.tgt_project, action.src_package, "images", "local"), repo_a
@@ -105,4 +113,5 @@ def compute_packages_of_request_from_source_report(
         load_packages_from_source_report(
             action, OBSBinary(action.src_project, action.src_package, "product", "local"), repo_b
         )
+
     return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
