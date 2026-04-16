@@ -8,6 +8,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
 from openqabot.types.increment import BuildInfo
+from openqabot.utils import get_obs_filter_params
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ def load_build_info(
     build_project_url = config.build_project_url()
     sub_path = config.build_listing_sub_path
     url = f"{build_project_url}/{sub_path}/"
-    params = {"P": "*spdx.json", "jsontable": 1}
+    params = get_obs_filter_params(config.build_filter)
     log.debug("Checking for '%s' files on %s with params %s", build_regex, url, params)
     rows = retried_requests.get(url, params=params).json().get("data", [])
 

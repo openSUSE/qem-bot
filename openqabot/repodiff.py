@@ -18,6 +18,7 @@ import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 
 from .config import settings
+from .utils import get_obs_filter_params
 from .utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ class RepoDiff:
             url,
             f"repodata-listing-{project}.json",
             as_json=True,
-            params={"P": "*-primary.xml*", "jsontable": 1},
+            params=get_obs_filter_params("*-primary.xml*"),
         )
         if not repo_data_listing or not isinstance(repo_data_listing, dict):
             log.error("Could not load repo data for project %s", project)

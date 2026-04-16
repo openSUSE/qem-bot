@@ -40,6 +40,7 @@ class IncrementConfig:
     build_listing_sub_path: str = ""
     build_regex: str = ""
     product_regex: str = ""
+    build_filter: str = field(default_factory=lambda: config.settings.build_filter)
     version_regex: str = DEFAULT_VERSION_REGEX
     packages: list[str] = field(default_factory=list)
     archs: set[str] = field(default_factory=set)
@@ -88,6 +89,7 @@ class IncrementConfig:
             build_listing_sub_path=entry["build_listing_sub_path"],
             build_regex=entry["build_regex"],
             product_regex=entry["product_regex"],
+            build_filter=entry.get("build_filter", config.settings.build_filter),
             version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
             packages=entry.get("packages", []),
             archs=set(entry.get("archs", [])),

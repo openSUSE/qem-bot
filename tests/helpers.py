@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlencode
 
 import osc.core
 import responses
@@ -21,7 +22,7 @@ from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
 from openqabot.types.submission import Submission
-from openqabot.utils import merge_dicts
+from openqabot.utils import get_obs_filter_params, merge_dicts
 
 if TYPE_CHECKING:
     import pytest
@@ -36,7 +37,9 @@ class ReviewState(NamedTuple):
     by_group: str
 
 
-obs_product_table_url = settings.obs_download_url + "/OBS:/PROJECT:/TEST/product/?P=*spdx.json&jsontable=1"
+obs_product_table_url = (
+    f"{settings.obs_download_url}/OBS:/PROJECT:/TEST/product/?{urlencode(get_obs_filter_params(settings.build_filter))}"
+)
 
 
 @dataclass

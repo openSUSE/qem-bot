@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
     approve_comment: bool = Field(default=False, alias="QEM_BOT_APPROVE_COMMENT")
+    build_filter: str = Field(default="*spdx.json", alias="QEM_BOT_BUILD_FILTER")
 
     # App-specific settings
     qem_dashboard_url: str = Field(default="http://dashboard.qam.suse.de/", alias="QEM_DASHBOARD_URL")
