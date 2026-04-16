@@ -84,9 +84,13 @@ def test_extra_builds_for_package_filtering(caplog: pytest.LogCaptureFixture) ->
 
 def test_filter_results(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
-    mocker.patch.object(approver.client, "is_in_devel_group", side_effect=lambda j: j.get("id") == 2)
-    mocker.patch.object(approver.client, "get_single_job", side_effect=lambda j: {"id": j})
+    mocker.patch.object(approver.client, "is_in_devel_group", side_effect=lambda j: j.get("group_id") == 9)
 
-    results = [{"passed": {"j1": {"job_ids": [1]}, "j2": {"job_ids": [1, 2]}}, "failed": {"j3": {"job_ids": [2]}}}]
-    expected = [{"passed": {"j1": {"job_ids": [1]}, "j2": {"job_ids": [1]}}}]
+    results = [
+        {
+            "passed": {"j1": {"job_ids": [1], "group_id": 1}, "j2": {"job_ids": [1, 2], "group_id": 9}},
+            "failed": {"j3": {"job_ids": [2], "group_id": 9}},
+        }
+    ]
+    expected = [{"passed": {"j1": {"job_ids": [1], "group_id": 1}}}]
     assert approver._filter_results(results) == expected  # noqa: SLF001

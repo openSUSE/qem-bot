@@ -104,11 +104,7 @@ class IncrementApprover:
 
     def _filter_jobs(self, jobs: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
         """Filter jobs within a state, removing those in devel groups."""
-        return {
-            name: {**info, "job_ids": ids}
-            for name, info in jobs.items()
-            if (ids := [i for i in info["job_ids"] if not self.is_in_devel_group(i)])
-        }
+        return {name: info for name, info in jobs.items() if not self.client.is_in_devel_group(info)}
 
     def _filter_results(self, results: OpenQAResults) -> OpenQAResults:
         """Remove jobs belonging to development groups from openQA results."""
@@ -143,11 +139,6 @@ class IncrementApprover:
             build_info.log_pending_jobs(pending_states)
             return False
         return True
-
-    def is_in_devel_group(self, job_id: int) -> bool:
-        """Fetch job details and check if it belongs to a development group."""
-        job = self.client.get_single_job(job_id)
-        return self.client.is_in_devel_group(job) if job else False
 
     def evaluate_openqa_job_results(
         self,

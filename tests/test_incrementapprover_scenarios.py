@@ -509,7 +509,7 @@ def test_approval_if_failing_jobs_are_in_development_group(
     fake_openqa_url_job_stat: str,
     schedule: bool,  # noqa: FBT001
 ) -> None:
-    responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"failed": {"job_ids": [123]}}})
+    responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"failed": {"job_ids": [123], "group_id": 9}}})
     increment_approver = prepare_approver(caplog, schedule=schedule)
     # is_devel_group is called with group_id (int), unlike is_in_devel_group which takes a job dict
     increment_approver.client.get_single_job = mocker.Mock(return_value=_devel_job(123, result="failed"))
@@ -539,7 +539,7 @@ def test_approval_with_mixed_jobs_development_ignored(
     responses.add(
         responses.GET,
         fake_openqa_url_job_stat,
-        json={"done": {"failed": {"job_ids": [123]}, "passed": {"job_ids": [456]}}},
+        json={"done": {"failed": {"job_ids": [123], "group_id": 9}, "passed": {"job_ids": [456], "group_id": 1}}},
     )
     job_map = {123: _devel_job(123, result="failed"), 456: _prod_job(456, result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
@@ -565,7 +565,10 @@ def test_approval_if_running_jobs_are_in_development_group(
     responses.add(
         responses.GET,
         fake_openqa_url_job_stat,
-        json={"running": {"some_job": {"job_ids": [123]}}, "done": {"passed": {"job_ids": [456]}}},
+        json={
+            "running": {"some_job": {"job_ids": [123], "group": "Development"}},
+            "done": {"passed": {"job_ids": [456], "group": "Production"}},
+        },
     )
     job_map = {123: _devel_job(123, state="running"), 456: _prod_job(456, state="done", result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
