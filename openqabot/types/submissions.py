@@ -95,13 +95,34 @@ class Submissions(BaseConf):
             return False
 
         jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
-        return any(
-            job["flavor"] == ctx.flavor
-            and job["arch"] == ctx.arch
-            and job["version"] == ver
-            and job.get("settings", {}).get("REPOHASH") == revs
-            for job in jobs
-        )
+        relevant_jobs = [
+            job for job in jobs if job["flavor"] == ctx.flavor and job["arch"] == ctx.arch and job["version"] == ver
+        ]
+
+        if not relevant_jobs:
+            return False
+
+        # Find the most recent REPOHASH among existing jobs
+        old_revs = [job.get("settings", {}).get("REPOHASH", 0) for job in relevant_jobs]
+        max_old_revs = max(old_revs)
+
+        if revs <= max_old_revs:
+            return True
+
+        # Check if the new REPOHASH is within the cooldown period
+        if (revs - max_old_revs) < settings.schedule_cooldown:
+            log.info(
+                "Submission %s: New RepoHash %s for %s on %s is within cooldown period (diff: %ss < %ss)",
+                ctx.sub,
+                revs,
+                ctx.flavor,
+                ctx.arch,
+                revs - max_old_revs,
+                settings.schedule_cooldown,
+            )
+            return True
+
+        return False
 
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""

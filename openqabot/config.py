@@ -80,6 +80,7 @@ class Settings(BaseSettings):
         default="Contact qem-bot maintainers for generic questions", alias="QEM_GENERIC_TOOL_ISSUES_CONTACT"
     )
     max_detailed_comment_entries: int = Field(default=7, alias="QEM_MAX_DETAILED_COMMENT_ENTRIES")
+    schedule_cooldown: int = Field(default=7200, alias="QEM_BOT_SCHEDULE_COOLDOWN")
 
     model_config = SettingsConfigDict(
         env_file=".env",
