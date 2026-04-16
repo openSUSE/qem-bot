@@ -38,7 +38,7 @@ class ReviewState(NamedTuple):
 
 
 obs_product_table_url = (
-    f"{settings.obs_download_url}/OBS:/PROJECT:/TEST/product/?{urlencode(get_obs_filter_params(settings.build_filter))}"
+    f"{settings.obs_download_url}/OBS:/PROJECT:/TEST/product/?{urlencode(get_obs_filter_params(BUILD_REGEX))}"
 )
 
 

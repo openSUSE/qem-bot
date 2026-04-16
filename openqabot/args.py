@@ -593,7 +593,7 @@ def increment_approve(  # noqa: PLR0913
         typer.Option("--product-regex", help="The regex used to determine what products are relevant"),
     ] = "^SLE.*",
     build_filter: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--build-filter",
             envvar="QEM_BOT_BUILD_FILTER",

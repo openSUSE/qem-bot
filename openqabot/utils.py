@@ -109,15 +109,15 @@ def merge_dicts(dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
 
 
 def get_obs_filter_params(pattern: str) -> dict[str, Any]:
-    """Reduce data transfer by evaluating the 'P' parameter at the source via 'jsontable'.
+    """Reduce data transfer by evaluating the 'REGEX' parameter at the source via 'jsontable'.
 
     References:
-        * https://github.com/openSUSE/MirrorCache/blob/207d61237c0597f8f4ff9d7ad12c4f9cb5d5cd1f/lib/MirrorCache/Datamodule.pm#L311
+        * https://github.com/openSUSE/MirrorCache/blob/207d61237c0597f8f4ff9d7ad12c4f9cb5d5cd1f/lib/MirrorCache/Datamodule.pm#L309
         * https://github.com/openSUSE/MirrorCache/issues/349
         * https://github.com/openSUSE/MirrorCache/pull/334
 
     """
-    return {"P": pattern, "jsontable": 1}
+    return {"REGEX": pattern, "jsontable": 1}
 
 
 def unique_dicts(dicts: list[dict[Any, Any]]) -> list[dict[Any, Any]]:

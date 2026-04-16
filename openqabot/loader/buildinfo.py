@@ -32,7 +32,7 @@ def load_build_info(
     build_project_url = config.build_project_url()
     sub_path = config.build_listing_sub_path
     url = f"{build_project_url}/{sub_path}/"
-    params = get_obs_filter_params(config.build_filter)
+    params = get_obs_filter_params(config.build_filter or build_regex)
     log.debug("Checking for '%s' files on %s with params %s", build_regex, url, params)
     rows = retried_requests.get(url, params=params).json().get("data", [])
 

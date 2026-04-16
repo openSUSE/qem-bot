@@ -109,7 +109,7 @@ class RepoDiff:
             url,
             f"repodata-listing-{project}.json",
             as_json=True,
-            params=get_obs_filter_params("*-primary.xml*"),
+            params=get_obs_filter_params(r".*-primary\.xml.*"),
         )
         if not repo_data_listing or not isinstance(repo_data_listing, dict):
             log.error("Could not load repo data for project %s", project)
