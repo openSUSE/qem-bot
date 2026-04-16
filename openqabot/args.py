@@ -607,6 +607,10 @@ def increment_approve(  # noqa: PLR0913
         ),
     ] = None,
     comment: comment_option = True,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
 ) -> None:
     """Approve the most recent product increment for an OBS project if tests passed."""
     args = ctx.obj
@@ -627,6 +631,14 @@ def increment_approve(  # noqa: PLR0913
     args.product_regex = product_regex
     args.increment_config = increment_config
     args.comment = comment
+
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
 
     approve = IncrementApprover(args)
     sys.exit(approve())
