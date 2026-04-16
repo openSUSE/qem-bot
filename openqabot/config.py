@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     # How long to wait for http(s) call in seconds
     url_timeout: int = 60
     # Detailed comments settings
-    enable_detailed_comments: bool = Field(default=False, alias="QEM_ENABLE_DETAILED_COMMENTS")
+    enable_detailed_comments: bool = Field(default=True, alias="QEM_ENABLE_DETAILED_COMMENTS")
     fallback_contact: str = Field(default="Contact openQA test maintainers", alias="QEM_FALLBACK_CONTACT")
     generic_tool_issues_contact: str = Field(
         default="Contact qem-bot maintainers for generic questions", alias="QEM_GENERIC_TOOL_ISSUES_CONTACT"
