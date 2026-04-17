@@ -175,10 +175,11 @@ class GiteaTrigger:
                 )
                 # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
                 # at least one for labels defined in staging.config
-                if pullrequest.has_all_labels(self.pr_required_labels) and pullrequest.has_any_label(
-                    set(self.staging_config_qa_labels.keys())
-                ):
+                qa_labels = set(self.staging_config_qa_labels.keys())
+                if pullrequest.has_all_labels(self.pr_required_labels) and pullrequest.has_any_label(qa_labels):
                     self.prs.append(pullrequest)
+                else:
+                    log.debug("PR %s disregarded (labels: %s)", pr_id, pullrequest.labels)
             except KeyError:
                 log.exception("Unable to process PR git:%s", pr_id)
         log.debug(
