@@ -45,6 +45,7 @@ def reset_mock_state() -> Any:
     MockInterceptorState.osc_conf_patcher = None
     yield
     responses.stop()
+    responses.reset()
     MockInterceptorState.started = False
     MockInterceptorState.osc_patcher = None
     MockInterceptorState.osc_conf_patcher = None
