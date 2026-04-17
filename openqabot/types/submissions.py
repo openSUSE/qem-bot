@@ -80,7 +80,7 @@ class Submissions(BaseConf):
     def _get_scheduled_jobs(sub_id: int, submission_type: str | None = None) -> list[dict[str, Any]]:
         """Fetch scheduled jobs from the dashboard."""
         try:
-            url = f"{settings.qem_dashboard_url}api/incident_settings/{sub_id}"
+            url = settings.dashboard_url("api", "incident_settings", sub_id)
             params = {"type": submission_type} if submission_type else {}
             res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
             return res if isinstance(res, list) else []
@@ -228,7 +228,7 @@ class Submissions(BaseConf):
             else f"{settings.smelt_url}/incident/{sub.id}"
         )
         settings_data["__SOURCE_CHANGE_URL"] = url
-        settings_data["__DASHBOARD_INCIDENT_URL"] = f"{settings.qem_dashboard_url}incident/{sub.id}"
+        settings_data["__DASHBOARD_INCIDENT_URL"] = settings.dashboard_url("incident", sub.id)
 
     def apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:  # noqa: PLR6301
         """Apply Public Cloud tools and PINT images to settings."""

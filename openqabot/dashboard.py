@@ -24,16 +24,16 @@ def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
     if cache_key in _GET_CACHE:
         return _GET_CACHE[cache_key]
 
-    data = retried_requests.get(settings.qem_dashboard_url + route, **kwargs).json()
+    data = retried_requests.get(settings.dashboard_url(route), **kwargs).json()
     _GET_CACHE[cache_key] = data
     return data
 
 
 def patch(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
     """Perform a PATCH request to the dashboard."""
-    return retried_requests.patch(settings.qem_dashboard_url + route, **kwargs)
+    return retried_requests.patch(settings.dashboard_url(route), **kwargs)
 
 
 def put(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
     """Perform a PUT request to the dashboard."""
-    return retried_requests.put(settings.qem_dashboard_url + route, **kwargs)
+    return retried_requests.put(settings.dashboard_url(route), **kwargs)

@@ -415,7 +415,7 @@ class Approver:
 
     def approve(self, sub: SubReq) -> bool:
         """Approve a submission in OBS or Gitea."""
-        msg = f"Request accepted for '{config.settings.obs_group}' based on data in {config.settings.qem_dashboard_url}"
+        msg = f"Request accepted for '{config.settings.obs_group}' based on data in {config.settings.dashboard_url()}"
         log.info("Approving %s", ms2str(sub))
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 

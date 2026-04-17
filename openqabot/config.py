@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 import osc.conf
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -48,6 +49,16 @@ class Settings(BaseSettings):
 
     # App-specific settings
     qem_dashboard_url: str = Field(default="http://dashboard.qam.suse.de/", alias="QEM_DASHBOARD_URL")
+
+    @field_validator("qem_dashboard_url")
+    @classmethod
+    def _ensure_trailing_slash(cls, v: str) -> str:
+        return v if v.endswith("/") else v + "/"
+
+    def dashboard_url(self, *path: str | int) -> str:
+        """Construct a QEM Dashboard URL with the given path components."""
+        return urljoin(self.qem_dashboard_url, "/".join(str(p).strip("/") for p in path))
+
     smelt_url: str = Field(default="https://smelt.suse.de", alias="SMELT_URL")
     gitea_url: str = Field(default="https://src.suse.de", alias="GITEA_URL")
     insecure: bool = Field(default=False, alias="QEM_BOT_INSECURE")

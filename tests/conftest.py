@@ -48,7 +48,7 @@ def fake_responses_for_unblocking_submissions_via_openqa_comments(
     submission = params["submission"]
     responses.add(
         responses.GET,
-        f"{settings.qem_dashboard_url}api/jobs/update/20005",
+        settings.dashboard_url("api", "jobs", "update", 20005),
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},

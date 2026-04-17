@@ -38,7 +38,7 @@ def fake_responses_for_unblocking_submissions_via_older_ok_result(
 ) -> None:
     responses.add(
         responses.GET,
-        f"{settings.qem_dashboard_url}api/jobs/update/20005",
+        settings.dashboard_url("api", "jobs", "update", 20005),
         json=[
             {"job_id": 100000, "status": "passed"},
             {"job_id": 100002, "status": "failed"},
@@ -238,7 +238,7 @@ def test_approval_via_openqa_older_ok_job(
     def mock_get_json(url: str, **_kwargs: Any) -> Any:
         if "update/2000" in url:
             return [{"job_id": 100002, "status": "failed"}]
-        if url in {f"{settings.qem_dashboard_url}api/jobs/100005", "api/jobs/100005"}:
+        if url in {settings.dashboard_url("api", "jobs", 100005), "api/jobs/100005"}:
             return mock_json
         return [{"job_id": 100000, "status": "passed"}]
 
@@ -275,7 +275,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
     def mock_get_json(url: str, **_kwargs: Any) -> Any:
         if "update/2000" in url:
             return [{"job_id": 100002, "status": "failed"}]
-        if url in {f"{settings.qem_dashboard_url}api/jobs/100005", "api/jobs/100005"}:
+        if url in {settings.dashboard_url("api", "jobs", 100005), "api/jobs/100005"}:
             return {"error": "Job not found"}
         return [{"job_id": 100000, "status": "passed"}]
 

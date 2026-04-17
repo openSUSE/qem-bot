@@ -132,7 +132,7 @@ class Aggregate(BaseConf):
     def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
         """Finalize the dashboard post with metadata and summary information."""
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{config.settings.qem_dashboard_url}incident/{sub.id}" for sub in full_post["qem"]["incidents"]
+            config.settings.dashboard_url("incident", sub.id) for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
             f"{config.settings.smelt_url}/incident/{sub.id}"

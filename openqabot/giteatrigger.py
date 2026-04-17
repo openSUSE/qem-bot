@@ -145,7 +145,7 @@ class GiteaTrigger:
                 else:
                     msg = (
                         f"Request accepted for '{config.settings.obs_group}' "
-                        f"based on data in {config.settings.qem_dashboard_url}"
+                        f"based on data in {config.settings.dashboard_url()}"
                     )
                     approve_pr(self.gitea_token, pullrequest.repo_name, pullrequest.number, pullrequest.commit_sha, msg)
 
