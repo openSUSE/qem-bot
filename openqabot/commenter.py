@@ -204,14 +204,7 @@ class Commenter:
         base_url = self.client.openqa.baseurl
         badge_msg = ""
         for b in sorted(builds):
-            params = {"build": b.build}
-            if b.distri:
-                params["distri"] = b.distri
-            if b.version:
-                params["version"] = b.version
-            if not config.settings.allow_development_groups:
-                params["not_group_glob"] = "*Devel*,*Test*"
-
+            params = self._get_base_badge_params(b.build, b.distri, b.version)
             label = f"Build {b.build}"
             params["label"] = label
             query = urlencode(params, safe="*")
@@ -240,14 +233,7 @@ class Commenter:
 
         if excluded_count > 0:
             first_b = sorted_builds[0]
-            params = {"build": first_b.build}
-            if first_b.distri:
-                params["distri"] = first_b.distri
-            if first_b.version:
-                params["version"] = first_b.version
-            if not config.settings.allow_development_groups:
-                params["not_group_glob"] = "*Devel*,*Test*"
-
+            params = self._get_base_badge_params(first_b.build, first_b.distri, first_b.version)
             query = urlencode(params, safe="*")
             overview_link = f"{base_url}/tests/overview?{query}"
             detail_msg += (
@@ -256,6 +242,13 @@ class Commenter:
 
         detail_msg += f"\n\nFor generic tool issues, contact {config.settings.generic_tool_issues_contact}."
         return detail_msg.strip()
+
+    def _get_base_badge_params(self, build: str, distri: str, version: str) -> dict[str, str]:  # noqa: PLR6301
+        """Centralized openQA badge parameter construction."""
+        params = {k: v for k, v in [("build", build), ("distri", distri), ("version", version)] if v}
+        if not config.settings.allow_development_groups:
+            params["not_group_glob"] = "*Devel*,*Test*"
+        return params
 
     def get_job_groups_with_failures(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Get job groups with blocking failures and their contact info."""
@@ -297,18 +290,12 @@ class Commenter:
             for g in groups.values()
         ]
 
-    @staticmethod
     def _generate_overview_url(
-        base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False, label: str | None = None
+        self, base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False, label: str | None = None
     ) -> str:
-        params = {"build": group["build"]}
-        if group.get("distri"):
-            params["distri"] = group["distri"]
-        if group.get("version"):
-            params["version"] = group["version"]
+        """Generate overview or badge URL for a specific job group."""
+        params = self._get_base_badge_params(group.get("build", ""), group.get("distri", ""), group.get("version", ""))
         params["group"] = group_name
-        if not config.settings.allow_development_groups:
-            params["not_group_glob"] = "*Devel*,*Test*"
         if label:
             params["label"] = label
 
