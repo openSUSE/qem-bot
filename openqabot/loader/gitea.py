@@ -153,19 +153,19 @@ def read_xml(name: str) -> etree.ElementTree:
 
 def reviews_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR reviews."""
-    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullReviews
+    # https://docs.gitea.com/api/1.25/#tag/repository/operation/repolistPullReviews
     return f"repos/{repo_name}/pulls/{number}/reviews"
 
 
 def changed_files_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR changed files."""
-    # https://docs.gitea.com/api/1.20/#tag/repository/operation/repoGetPullRequestFiles
+    # https://docs.gitea.com/api/1.25/#tag/repository/operation/repoGetPullRequestFiles
     return f"repos/{repo_name}/pulls/{number}/files"
 
 
 def comments_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR comments."""
-    # https://docs.gitea.com/api/1.20/#tag/issue/operation/issueCreateComment
+    # https://docs.gitea.com/api/1.25/#tag/issue/operation/issueCreateComment
     return f"repos/{repo_name}/issues/{number}/comments"
 
 
@@ -210,7 +210,7 @@ def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> lis
         return [cast("dict[str, Any]", pr)]
 
     try:
-        # https://docs.gitea.com/api/1.20/#tag/repository/operation/repolistPullRequests
+        # https://docs.gitea.com/api/1.25/#tag/repository/operation/repolistPullRequests
         return list(iter_gitea_items(f"repos/{repo}/pulls?state=open", token))
     except (requests.exceptions.RequestException, TypeError):
         log.exception("Gitea API error: Could not fetch open PRs from %s", repo)
