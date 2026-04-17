@@ -7,6 +7,8 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
 
+from openqabot import config
+
 if TYPE_CHECKING:
     import osc.core
 
@@ -29,6 +31,13 @@ class BuildIdentifier(NamedTuple):
     def from_params(cls, params: dict[str, str]) -> BuildIdentifier:
         """Create a BuildIdentifier from scheduling parameters."""
         return cls(params["BUILD"], params["DISTRI"], params["VERSION"])
+
+    def get_base_badge_params(self) -> dict[str, str]:
+        """Centralized openQA badge parameter construction."""
+        params = {k: v for k, v in [("build", self.build), ("distri", self.distri), ("version", self.version)] if v}
+        if not config.settings.allow_development_groups:
+            params["not_group_glob"] = "*Devel*,*Test*"
+        return params
 
 
 class BuildInfo(NamedTuple):
