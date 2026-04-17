@@ -592,14 +592,6 @@ def increment_approve(  # noqa: PLR0913
         str,
         typer.Option("--product-regex", help="The regex used to determine what products are relevant"),
     ] = "^SLE.*",
-    build_filter: Annotated[
-        str | None,
-        typer.Option(
-            "--build-filter",
-            envvar="QEM_BOT_BUILD_FILTER",
-            help="The server-side pattern matching filter for the build listing",
-        ),
-    ] = config_module.settings.build_filter,
     increment_config: Annotated[
         Path | None,
         typer.Option(
@@ -626,7 +618,6 @@ def increment_approve(  # noqa: PLR0913
     args.build_listing_sub_path = build_listing_sub_path
     args.build_regex = build_regex
     args.product_regex = product_regex
-    args.build_filter = build_filter
     args.increment_config = increment_config
     args.comment = comment
 
