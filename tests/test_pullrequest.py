@@ -2,35 +2,9 @@
 # SPDX-License-Identifier: MIT
 """Test PullRequest class."""
 
-import logging
-
 import pytest
-import requests
-from pytest_mock import MockerFixture
 
-from openqabot.loader import gitea
 from openqabot.types.pullrequest import PullRequest
-
-
-def test_get_open_prs_specific_number_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    """Cover JSONDecodeError when fetching a specific PR number."""
-    caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.JSONDecodeError("msg", "doc", 0))
-    res = gitea.get_open_prs({}, "repo", number=124)
-
-    assert res == []
-    assert "PR git:124 ignored: Could not read PR metadata" in caplog.text
-
-
-def test_get_open_prs_specific_number_key_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    """Cover KeyError (simulating unexpected API response structure)."""
-    caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.get_json", side_effect=KeyError("missing_field"))
-
-    res = gitea.get_open_prs({}, "repo", number=124)
-
-    assert res == []
-    assert "PR git:124 ignored: Could not read PR metadata" in caplog.text
 
 
 def test_pull_request_has_labels() -> None:
@@ -38,7 +12,8 @@ def test_pull_request_has_labels() -> None:
     raw_data = [{"name": "bug", "id": 1}, {"name": "urgent", "id": 2}, {"name": "v1.0", "id": 3}]
     pr = PullRequest(
         number=124,
-        repo_name="os-autoinst",
+        state="open",
+        project="os-autoinst",
         branch="master",
         url="http://gitea/pull/124",
         commit_sha="abcd123",
@@ -55,10 +30,23 @@ def test_pull_request_id_property() -> None:
     """Verify that id property returns the same value as number."""
     pr = PullRequest(
         number=124,
-        repo_name="os-autoinst",
+        state="open",
+        project="os-autoinst",
         branch="master",
         url="http://gitea/pull/124",
         commit_sha="abcd123",
         raw_labels=[],
     )
     assert pr.id == 124
+
+
+def test_create_from_json_invalid_data(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify create_from_json returns None and logs error on invalid data."""
+    # Missing 'number'
+    assert PullRequest.from_json({"base": {"repo": {"full_name": "repo"}}}) is None
+    assert "PR git:? ignored: Could not read PR metadata" in caplog.text
+
+    # Missing 'base'
+    caplog.clear()
+    assert PullRequest.from_json({"number": 123}) is None
+    assert "PR git:123 ignored: Could not read PR metadata" in caplog.text

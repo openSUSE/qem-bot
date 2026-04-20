@@ -3,7 +3,10 @@
 """Gitea Pullrequest type definition."""
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from logging import getLogger
+from typing import Any, Protocol, Self
+
+log = getLogger("bot.loader.pullrequest")
 
 
 class CommentableProtocol(Protocol):
@@ -25,7 +28,8 @@ class PullRequest:
     """Represent all information to operate Gitea pull requests."""
 
     number: int
-    repo_name: str
+    state: str
+    project: str
     branch: str
     url: str
     commit_sha: str
@@ -49,3 +53,28 @@ class PullRequest:
     def has_any_label(self, search_labels: set[str]) -> bool:
         """Check if pull request has at least one label from the input set."""
         return not self.labels.isdisjoint(search_labels)
+
+    def is_active(self) -> bool:
+        """Check if the pull request is in an active state."""
+        return self.state == "open"
+
+    @classmethod
+    def from_json(cls: type[Self], pr_json: dict[str, Any]) -> Self | None:
+        """Return instance of PullRequest created from dict."""
+        try:
+            instance = cls(
+                number=pr_json["number"],
+                state=pr_json.get("state", "open"),
+                raw_labels=pr_json.get("labels", []),
+                project=pr_json["base"]["repo"]["full_name"],
+                branch=pr_json["base"].get("label", pr_json["base"].get("ref", "unknown")),
+                url=pr_json.get("html_url", pr_json.get("url", "")),
+                commit_sha=pr_json.get("head", {}).get("sha", "unknown"),
+            )
+            log.debug("PR git:%i: %s", instance.number, instance)
+        except KeyError:
+            pr_id = pr_json.get("number", "?")
+            log.exception("PR git:%s ignored: Could not read PR metadata", pr_id)
+            return None
+        else:
+            return instance

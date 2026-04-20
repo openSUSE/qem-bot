@@ -147,11 +147,11 @@ class GiteaTrigger:
                         f"Request accepted for '{config.settings.obs_group}' "
                         f"based on data in {config.settings.dashboard_url()}"
                     )
-                    approve_pr(self.gitea_token, pullrequest.repo_name, pullrequest.number, pullrequest.commit_sha, msg)
+                    approve_pr(self.gitea_token, pullrequest.project, pullrequest.number, pullrequest.commit_sha, msg)
 
     def get_prs_by_label(self) -> None:
         """Get all open PRs and filter them by defined label."""
-        open_prs: list[Any] = get_open_prs(
+        open_prs: list[PullRequest] = get_open_prs(
             self.gitea_token,
             self.gitea_repo,
             number=self.pr_number,
@@ -162,26 +162,13 @@ class GiteaTrigger:
             self.gitea_repo,
         )
         for pr in open_prs:
-            pr_id = pr.get("number", "?")
-            log.debug("Fetching info for PR git:%s from Gitea", pr_id)
-            try:
-                pullrequest = PullRequest(
-                    number=pr["number"],
-                    raw_labels=pr["labels"],
-                    repo_name=pr["base"]["repo"]["full_name"],
-                    branch=pr["base"]["label"],
-                    url=pr["html_url"],
-                    commit_sha=pr["head"]["sha"],
-                )
-                # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
-                # at least one for labels defined in staging.config
-                qa_labels = set(self.staging_config_qa_labels.keys())
-                if pullrequest.has_all_labels(self.pr_required_labels) and pullrequest.has_any_label(qa_labels):
-                    self.prs.append(pullrequest)
-                else:
-                    log.debug("PR %s disregarded (labels: %s)", pr_id, pullrequest.labels)
-            except KeyError:
-                log.exception("Unable to process PR git:%s", pr_id)
+            # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
+            # at least one for labels defined in staging.config
+            qa_labels = set(self.staging_config_qa_labels.keys())
+            if pr.has_all_labels(self.pr_required_labels) and pr.has_any_label(qa_labels):
+                self.prs.append(pr)
+            else:
+                log.debug("PR %s disregarded (labels: %s)", pr.number, pr.labels)
         log.debug(
             "Data for %d pullrequest: %s",
             len(self.prs),
