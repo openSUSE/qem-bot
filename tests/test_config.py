@@ -6,6 +6,8 @@ import ast
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from openqabot.config import Settings, get_default_obs_url
 
 
@@ -70,8 +72,9 @@ def test_cli_envvars_covered_by_settings() -> None:
     assert not missing, f"envvars in args.py missing from config.py Settings: {missing}"
 
 
-def test_obs_web_url_property() -> None:
+def test_obs_web_url_property(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test the obs_web_url property."""
+    monkeypatch.delenv("OBS_URL", raising=False)
     settings = Settings(obs_url="https://api.suse.de")
     assert settings.obs_web_url == "https://build.suse.de"
 
@@ -80,6 +83,18 @@ def test_obs_web_url_property() -> None:
 
     settings = Settings(obs_url="https://some.api.server.com")
     assert settings.obs_web_url == "https://some.build.server.com"
+
+
+def test_obs_products_set() -> None:
+    """Test the obs_products_set property."""
+    settings = Settings(obs_products="p1,p2,p3")
+    assert settings.obs_products_set == {"p1", "p2", "p3"}
+
+
+def test_dashboard_token_dict() -> None:
+    """Test the dashboard_token_dict property."""
+    settings = Settings(token="mytoken")
+    assert settings.dashboard_token_dict == {"Authorization": "Token mytoken"}
 
 
 def test_insecure_setting() -> None:

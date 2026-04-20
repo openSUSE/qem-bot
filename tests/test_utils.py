@@ -184,7 +184,6 @@ def test_unique_dicts() -> None:
 
 
 def test_create_logger_duplicate_handlers() -> None:
-
     name = "test_duplicate_logger"
     log = create_logger(name)
     assert len(log.handlers) == 1

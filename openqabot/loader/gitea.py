@@ -26,12 +26,12 @@ from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
 from openqabot.errors import NoRepoFoundError
+from openqabot.types.pullrequest import PullRequest
 from openqabot.utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from openqabot.types.pullrequest import PullRequest
     from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
@@ -195,26 +195,34 @@ def compute_repo_url_for_job_setting(
     return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_list)
 
 
-def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> list[dict[str, Any]]:
+def _fetch_all_prs(repo: str, token: dict[str, str]) -> list[PullRequest]:
+    try:
+        return [
+            pr
+            for pr_json in iter_gitea_items(f"repos/{repo}/pulls?state=open", token)
+            if (pr := PullRequest.from_json(pr_json)) is not None
+        ]
+    except (requests.exceptions.RequestException, json.JSONDecodeError):
+        log.exception("Gitea API error: Could not fetch open PRs from %s", repo)
+    return []
+
+
+def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> list[PullRequest]:
     """Fetch open PRs from a Gitea repository."""
     log.debug("Fetching open PRs from '%s'", repo)
-    if number is not None:
-        try:
-            pr = get_json(f"repos/{repo}/pulls/{number}", token)
-        # Catching RequestException for general API errors, and json's JSONDecodeError
-        # for cases where requests might not wrap it in RequestException
-        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError):
-            log.exception("PR git:%s ignored: Could not read PR metadata", number)
-            return []
-        log.debug("PR git:%i: %s", number, pr)
-        return [cast("dict[str, Any]", pr)]
+    if number is None:
+        return _fetch_all_prs(repo, token)
+    return _get_single_pr(token, repo, number)
 
+
+def _get_single_pr(token: dict[str, str], repo: str, number: int) -> list[PullRequest]:
     try:
         # https://docs.gitea.com/api/1.25/#tag/repository/operation/repolistPullRequests
-        return list(iter_gitea_items(f"repos/{repo}/pulls?state=open", token))
-    except (requests.exceptions.RequestException, TypeError):
-        log.exception("Gitea API error: Could not fetch open PRs from %s", repo)
-        return []
+        if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{repo}/pulls/{number}", token))):
+            return [pr]
+    except (requests.exceptions.RequestException, json.JSONDecodeError) as ex:
+        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # noqa: G201
+    return []
 
 
 def _approval_identifiers(bot_user: str, commit_id: str, *, approve: bool = True) -> tuple[str, str]:
@@ -668,7 +676,7 @@ def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) 
 
 
 def _fetch_details(
-    repo_name: str, number: int, token: dict[str, str], *, dry: bool
+    project: str, number: int, token: dict[str, str], *, dry: bool
 ) -> tuple[list[Any], list[Any], list[Any]]:
     if dry:
         if number == 124:  # noqa: PLR2004
@@ -679,14 +687,50 @@ def _fetch_details(
             )
         return [], [], []
     return (
-        list(iter_gitea_items(reviews_url(repo_name, number), token)),
-        list(iter_gitea_items(comments_url(repo_name, number), token)),
-        list(iter_gitea_items(changed_files_url(repo_name, number), token)),
+        list(iter_gitea_items(reviews_url(project, number), token)),
+        list(iter_gitea_items(comments_url(project, number), token)),
+        list(iter_gitea_items(changed_files_url(project, number), token)),
     )
 
 
+def _init_submission_dict(pr: PullRequest) -> dict[str, Any]:
+    """Initialize a submission dictionary with default values from a PR."""
+    return {
+        "number": pr.number,
+        "project": pr.project,
+        # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
+        # see openqabot/types/incidents.py#L227
+        "emu": False,
+        "isActive": pr.is_active(),
+        "inReviewQAM": False,
+        "inReview": False,
+        "approved": False,
+        # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
+        "embargoed": False,
+        "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
+        "rr_number": None,
+        "packages": [],
+        "channels": [],
+        "url": pr.url,
+        "type": "git",
+    }
+
+
+def _validate_submission(
+    submission: dict[str, Any],
+    number: int,
+    *,
+    only_successful_builds: bool,
+) -> bool:
+    """Validate if the submission has channels, acceptable builds, and packages."""
+    if not submission["channels"]:
+        log.info("PR git:%s skipped: No channels found", number)
+        return False
+    return not (only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number))
+
+
 def make_submission_from_gitea_pr(
-    pr: dict[str, Any],
+    pr: PullRequest,
     token: dict[str, str],
     *,
     only_successful_builds: bool,
@@ -694,54 +738,31 @@ def make_submission_from_gitea_pr(
     dry: bool,
 ) -> dict[str, Any] | None:
     """Create a dashboard-compatible submission record from a Gitea PR."""
-    log.debug("Fetching info for PR git:%s from Gitea", pr.get("number", "?"))
+    log.debug("Fetching info for PR git:%s from Gitea", pr.number)
     try:
-        number = pr["number"]
-        repo = pr["base"]["repo"]
-        repo_name = repo["full_name"]
-        submission = {
-            "number": number,
-            "project": repo["full_name"],
-            # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
-            # see openqabot/types/incidents.py#L227
-            "emu": False,
-            "isActive": pr["state"] == "open",
-            "inReviewQAM": False,
-            "inReview": False,
-            "approved": False,
-            # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
-            "embargoed": False,
-            "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
-            "rr_number": None,
-            "packages": [],
-            "channels": [],
-            "url": pr["url"],
-            "type": "git",
-        }
-        reviews, comments, files = _fetch_details(repo_name, number, token, dry=dry)
+        submission = _init_submission_dict(pr)
+        reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
 
         if add_reviews(submission, reviews) < 1 and only_requested_prs:
-            log.info("PR git:%s skipped: No reviews by %s", number, config.settings.obs_group)
+            log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
             return None
+
         add_comments_and_referenced_build_results(submission, comments, dry=dry)
-        if not submission["channels"]:
-            log.info("PR git:%s skipped: No channels found", number)
-            return None
-        if only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number):
+        if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
             return None
         add_packages_from_files(submission, token, files, dry=dry)
         if not submission["packages"]:
-            log.info("PR git:%s skipped: No packages found", number)
+            log.info("PR git:%s skipped: No packages found", pr.number)
             return None
 
     except Exception:
-        log.exception("Gitea API error: Unable to process PR git:%s", pr.get("number", "?"))
+        log.exception("Gitea API error: Unable to process PR git:%s", pr.number)
         return None
     return submission
 
 
 def get_submissions_from_open_prs(
-    open_prs: list[dict[str, Any]],
+    open_prs: list[PullRequest],
     token: dict[str, str],
     *,
     only_successful_builds: bool,

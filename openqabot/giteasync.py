@@ -7,6 +7,8 @@ from logging import getLogger
 from pprint import pformat
 from typing import Any
 
+from openqabot.types.pullrequest import PullRequest
+
 from .loader.amqp_listener import AMQPListener
 from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_submission_from_gitea_pr, make_token_header
 from .loader.qem import update_submissions
@@ -76,8 +78,9 @@ class GiteaSync:
         return update_submissions(submissions, params={"type": "git"}, retry=self.retry)
 
     def _on_amqp_message(self, message: dict[str, Any], _: str) -> None:
-        if message["pull_request"]["base"]["repo"]["full_name"] == self.gitea_repo:
-            log.info("PR #%s on %s %s", message["pull_request"]["number"], self.gitea_repo, message["action"])
+        pr = PullRequest.from_json(message["pull_request"])
+        if pr and pr.project == self.gitea_repo:
+            log.info("PR #%s on %s %s", pr.number, self.gitea_repo, message["action"])
             submission = make_submission_from_gitea_pr(
                 message["pull_request"],
                 self.gitea_token,

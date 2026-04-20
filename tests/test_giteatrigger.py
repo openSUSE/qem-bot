@@ -13,6 +13,7 @@ import requests
 from pytest_mock import MockerFixture
 
 from openqabot.giteatrigger import GiteaTrigger
+from openqabot.types.pullrequest import PullRequest
 from openqabot.types.types import Data
 
 
@@ -111,34 +112,37 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
     mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            {
+            PullRequest.from_json({
                 "number": 1,
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
-            },
-            {
+                "state": "open",
+            }),
+            PullRequest.from_json({
                 "number": 2,
                 "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
-            },
-            {
+                "state": "open",
+            }),
+            PullRequest.from_json({
                 "number": 3,
                 "labels": [{"name": "needs-testing"}],
                 "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
-            },
+                "state": "open",
+            }),
         ],
     )
 
     trigger.get_prs_by_label()
     assert len(trigger.prs) == 1
     assert trigger.prs[0].number == 1
-    assert trigger.prs[0].repo_name == "owner/r"
+    assert trigger.prs[0].project == "owner/r"
 
 
 def test_check_pullrequest_dry_run(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
@@ -204,13 +208,13 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
     mock_get_pr = mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            {
+            PullRequest.from_json({
                 "number": 1337,
                 "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
                 "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
                 "html_url": "u",
                 "head": {"sha": "xyz"},
-            }
+            })
         ],
     )
 
@@ -219,7 +223,7 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
 
     mock_get_pr.assert_called_once()
     assert len(trigger.prs) == 1
-    assert trigger.prs[0].repo_name == "owner/r"
+    assert trigger.prs[0].project == "owner/r"
 
 
 def test_check_pullrequest_comments_when_no_trigger_needed(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
@@ -252,7 +256,7 @@ def test_comment_on_pr_build_injection(trigger: GiteaTrigger, mocker: MockerFixt
     cast("MagicMock", trigger.openqa.get_jobs).return_value = mock_jobs
     cast("MagicMock", trigger.commenter.generate_comment).return_value = ("Summary", "passed")
 
-    mock_pr = MagicMock(number=123, url="http://fake.url/123", commit_sha="sha123", repo_name="fake_repo")
+    mock_pr = MagicMock(number=123, url="http://fake.url/123", commit_sha="sha123", project="fake_repo")
     trigger.comment_on_pr(mock_pr, "product", "version", "arch", "PR-BUILD")
 
     assert mock_jobs[0]["build"] == "PR-BUILD"
@@ -297,19 +301,6 @@ def test_comment_on_pr_exception(trigger: GiteaTrigger) -> None:
     trigger.comment_on_pr(mock_pr, "product", "version", "arch", "build")
 
     cast("MagicMock", trigger.commenter.gitea_comment).assert_not_called()
-
-
-def test_get_prs_by_label_exception_during_pr_processing(
-    trigger: GiteaTrigger, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    """Tests get_prs_by_label when an exception occurs while processing a PR."""
-    mocker.patch(
-        "openqabot.giteatrigger.get_open_prs",
-        return_value=[{"number": 1}],  # Missing required fields to trigger exception
-    )
-    trigger.get_prs_by_label()
-    assert len(trigger.prs) == 0
-    assert "Unable to process PR git:1" in caplog.text
 
 
 def test_check_pullrequest_no_matched_iso(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
