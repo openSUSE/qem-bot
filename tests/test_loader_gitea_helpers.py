@@ -212,13 +212,13 @@ def test_iter_gitea_items_throws_on_dict(mocker: MockerFixture) -> None:
 
 
 def test_read_json_file_list_success(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.read_json_file", return_value=[{"id": 1}])
+    mocker.patch("openqabot.loader.gitea_utils.read_json_file", return_value=[{"id": 1}])
     res = gitea.read_json_file_list("some_file")
     assert res == [{"id": 1}]
 
 
 def test_read_json_file_list_throws_on_dict(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.read_json_file", return_value={"message": "Not Found"})
+    mocker.patch("openqabot.loader.gitea_utils.read_json_file", return_value={"message": "Not Found"})
     with pytest.raises(TypeError, match="JSON response file 'some_file' returned dict instead of list"):
         gitea.read_json_file_list("some_file")
 
