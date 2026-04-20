@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import re
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from itertools import chain
 from logging import getLogger
@@ -113,8 +114,9 @@ class IncrementApprover:
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
-        res = [
-            self.client.get_scheduled_product_stats({
+
+        def fetch(p: dict[str, Any]) -> OpenQAResult:
+            return self.client.get_scheduled_product_stats({
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
                 "flavor": p["FLAVOR"],
@@ -122,8 +124,10 @@ class IncrementApprover:
                 "build": p["BUILD"],
                 "product": p.get("PRODUCT"),
             })
-            for p in params
-        ]
+
+        with ThreadPoolExecutor() as executor:
+            res = list(executor.map(fetch, params))
+
         log.debug("Job statistics:\n%s", pformat(res))
         return res
 
