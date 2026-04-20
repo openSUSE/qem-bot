@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import tempfile
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from logging import getLogger
 from typing import Any
@@ -100,18 +101,30 @@ def compute_packages_of_request_from_source_report(
     request: osc.core.Request,
 ) -> tuple[defaultdict[str, set[Package]], int]:
     """Compute the package diff of a request based on source reports."""
+    # target projects (e.g. `SUSE:Products:SLE-Product-SLES:16.0:aarch64`)
     repo_a: defaultdict[str, set[Package]] = defaultdict(set)
+    # source projects (e.g. `SUSE:SLFO:Products:SLES:16.0:TEST`)
     repo_b: defaultdict[str, set[Package]] = defaultdict(set)
 
-    for action in request.actions:
-        log.debug("Checking action '%s' -> '%s' of request %s", action.src_project, action.tgt_project, request.reqid)
-        # add packages for target project (e.g. `SUSE:Products:SLE-Product-SLES:16.0:aarch64`), that is repo "A"
-        load_packages_from_source_report(
-            action, OBSBinary(action.tgt_project, action.src_package, "images", "local"), repo_a
-        )
-        # add packages for source project (e.g. `SUSE:SLFO:Products:SLES:16.0:TEST`), that is repo "B"
-        load_packages_from_source_report(
-            action, OBSBinary(action.src_project, action.src_package, "product", "local"), repo_b
-        )
+    def worker(action: Any, binary: OBSBinary) -> defaultdict[str, set[Package]]:  # noqa: ANN401
+        packages: defaultdict[str, set[Package]] = defaultdict(set)
+        load_packages_from_source_report(action, binary, packages)
+        return packages
+
+    tasks = [
+        *((a, OBSBinary(a.tgt_project, a.src_package, "images", "local")) for a in request.actions),
+        *((a, OBSBinary(a.src_project, a.src_package, "product", "local")) for a in request.actions),
+    ]
+
+    with ThreadPoolExecutor() as executor:
+        # Use executor.map to ensure exceptions are raised if they occur in threads
+        results = list(executor.map(lambda p: worker(*p), tasks))
+
+    # results contains first all "target" projects, then all "source" projects
+    num_actions = len(request.actions)
+    for i, res in enumerate(results):
+        target_repo = repo_a if i < num_actions else repo_b
+        for arch, pks in res.items():
+            target_repo[arch].update(pks)
 
     return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
