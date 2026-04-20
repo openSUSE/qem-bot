@@ -14,7 +14,6 @@ from responses import matchers
 
 from openqabot.config import QEM_DASHBOARD, SMELT
 from openqabot.smeltsync import SMELTSync, has_qam_review, is_inreview, is_revoked, review_rrequest
-from responses import matchers
 
 
 @pytest.fixture

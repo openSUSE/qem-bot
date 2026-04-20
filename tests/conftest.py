@@ -15,7 +15,6 @@ import pytest
 import responses
 
 import openqabot.config as config_module
-import responses
 from openqabot.approver import Approver, validate_job_qam
 from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
