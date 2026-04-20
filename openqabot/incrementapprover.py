@@ -112,7 +112,7 @@ def _match_additional_build(
         return None
 
     groups = package_name_match.groupdict()
-    extra_build = [build_info.build, additional_build["build_suffix"]]
+    extra_build = [f"PI-{build_info.build}", additional_build["build_suffix"]]
     extra_params: dict[str, str] = {}
 
     if kind := groups.get("kind"):
