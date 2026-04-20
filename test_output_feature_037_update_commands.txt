@@ -1,0 +1,1436 @@
+make[1]: Entering directory '/home/okurz/local/openSUSE/qem/qem-bot'
+unshare -r -n python3 -m pytest -n auto -v --cov --cov-report=xml --cov-report=term-missing
+make[2]: Entering directory '/home/okurz/local/openSUSE/qem/qem-bot'
+make[3]: Entering directory '/home/okurz/local/openSUSE/qem/qem-bot'
+Checking code health…
+Checking maintainability (grade B or worse) …
+ruff check
+ty check
+All checks passed!
+ruff format --check
+108 files already formatted
+All checks passed!
+make[3]: Leaving directory '/home/okurz/local/openSUSE/qem/qem-bot'
+make[2]: Leaving directory '/home/okurz/local/openSUSE/qem/qem-bot'
+============================= test session starts ==============================
+platform linux -- Python 3.13.12, pytest-9.0.2, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/okurz/local/openSUSE/qem/qem-bot
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.0.0, mock-3.15.1, xdist-3.8.0
+created: 8/8 workers
+8 workers [650 items]
+
+scheduling tests via LoadScheduling
+
+tests/test_aggregate.py::test_aggregate_constructor
+tests/test_amqp.py::test_fetch_openqa_results_unfiltered
+tests/test_aggregate.py::test_aggregate_priority
+tests/test_approve_helpers.py::test_clone_dedup_latest_fails_blocks
+tests/test_commenter.py::test_osc_comment_delete_existing_not_similar_not_dry
+tests/test_args.py::test_command_help
+tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with non-printable character]
+tests/test_approve_scenarios.py::test_sub_without_results
+[gw0] [  0%] PASSED tests/test_aggregate.py::test_aggregate_constructor
+tests/test_aggregate.py::test_aggregate_printable
+[gw2] [  0%] PASSED tests/test_amqp.py::test_fetch_openqa_results_unfiltered
+tests/test_amqp.py::test_fetch_openqa_results_key_error
+[gw3] [  0%] PASSED tests/test_approve_helpers.py::test_clone_dedup_latest_fails_blocks
+[gw0] [  0%] PASSED tests/test_aggregate.py::test_aggregate_printable
+[gw7] [  0%] PASSED tests/test_commenter.py::test_osc_comment_delete_existing_not_similar_not_dry
+[gw1] [  0%] PASSED tests/test_aggregate.py::test_aggregate_priority
+tests/test_aggregate.py::test_aggregate_call
+[gw4] [  1%] PASSED tests/test_approve_scenarios.py::test_sub_without_results
+tests/test_commenter.py::test_osc_comment_replace_not_dry
+tests/test_approve_helpers.py::test_validate_job_qam_not_passed
+tests/test_aggregate.py::test_aggregate_multiple_priority
+tests/test_approve_scenarios.py::test_one_submission_failed_no_jobs
+[gw0] [  1%] PASSED tests/test_aggregate.py::test_aggregate_call
+[gw2] [  1%] PASSED tests/test_amqp.py::test_fetch_openqa_results_key_error
+tests/test_aggregate.py::test_aggregate_call_with_archs
+[gw3] [  1%] PASSED tests/test_approve_helpers.py::test_validate_job_qam_not_passed
+tests/test_amqp.py::test_fetch_openqa_results_no_id
+tests/test_approve_helpers.py::test_clone_dedup_different_scenarios
+[gw1] [  1%] PASSED tests/test_aggregate.py::test_aggregate_multiple_priority
+tests/test_aggregate.py::test_process_arch_same_build_exists
+[gw0] [  1%] PASSED tests/test_aggregate.py::test_aggregate_call_with_archs
+[gw2] [  2%] PASSED tests/test_amqp.py::test_fetch_openqa_results_no_id
+[gw7] [  2%] PASSED tests/test_commenter.py::test_osc_comment_replace_not_dry
+tests/test_aggregate.py::test_aggregate_call_with_test_issues
+tests/test_amqp_listener.py::test_listener_full_workflow
+tests/test_commenter.py::test_osc_comment_replace_dry_run
+[gw3] [  2%] PASSED tests/test_approve_helpers.py::test_clone_dedup_different_scenarios
+[gw1] [  2%] PASSED tests/test_aggregate.py::test_process_arch_same_build_exists
+[gw4] [  2%] PASSED tests/test_approve_scenarios.py::test_one_submission_failed_no_jobs
+tests/test_approve_helpers.py::test_clone_dedup_two_scenarios_one_fails_blocks
+tests/test_aggregate.py::test_aggregate_duplicate_submissions
+tests/test_approve_scenarios.py::test_one_submission_failed_with_comment
+[gw0] [  2%] PASSED tests/test_aggregate.py::test_aggregate_call_with_test_issues
+[gw2] [  2%] PASSED tests/test_amqp_listener.py::test_listener_full_workflow
+[gw7] [  3%] PASSED tests/test_commenter.py::test_osc_comment_replace_dry_run
+tests/test_aggregate.py::test_aggregate_call_pc_pint
+[gw3] [  3%] PASSED tests/test_approve_helpers.py::test_clone_dedup_two_scenarios_one_fails_blocks
+tests/test_amqp_listener.py::test_listen_no_url
+[gw1] [  3%] PASSED tests/test_aggregate.py::test_aggregate_duplicate_submissions
+tests/test_commenter.py::test_summarize_message
+tests/test_approve_helpers.py::test_clone_dedup_fallback_to_other_urls
+tests/test_aggregate.py::test_aggregate_url_format
+[gw2] [  3%] PASSED tests/test_amqp_listener.py::test_listen_no_url
+[gw0] [  3%] PASSED tests/test_aggregate.py::test_aggregate_call_pc_pint
+tests/test_amqp_listener.py::test_stop_connection_none
+tests/test_aggregate.py::test_aggregate_call_pc_pint_with_submissions
+[gw7] [  3%] PASSED tests/test_commenter.py::test_summarize_message
+[gw1] [  4%] PASSED tests/test_aggregate.py::test_aggregate_url_format
+[gw3] [  4%] PASSED tests/test_approve_helpers.py::test_clone_dedup_fallback_to_other_urls
+[gw4] [  4%] PASSED tests/test_approve_scenarios.py::test_one_submission_failed_with_comment
+[gw2] [  4%] PASSED tests/test_amqp_listener.py::test_stop_connection_none
+tests/test_commenter.py::test_summarize_message_allow_devel
+tests/test_approve_helpers.py::test_clone_dedup_empty_results
+tests/test_aggrsync.py::test_call
+tests/test_amqp_listener.py::test_stop_connection_closed
+tests/test_approve_scenarios.py::test_one_aggr_failed
+[gw0] [  4%] PASSED tests/test_aggregate.py::test_aggregate_call_pc_pint_with_submissions
+[gw5] [  4%] PASSED tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with non-printable character]
+tests/test_aggregate.py::test_aggregate_call_no_job_settings
+[gw2] [  4%] PASSED tests/test_amqp_listener.py::test_stop_connection_closed
+tests/test_args.py::test_full_run
+[gw7] [  5%] PASSED tests/test_commenter.py::test_summarize_message_allow_devel
+[gw1] [  5%] PASSED tests/test_aggrsync.py::test_call
+[gw3] [  5%] PASSED tests/test_approve_helpers.py::test_clone_dedup_empty_results
+tests/test_approve_git.py::test_git_approve_no_project
+tests/test_commenter.py::test_gitea_comment_dry_run
+tests/test_approve_helpers.py::test_clone_dedup_error_results
+[gw0] [  5%] PASSED tests/test_aggregate.py::test_aggregate_call_no_job_settings
+tests/test_aggrsync.py::test_call_with_results
+tests/test_aggregate.py::test_aggregate_call_pc_tools_fail
+[gw2] [  5%] PASSED tests/test_approve_git.py::test_git_approve_no_project
+tests/test_approve_helpers.py::test_is_job_marked_acceptable_for_submission_request_error
+[gw3] [  5%] PASSED tests/test_approve_helpers.py::test_clone_dedup_error_results
+[gw1] [  6%] PASSED tests/test_aggrsync.py::test_call_with_results
+[gw7] [  6%] PASSED tests/test_commenter.py::test_gitea_comment_dry_run
+tests/test_approve_helpers.py::test_clone_dedup_jobs_without_job_id
+tests/test_amqp.py::test_handling_aggregate_full_coverage
+[gw0] [  6%] PASSED tests/test_aggregate.py::test_aggregate_call_pc_tools_fail
+tests/test_commenter.py::test_gitea_comment_post_new
+tests/test_aggregate.py::test_aggregate_call_pc_pint_fail
+[gw2] [  6%] PASSED tests/test_approve_helpers.py::test_is_job_marked_acceptable_for_submission_request_error
+[gw4] [  6%] PASSED tests/test_approve_scenarios.py::test_one_aggr_failed
+tests/test_approve_helpers.py::test_mark_job_as_acceptable_for_submission_request_error
+[gw1] [  6%] PASSED tests/test_amqp.py::test_handling_aggregate_full_coverage
+[gw3] [  6%] PASSED tests/test_approve_helpers.py::test_clone_dedup_jobs_without_job_id
+tests/test_approve_scenarios.py::test_single_submission_not_ok_no_data
+tests/test_approve_helpers.py::test_clone_dedup_keeps_highest_job_id
+tests/test_amqp.py::test_on_message_parsing[:smelt:33222:emacs-smelt-33222]
+[gw0] [  7%] PASSED tests/test_aggregate.py::test_aggregate_call_pc_pint_fail
+[gw7] [  7%] PASSED tests/test_commenter.py::test_gitea_comment_post_new
+[gw2] [  7%] PASSED tests/test_approve_helpers.py::test_mark_job_as_acceptable_for_submission_request_error
+tests/test_commenter.py::test_gitea_comment_patch_existing
+tests/test_aggregate.py::test_get_buildnr_same_build
+tests/test_approve_helpers.py::test_validate_job_qam_no_qam_data[no_qam_data]
+[gw1] [  7%] PASSED tests/test_amqp.py::test_on_message_parsing[:smelt:33222:emacs-smelt-33222]
+[gw0] [  7%] PASSED tests/test_aggregate.py::test_get_buildnr_same_build
+[gw3] [  7%] PASSED tests/test_approve_helpers.py::test_clone_dedup_keeps_highest_job_id
+[gw4] [  8%] PASSED tests/test_approve_scenarios.py::test_single_submission_not_ok_no_data
+tests/test_amqp.py::test_on_message_parsing[:33222:emacs-smelt-33222]
+tests/test_aggregate.py::test_filter_submissions_embargoed
+tests/test_approve_obs.py::test_403_response
+[gw2] [  8%] PASSED tests/test_approve_helpers.py::test_validate_job_qam_no_qam_data[no_qam_data]
+tests/test_approve_scenarios.py::test_single_submission_aggr_not_ok_no_data
+[gw5] [  8%] PASSED tests/test_args.py::test_full_run
+[gw7] [  8%] PASSED tests/test_commenter.py::test_gitea_comment_patch_existing
+tests/test_approve_helpers.py::test_validate_job_qam_no_qam_data[status_not_passed]
+[gw1] [  8%] PASSED tests/test_amqp.py::test_on_message_parsing[:33222:emacs-smelt-33222]
+tests/test_args.py::test_submission_schedule
+tests/test_commenter.py::test_commenter_call_git
+[gw0] [  8%] PASSED tests/test_aggregate.py::test_filter_submissions_embargoed
+tests/test_amqp.py::test_on_message_parsing[:gitea:123:foo-gitea-123]
+tests/test_aggregate.py::test_filter_submissions_staging
+[gw2] [  8%] PASSED tests/test_approve_helpers.py::test_validate_job_qam_no_qam_data[status_not_passed]
+[gw4] [  9%] PASSED tests/test_approve_scenarios.py::test_single_submission_aggr_not_ok_no_data
+[gw1] [  9%] PASSED tests/test_amqp.py::test_on_message_parsing[:gitea:123:foo-gitea-123]
+[gw0] [  9%] PASSED tests/test_aggregate.py::test_filter_submissions_staging
+tests/test_amqp.py::test_handling_aggregate
+[gw7] [  9%] PASSED tests/test_commenter.py::test_commenter_call_git
+tests/test_approve_helpers.py::test_was_older_job_ok_returns_none[job0-Could not parse build date]
+tests/test_aggregate.py::test_get_test_submissions_repos_existing
+tests/test_approve_scenarios.py::test_approval_via_openqa_older_ok_job[job_passed]
+tests/test_commenter.py::test_gitea_comment_no_token
+[gw1] [  9%] PASSED tests/test_amqp.py::test_handling_aggregate
+tests/test_amqp.py::test_on_message_bad_routing_key
+[gw0] [  9%] PASSED tests/test_aggregate.py::test_get_test_submissions_repos_existing
+[gw2] [ 10%] PASSED tests/test_approve_helpers.py::test_was_older_job_ok_returns_none[job0-Could not parse build date]
+tests/test_aggregate.py::test_aggregate_call_ci_url
+tests/test_approve_helpers.py::test_was_older_job_ok_returns_none[job1-Older jobs are too old]
+[gw1] [ 10%] PASSED tests/test_amqp.py::test_on_message_bad_routing_key
+[gw7] [ 10%] PASSED tests/test_commenter.py::test_gitea_comment_no_token
+tests/test_amqp.py::test_on_message_no_build
+[gw4] [ 10%] PASSED tests/test_approve_scenarios.py::test_approval_via_openqa_older_ok_job[job_passed]
+[gw0] [ 10%] PASSED tests/test_aggregate.py::test_aggregate_call_ci_url
+tests/test_commenter.py::test_comment_on_submission_empty_msg_git
+[gw2] [ 10%] PASSED tests/test_approve_helpers.py::test_was_older_job_ok_returns_none[job1-Older jobs are too old]
+tests/test_approve_scenarios.py::test_approval_via_openqa_older_ok_job[job_not_passed]
+tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[no_suitable_older_jobs]
+tests/test_aggregate.py::test_process_arch_json_error
+[gw1] [ 10%] PASSED tests/test_amqp.py::test_on_message_no_build
+tests/test_amqp.py::test_on_message_bad_build
+[gw5] [ 11%] PASSED tests/test_args.py::test_submission_schedule
+tests/test_args.py::test_updates_run
+[gw2] [ 11%] PASSED tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[no_suitable_older_jobs]
+[gw1] [ 11%] PASSED tests/test_amqp.py::test_on_message_bad_build
+[gw7] [ 11%] PASSED tests/test_commenter.py::test_comment_on_submission_empty_msg_git
+[gw0] [ 11%] PASSED tests/test_aggregate.py::test_process_arch_json_error
+tests/test_commenter.py::test_gitea_comment_no_url
+tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[invalid_date]
+tests/test_aggregate.py::test_process_arch_request_error
+tests/test_amqp.py::test_handle_submission_value_error
+[gw4] [ 11%] PASSED tests/test_approve_scenarios.py::test_approval_via_openqa_older_ok_job[job_not_passed]
+tests/test_approve_scenarios.py::test_approval_with_obsolete_jobs[obsolete_only]
+[gw1] [ 12%] PASSED tests/test_amqp.py::test_handle_submission_value_error
+[gw0] [ 12%] PASSED tests/test_aggregate.py::test_process_arch_request_error
+[gw2] [ 12%] PASSED tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[invalid_date]
+tests/test_amqp.py::test_handle_submission_updates_dashboard_entry
+[gw7] [ 12%] PASSED tests/test_commenter.py::test_gitea_comment_no_url
+tests/test_aggregate.py::test_process_arch_onetime_skip
+tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[empty_data]
+tests/test_commenter.py::test_gitea_comment_similar_exists
+[gw0] [ 12%] PASSED tests/test_aggregate.py::test_process_arch_onetime_skip
+[gw1] [ 12%] PASSED tests/test_amqp.py::test_handle_submission_updates_dashboard_entry
+tests/test_aggregate.py::test_aggregate_call_deprioritize_limit
+[gw2] [ 12%] PASSED tests/test_approve_helpers.py::test_was_ok_before_no_suitable_older_jobs[empty_data]
+[gw4] [ 13%] PASSED tests/test_approve_scenarios.py::test_approval_with_obsolete_jobs[obsolete_only]
+tests/test_amqp.py::test_handle_submission_exception
+tests/test_approve_helpers.py::test_get_submission_result_empty_jobs
+[gw7] [ 13%] PASSED tests/test_commenter.py::test_gitea_comment_similar_exists
+tests/test_approve_scenarios.py::test_approval_with_obsolete_jobs[obsolete_and_failed]
+tests/test_commenter.py::test_commenter_call_empty_msg
+[gw0] [ 13%] PASSED tests/test_aggregate.py::test_aggregate_call_deprioritize_limit
+[gw1] [ 13%] PASSED tests/test_amqp.py::test_handle_submission_exception
+[gw2] [ 13%] PASSED tests/test_approve_helpers.py::test_get_submission_result_empty_jobs
+[gw6] [ 13%] PASSED tests/test_args.py::test_command_help
+tests/test_aggregate.py::test_aggregate_call_pc_tools_success
+tests/test_amqp.py::test_handle_submission_not_matching_data
+tests/test_approve_helpers.py::test_job_contains_submission_no_job_settings
+tests/test_args.py::test_args_help_bypasses_mandatory_token
+[gw5] [ 14%] PASSED tests/test_args.py::test_updates_run
+[gw4] [ 14%] PASSED tests/test_approve_scenarios.py::test_approval_with_obsolete_jobs[obsolete_and_failed]
+tests/test_args.py::test_sync_smelt
+[gw2] [ 14%] PASSED tests/test_approve_helpers.py::test_job_contains_submission_no_job_settings
+[gw7] [ 14%] PASSED tests/test_commenter.py::test_commenter_call_empty_msg
+[gw0] [ 14%] PASSED tests/test_aggregate.py::test_aggregate_call_pc_tools_success
+[gw6] [ 14%] PASSED tests/test_args.py::test_args_help_bypasses_mandatory_token
+[gw1] [ 14%] PASSED tests/test_amqp.py::test_handle_submission_not_matching_data
+tests/test_approve_unblock.py::test_approval_unblocked_via_openqa_comment[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+tests/test_approve_helpers.py::test_clone_dedup_latest_passes_approves
+tests/test_commenter.py::test_comment_on_submission_unsupported_type
+tests/test_args.py::test_configs_file_accepted
+tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_no_failures]
+tests/test_amqp.py::test_fetch_openqa_results_calls_post_result
+[gw7] [ 15%] PASSED tests/test_commenter.py::test_comment_on_submission_unsupported_type
+[gw2] [ 15%] PASSED tests/test_approve_helpers.py::test_clone_dedup_latest_passes_approves
+[gw3] [ 15%] PASSED tests/test_approve_obs.py::test_403_response
+[gw0] [ 15%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_no_failures]
+tests/test_commenter.py::test_comment_on_submission_no_results_error
+[gw1] [ 15%] PASSED tests/test_amqp.py::test_fetch_openqa_results_calls_post_result
+tests/test_config.py::test_get_default_obs_url_fallback
+tests/test_approve_obs.py::test_404_response
+tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_with_failures]
+tests/test_giteatrigger.py::test_check_pullrequest_no_iso_found
+[gw2] [ 15%] PASSED tests/test_config.py::test_get_default_obs_url_fallback
+tests/test_config.py::test_cli_envvars_covered_by_settings
+[gw7] [ 16%] PASSED tests/test_commenter.py::test_comment_on_submission_no_results_error
+[gw0] [ 16%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_with_failures]
+[gw1] [ 16%] PASSED tests/test_giteatrigger.py::test_check_pullrequest_no_iso_found
+tests/test_commenter.py::test_comment_on_submission_running_jobs
+tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_allow_devel]
+tests/test_giteatrigger.py::test_get_prs_by_label_api_exception
+[gw7] [ 16%] PASSED tests/test_commenter.py::test_comment_on_submission_running_jobs
+[gw1] [ 16%] PASSED tests/test_giteatrigger.py::test_get_prs_by_label_api_exception
+[gw6] [ 16%] PASSED tests/test_args.py::test_configs_file_accepted
+tests/test_commenter.py::test_comment_on_submission_no_jobs
+[gw0] [ 16%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[enabled_allow_devel]
+tests/test_giteatrigger.py::test_trigger_call_execution
+tests/test_args.py::test_configs_dir_accepted
+tests/test_commenter.py::test_summarize_message_detailed_comments[generic_contact]
+[gw2] [ 17%] PASSED tests/test_config.py::test_cli_envvars_covered_by_settings
+tests/test_config.py::test_obs_web_url_property
+[gw7] [ 17%] PASSED tests/test_commenter.py::test_comment_on_submission_no_jobs
+[gw1] [ 17%] PASSED tests/test_giteatrigger.py::test_trigger_call_execution
+tests/test_commenter.py::test_generate_comment_raw_openqa_jobs
+[gw4] [ 17%] PASSED tests/test_approve_unblock.py::test_approval_unblocked_via_openqa_comment[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+tests/test_giteatrigger.py::test_get_prs_by_label_specific_number
+tests/test_approve_unblock.py::test_some_jobs_marked_as_acceptable_for_via_openqa_comment[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+[gw7] [ 17%] PASSED tests/test_commenter.py::test_generate_comment_raw_openqa_jobs
+[gw5] [ 17%] PASSED tests/test_args.py::test_sync_smelt
+[gw1] [ 18%] PASSED tests/test_giteatrigger.py::test_get_prs_by_label_specific_number
+tests/test_commenter.py::test_summarize_message_detailed_comments[disabled]
+tests/test_args.py::test_sync_gitea
+tests/test_giteatrigger.py::test_check_pullrequest_comments_when_no_trigger_needed
+[gw1] [ 18%] PASSED tests/test_giteatrigger.py::test_check_pullrequest_comments_when_no_trigger_needed
+[gw7] [ 18%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[disabled]
+[gw6] [ 18%] PASSED tests/test_args.py::test_configs_dir_accepted
+tests/test_giteatrigger.py::test_comment_on_pr_build_injection
+tests/test_incrementapprover_build_info.py::testload_build_info_no_match
+tests/test_args.py::test_main_no_token_exit
+[gw1] [ 18%] PASSED tests/test_giteatrigger.py::test_comment_on_pr_build_injection
+tests/test_giteatrigger.py::test_comment_on_pr_dry_run_approves
+[gw4] [ 18%] PASSED tests/test_approve_unblock.py::test_some_jobs_marked_as_acceptable_for_via_openqa_comment[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+[gw1] [ 18%] PASSED tests/test_giteatrigger.py::test_comment_on_pr_dry_run_approves
+[gw2] [ 19%] PASSED tests/test_config.py::test_obs_web_url_property
+tests/test_approve_unblock.py::test_approval_still_blocked_if_openqa_comment_not_relevant[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+tests/test_giteatrigger.py::test_comment_on_pr_no_jobs
+tests/test_config.py::test_insecure_setting
+[gw1] [ 19%] PASSED tests/test_giteatrigger.py::test_comment_on_pr_no_jobs
+[gw3] [ 19%] PASSED tests/test_approve_obs.py::test_404_response
+tests/test_giteatrigger.py::test_comment_on_pr_exception
+tests/test_approve_obs.py::test_500_response
+[gw6] [ 19%] PASSED tests/test_args.py::test_main_no_token_exit
+[gw0] [ 19%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[generic_contact]
+tests/test_args.py::test_main_token_provided_no_help
+tests/test_commenter.py::test_summarize_message_detailed_comments[fallback_contact]
+[gw1] [ 19%] PASSED tests/test_giteatrigger.py::test_comment_on_pr_exception
+tests/test_giteatrigger.py::test_get_prs_by_label_exception_during_pr_processing
+[gw0] [ 20%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[fallback_contact]
+tests/test_commenter.py::test_summarize_message_detailed_comments[api_error]
+[gw5] [ 20%] PASSED tests/test_args.py::test_sync_gitea
+tests/test_args.py::test_sync
+[gw1] [ 20%] PASSED tests/test_giteatrigger.py::test_get_prs_by_label_exception_during_pr_processing
+[gw0] [ 20%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[api_error]
+[gw4] [ 20%] PASSED tests/test_approve_unblock.py::test_approval_still_blocked_if_openqa_comment_not_relevant[fake_responses_for_unblocking_submissions_via_openqa_comments0]
+tests/test_giteatrigger.py::test_check_pullrequest_no_matched_iso
+[gw2] [ 20%] PASSED tests/test_config.py::test_insecure_setting
+tests/test_commenter.py::test_summarize_message_detailed_comments[no_group_id]
+tests/test_approve_unblock.py::test_approval_via_openqa_older_ok_job[job_passed-2]
+tests/test_crawler.py::test_get_regex_match_success
+[gw2] [ 20%] PASSED tests/test_crawler.py::test_get_regex_match_success
+[gw7] [ 21%] PASSED tests/test_incrementapprover_build_info.py::testload_build_info_no_match
+[gw0] [ 21%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[no_group_id]
+[gw6] [ 21%] PASSED tests/test_args.py::test_main_token_provided_no_help
+tests/test_crawler.py::test_get_regex_match_empty_packages
+tests/test_incrementapprover_build_info.py::test_extra_builds_no_match
+tests/test_commenter.py::test_summarize_message_detailed_comments[exceeds_max_entries_allow_devel]
+tests/test_args.py::test_debug_flag
+[gw2] [ 21%] PASSED tests/test_crawler.py::test_get_regex_match_empty_packages
+tests/test_crawler.py::test_get_regex_match_multiple_matches
+[gw7] [ 21%] PASSED tests/test_incrementapprover_build_info.py::test_extra_builds_no_match
+tests/test_incrementapprover_build_info.py::testload_build_info_missing_flavor_group
+[gw0] [ 21%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[exceeds_max_entries_allow_devel]
+[gw2] [ 22%] PASSED tests/test_crawler.py::test_get_regex_match_multiple_matches
+tests/test_commenter.py::test_summarize_message_detailed_comments[exceeds_max_entries_no_distri_version]
+tests/test_crawler.py::test_get_regex_match_no_filtered_results
+[gw7] [ 22%] PASSED tests/test_incrementapprover_build_info.py::testload_build_info_missing_flavor_group
+[gw5] [ 22%] PASSED tests/test_args.py::test_sync
+[gw2] [ 22%] PASSED tests/test_crawler.py::test_get_regex_match_no_filtered_results
+tests/test_incrementapprover_build_info.py::testload_build_info_filter_no_match
+tests/test_args.py::test_gitea_trigger
+tests/test_crawler.py::test_crawl_success
+[gw0] [ 22%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments[exceeds_max_entries_no_distri_version]
+tests/test_commenter.py::test_summarize_message_detailed_comments_duplicate_group
+[gw7] [ 22%] PASSED tests/test_incrementapprover_build_info.py::testload_build_info_filter_no_match
+[gw2] [ 22%] PASSED tests/test_crawler.py::test_crawl_success
+tests/test_incrementapprover_build_info.py::test_extra_builds_package_version_regex_no_match
+tests/test_crawler.py::test_crawl_request_exception
+[gw4] [ 23%] PASSED tests/test_approve_unblock.py::test_approval_via_openqa_older_ok_job[job_passed-2]
+[gw6] [ 23%] PASSED tests/test_args.py::test_debug_flag
+tests/test_approve_unblock.py::test_approval_via_openqa_older_ok_job[job_not_found-2]
+tests/test_args.py::test_main_fake_data
+[gw2] [ 23%] PASSED tests/test_crawler.py::test_crawl_request_exception
+[gw7] [ 23%] PASSED tests/test_incrementapprover_build_info.py::test_extra_builds_package_version_regex_no_match
+[gw0] [ 23%] PASSED tests/test_commenter.py::test_summarize_message_detailed_comments_duplicate_group
+tests/test_crawler.py::test_crawl_json_decode_error
+tests/test_incrementapprover_diff.py::test_package_diff_repo
+tests/test_config.py::test_download_maintenance_override
+[gw2] [ 23%] PASSED tests/test_crawler.py::test_crawl_json_decode_error
+[gw7] [ 24%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_repo
+tests/test_crawler.py::test_crawler_init_settings
+[gw3] [ 24%] PASSED tests/test_approve_obs.py::test_500_response
+tests/test_incrementapprover_diff.py::test_package_diff_none
+[gw1] [ 24%] PASSED tests/test_giteatrigger.py::test_check_pullrequest_no_matched_iso
+tests/test_approve_obs.py::test_osc_unknown_exception
+[gw2] [ 24%] PASSED tests/test_crawler.py::test_crawler_init_settings
+tests/test_giteatrigger.py::test_comment_on_pr_data_creation
+tests/test_dotenv.py::test_dotenv_loading
+[gw5] [ 24%] PASSED tests/test_args.py::test_gitea_trigger
+[gw7] [ 24%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_none
+tests/test_args.py::test_sub_approve[extra_args0-env0-True]
+tests/test_incrementapprover_diff.py::test_package_diff_cached
+[gw0] [ 24%] PASSED tests/test_config.py::test_download_maintenance_override
+[gw1] [ 25%] PASSED tests/test_giteatrigger.py::test_comment_on_pr_data_creation
+[gw2] [ 25%] PASSED tests/test_dotenv.py::test_dotenv_loading
+tests/test_config.py::test_git_review_bot_user_default
+tests/test_giteatrigger.py::test_is_openqa_triggering_needed_with_results
+tests/test_giteasync.py::test_gitea_sync_on_dry_run_does_not_sync
+[gw7] [ 25%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_cached
+tests/test_incrementapprover_diff.py::test_package_diff_source_report_no_request
+[gw6] [ 25%] PASSED tests/test_args.py::test_main_fake_data
+[gw1] [ 25%] PASSED tests/test_giteatrigger.py::test_is_openqa_triggering_needed_with_results
+tests/test_baseconf.py::test_baseconf_init
+[gw7] [ 25%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_source_report_no_request
+tests/test_incrementapprover_build_info.py::test_no_approval_if_no_builds_found
+[gw6] [ 26%] PASSED tests/test_baseconf.py::test_baseconf_init
+tests/test_incrementapprover_diff.py::test_package_diff_reference_repos
+tests/test_baseconf.py::test_is_embargoed
+[gw0] [ 26%] PASSED tests/test_config.py::test_git_review_bot_user_default
+[gw6] [ 26%] PASSED tests/test_baseconf.py::test_is_embargoed
+tests/test_config.py::test_git_review_bot_user_override
+[gw7] [ 26%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_reference_repos
+tests/test_commenter.py::test_commenter_init
+[gw1] [ 26%] PASSED tests/test_incrementapprover_build_info.py::test_no_approval_if_no_builds_found
+tests/test_incrementapprover_diff.py::test_package_diff_skip_debug
+tests/test_incrementapprover_build_info.py::test_no_approval_if_one_of_two_configs_has_no_builds
+[gw5] [ 26%] PASSED tests/test_args.py::test_sub_approve[extra_args0-env0-True]
+tests/test_args.py::test_sub_approve[extra_args1-env1-False]
+[gw7] [ 26%] PASSED tests/test_incrementapprover_diff.py::test_package_diff_skip_debug
+tests/test_incrementapprover_helpers.py::testget_regex_match_invalid_pattern
+[gw6] [ 27%] PASSED tests/test_commenter.py::test_commenter_init
+tests/test_commenter.py::test_commenter_init_with_submissions
+[gw1] [ 27%] PASSED tests/test_incrementapprover_build_info.py::test_no_approval_if_one_of_two_configs_has_no_builds
+[gw0] [ 27%] PASSED tests/test_config.py::test_git_review_bot_user_override
+tests/test_incrementapprover_scenarios.py::test_skipping_with_only_jobs_of_additional_builds_present
+[gw7] [ 27%] PASSED tests/test_incrementapprover_helpers.py::testget_regex_match_invalid_pattern
+tests/test_config.py::test_git_review_bot_user_empty
+tests/test_incrementapprover_helpers.py::test_schedule_jobs_dry
+[gw6] [ 27%] PASSED tests/test_commenter.py::test_commenter_init_with_submissions
+tests/test_commenter.py::test_commenter_call_failed_jobs
+[gw7] [ 27%] PASSED tests/test_incrementapprover_helpers.py::test_schedule_jobs_dry
+tests/test_incrementapprover_helpers.py::test_schedule_jobs_fail
+[gw7] [ 28%] PASSED tests/test_incrementapprover_helpers.py::test_schedule_jobs_fail
+[gw0] [ 28%] PASSED tests/test_config.py::test_git_review_bot_user_empty
+tests/test_loader_gitea_archs.py::test_determine_relevant_archs_empty_product
+[gw5] [ 28%] PASSED tests/test_args.py::test_sub_approve[extra_args1-env1-False]
+[gw2] [ 28%] PASSED tests/test_giteasync.py::test_gitea_sync_on_dry_run_does_not_sync
+tests/test_config.py::test_get_default_obs_url_from_osc
+[gw6] [ 28%] PASSED tests/test_commenter.py::test_commenter_call_failed_jobs
+tests/test_args.py::test_sub_approve[extra_args2-env2-True]
+tests/test_giteasync.py::test_sync_with_product_repo
+[gw7] [ 28%] PASSED tests/test_loader_gitea_archs.py::test_determine_relevant_archs_empty_product
+tests/test_commenter.py::test_commenter_call_passed_jobs
+[gw0] [ 28%] PASSED tests/test_config.py::test_get_default_obs_url_from_osc
+tests/test_loader_gitea_archs.py::test_get_multibuild_data
+tests/test_config.py::test_get_default_obs_url_no_apiurl
+[gw4] [ 29%] PASSED tests/test_approve_unblock.py::test_approval_via_openqa_older_ok_job[job_not_found-2]
+[gw3] [ 29%] PASSED tests/test_approve_obs.py::test_osc_unknown_exception
+[gw7] [ 29%] PASSED tests/test_loader_gitea_archs.py::test_get_multibuild_data
+tests/test_approve_unblock.py::test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard[2]
+tests/test_approve_obs.py::test_osc_all_pass
+[gw1] [ 29%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_with_only_jobs_of_additional_builds_present
+tests/test_loader_gitea_build_results.py::test_add_build_result_inconsistent_scminfo
+[gw0] [ 29%] PASSED tests/test_config.py::test_get_default_obs_url_no_apiurl
+[gw6] [ 29%] PASSED tests/test_commenter.py::test_commenter_call_passed_jobs
+tests/test_incrementapprover_scenarios.py::test_scheduling_with_no_openqa_jobs
+tests/test_incrementapprover_scenarios.py::test_issue_194074_specific_request_sles
+tests/test_commenter.py::test_osc_comment_no_request
+[gw7] [ 30%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_result_inconsistent_scminfo
+tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_repo_mismatch
+[gw7] [ 30%] PASSED tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_repo_mismatch
+[gw3] [ 30%] PASSED tests/test_approve_obs.py::test_osc_all_pass
+[gw0] [ 30%] PASSED tests/test_incrementapprover_scenarios.py::test_issue_194074_specific_request_sles
+tests/test_loader_gitea_build_results.py::test_add_build_results_url_mismatch_just_passes
+[gw6] [ 30%] PASSED tests/test_commenter.py::test_osc_comment_no_request
+tests/test_approve_scenarios.py::test_no_jobs
+tests/test_incrementapprover_scenarios.py::test_approval_if_failing_jobs_are_in_development_group[no_schedule]
+tests/test_commenter.py::test_comment_on_submission_empty_msg
+[gw7] [ 30%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_url_mismatch_just_passes
+tests/test_loader_gitea_build_results.py::test_add_build_results_http_error
+[gw5] [ 30%] PASSED tests/test_args.py::test_sub_approve[extra_args2-env2-True]
+[gw1] [ 31%] PASSED tests/test_incrementapprover_scenarios.py::test_scheduling_with_no_openqa_jobs
+tests/test_args.py::test_sub_approve[extra_args3-env3-True]
+[gw6] [ 31%] PASSED tests/test_commenter.py::test_comment_on_submission_empty_msg
+[gw7] [ 31%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_http_error
+tests/test_incrementapprover_scenarios.py::test_scheduling_extra_livepatching_builds_with_no_openqa_jobs
+[gw3] [ 31%] PASSED tests/test_approve_scenarios.py::test_no_jobs
+tests/test_commenter.py::test_osc_comment_dry_run
+tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_arch_filter
+tests/test_approve_scenarios.py::test_single_submission_not_ok_not_approved
+[gw4] [ 31%] PASSED tests/test_approve_unblock.py::test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard[2]
+[gw7] [ 31%] PASSED tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_arch_filter
+tests/test_approve_unblock.py::test_approval_still_blocked_if_openqa_older_job_dont_include_submission[2222]
+tests/test_loader_gitea_build_results.py::test_add_build_result_published
+[gw3] [ 32%] PASSED tests/test_approve_scenarios.py::test_single_submission_not_ok_not_approved
+[gw7] [ 32%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_result_published
+tests/test_approve_scenarios.py::test_no_comment_suppresses_commenting
+[gw6] [ 32%] PASSED tests/test_commenter.py::test_osc_comment_dry_run
+tests/test_loader_gitea_build_results.py::test_add_build_results_failed_packages
+[gw0] [ 32%] PASSED tests/test_incrementapprover_scenarios.py::test_approval_if_failing_jobs_are_in_development_group[no_schedule]
+tests/test_commenter.py::test_osc_comment_with_revision
+tests/test_incrementapprover_scenarios.py::test_approval_if_failing_jobs_are_in_development_group[schedule]
+[gw7] [ 32%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_failed_packages
+[gw3] [ 32%] PASSED tests/test_approve_scenarios.py::test_no_comment_suppresses_commenting
+tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_repo_match
+tests/test_approve_scenarios.py::test_single_submission_passed_is_approved
+[gw7] [ 32%] PASSED tests/test_loader_gitea_build_results.py::test_is_build_result_relevant_repo_match
+[gw5] [ 33%] PASSED tests/test_args.py::test_sub_approve[extra_args3-env3-True]
+tests/test_loader_gitea_build_results.py::test_add_build_results_dry_124
+tests/test_args.py::test_sub_comment
+[gw6] [ 33%] PASSED tests/test_commenter.py::test_osc_comment_with_revision
+tests/test_commenter.py::test_osc_comment_no_comment
+[gw1] [ 33%] PASSED tests/test_incrementapprover_scenarios.py::test_scheduling_extra_livepatching_builds_with_no_openqa_jobs
+[gw7] [ 33%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_dry_124
+tests/test_incrementapprover_scenarios.py::test_scheduling_extra_livepatching_builds_based_on_source_report
+tests/test_loader_gitea_build_results.py::test_add_build_results_scminfo
+[gw0] [ 33%] PASSED tests/test_incrementapprover_scenarios.py::test_approval_if_failing_jobs_are_in_development_group[schedule]
+tests/test_incrementapprover_scenarios.py::test_approval_with_mixed_jobs_development_ignored
+[gw7] [ 33%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_scminfo
+[gw6] [ 34%] PASSED tests/test_commenter.py::test_osc_comment_no_comment
+tests/test_loader_gitea_helpers.py::test_add_packages_from_patchinfo_non_dry
+tests/test_commenter.py::test_osc_comment_similar_exists
+[gw7] [ 34%] PASSED tests/test_loader_gitea_helpers.py::test_add_packages_from_patchinfo_non_dry
+tests/test_loader_gitea_helpers.py::test_add_packages_from_patchinfo_parse_error
+[gw5] [ 34%] PASSED tests/test_args.py::test_sub_comment
+[gw2] [ 34%] PASSED tests/test_giteasync.py::test_sync_with_product_repo
+[gw6] [ 34%] PASSED tests/test_commenter.py::test_osc_comment_similar_exists
+tests/test_args.py::test_sub_comment_with_detailed_args
+[gw7] [ 34%] PASSED tests/test_loader_gitea_helpers.py::test_add_packages_from_patchinfo_parse_error
+[gw0] [ 34%] PASSED tests/test_incrementapprover_scenarios.py::test_approval_with_mixed_jobs_development_ignored
+tests/test_loader_gitea_build_results.py::test_add_build_results_duplicate_channels
+tests/test_giteasync.py::test_sync_with_product_version_from_repo_listing
+tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_success
+tests/test_incrementapprover_scenarios.py::test_approval_if_running_jobs_are_in_development_group
+[gw7] [ 35%] PASSED tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_success
+tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_requests_json_error
+[gw1] [ 35%] PASSED tests/test_incrementapprover_scenarios.py::test_scheduling_extra_livepatching_builds_based_on_source_report
+tests/test_incrementapprover_scenarios.py::test_skipping_with_pending_openqa_jobs
+[gw7] [ 35%] PASSED tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_requests_json_error
+tests/test_loader_gitea_helpers.py::test_add_channel_for_build_result_local
+[gw3] [ 35%] PASSED tests/test_approve_scenarios.py::test_single_submission_passed_is_approved
+tests/test_approve_scenarios.py::test_all_passed
+[gw0] [ 35%] PASSED tests/test_incrementapprover_scenarios.py::test_approval_if_running_jobs_are_in_development_group
+[gw7] [ 35%] PASSED tests/test_loader_gitea_helpers.py::test_add_channel_for_build_result_local
+tests/test_incrementapprover_scenarios.py::test_handle_approval_with_comment_flag
+tests/test_loader_gitea_helpers.py::test_get_json_success
+[gw3] [ 36%] PASSED tests/test_approve_scenarios.py::test_all_passed
+[gw7] [ 36%] PASSED tests/test_loader_gitea_helpers.py::test_get_json_success
+[gw0] [ 36%] PASSED tests/test_incrementapprover_scenarios.py::test_handle_approval_with_comment_flag
+tests/test_approve_scenarios.py::test_sub_passed_aggr_without_results
+tests/test_loader_config.py::test_get_onearch
+tests/test_loader_gitea_helpers.py::test_iter_gitea_items_success
+[gw4] [ 36%] PASSED tests/test_approve_unblock.py::test_approval_still_blocked_if_openqa_older_job_dont_include_submission[2222]
+tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with carriage returns]
+[gw7] [ 36%] PASSED tests/test_loader_gitea_helpers.py::test_iter_gitea_items_success
+[gw0] [ 36%] PASSED tests/test_loader_config.py::test_get_onearch
+[gw3] [ 36%] PASSED tests/test_approve_scenarios.py::test_sub_passed_aggr_without_results
+[gw1] [ 37%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_with_pending_openqa_jobs
+tests/test_loader_gitea_helpers.py::test_iter_gitea_items_pagination
+tests/test_loader_config.py::test_get_onearch_not_found
+tests/test_incrementapprover_scenarios.py::test_listing_not_ok_openqa_jobs
+tests/test_giteasync.py::test_sync_with_codestream_repo
+[gw0] [ 37%] PASSED tests/test_loader_config.py::test_get_onearch_not_found
+[gw7] [ 37%] PASSED tests/test_loader_gitea_helpers.py::test_iter_gitea_items_pagination
+tests/test_loader_config.py::test_load_metadata_aggregate_all_files_in_folder
+tests/test_loader_gitea_helpers.py::test_iter_gitea_items_throws_on_dict
+[gw2] [ 37%] PASSED tests/test_giteasync.py::test_sync_with_product_version_from_repo_listing
+[gw7] [ 37%] PASSED tests/test_loader_gitea_helpers.py::test_iter_gitea_items_throws_on_dict
+[gw6] [ 37%] PASSED tests/test_loader_gitea_build_results.py::test_add_build_results_duplicate_channels
+tests/test_loader_config.py::test_read_products
+tests/test_loader_gitea_helpers.py::test_read_json_file_list_success
+[gw0] [ 38%] PASSED tests/test_loader_config.py::test_load_metadata_aggregate_all_files_in_folder
+tests/test_loader_config.py::test_load_metadata_aggregate_file
+tests/test_loader_gitea_build_results.py::test_add_comments_multiple_bot_comments
+[gw7] [ 38%] PASSED tests/test_loader_gitea_helpers.py::test_read_json_file_list_success
+tests/test_loader_gitea_helpers.py::test_read_json_file_list_throws_on_dict
+[gw6] [ 38%] PASSED tests/test_loader_gitea_build_results.py::test_add_comments_multiple_bot_comments
+[gw0] [ 38%] PASSED tests/test_loader_config.py::test_load_metadata_aggregate_file
+[gw7] [ 38%] PASSED tests/test_loader_gitea_helpers.py::test_read_json_file_list_throws_on_dict
+tests/test_loader_gitea_build_results.py::test_url_regex_robust
+tests/test_loader_config.py::test_load_metadata_incidents_all_files_in_folder
+tests/test_loader_gitea_helpers.py::test_is_build_acceptable_fail
+[gw2] [ 38%] PASSED tests/test_loader_config.py::test_read_products
+tests/test_loader_config.py::test_read_products_file
+[gw1] [ 38%] PASSED tests/test_incrementapprover_scenarios.py::test_listing_not_ok_openqa_jobs
+[gw6] [ 39%] PASSED tests/test_loader_gitea_build_results.py::test_url_regex_robust
+[gw7] [ 39%] PASSED tests/test_loader_gitea_helpers.py::test_is_build_acceptable_fail
+tests/test_incrementapprover_scenarios.py::test_evaluate_list_of_openqa_job_results
+tests/test_loader_gitea_build_results.py::test_obs_project_regex_robust
+tests/test_loader_gitea_prs.py::test_get_open_prs_returns_specified_pr
+[gw0] [ 39%] PASSED tests/test_loader_config.py::test_load_metadata_incidents_all_files_in_folder
+[gw4] [ 39%] PASSED tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with carriage returns]
+[gw2] [ 39%] PASSED tests/test_loader_config.py::test_read_products_file
+tests/test_loader_config.py::test_load_metadata_all
+[gw6] [ 39%] PASSED tests/test_loader_gitea_build_results.py::test_obs_project_regex_robust
+tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with text before @review]
+[gw7] [ 40%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_returns_specified_pr
+tests/test_loader_config.py::test_invalid_yaml_file_is_skipped
+tests/test_loader_gitea_build_results.py::test_add_comments_no_bot_comments
+tests/test_loader_gitea_prs.py::test_get_open_prs_metadata_error
+[gw1] [ 40%] PASSED tests/test_incrementapprover_scenarios.py::test_evaluate_list_of_openqa_job_results
+[gw0] [ 40%] PASSED tests/test_loader_config.py::test_load_metadata_all
+[gw6] [ 40%] PASSED tests/test_loader_gitea_build_results.py::test_add_comments_no_bot_comments
+tests/test_incrementapprover_scenarios.py::test_check_unique_jobid_request_pair_all_jobs_unique
+tests/test_loader_gitea_build_results.py::test_add_comments_bot_comments_no_urls
+tests/test_loader_config.py::test_load_metadata_exclude_all
+[gw2] [ 40%] PASSED tests/test_loader_config.py::test_invalid_yaml_file_is_skipped
+[gw7] [ 40%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_metadata_error
+tests/test_loader_gitea_prs.py::test_get_open_prs_iter_pages
+tests/test_loader_config.py::test_load_one_metadata_missing_settings
+[gw6] [ 40%] PASSED tests/test_loader_gitea_build_results.py::test_add_comments_bot_comments_no_urls
+[gw7] [ 41%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_iter_pages
+[gw0] [ 41%] PASSED tests/test_loader_config.py::test_load_metadata_exclude_all
+[gw2] [ 41%] PASSED tests/test_loader_config.py::test_load_one_metadata_missing_settings
+tests/test_loader_gitea_helpers.py::test_post_json_on_not_ok_logs_error
+tests/test_loader_gitea_prs.py::test_get_open_prs_iter_pages_unexpected_dict
+[gw1] [ 41%] PASSED tests/test_incrementapprover_scenarios.py::test_check_unique_jobid_request_pair_all_jobs_unique
+tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_no_reviews
+tests/test_loader_config.py::test_read_products_yaml_error
+[gw3] [ 41%] PASSED tests/test_giteasync.py::test_sync_with_codestream_repo
+tests/test_incrementapprover_scenarios.py::test_check_unique_jobid_request_pair_ambiguity_found
+[gw0] [ 41%] PASSED tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_no_reviews
+[gw7] [ 42%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_iter_pages_unexpected_dict
+tests/test_giteasync.py::test_sync_without_results
+[gw2] [ 42%] PASSED tests/test_loader_config.py::test_read_products_yaml_error
+tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_exception
+[gw6] [ 42%] PASSED tests/test_loader_gitea_helpers.py::test_post_json_on_not_ok_logs_error
+tests/test_loader_gitea_prs.py::test_get_open_prs_json_error
+tests/test_loader_config.py::test_concat_on_non_sequence_node_raises_clear_error
+tests/test_loader_gitea_helpers.py::test_patch_json_on_not_ok_logs_error
+[gw0] [ 42%] PASSED tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_exception
+[gw1] [ 42%] PASSED tests/test_incrementapprover_scenarios.py::test_check_unique_jobid_request_pair_ambiguity_found
+[gw7] [ 42%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_json_error
+[gw2] [ 42%] PASSED tests/test_loader_config.py::test_concat_on_non_sequence_node_raises_clear_error
+tests/test_loader_gitea_submissions.py::test_is_review_requested_by_explicit_users
+tests/test_incrementapprover_scenarios.py::test_handle_approval_valid_request_id
+tests/test_loader_gitea_prs.py::test_get_open_prs_request_error
+tests/test_loader_config.py::test_load_metadata_concat_simple_list
+[gw0] [ 43%] PASSED tests/test_loader_gitea_submissions.py::test_is_review_requested_by_explicit_users
+[gw6] [ 43%] PASSED tests/test_loader_gitea_helpers.py::test_patch_json_on_not_ok_logs_error
+[gw7] [ 43%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_request_error
+tests/test_loader_incrementconfig.py::test_from_config_file_invalid_yaml
+[gw2] [ 43%] PASSED tests/test_loader_config.py::test_load_metadata_concat_simple_list
+tests/test_loader_gitea_helpers.py::test_patch_json_success
+[gw1] [ 43%] PASSED tests/test_incrementapprover_scenarios.py::test_handle_approval_valid_request_id
+tests/test_loader_gitea_prs.py::test_get_open_prs_specific_number_json_error
+tests/test_loader_config.py::test_load_metadata_concat_mixed_list_scalar
+[gw4] [ 43%] PASSED tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with text before @review]
+tests/test_incrementapprover_scenarios.py::test_handle_approval_disapprove
+[gw0] [ 44%] PASSED tests/test_loader_incrementconfig.py::test_from_config_file_invalid_yaml
+[gw6] [ 44%] PASSED tests/test_loader_gitea_helpers.py::test_patch_json_success
+tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with trailing characters]
+[gw2] [ 44%] PASSED tests/test_loader_config.py::test_load_metadata_concat_mixed_list_scalar
+tests/test_loader_incrementconfig.py::test_config_parsing
+tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_json_error
+[gw7] [ 44%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_specific_number_json_error
+tests/test_loader_config.py::test_load_metadata_concat_nested_and_anchors
+[gw1] [ 44%] PASSED tests/test_incrementapprover_scenarios.py::test_handle_approval_disapprove
+tests/test_loader_gitea_prs.py::test_get_open_prs_specific_number_key_error
+tests/test_incrementapprover_scenarios.py::test_skipping_with_mismatching_package
+[gw2] [ 44%] PASSED tests/test_loader_config.py::test_load_metadata_concat_nested_and_anchors
+[gw6] [ 44%] PASSED tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_json_error
+tests/test_loader_config.py::test_concat_constructor_container_unwrapping
+tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_http_error
+[gw7] [ 45%] PASSED tests/test_loader_gitea_prs.py::test_get_open_prs_specific_number_key_error
+[gw0] [ 45%] PASSED tests/test_loader_incrementconfig.py::test_config_parsing
+[gw1] [ 45%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_with_mismatching_package
+tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_dry
+[gw2] [ 45%] PASSED tests/test_loader_config.py::test_concat_constructor_container_unwrapping
+tests/test_incrementapprover_scenarios.py::test_issue_194074_repro
+[gw6] [ 45%] PASSED tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_http_error
+tests/test_loader_config.py::test_concat_with_tuple_behavior
+tests/test_loader_incrementconfig.py::test_config_parsing_from_args
+tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_request_exception
+[gw7] [ 45%] PASSED tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_dry
+[gw0] [ 46%] PASSED tests/test_loader_incrementconfig.py::test_config_parsing_from_args
+[gw2] [ 46%] PASSED tests/test_loader_config.py::test_concat_with_tuple_behavior
+tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_skips
+tests/test_loader_incrementconfig.py::test_config_parsing_from_args_with_path[0-foo]
+tests/test_loader_gitea_archs.py::test_determine_relevant_archs_from_multibuild_info_success
+[gw6] [ 46%] PASSED tests/test_loader_gitea_helpers.py::test_get_product_version_from_repo_listing_request_exception
+[gw7] [ 46%] PASSED tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_skips
+[gw1] [ 46%] PASSED tests/test_incrementapprover_scenarios.py::test_issue_194074_repro
+[gw2] [ 46%] PASSED tests/test_loader_gitea_archs.py::test_determine_relevant_archs_from_multibuild_info_success
+[gw5] [ 46%] FAILED tests/test_args.py::test_sub_comment_with_detailed_args
+tests/test_loader_qem.py::test_get_submission_settings_data
+tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_dry_other_number_passes
+[gw0] [ 47%] PASSED tests/test_loader_incrementconfig.py::test_config_parsing_from_args_with_path[0-foo]
+tests/test_loader_gitea_archs.py::test_determine_relevant_archs_exception
+tests/test_incrementapprover_scenarios.py::test_issue_194074_specific_request
+tests/test_args.py::test_sub_sync_results
+tests/test_loader_incrementconfig.py::test_config_parsing_from_args_with_path[1-bar]
+[gw7] [ 47%] PASSED tests/test_loader_gitea_submissions.py::test_make_submission_from_gitea_pr_dry_other_number_passes
+[gw6] [ 47%] PASSED tests/test_loader_qem.py::test_get_submission_settings_data
+[gw2] [ 47%] PASSED tests/test_loader_gitea_archs.py::test_determine_relevant_archs_exception
+tests/test_loader_qem.py::test_get_submission_settings_data_error
+tests/test_loader_qem.py::test_update_submissions_success
+[gw3] [ 47%] PASSED tests/test_giteasync.py::test_sync_without_results
+[gw0] [ 47%] PASSED tests/test_loader_incrementconfig.py::test_config_parsing_from_args_with_path[1-bar]
+tests/test_loader_qem.py::test_get_active_submissions_with_type
+[gw4] [ 48%] PASSED tests/test_approve_unblock.py::test_approval_unblocked_with_various_comment_formats[with trailing characters]
+tests/test_loader_incrementconfig.py::test_config_parsing_reference_repos
+[gw1] [ 48%] PASSED tests/test_incrementapprover_scenarios.py::test_issue_194074_specific_request
+tests/test_giteasync.py::test_extracting_product_name_and_version
+[gw7] [ 48%] PASSED tests/test_loader_qem.py::test_update_submissions_success
+[gw6] [ 48%] PASSED tests/test_loader_qem.py::test_get_submission_settings_data_error
+tests/test_loader_qem.py::test_get_submissions_on_submission_returns_single_submission
+tests/test_incrementapprover_helpers.py::test_extra_builds_for_package_filtering
+tests/test_loader_qem.py::test_update_submissions_request_exception
+tests/test_loader_qem.py::test_get_submission_results
+[gw0] [ 48%] PASSED tests/test_loader_incrementconfig.py::test_config_parsing_reference_repos
+[gw2] [ 48%] PASSED tests/test_loader_qem.py::test_get_active_submissions_with_type
+[gw3] [ 48%] PASSED tests/test_giteasync.py::test_extracting_product_name_and_version
+tests/test_loader_qem.py::test_get_active_submissions_no_type
+tests/test_loader_qem.py::test_get_submissions_simple
+tests/test_giteasync.py::test_handling_unavailable_build_info
+[gw6] [ 49%] PASSED tests/test_loader_qem.py::test_get_submission_results
+[gw7] [ 49%] PASSED tests/test_loader_qem.py::test_update_submissions_request_exception
+[gw1] [ 49%] PASSED tests/test_loader_qem.py::test_get_submissions_on_submission_returns_single_submission
+tests/test_loader_qem.py::test_get_submission_results_error
+tests/test_loader_qem.py::test_get_submissions_error
+[gw4] [ 49%] PASSED tests/test_incrementapprover_helpers.py::test_extra_builds_for_package_filtering
+[gw2] [ 49%] PASSED tests/test_loader_qem.py::test_get_active_submissions_no_type
+tests/test_loader_qem.py::test_update_submissions_unsuccessful_with_error_text
+[gw0] [ 49%] PASSED tests/test_loader_qem.py::test_get_submissions_simple
+[gw3] [ 50%] PASSED tests/test_giteasync.py::test_handling_unavailable_build_info
+tests/test_loader_qem.py::test_get_single_submission_with_type
+tests/test_incrementapprover_helpers.py::test_filter_results
+[gw1] [ 50%] PASSED tests/test_loader_qem.py::test_get_submissions_error
+[gw6] [ 50%] PASSED tests/test_loader_qem.py::test_get_submission_results_error
+tests/test_giteasync.py::test_reviewing_pr
+[gw7] [ 50%] PASSED tests/test_loader_qem.py::test_update_submissions_unsuccessful_with_error_text
+tests/test_loader_smelt.py::test_get_active_submission_ids_paginated
+tests/test_loader_qem.py::test_get_submissions_create_none
+tests/test_loader_qem.py::test_get_aggregate_settings_no_settings
+[gw2] [ 50%] PASSED tests/test_loader_qem.py::test_get_single_submission_with_type
+[gw5] [ 50%] PASSED tests/test_args.py::test_sub_sync_results
+tests/test_loader_qem.py::test_update_submissions_unsuccessful_no_text
+tests/test_loader_qem.py::test_get_single_submission_no_type
+[gw3] [ 50%] PASSED tests/test_giteasync.py::test_reviewing_pr
+tests/test_args.py::test_aggr_sync_results
+[gw1] [ 51%] PASSED tests/test_loader_qem.py::test_get_submissions_create_none
+[gw4] [ 51%] PASSED tests/test_incrementapprover_helpers.py::test_filter_results
+[gw6] [ 51%] PASSED tests/test_loader_qem.py::test_get_aggregate_settings_no_settings
+tests/test_giteasync.py::test_reviewing_pr_no_bot_user
+tests/test_loader_qem.py::test_get_active_submissions
+[gw7] [ 51%] PASSED tests/test_loader_qem.py::test_update_submissions_unsuccessful_no_text
+tests/test_loader_qem.py::test_get_aggregate_settings
+[gw2] [ 51%] PASSED tests/test_loader_qem.py::test_get_single_submission_no_type
+tests/test_incrementapprover_obs.py::test_specified_obs_request_not_found_skips_approval
+tests/test_loader_qem.py::test_post_job_success
+tests/test_loader_qem.py::test_dashboard_put
+[gw1] [ 51%] PASSED tests/test_loader_qem.py::test_get_active_submissions
+[gw6] [ 52%] PASSED tests/test_loader_qem.py::test_get_aggregate_settings
+[gw3] [ 52%] PASSED tests/test_giteasync.py::test_reviewing_pr_no_bot_user
+tests/test_loader_qem.py::test_get_submissions_approver
+tests/test_loader_qem.py::test_get_aggregate_settings_data
+[gw2] [ 52%] PASSED tests/test_loader_qem.py::test_dashboard_put
+[gw0] [ 52%] PASSED tests/test_loader_smelt.py::test_get_active_submission_ids_paginated
+tests/test_giteasync.py::test_computing_repo_url
+tests/test_loader_smelt.py::test_get_active_submission_ids_simple
+[gw4] [ 52%] PASSED tests/test_incrementapprover_obs.py::test_specified_obs_request_not_found_skips_approval
+[gw7] [ 52%] PASSED tests/test_loader_qem.py::test_post_job_success
+tests/test_loader_qem.py::test_post_job_unsuccessful
+tests/test_loader_smelt.py::test_get_submission_from_smelt_exception
+[gw1] [ 52%] PASSED tests/test_loader_qem.py::test_get_submissions_approver
+[gw6] [ 53%] PASSED tests/test_loader_qem.py::test_get_aggregate_settings_data
+tests/test_incrementapprover_obs.py::test_specified_obs_request_found_renders_request
+tests/test_loader_qem.py::test_get_single_submission
+[gw3] [ 53%] PASSED tests/test_giteasync.py::test_computing_repo_url
+tests/test_loader_qem.py::test_get_aggregate_results
+[gw7] [ 53%] PASSED tests/test_loader_qem.py::test_post_job_unsuccessful
+tests/test_giteasync.py::test_computing_repo_url_empty_product
+tests/test_loader_qem.py::test_post_job_request_exception
+[gw1] [ 53%] PASSED tests/test_loader_qem.py::test_get_single_submission
+[gw6] [ 53%] PASSED tests/test_loader_qem.py::test_get_aggregate_results
+[gw2] [ 53%] PASSED tests/test_loader_smelt.py::test_get_active_submission_ids_simple
+tests/test_loader_qem.py::test_get_submission_settings_no_settings
+[gw3] [ 54%] PASSED tests/test_giteasync.py::test_computing_repo_url_empty_product
+[gw4] [ 54%] PASSED tests/test_incrementapprover_obs.py::test_specified_obs_request_found_renders_request
+[gw0] [ 54%] PASSED tests/test_loader_smelt.py::test_get_submission_from_smelt_exception
+tests/test_loader_qem.py::test_get_aggregate_results_error
+[gw7] [ 54%] PASSED tests/test_loader_qem.py::test_post_job_request_exception
+tests/test_loader_smelt.py::test_get_active_submission_ids_error
+tests/test_incrementapprover_obs.py::testfind_request_on_obs_with_request_id
+tests/test_giteasync.py::test_adding_packages_from_files
+tests/test_loader_smelt.py::test_active_inc_schema_validation
+[gw1] [ 54%] PASSED tests/test_loader_qem.py::test_get_submission_settings_no_settings
+tests/test_loader_qem.py::test_update_job_success
+[gw6] [ 54%] PASSED tests/test_loader_qem.py::test_get_aggregate_results_error
+tests/test_loader_qem.py::test_get_submission_settings_all_submissions
+[gw3] [ 54%] PASSED tests/test_giteasync.py::test_adding_packages_from_files
+[gw5] [ 55%] PASSED tests/test_args.py::test_aggr_sync_results
+[gw7] [ 55%] PASSED tests/test_loader_qem.py::test_update_job_success
+tests/test_loader_qem.py::test_get_aggregate_settings_data_none
+tests/test_giteasync.py::test_gitea_sync_skips_initial_on_request
+[gw4] [ 55%] PASSED tests/test_incrementapprover_obs.py::testfind_request_on_obs_with_request_id
+tests/test_loader_qem.py::test_update_job_unsuccessful
+tests/test_args.py::test_increment_approve
+[gw1] [ 55%] PASSED tests/test_loader_qem.py::test_get_submission_settings_all_submissions
+tests/test_incrementapprover_obs.py::testfind_request_on_obs_caching
+tests/test_loader_qem.py::test_get_submission_settings_multiple_rrids
+[gw2] [ 55%] PASSED tests/test_loader_smelt.py::test_get_active_submission_ids_error
+[gw6] [ 55%] PASSED tests/test_loader_qem.py::test_get_aggregate_settings_data_none
+[gw7] [ 56%] PASSED tests/test_loader_qem.py::test_update_job_unsuccessful
+[gw0] [ 56%] PASSED tests/test_loader_smelt.py::test_active_inc_schema_validation
+[gw3] [ 56%] PASSED tests/test_giteasync.py::test_gitea_sync_skips_initial_on_request
+tests/test_loader_smelt.py::test_get_submission_from_smelt_simple
+tests/test_loader_qem.py::test_update_job_request_exception
+tests/test_giteasync.py::test_gitea_sync_amqp
+[gw1] [ 56%] PASSED tests/test_loader_qem.py::test_get_submission_settings_multiple_rrids
+tests/test_loader_smelt.py::test_incident_schema_validation
+tests/test_mock_interceptor.py::test_gitea_pulls_callback
+tests/test_loader_qem.py::test_get_submission_settings_no_rrids
+[gw4] [ 56%] PASSED tests/test_incrementapprover_obs.py::testfind_request_on_obs_caching
+[gw6] [ 56%] PASSED tests/test_mock_interceptor.py::test_gitea_pulls_callback
+tests/test_incrementapprover_obs.py::testhandle_approval_dry
+[gw7] [ 56%] PASSED tests/test_loader_qem.py::test_update_job_request_exception
+[gw3] [ 57%] PASSED tests/test_giteasync.py::test_gitea_sync_amqp
+[gw2] [ 57%] PASSED tests/test_loader_smelt.py::test_get_submission_from_smelt_simple
+tests/test_mock_interceptor.py::test_gitea_pr_details_callback
+[gw0] [ 57%] PASSED tests/test_loader_smelt.py::test_incident_schema_validation
+[gw1] [ 57%] PASSED tests/test_loader_qem.py::test_get_submission_settings_no_rrids
+tests/test_openqabot_simple.py::test_passed_non_osd
+tests/test_giteatrigger.py::test_check_pullrequest_triggers_job
+tests/test_loader_smelt.py::test_get_submission_from_smelt_error
+tests/test_openqaclient.py::test_is_in_devel_group_allow_development_groups
+[gw6] [ 57%] PASSED tests/test_mock_interceptor.py::test_gitea_pr_details_callback
+tests/test_mock_increment_coverage.py::test_log_no_jobs_empty
+[gw4] [ 57%] PASSED tests/test_incrementapprover_obs.py::testhandle_approval_dry
+tests/test_mock_interceptor.py::test_smelt_graphql_callback
+[gw1] [ 58%] PASSED tests/test_openqaclient.py::test_is_in_devel_group_allow_development_groups
+[gw0] [ 58%] PASSED tests/test_mock_increment_coverage.py::test_log_no_jobs_empty
+tests/test_incrementapprover_obs.py::testapprove_on_obs_dry
+[gw7] [ 58%] PASSED tests/test_openqabot_simple.py::test_passed_non_osd
+[gw6] [ 58%] PASSED tests/test_mock_interceptor.py::test_smelt_graphql_callback
+tests/test_openqaclient.py::test_is_in_devel_group_no_group_id
+[gw3] [ 58%] PASSED tests/test_giteatrigger.py::test_check_pullrequest_triggers_job
+tests/test_openqabot_simple.py::test_passed_post_osd_failed
+tests/test_mock_interceptor.py::test_setup_mock_responses
+tests/test_mock_interceptor.py::test_openqa_jobs_callback
+[gw2] [ 58%] PASSED tests/test_loader_smelt.py::test_get_submission_from_smelt_error
+tests/test_giteatrigger.py::test_is_openqatriggering_needed_false
+[gw4] [ 58%] PASSED tests/test_incrementapprover_obs.py::testapprove_on_obs_dry
+[gw1] [ 59%] PASSED tests/test_openqaclient.py::test_is_in_devel_group_no_group_id
+tests/test_openqabot.py::test_main_configs_not_dir_triggers_error_and_exit
+[gw6] [ 59%] PASSED tests/test_mock_interceptor.py::test_openqa_jobs_callback
+tests/test_openqaclient.py::test_get_job_group_info_success
+[gw0] [ 59%] PASSED tests/test_mock_interceptor.py::test_setup_mock_responses
+tests/test_incrementapprover_obs.py::testhandle_approval_no_jobs_safeguard
+[gw7] [ 59%] PASSED tests/test_openqabot_simple.py::test_passed_post_osd_failed
+[gw5] [ 59%] PASSED tests/test_args.py::test_increment_approve
+tests/test_mock_interceptor.py::test_patchinfo_callback
+tests/test_mock_interceptor.py::test_setup_mock_responses_no_osc
+tests/test_openqabot_simple.py::test_post_qem_success
+tests/test_args.py::test_repo_diff
+[gw3] [ 59%] PASSED tests/test_giteatrigger.py::test_is_openqatriggering_needed_false
+[gw1] [ 60%] PASSED tests/test_openqaclient.py::test_get_job_group_info_success
+[gw6] [ 60%] PASSED tests/test_mock_interceptor.py::test_patchinfo_callback
+[gw0] [ 60%] PASSED tests/test_mock_interceptor.py::test_setup_mock_responses_no_osc
+tests/test_giteatrigger.py::test_get_prs_by_label_filtering
+tests/test_openqaclient.py::test_get_job_group_info_empty_response
+[gw4] [ 60%] PASSED tests/test_incrementapprover_obs.py::testhandle_approval_no_jobs_safeguard
+tests/test_mock_interceptor.py::test_setup_mock_responses_no_start
+tests/test_mock_interceptor.py::test_mock_http_get
+tests/test_incrementapprover_obs.py::testfind_request_on_obs_not_accepted
+[gw7] [ 60%] PASSED tests/test_openqabot_simple.py::test_post_qem_success
+[gw6] [ 60%] PASSED tests/test_mock_interceptor.py::test_mock_http_get
+[gw0] [ 60%] PASSED tests/test_mock_interceptor.py::test_setup_mock_responses_no_start
+[gw1] [ 61%] PASSED tests/test_openqaclient.py::test_get_job_group_info_empty_response
+tests/test_openqaclient.py::test_post_job_failed
+tests/test_mock_submission_coverage.py::test_mock_submission_revisions_fallback_none
+tests/test_openqaclient.py::test_get_job_group_info_error
+tests/test_mock_interceptor.py::test_read_fixture
+[gw3] [ 61%] PASSED tests/test_giteatrigger.py::test_get_prs_by_label_filtering
+[gw4] [ 61%] PASSED tests/test_incrementapprover_obs.py::testfind_request_on_obs_not_accepted
+[gw6] [ 61%] PASSED tests/test_mock_submission_coverage.py::test_mock_submission_revisions_fallback_none
+tests/test_incrementapprover_scenarios.py::test_approval_if_there_are_only_ok_openqa_jobs
+tests/test_giteatrigger.py::test_check_pullrequest_dry_run
+[gw0] [ 61%] PASSED tests/test_mock_interceptor.py::test_read_fixture
+tests/test_mock_submission_coverage.py::test_mock_submission_contains_package_none
+[gw1] [ 61%] PASSED tests/test_openqaclient.py::test_get_job_group_info_error
+[gw7] [ 62%] PASSED tests/test_openqaclient.py::test_post_job_failed
+tests/test_osclib_comments.py::test_truncate_very_short
+[gw6] [ 62%] PASSED tests/test_mock_submission_coverage.py::test_mock_submission_contains_package_none
+tests/test_osclib_comments.py::test_comment_as_dict
+tests/test_openqaclient.py::test_post_job_passed
+[gw3] [ 62%] PASSED tests/test_giteatrigger.py::test_check_pullrequest_dry_run
+tests/test_openqabot.py::test_no_args_prints_help
+[gw0] [ 62%] PASSED tests/test_osclib_comments.py::test_truncate_very_short
+tests/test_osclib_comments.py::test_truncate_near_closing_pre
+[gw2] [ 62%] PASSED tests/test_openqabot.py::test_main_configs_not_dir_triggers_error_and_exit
+tests/test_osclib_comments.py::test_comment_find
+[gw1] [ 62%] PASSED tests/test_osclib_comments.py::test_comment_as_dict
+[gw7] [ 62%] PASSED tests/test_openqaclient.py::test_post_job_passed
+tests/test_openqabot.py::test_main_debug_flag_sets_log_level
+tests/test_osclib_comments.py::testprepare_url
+[gw0] [ 63%] PASSED tests/test_osclib_comments.py::test_truncate_near_closing_pre
+tests/test_openqaclient.py::test_handle_job_not_found
+[gw3] [ 63%] PASSED tests/test_osclib_comments.py::test_comment_find
+tests/test_osclib_comments.py::test_delete_children_complex
+tests/test_osclib_comments.py::test_add_marker
+[gw1] [ 63%] PASSED tests/test_osclib_comments.py::testprepare_url
+[gw7] [ 63%] PASSED tests/test_openqaclient.py::test_handle_job_not_found
+[gw3] [ 63%] PASSED tests/test_osclib_comments.py::test_add_marker
+[gw5] [ 63%] PASSED tests/test_args.py::test_repo_diff
+[gw0] [ 64%] PASSED tests/test_osclib_comments.py::test_delete_children_complex
+tests/test_osclib_comments.py::test_get_comments
+tests/test_openqaclient.py::test_get_methods_handle_errors_gracefully
+tests/test_osclib_comments.py::test_add_marker_no_info
+tests/test_osclib_comments.py::test_delete
+[gw4] [ 64%] PASSED tests/test_incrementapprover_scenarios.py::test_approval_if_there_are_only_ok_openqa_jobs
+tests/test_args.py::test_amqp
+tests/test_incrementapprover_scenarios.py::test_skipping_if_rescheduling
+[gw1] [ 64%] PASSED tests/test_osclib_comments.py::test_get_comments
+[gw3] [ 64%] PASSED tests/test_osclib_comments.py::test_add_marker_no_info
+[gw0] [ 64%] PASSED tests/test_osclib_comments.py::test_delete
+tests/test_osclib_comments.py::test_add_comment
+tests/test_pc_helper.py::test_pint_query_uses_cache
+[gw7] [ 64%] PASSED tests/test_openqaclient.py::test_get_methods_handle_errors_gracefully
+tests/test_osclib_comments.py::test_delete_children
+tests/test_openqaclient.py::test_get_job_comments_request_exception
+[gw3] [ 64%] PASSED tests/test_osclib_comments.py::test_add_comment
+[gw1] [ 65%] PASSED tests/test_pc_helper.py::test_pint_query_uses_cache
+[gw0] [ 65%] PASSED tests/test_osclib_comments.py::test_delete_children
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_empty_settings
+tests/test_osclib_comments.py::test_truncate
+tests/test_osclib_comments.py::test_delete_from
+[gw7] [ 65%] PASSED tests/test_openqaclient.py::test_get_job_comments_request_exception
+[gw3] [ 65%] PASSED tests/test_osclib_comments.py::test_truncate
+[gw1] [ 65%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_empty_settings
+tests/test_readme.py::test_readme_missing_markers
+tests/test_osclib_comments.py::test_truncate_long
+[gw0] [ 65%] PASSED tests/test_osclib_comments.py::test_delete_from
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_simple_settings
+[gw2] [ 66%] PASSED tests/test_openqabot.py::test_main_debug_flag_sets_log_level
+tests/test_osclib_comments.py::test_delete_from_where_user
+[gw3] [ 66%] PASSED tests/test_osclib_comments.py::test_truncate_long
+[gw7] [ 66%] PASSED tests/test_readme.py::test_readme_missing_markers
+[gw4] [ 66%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_if_rescheduling
+tests/test_openqabot.py::test_main_keyboard_interrupt
+tests/test_osclib_comments.py::test_comment_find_no_match
+[gw1] [ 66%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_simple_settings
+tests/test_readme.py::test_readme_line_length_success
+tests/test_incrementapprover_scenarios.py::test_skipping_with_failing_openqa_jobs_for_one_config
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_different_region
+[gw0] [ 66%] PASSED tests/test_osclib_comments.py::test_delete_from_where_user
+[gw3] [ 66%] PASSED tests/test_osclib_comments.py::test_comment_find_no_match
+[gw7] [ 67%] PASSED tests/test_readme.py::test_readme_line_length_success
+tests/test_repodiff.py::test_repodiff_compression
+[gw2] [ 67%] PASSED tests/test_openqabot.py::test_main_keyboard_interrupt
+tests/test_osclib_comments.py::test_comment_find_wrong_bot
+tests/test_readme.py::test_readme_line_length_failure
+[gw1] [ 67%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_different_region
+tests/test_openqabot.py::test_main_missing_token_exits
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_no_recent_image_found
+[gw0] [ 67%] PASSED tests/test_repodiff.py::test_repodiff_compression
+[gw3] [ 67%] PASSED tests/test_osclib_comments.py::test_comment_find_wrong_bot
+[gw7] [ 67%] PASSED tests/test_readme.py::test_readme_line_length_failure
+tests/test_repodiff.py::test_request_and_dump_fake_data_errors[FileNotFoundError-read_bytes-Failed to read tests/fixtures/responses/name: File not found]
+tests/test_repodiff.py::test_request_and_dump_exception
+tests/test_readme.py::test_readme_actual_file
+[gw1] [ 68%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_no_recent_image_found
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_exception
+[gw0] [ 68%] PASSED tests/test_repodiff.py::test_request_and_dump_fake_data_errors[FileNotFoundError-read_bytes-Failed to read tests/fixtures/responses/name: File not found]
+[gw7] [ 68%] PASSED tests/test_readme.py::test_readme_actual_file
+[gw3] [ 68%] PASSED tests/test_repodiff.py::test_request_and_dump_exception
+tests/test_repodiff.py::test_request_and_dump_fake_data_errors[side_effect1-read_bytes-Failed to parse tests/fixtures/responses/name]
+tests/test_repodiff.py::test_repodiff_no_args
+[gw6] [ 68%] PASSED tests/test_openqabot.py::test_no_args_prints_help
+tests/test_repodiff.py::test_compute_diff_exception
+[gw1] [ 68%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_exception
+tests/test_osclib_comments.py::test_comment_find_empty_info
+tests/test_pc_helper.py::test_apply_publiccloud_pint_image_already_has_id
+[gw7] [ 68%] PASSED tests/test_repodiff.py::test_repodiff_no_args
+[gw0] [ 69%] PASSED tests/test_repodiff.py::test_request_and_dump_fake_data_errors[side_effect1-read_bytes-Failed to parse tests/fixtures/responses/name]
+[gw3] [ 69%] PASSED tests/test_repodiff.py::test_compute_diff_exception
+[gw6] [ 69%] PASSED tests/test_osclib_comments.py::test_comment_find_empty_info
+tests/test_repodiff.py::test_repodiff
+[gw1] [ 69%] PASSED tests/test_pc_helper.py::test_apply_publiccloud_pint_image_already_has_id
+tests/test_repodiff.py::test_load_repodata_error
+[gw4] [ 69%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_with_failing_openqa_jobs_for_one_config
+tests/test_osclib_comments.py::test_add_comment_with_parent
+tests/test_repodiff.py::test_request_and_dump_dump_data
+tests/test_repodiff.py::test_request_and_dump_not_ok[500-Internal Server Error-Failed to fetch data from http://url: 500 Internal Server Error]
+tests/test_incrementapprover_scenarios.py::test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products_are_considered
+[gw7] [ 69%] PASSED tests/test_repodiff.py::test_repodiff
+[gw0] [ 70%] PASSED tests/test_repodiff.py::test_load_repodata_error
+[gw6] [ 70%] PASSED tests/test_osclib_comments.py::test_add_comment_with_parent
+[gw1] [ 70%] PASSED tests/test_repodiff.py::test_request_and_dump_not_ok[500-Internal Server Error-Failed to fetch data from http://url: 500 Internal Server Error]
+tests/test_osclib_comments.py::test_truncate_unbalanced_pre
+[gw3] [ 70%] PASSED tests/test_repodiff.py::test_request_and_dump_dump_data
+tests/test_repohash.py::test_get_max_revision_3
+tests/test_repodiff.py::test_load_packages_empty
+tests/test_repodiff.py::test_find_primary_repodata_none
+tests/test_repodiff.py::test_request_and_dump_no_dump
+[gw2] [ 70%] PASSED tests/test_openqabot.py::test_main_missing_token_exits
+[gw6] [ 70%] PASSED tests/test_osclib_comments.py::test_truncate_unbalanced_pre
+[gw0] [ 70%] PASSED tests/test_repodiff.py::test_load_packages_empty
+tests/test_openqabot.py::test_main_help_no_token
+[gw1] [ 71%] PASSED tests/test_repodiff.py::test_find_primary_repodata_none
+tests/test_osclib_comments.py::test_comment_find_mismatch_info
+[gw3] [ 71%] PASSED tests/test_repodiff.py::test_request_and_dump_no_dump
+tests/test_repodiff.py::test_load_packages_invalid_data
+[gw7] [ 71%] PASSED tests/test_repohash.py::test_get_max_revision_3
+tests/test_repodiff.py::test_load_repodata_request_failed
+tests/test_repodiff.py::test_repodiff_exit
+[gw6] [ 71%] PASSED tests/test_osclib_comments.py::test_comment_find_mismatch_info
+tests/test_repohash.py::test_get_max_revision_connectionerror
+tests/test_osclib_comments.py::test_delete_children_nobody
+[gw0] [ 71%] PASSED tests/test_repodiff.py::test_load_packages_invalid_data
+[gw1] [ 71%] PASSED tests/test_repodiff.py::test_load_repodata_request_failed
+[gw3] [ 72%] PASSED tests/test_repodiff.py::test_repodiff_exit
+tests/test_repodiff.py::test_load_packages_not_rpm
+tests/test_repohash.py::test_get_max_revision_retry_error
+[gw6] [ 72%] PASSED tests/test_osclib_comments.py::test_delete_children_nobody
+tests/test_repodiff.py::test_request_and_dump_not_ok[404-Not Found-Failed to fetch data from http://url: 404 Not Found]
+[gw7] [ 72%] PASSED tests/test_repohash.py::test_get_max_revision_connectionerror
+[gw5] [ 72%] PASSED tests/test_args.py::test_amqp
+[gw1] [ 72%] PASSED tests/test_repodiff.py::test_load_packages_not_rpm
+tests/test_osclib_comments.py::test_delete_from_where_user_mismatch
+[gw0] [ 72%] PASSED tests/test_repohash.py::test_get_max_revision_retry_error
+tests/test_repohash.py::test_get_max_revision_httperror
+tests/test_repohash.py::test_get_max_revision_manager_aarch64
+[gw3] [ 72%] PASSED tests/test_repodiff.py::test_request_and_dump_not_ok[404-Not Found-Failed to fetch data from http://url: 404 Not Found]
+tests/test_args.py::test_configs_non_existent_all_commands
+tests/test_repohash.py::test_get_max_revision_not_ok
+[gw6] [ 73%] PASSED tests/test_osclib_comments.py::test_delete_from_where_user_mismatch
+tests/test_smeltsync.py::test_sync_qam_inreview[fake_smelt_api0]
+[gw1] [ 73%] PASSED tests/test_repohash.py::test_get_max_revision_manager_aarch64
+tests/test_pc_helper.py::test_apply_pc_tools_image
+tests/test_repohash.py::test_get_max_revision_opensuse
+[gw4] [ 73%] PASSED tests/test_incrementapprover_scenarios.py::test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products_are_considered
+[gw0] [ 73%] PASSED tests/test_repohash.py::test_get_max_revision_not_ok
+[gw7] [ 73%] PASSED tests/test_repohash.py::test_get_max_revision_httperror
+[gw6] [ 73%] PASSED tests/test_pc_helper.py::test_apply_pc_tools_image
+tests/test_repohash.py::test_get_max_revision_xmlerror
+tests/test_repohash.py::test_get_max_revision_with_submission_id_not_ok
+tests/test_pc_helper.py::test_get_recent_pint_image
+[gw1] [ 74%] PASSED tests/test_repohash.py::test_get_max_revision_opensuse
+tests/test_smeltsync.py::test_is_inreview
+[gw4] [ 74%] PASSED tests/test_pc_helper.py::test_get_recent_pint_image
+tests/test_smeltsync.py::test_has_qam_review_empty_set_fails
+[gw3] [ 74%] PASSED tests/test_smeltsync.py::test_sync_qam_inreview[fake_smelt_api0]
+[gw0] [ 74%] PASSED tests/test_repohash.py::test_get_max_revision_with_submission_id_not_ok
+[gw6] [ 74%] PASSED tests/test_smeltsync.py::test_is_inreview
+tests/test_pc_helper.py::test_get_latest_tools_image
+[gw1] [ 74%] PASSED tests/test_smeltsync.py::test_has_qam_review_empty_set_fails
+tests/test_smeltsync.py::test_is_revoked
+tests/test_smeltsync.py::test_no_embargoed_and_priority_value[fake_smelt_api0]
+tests/test_repohash.py::test_merge_repohash
+[gw7] [ 74%] PASSED tests/test_repohash.py::test_get_max_revision_xmlerror
+tests/test_sourcereport.py::test_parse_source_report
+[gw6] [ 75%] PASSED tests/test_smeltsync.py::test_is_revoked
+tests/test_repohash.py::test_get_max_revision_empty_xml
+[gw4] [ 75%] PASSED tests/test_pc_helper.py::test_get_latest_tools_image
+[gw0] [ 75%] PASSED tests/test_repohash.py::test_merge_repohash
+tests/test_smeltsync.py::test_create_record_no_request_set
+tests/test_pullrequest.py::test_get_open_prs_specific_number_json_error
+[gw1] [ 75%] PASSED tests/test_sourcereport.py::test_parse_source_report
+tests/test_repohash.py::test_get_max_revision_slfo
+[gw6] [ 75%] PASSED tests/test_smeltsync.py::test_create_record_no_request_set
+tests/test_sourcereport.py::test_find_source_reports
+tests/test_smeltsync.py::test_is_revoked_true
+[gw3] [ 75%] PASSED tests/test_smeltsync.py::test_no_embargoed_and_priority_value[fake_smelt_api0]
+[gw7] [ 76%] PASSED tests/test_repohash.py::test_get_max_revision_empty_xml
+[gw4] [ 76%] PASSED tests/test_pullrequest.py::test_get_open_prs_specific_number_json_error
+tests/test_smeltsync.py::test_sync_approved[fake_smelt_api0]
+tests/test_repohash.py::test_get_max_revision_exception
+[gw6] [ 76%] PASSED tests/test_smeltsync.py::test_is_revoked_true
+[gw1] [ 76%] PASSED tests/test_sourcereport.py::test_find_source_reports
+tests/test_pullrequest.py::test_get_open_prs_specific_number_key_error
+[gw0] [ 76%] PASSED tests/test_repohash.py::test_get_max_revision_slfo
+tests/test_smeltsync.py::test_has_qam_review_correct_status_passes
+tests/test_sourcereport.py::test_load_packages_http_error
+tests/test_repohash.py::test_get_max_revision_slfo_with_repo_version
+[gw6] [ 76%] PASSED tests/test_smeltsync.py::test_has_qam_review_correct_status_passes
+[gw7] [ 76%] PASSED tests/test_repohash.py::test_get_max_revision_exception
+[gw4] [ 77%] PASSED tests/test_pullrequest.py::test_get_open_prs_specific_number_key_error
+[gw1] [ 77%] PASSED tests/test_sourcereport.py::test_load_packages_http_error
+tests/test_submission.py::test_sub_repr_no_rrid
+tests/test_submission.py::test_sub_normal_livepatch
+tests/test_pullrequest.py::test_pull_request_has_labels
+tests/test_submission.py::test_sub_normal
+[gw3] [ 77%] PASSED tests/test_smeltsync.py::test_sync_approved[fake_smelt_api0]
+[gw0] [ 77%] PASSED tests/test_repohash.py::test_get_max_revision_slfo_with_repo_version
+[gw6] [ 77%] PASSED tests/test_submission.py::test_sub_repr_no_rrid
+[gw7] [ 77%] PASSED tests/test_submission.py::test_sub_normal_livepatch
+[gw4] [ 78%] PASSED tests/test_pullrequest.py::test_pull_request_has_labels
+tests/test_smeltsync.py::test_sync_dry_run[fake_smelt_api0]
+tests/test_submission.py::test_sub_create
+tests/test_submission.py::test_sub_norepo
+tests/test_pullrequest.py::test_pull_request_id_property
+[gw1] [ 78%] PASSED tests/test_submission.py::test_sub_normal
+tests/test_submission.py::test_sub_is_livepatch_false
+tests/test_submission.py::test_revisions_with_fallback_no_revisions
+[gw6] [ 78%] PASSED tests/test_submission.py::test_sub_is_livepatch_false
+[gw4] [ 78%] PASSED tests/test_pullrequest.py::test_pull_request_id_property
+[gw7] [ 78%] PASSED tests/test_submission.py::test_sub_norepo
+[gw0] [ 78%] PASSED tests/test_submission.py::test_sub_create
+tests/test_submission.py::test_sub_rev_product_repo_list
+tests/test_readme.py::test_readme_usage_up_to_date
+tests/test_submission.py::test_sub_revisions
+tests/test_submission.py::test_sub_nopackage
+[gw1] [ 78%] PASSED tests/test_submission.py::test_revisions_with_fallback_no_revisions
+[gw3] [ 79%] PASSED tests/test_smeltsync.py::test_sync_dry_run[fake_smelt_api0]
+tests/test_submission.py::test_slfo_channels_edge_cases
+[gw6] [ 79%] PASSED tests/test_submission.py::test_sub_rev_product_repo_list
+tests/test_smeltsync.py::test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully
+[gw7] [ 79%] PASSED tests/test_submission.py::test_sub_nopackage
+[gw0] [ 79%] PASSED tests/test_submission.py::test_sub_revisions
+tests/test_submission.py::test_sub_rev_non_matching_version
+tests/test_submission.py::test_slfo_channels_and_revisions
+tests/test_submission.py::test_sub_nochannels
+[gw3] [ 79%] PASSED tests/test_smeltsync.py::test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully
+[gw1] [ 79%] PASSED tests/test_submission.py::test_slfo_channels_edge_cases
+[gw6] [ 80%] PASSED tests/test_submission.py::test_sub_rev_non_matching_version
+tests/test_submission.py::test_submission_create_empty_packages
+tests/test_submission.py::test_compute_revisions_cache_hit
+[gw0] [ 80%] PASSED tests/test_submission.py::test_slfo_channels_and_revisions
+tests/test_submission.py::test_sub_rev_empty_channels
+[gw7] [ 80%] PASSED tests/test_submission.py::test_sub_nochannels
+tests/test_submission.py::test_sub_rev_multiple_repos
+[gw3] [ 80%] PASSED tests/test_submission.py::test_submission_create_empty_packages
+[gw1] [ 80%] PASSED tests/test_submission.py::test_compute_revisions_cache_hit
+tests/test_submission.py::test_sub_nochannels2
+tests/test_submission.py::test_compute_revisions_logging_once
+[gw0] [ 80%] PASSED tests/test_submission.py::test_sub_rev_multiple_repos
+tests/test_submission.py::test_compute_revisions_cache_hit_none
+[gw6] [ 80%] PASSED tests/test_submission.py::test_sub_rev_empty_channels
+[gw7] [ 81%] PASSED tests/test_submission.py::test_sub_nochannels2
+tests/test_submission.py::test_sub_rev_no_repo_found
+tests/test_submissions.py::test_making_repo_url
+[gw3] [ 81%] PASSED tests/test_submission.py::test_compute_revisions_logging_once
+tests/test_submissions_call.py::test_submissions_call_with_issues
+[gw1] [ 81%] PASSED tests/test_submission.py::test_compute_revisions_cache_hit_none
+tests/test_submission.py::test_sub_rev_limit_archs
+[gw6] [ 81%] PASSED tests/test_submissions.py::test_making_repo_url
+[gw0] [ 81%] PASSED tests/test_submission.py::test_sub_rev_no_repo_found
+[gw7] [ 81%] PASSED tests/test_submissions_call.py::test_submissions_call_with_issues
+tests/test_submissions_call.py::test_submissions_call_with_params_expand_distri_version
+tests/test_submissions_handle.py::test_get_submissions_obj_coverage
+tests/test_submissions_call.py::test_submissions_call
+tests/test_submissions_call.py::test_submissions_call_with_channels
+[gw3] [ 82%] PASSED tests/test_submission.py::test_sub_rev_limit_archs
+[gw6] [ 82%] PASSED tests/test_submissions_call.py::test_submissions_call
+[gw0] [ 82%] PASSED tests/test_submissions_handle.py::test_get_submissions_obj_coverage
+tests/test_submission.py::test_log_skipped_twice
+[gw1] [ 82%] PASSED tests/test_submissions_call.py::test_submissions_call_with_params_expand_distri_version
+[gw7] [ 82%] PASSED tests/test_submissions_call.py::test_submissions_call_with_channels
+tests/test_submissions_call.py::test_submissions_call_with_flavors
+tests/test_submissions_handle.py::test_handle_submission_rev_coverage[False-True]
+tests/test_submissions_call.py::test_submissions_call_with_params_expand_isolated
+tests/test_submissions_call.py::test_submissions_call_with_packages
+[gw6] [ 82%] PASSED tests/test_submissions_call.py::test_submissions_call_with_flavors
+[gw3] [ 82%] PASSED tests/test_submission.py::test_log_skipped_twice
+[gw0] [ 83%] PASSED tests/test_submissions_handle.py::test_handle_submission_rev_coverage[False-True]
+tests/test_submissions_call.py::test_submissions_call_with_submissions
+tests/test_submissions_handle.py::test_handle_submission_rev_coverage[True-None]
+[gw1] [ 83%] PASSED tests/test_submissions_call.py::test_submissions_call_with_params_expand_isolated
+tests/test_submissions_handle.py::test_handle_submission_with_ci_url
+tests/test_submissions_call.py::test_submissions_call_reproduction_of_repeated_schedule
+[gw7] [ 83%] PASSED tests/test_submissions_call.py::test_submissions_call_with_packages
+[gw6] [ 83%] PASSED tests/test_submissions_call.py::test_submissions_call_with_submissions
+tests/test_submissions_handle.py::test_handle_submission_staging_skip
+[gw0] [ 83%] PASSED tests/test_submissions_handle.py::test_handle_submission_rev_coverage[True-None]
+tests/test_submissions_call.py::test_submissions_call_with_params_expand
+[gw1] [ 83%] PASSED tests/test_submissions_call.py::test_submissions_call_reproduction_of_repeated_schedule
+[gw3] [ 84%] PASSED tests/test_submissions_handle.py::test_handle_submission_with_ci_url
+[gw6] [ 84%] PASSED tests/test_submissions_handle.py::test_handle_submission_staging_skip
+tests/test_submissions_handle.py::test_handle_submission_git_not_ongoing
+tests/test_submissions_gitea.py::test_gitea_submissions
+tests/test_submissions_handle.py::test_is_scheduled_job_error
+tests/test_submissions_handle.py::test_handle_submission_excluded_packages_skip
+[gw7] [ 84%] PASSED tests/test_submissions_call.py::test_submissions_call_with_params_expand
+[gw0] [ 84%] PASSED tests/test_submissions_handle.py::test_handle_submission_git_not_ongoing
+tests/test_submissions_handle.py::test_handle_submission_no_issue_skip
+[gw6] [ 84%] PASSED tests/test_submissions_handle.py::test_handle_submission_excluded_packages_skip
+tests/test_submissions_handle.py::test_handle_submission_kernel_no_product_repo_skip
+[gw1] [ 84%] PASSED tests/test_submissions_gitea.py::test_gitea_submissions
+[gw3] [ 84%] PASSED tests/test_submissions_handle.py::test_is_scheduled_job_error
+tests/test_submissions_handle.py::test_handle_submission_livepatch_kgraft
+[gw7] [ 85%] PASSED tests/test_submissions_handle.py::test_handle_submission_no_issue_skip
+tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check1]
+tests/test_submissions_handle.py::test_is_scheduled_job_no_revs
+[gw0] [ 85%] PASSED tests/test_submissions_handle.py::test_handle_submission_kernel_no_product_repo_skip
+tests/test_submissions_handle.py::test_handle_submission_required_issues_skip
+[gw6] [ 85%] PASSED tests/test_submissions_handle.py::test_handle_submission_livepatch_kgraft
+tests/test_submissions_handle.py::test_handle_submission_pc_tools_image_fail
+tests/test_submissions_handle.py::test_handle_submission_singlearch_no_aggregate
+[gw1] [ 85%] PASSED tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check1]
+[gw5] [ 85%] PASSED tests/test_args.py::test_configs_non_existent_all_commands
+[gw3] [ 85%] PASSED tests/test_submissions_handle.py::test_is_scheduled_job_no_revs
+[gw7] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_required_issues_skip
+tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check2]
+[gw6] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_pc_tools_image_fail
+tests/test_loader_gitea_helpers.py::test_is_build_acceptable_success
+[gw0] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_singlearch_no_aggregate
+tests/test_submissions_handle.py::test_handle_submission_embargoed_skip
+tests/test_submissions_handle.py::test_handle_submission_already_scheduled
+tests/test_submissions_handle.py::test_handle_submission_pc_pint_image_fail
+tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check0]
+[gw1] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check2]
+[gw5] [ 86%] PASSED tests/test_loader_gitea_helpers.py::test_is_build_acceptable_success
+[gw3] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_embargoed_skip
+tests/test_submissions_handle.py::test_handle_submission_params_expand_forbidden
+[gw6] [ 86%] PASSED tests/test_submissions_handle.py::test_handle_submission_pc_pint_image_fail
+tests/test_loader_gitea_helpers.py::test_generate_repo_url_success
+[gw7] [ 87%] PASSED tests/test_submissions_handle.py::test_handle_submission_already_scheduled
+[gw0] [ 87%] PASSED tests/test_submissions_handle.py::test_handle_submission_should_aggregate_logic[aggregate_check0]
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs0-flavor_kwargs0-30]
+tests/test_submissions_handle.py::test_process_sub_context_norepfound
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs4-flavor_kwargs4-55]
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs2-flavor_kwargs2-None]
+[gw1] [ 87%] PASSED tests/test_submissions_handle.py::test_handle_submission_params_expand_forbidden
+[gw5] [ 87%] PASSED tests/test_loader_gitea_helpers.py::test_generate_repo_url_success
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs6-flavor_kwargs6-25]
+tests/test_loader_gitea_helpers.py::test_generate_repo_url_two_label_match
+[gw3] [ 87%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs0-flavor_kwargs0-30]
+[gw0] [ 87%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs4-flavor_kwargs4-55]
+[gw7] [ 88%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs2-flavor_kwargs2-None]
+[gw2] [ 88%] PASSED tests/test_openqabot.py::test_main_help_no_token
+[gw6] [ 88%] PASSED tests/test_submissions_handle.py::test_process_sub_context_norepfound
+[gw1] [ 88%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs6-flavor_kwargs6-25]
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs5-flavor_kwargs5-55]
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs3-flavor_kwargs3-100]
+tests/test_openqabot.py::test_main_help_subcommand_no_token
+tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs1-flavor_kwargs1-60]
+tests/test_submissions_handle.py::test_handle_submission_no_revisions_return_none
+tests/test_submissions_handle.py::test_handle_submission_pc_tools_image_success
+[gw0] [ 88%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs5-flavor_kwargs5-55]
+[gw7] [ 88%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs3-flavor_kwargs3-100]
+[gw5] [ 88%] PASSED tests/test_loader_gitea_helpers.py::test_generate_repo_url_two_label_match
+tests/test_submissions_handle.py::test_handle_submission_revisions_fallback_none
+tests/test_submissions_handle.py::test_should_skip_kernel_missing_repo
+[gw1] [ 89%] PASSED tests/test_submissions_handle.py::test_handle_submission_pc_tools_image_success
+[gw6] [ 89%] PASSED tests/test_submissions_handle.py::test_handle_submission_no_revisions_return_none
+[gw3] [ 89%] PASSED tests/test_submissions_handle.py::test_handle_submission_priority_logic[inc_kwargs1-flavor_kwargs1-60]
+tests/test_loader_gitea_helpers.py::test_get_gitea_staging_config
+tests/test_submissions_handle.py::test_handle_submission_prevents_empty_incident_repo
+[gw0] [ 89%] PASSED tests/test_submissions_handle.py::test_handle_submission_revisions_fallback_none
+[gw7] [ 89%] PASSED tests/test_submissions_handle.py::test_should_skip_kernel_missing_repo
+tests/test_submissions_handle.py::test_handle_submission_compute_revisions_fail
+tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data1-matches1-False-Submission smelt:1: Aggregate job not required]
+[gw1] [ 89%] PASSED tests/test_submissions_handle.py::test_handle_submission_prevents_empty_incident_repo
+tests/test_submissions_handle.py::test_should_skip_embargoed
+tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data0-matches0-False-Submission smelt:1: Aggregate job not required]
+[gw5] [ 90%] PASSED tests/test_loader_gitea_helpers.py::test_get_gitea_staging_config
+[gw6] [ 90%] PASSED tests/test_submissions_handle.py::test_handle_submission_compute_revisions_fail
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[None-api_response0-PR 123 already approved for commit sha123-False]
+tests/test_submissions_handle.py::test_handle_submission_packages_mismatch
+[gw3] [ 90%] PASSED tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data1-matches1-False-Submission smelt:1: Aggregate job not required]
+[gw7] [ 90%] PASSED tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data0-matches0-False-Submission smelt:1: Aggregate job not required]
+tests/test_subsyncres.py::test_clone_dry
+[gw0] [ 90%] PASSED tests/test_submissions_handle.py::test_should_skip_embargoed
+tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data2-matches2-True-None]
+[gw1] [ 90%] PASSED tests/test_submissions_handle.py::test_handle_submission_packages_mismatch
+tests/test_subsyncres.py::test_devel_fast_dry
+tests/test_subsyncres.py::test_nogroup_dry
+[gw5] [ 90%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[None-api_response0-PR 123 already approved for commit sha123-False]
+[gw3] [ 91%] PASSED tests/test_submissions_handle.py::test_is_aggregate_needed_logic[data2-matches2-True-None]
+tests/test_subsyncres.py::test_devel_dry
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[None-api_response1-None-True]
+tests/test_syncres.py::test_clone_dry
+[gw7] [ 91%] PASSED tests/test_subsyncres.py::test_devel_fast_dry
+[gw5] [ 91%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[None-api_response1-None-True]
+tests/test_syncres.py::testnormalize_data_safe_handles_error_gracefully
+[gw3] [ 91%] PASSED tests/test_syncres.py::test_clone_dry
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response2-PR 123 already approved via comment for commit sha123-False]
+[gw1] [ 91%] PASSED tests/test_subsyncres.py::test_devel_dry
+[gw0] [ 91%] PASSED tests/test_subsyncres.py::test_nogroup_dry
+[gw6] [ 92%] PASSED tests/test_subsyncres.py::test_clone_dry
+tests/test_types.py::test_get_channel_type[SLFO-ChannelType.SLFO]
+[gw2] [ 92%] PASSED tests/test_openqabot.py::test_main_help_subcommand_no_token
+tests/test_types.py::test_get_channel_type[SUSE:SLFO:1.1-ChannelType.SLFO]
+[gw7] [ 92%] PASSED tests/test_syncres.py::testnormalize_data_safe_handles_error_gracefully
+tests/test_subsyncres.py::test_passed_dry
+tests/test_syncres.py::test_post_result_aggregate
+tests/test_openqabot.py::test_main_missing_token_with_help_returns_early
+[gw3] [ 92%] PASSED tests/test_types.py::test_get_channel_type[SLFO-ChannelType.SLFO]
+[gw1] [ 92%] PASSED tests/test_types.py::test_get_channel_type[SUSE:SLFO:1.1-ChannelType.SLFO]
+tests/test_types.py::test_get_channel_type[openSUSE-SLE-ChannelType.OPENSUSE]
+tests/test_types.py::test_get_channel_type[openSUSE-Leap-ChannelType.OPENSUSE]
+tests/test_types.py::test_get_channel_type[SLES-ChannelType.UPDATES]
+[gw5] [ 92%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response2-PR 123 already approved via comment for commit sha123-False]
+[gw2] [ 92%] PASSED tests/test_openqabot.py::test_main_missing_token_with_help_returns_early
+[gw7] [ 93%] PASSED tests/test_types.py::test_get_channel_type[openSUSE-SLE-ChannelType.OPENSUSE]
+[gw0] [ 93%] PASSED tests/test_syncres.py::test_post_result_aggregate
+[gw1] [ 93%] PASSED tests/test_types.py::test_get_channel_type[SLES-ChannelType.UPDATES]
+[gw3] [ 93%] PASSED tests/test_types.py::test_get_channel_type[openSUSE-Leap-ChannelType.OPENSUSE]
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response3-None-True]
+tests/test_openqabot_simple.py::test_passed
+tests/test_types.py::test_get_channel_type[-ChannelType.UPDATES]
+tests/test_types.py::test_prodver_from_issue_channel_without_product_version
+tests/test_types.py::test_get_channel_type[SLE-Module-Basesystem-ChannelType.UPDATES]
+tests/test_types.py::test_prodver_from_issue_channel_with_product_version
+[gw7] [ 93%] PASSED tests/test_types.py::test_get_channel_type[-ChannelType.UPDATES]
+[gw1] [ 93%] PASSED tests/test_types.py::test_prodver_from_issue_channel_without_product_version
+[gw3] [ 94%] PASSED tests/test_types.py::test_prodver_from_issue_channel_with_product_version
+tests/test_types.py::test_repos_compute_url_slfo_via_project_param
+tests/test_types.py::test_repos_compute_url_opensuse
+[gw6] [ 94%] PASSED tests/test_subsyncres.py::test_passed_dry
+[gw0] [ 94%] PASSED tests/test_types.py::test_get_channel_type[SLE-Module-Basesystem-ChannelType.UPDATES]
+[gw2] [ 94%] PASSED tests/test_openqabot_simple.py::test_passed
+tests/test_types.py::test_repos_compute_url_updates_with_project
+tests/test_types.py::test_get_channel_type[SomethingElse-ChannelType.UPDATES]
+[gw5] [ 94%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response3-None-True]
+[gw7] [ 94%] PASSED tests/test_types.py::test_repos_compute_url_slfo_via_project_param
+[gw1] [ 94%] PASSED tests/test_types.py::test_repos_compute_url_opensuse
+tests/test_types.py::test_prodver_from_issue_channel_type
+tests/test_types.py::test_repos_compute_url_updates
+tests/test_utils.py::test_normalize_results
+[gw3] [ 95%] PASSED tests/test_types.py::test_repos_compute_url_updates_with_project
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-review-api_response4-PR 123 already approved via comment for commit sha123-False]
+tests/test_utils.py::test_compare_submission_data
+[gw6] [ 95%] PASSED tests/test_types.py::test_get_channel_type[SomethingElse-ChannelType.UPDATES]
+[gw2] [ 95%] PASSED tests/test_types.py::test_prodver_from_issue_channel_type
+[gw1] [ 95%] PASSED tests/test_utils.py::test_normalize_results
+tests/test_utils.py::test_walk[data0-result0]
+tests/test_utils.py::test_walk[data1-result1]
+[gw0] [ 95%] PASSED tests/test_types.py::test_repos_compute_url_updates
+[gw7] [ 95%] PASSED tests/test_utils.py::test_compare_submission_data
+tests/test_utils.py::test_walk[data2-result2]
+tests/test_utils.py::test_get_yml_list_single_file_yml
+tests/test_utils.py::test_make_retry_session
+[gw6] [ 96%] PASSED tests/test_utils.py::test_walk[data1-result1]
+tests/test_utils.py::test_get_yml_list_folder_with_single_file_yml
+[gw5] [ 96%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-review-api_response4-PR 123 already approved via comment for commit sha123-False]
+[gw3] [ 96%] PASSED tests/test_utils.py::test_walk[data0-result0]
+[gw2] [ 96%] PASSED tests/test_utils.py::test_walk[data2-result2]
+tests/test_utils.py::test_unique_dicts
+tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response5-None-True]
+[gw1] [ 96%] PASSED tests/test_utils.py::test_get_yml_list_single_file_yml
+tests/test_utils.py::test_create_logger_duplicate_handlers
+tests/test_utils.py::test_get_yml_list_folder_with_multiple_files
+[gw7] [ 96%] PASSED tests/test_utils.py::test_get_yml_list_folder_with_single_file_yml
+tests/test_utils.py::test_extract_contact_from_description[None-None]
+[gw6] [ 96%] PASSED tests/test_utils.py::test_unique_dicts
+tests/test_utils.py::test_extract_contact_from_description[Some random text without contact info-None]
+[gw0] [ 97%] PASSED tests/test_utils.py::test_make_retry_session
+[gw5] [ 97%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_scenarios[bot-api_response5-None-True]
+[gw2] [ 97%] PASSED tests/test_utils.py::test_create_logger_duplicate_handlers
+tests/test_utils.py::test_extract_contact_from_description[Responsible: qe-team@suse.de-qe-team@suse.de]
+tests/test_utils.py::test_extract_contact_from_description[-None]
+[gw1] [ 97%] PASSED tests/test_utils.py::test_extract_contact_from_description[None-None]
+[gw7] [ 97%] PASSED tests/test_utils.py::test_extract_contact_from_description[Some random text without contact info-None]
+[gw3] [ 97%] PASSED tests/test_utils.py::test_get_yml_list_folder_with_multiple_files
+tests/test_loader_gitea_helpers.py::test_approve_pr_exception
+tests/test_utils.py::test_extract_contact_from_description[Person: test@suse.de-test@suse.de]
+tests/test_utils.py::test_extract_contact_from_description[responsible: lowercase@example.com-lowercase@example.com]
+tests/test_utils.py::test_extract_contact_from_description[Maintainer: maintainer@suse.de-maintainer@suse.de]
+tests/test_utils.py::test_extract_contact_from_description[Team: #qe-team on Slack-#qe-team on Slack]
+[gw6] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[Responsible: qe-team@suse.de-qe-team@suse.de]
+[gw0] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[-None]
+[gw2] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[Person: test@suse.de-test@suse.de]
+[gw7] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[responsible: lowercase@example.com-lowercase@example.com]
+tests/test_utils.py::test_extract_contact_from_description[Leading text\nPerson: middle@example.com\nTrailing text-middle@example.com]
+[gw5] [ 98%] PASSED tests/test_loader_gitea_helpers.py::test_approve_pr_exception
+tests/test_utils.py::test_extract_contact_from_description[Multiple lines\nResponsible: contact@example.com\nOther text-contact@example.com]
+[gw3] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[Team: #qe-team on Slack-#qe-team on Slack]
+[gw1] [ 98%] PASSED tests/test_utils.py::test_extract_contact_from_description[Maintainer: maintainer@suse.de-maintainer@suse.de]
+[gw0] [ 99%] PASSED tests/test_utils.py::test_extract_contact_from_description[Leading text\nPerson: middle@example.com\nTrailing text-middle@example.com]
+[gw4] [ 99%] FAILED tests/test_readme.py::test_readme_usage_up_to_date
+[gw6] [ 99%] PASSED tests/test_utils.py::test_extract_contact_from_description[Multiple lines\nResponsible: contact@example.com\nOther text-contact@example.com]
+tests/test_submission.py::test_rev_filtering_non_sensible_combinations
+[gw4] [ 99%] PASSED tests/test_submission.py::test_rev_filtering_non_sensible_combinations
+tests/test_submission.py::test_rev_filtering_slfo_no_compatible_repos
+[gw4] [ 99%] PASSED tests/test_submission.py::test_rev_filtering_slfo_no_compatible_repos
+tests/test_submissions.py::test_submissions_constructor
+[gw4] [ 99%] PASSED tests/test_submissions.py::test_submissions_constructor
+tests/test_submissions.py::test_submissions_printable
+[gw4] [100%] PASSED tests/test_submissions.py::test_submissions_printable
+ERROR: Coverage failure: total of 99 is less than fail-under=100
+
+
+=================================== FAILURES ===================================
+_____________________ test_sub_comment_with_detailed_args ______________________
+[gw5] linux -- Python 3.13.12 /usr/bin/python3
+
+mocker = <pytest_mock.plugin.MockerFixture object at 0x7f0647344750>
+tmp_path = PosixPath('/tmp/pytest-of-okurz/pytest-12241/popen-gw5/test_sub_comment_with_detailed0')
+
+    def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:
+        mocker.patch("openqabot.args.get_submissions", return_value=[])
+        comment = mocker.patch("openqabot.args.Commenter")
+        comment.return_value.return_value = 0
+        result = runner.invoke(
+            app,
+            [
+                "--token",
+                "foo",
+                "--configs",
+                str(tmp_path),
+                "sub-comment",
+                "--enable-detailed-comments",
+                "--fallback-contact",
+                "Test Contact",
+                "--generic-tool-issues-contact",
+                "@test",
+                "--max-detailed-comment-entries",
+                "5",
+            ],
+        )
+>       assert result.exit_code == 0
+E       assert 2 == 0
+E        +  where 2 = <Result SystemExit(2)>.exit_code
+
+tests/test_args.py:158: AssertionError
+_________________________ test_readme_usage_up_to_date _________________________
+[gw4] linux -- Python 3.13.12 /usr/bin/python3
+
+    def test_readme_usage_up_to_date() -> None:
+        """Ensure the Usage section in Readme.md matches current --help output."""
+        env = os.environ.copy()
+        env["COLUMNS"] = "80"
+        env["NO_COLOR"] = "1"
+        env["TERM"] = "dumb"
+        result = runner.invoke(app, ["--help"], env=env, prog_name="qem-bot.py")
+        help_output = strip_ansi(result.stdout)
+        lines = help_output.splitlines()
+        indented_lines = [("    " + line.strip()).rstrip() for line in lines]
+        formatted_help = "\n".join(indented_lines).strip()
+        expected_block = f"    >>> qem-bot.py --help\n\n    {formatted_help}"
+
+        readme_path = Path("Readme.md")
+        content = readme_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+>       run_readme_usage_check(content, expected_block)
+
+tests/test_readme.py:49:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+content = '[![ci](https://github.com/openSUSE/qem-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/openSUSE/qem-bot/a... is licensed under the MIT license, see LICENSE file for details.\nSome exceptions apply and are marked accordingly.\n'
+expected_block = '    >>> qem-bot.py --help\n\n    Usage: qem-bot.py [OPTIONS] COMMAND [ARGS]...\n\n    QEM-Dashboard, SMELT, Gitea and...                               │\n    ╰──────────────────────────────────────────────────────────────────────────────╯'
+
+    def run_readme_usage_check(content: str, expected_block: str) -> None:
+        """Check if the usage section in content matches expected_block."""
+        start_marker = "<!-- usage_start -->"
+        end_marker = "<!-- usage_end -->"
+
+        if start_marker not in content or end_marker not in content:
+            pytest.fail("Usage markers not found in Readme.md")
+
+        usage_part = content.split(start_marker, maxsplit=1)[1].split(end_marker, maxsplit=1)[0].strip()
+        expected_part = expected_block.strip()
+
+>       assert normalize_whitespace(usage_part) == normalize_whitespace(expected_part), (
+            "Readme.md usage section is outdated or has formatting discrepancies. "
+            "Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it."
+        )
+E       AssertionError: Readme.md usage section is outdated or has formatting discrepancies. Run 'python3 scripts/update_readme.py' or 'make update-readme' to update it.
+E       assert '>>> qem-bot....────────────╯' == '>>> qem-bot....────────────╯'
+E
+E           >>> qem-bot.py --help
+E
+E           Usage: qem-bot.py [OPTIONS] COMMAND [ARGS]...
+E
+E           QEM-Dashboard, SMELT, Gitea and openQA connector
+E           ...
+E
+E         ...Full output truncated (70 lines hidden), use '-vv' to show
+
+tests/test_readme.py:28: AssertionError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.13.12-final-0 _______________
+
+Name                 Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------
+openqabot/args.py      212      2     16      1    99%   119-120
+tests/test_args.py     200      1      2      0    99%   159
+----------------------------------------------------------------
+TOTAL                 9774      3   1026      1    99%
+
+101 files skipped due to complete coverage.
+Coverage XML written to file coverage.xml
+FAIL Required test coverage of 100.0% not reached. Total coverage: 99.96%
+=========================== short test summary info ============================
+FAILED tests/test_args.py::test_sub_comment_with_detailed_args - assert 2 == 0
+FAILED tests/test_readme.py::test_readme_usage_up_to_date - AssertionError: R...
+======================== 2 failed, 648 passed in 4.06s =========================
+make[1]: *** [Makefile:22: test-unit] Error 1
+make[1]: Leaving directory '/home/okurz/local/openSUSE/qem/qem-bot'
+make: *** [Makefile:78: test] Error 2
