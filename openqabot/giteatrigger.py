@@ -3,6 +3,7 @@
 """Trigger testing for PR(s) with certain label."""
 
 from argparse import Namespace
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import chain
 from logging import getLogger
@@ -370,7 +371,8 @@ class GiteaTrigger:
         """
         for trigger_config in self.config_list:
             self.load_prs_for_project(trigger_config.project)
-        for pr in chain.from_iterable(self.prs.values()):
-            self.check_pullrequest(pr)
+
+        with ThreadPoolExecutor() as executor:
+            list(executor.map(self.check_pullrequest, chain.from_iterable(self.prs.values())))
 
         return 0
