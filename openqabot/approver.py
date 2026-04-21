@@ -7,6 +7,7 @@ from __future__ import annotations
 import operator
 import re
 import string
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from enum import Enum, auto
 from functools import lru_cache
@@ -149,7 +150,10 @@ class Approver:
         )
 
         overall_result = True
-        submissions_to_approve = [sub for sub in subreqs if self.approvable(sub)]
+        with ThreadPoolExecutor() as executor:
+            approvable_flags = list(executor.map(self.approvable, subreqs))
+
+        submissions_to_approve = [sub for sub, ok in zip(subreqs, approvable_flags, strict=True) if ok]
 
         log.info("Submissions to approve:")
         for sub in submissions_to_approve:
@@ -157,8 +161,9 @@ class Approver:
 
         if not self.dry:
             osc.conf.get_config(override_apiurl=config.settings.obs_url)
-            for sub in submissions_to_approve:
-                overall_result &= self.approve(sub)
+            with ThreadPoolExecutor() as executor:
+                for result in executor.map(self.approve, submissions_to_approve):
+                    overall_result &= result
 
         log.info("Submission approval process finished")
 
