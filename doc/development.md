@@ -98,16 +98,6 @@ tests/test_amqp.py` to execute a single test.
 
 Run `make checkstyle` to run all style and static analysis checks.
 
-Run `check-maintainability` to check maintainability. This requires the tool
-`radon`. You can also check individual files displaying the exact percentage via
-e.g. `radon mi --show tests/test_loader_incrementconfig.py`. Note that this kind
-of metric is not about specific bad patterns but rather counts constructs like
-`if` statements. Check out the
-[Radon documentation](https://radon.readthedocs.io/en/latest/intro.html) for
-details. There is also
-[documentation about the thresholds](https://radon.readthedocs.io/en/latest/commandline.html#the-mi-command)
-for the grades.
-
 Run `make test-all-commands-unstable` to quickly verify that all bot subcommands
 can be parsed and executed (using `--dry` and `--fake-data`).
 

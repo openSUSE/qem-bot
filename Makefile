@@ -51,11 +51,6 @@ check-code-health: ## Find dead code (vulture)
 	@echo "Checking code health…"
 	@vulture ${SOURCE_FILES} --min-confidence 80
 
-.PHONY: check-maintainability
-check-maintainability: ## Check maintainability index (radon)
-	@echo "Checking maintainability (grade B or worse) …"
-	@radon mi ${SOURCE_FILES} -n B | (! grep ".")
-
 .PHONY: check-types-ty
 check-types-ty: ## Run ty type checker
 	ty check
@@ -71,7 +66,7 @@ checkstyle: ## Run fast style and static analysis checks
 
 .PHONY: checkstyle-all
 checkstyle-all: ## Run all style and static analysis checks
-	@$(MAKE) -j checkstyle check-code-health check-maintainability
+	@$(MAKE) -j checkstyle check-code-health
 
 .PHONY: test
 test: ## Run all tests with coverage analysis and style checks

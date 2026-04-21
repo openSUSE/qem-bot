@@ -41,7 +41,6 @@ dev = [
     "pytest-xdist",
     "pyupgrade",
     "coverage",
-    "radon",
     "responses>=0.21.0",
     "urllib3",
     "ruff",
@@ -155,7 +154,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 9
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101", "S105", "S106", "PLR0917", "D103"]
