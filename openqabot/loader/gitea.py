@@ -518,45 +518,56 @@ def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | Non
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[etree._Element]:
-    """Fetch build results for an OBS project."""
+def _get_project_results(obs_project: str, *, dry: bool) -> tuple[list[etree._Element], bool]:
+    """Fetch build results for an OBS project. Returns a tuple of (results, is_unavailable)."""
     build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
     if dry:
-        return read_xml("build-results-124-" + obs_project).getroot().findall("result")
+        return read_xml("build-results-124-" + obs_project).getroot().findall("result"), False
     try:
-        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
+        return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result"), False
     except urllib.error.HTTPError:
-        results.unavailable.add(obs_project)
         log.info("Build results for project %s unreadable, skipping: %s", obs_project, build_info_url)
-        return []
+        return [], True
 
 
-def _process_obs_url(
+def _fetch_obs_url_data(
     url: str,
-    submission: dict[str, Any],
     *,
     dry: bool,
-    results: BuildResults,
-) -> None:
-    """Process an OBS URL and update submission build results."""
+) -> tuple[str | None, set[str] | None, list[etree._Element], bool]:
+    """Fetch all necessary data for an OBS URL concurrently."""
     if not (project_match := OBS_PROJECT_SHOW_REGEX.search(url)):
-        return
+        return None, None, [], False
     obs_project = project_match.group(1)
     log.debug("Checking OBS project %s", obs_project)
     relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
 
-    for res in _get_project_results(obs_project, dry=dry, results=results):
-        if is_build_result_relevant(res, relevant_archs):
-            add_build_result(submission, res, results)
+    xml_results, is_unavailable = _get_project_results(obs_project, dry=dry)
+    return obs_project, relevant_archs, xml_results, is_unavailable
 
 
-def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
-    """Aggregate build results from multiple OBS URLs into a submission."""
-    results = BuildResults()
+def _process_fetched_data(
+    submission: dict[str, Any],
+    results: BuildResults,
+    futs: list[futures.Future[tuple[str | None, set[str] | None, list[etree._Element], bool]]],
+) -> None:
+    """Process data fetched concurrently in the main thread."""
+    for fut in futures.as_completed(futs):
+        obs_project, relevant_archs, xml_results, is_unavailable = fut.result()
 
-    for url in obs_urls:
-        _process_obs_url(url, submission, dry=dry, results=results)
+        if obs_project is None:
+            continue
 
+        if is_unavailable:
+            results.unavailable.add(obs_project)
+
+        for res in xml_results:
+            if is_build_result_relevant(res, relevant_archs):
+                add_build_result(submission, res, results)
+
+
+def _update_submission_from_results(submission: dict[str, Any], results: BuildResults) -> None:
+    """Update submission dictionary with aggregated build results."""
     if results.unpublished:
         log.info(
             "PR git:%i: Some repos not published yet: %s",
@@ -579,6 +590,17 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
         "all" in config.settings.obs_products_set,
     ) == (1, False):
         submission["scminfo"] = submission.get("scminfo_" + next(iter(config.settings.obs_products_set)), "")
+
+
+def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+    """Aggregate build results from multiple OBS URLs into a submission."""
+    results = BuildResults()
+
+    with futures.ThreadPoolExecutor() as executor:
+        futs = [executor.submit(_fetch_obs_url_data, url, dry=dry) for url in obs_urls]
+        _process_fetched_data(submission, results, futs)
+
+    _update_submission_from_results(submission, results)
 
 
 def add_comments_and_referenced_build_results(
