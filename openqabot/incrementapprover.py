@@ -200,7 +200,10 @@ class IncrementApprover:
         reqid = approval_status.request.reqid
         id_msg = f"OBS request {config.settings.obs_web_url}/request/show/{reqid}"
 
-        if not reasons_to_disapprove and not approval_status.ok_jobs:
+        # Safeguard: only block if NO jobs were ever identified for this request.
+        # If processed_jobs is set but ok_jobs is empty, it means all jobs were filtered
+        # (e.g. development groups) and approval should proceed if there are no other blockers.
+        if not reasons_to_disapprove and not approval_status.ok_jobs and not approval_status.processed_jobs:
             reasons_to_disapprove.append("No openQA jobs were found/checked for this request.")
 
         if self.comment and approval_status.builds:
@@ -448,9 +451,7 @@ class IncrementApprover:
             return 0
 
         if jobs_were_filtered:
-            approval_status.reasons_to_disapprove.append(
-                f"No jobs left for evaluation (all were filtered) for {info_str}"
-            )
+            log.info("All jobs filtered for %s (development groups ignored)", info_str)
             return 0
 
         approval_status.reasons_to_disapprove.append(f"No jobs scheduled for {info_str}")

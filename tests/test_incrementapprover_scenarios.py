@@ -515,12 +515,19 @@ def test_approval_if_failing_jobs_are_in_development_group(
     increment_approver.client.get_single_job = mocker.Mock(return_value=_devel_job(123, result="failed"))
     increment_approver.client.is_devel_group = mocker.Mock(return_value=True)
     mock_post_job = mocker.patch.object(increment_approver.client, "post_job")
+    mock_change_review = mocker.patch("osc.core.change_review_state")
     increment_approver()
 
     # regardless of schedule flag, filtered-out jobs must never trigger post_job
     mock_post_job.assert_not_called()
-    assert "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:" in caplog.text
-    assert "No jobs left for evaluation (all were filtered) for" in caplog.text
+    # All jobs filtered, so approval should proceed (no blocking failures)
+    mock_change_review.assert_called_once()
+    assert mock_change_review.call_args[1]["newstate"] == "accepted"
+    assert "All 0 openQA jobs have passed/softfailed" in mock_change_review.call_args[1]["message"]
+    assert "Approving OBS request https://build.suse.de/request/show/42:" in caplog.text
+    assert "All jobs filtered for" in caplog.text
+    assert "development groups ignored" in caplog.text
+    assert "No jobs left for evaluation (all were filtered)" not in caplog.text
     assert "Scheduling jobs for" not in caplog.text
 
 
