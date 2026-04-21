@@ -340,6 +340,32 @@ def test_trigger_call_execution(
     mock_check.assert_called_once_with(mock_pr)
 
 
+@pytest.mark.parametrize(
+    ("side_effect", "expected_rc", "expected_logged"),
+    [
+        (None, 0, set()),
+        (RuntimeError("boom"), 1, {1, 2, 3}),
+    ],
+    ids=["all PRs evaluated, rc 0", "every raising PR logged with its number, rc 1"],
+)
+def test_trigger_call_fans_out_and_isolates_failures(
+    trigger: GiteaTrigger,
+    mocker: MockerFixture,
+    side_effect: Exception | None,
+    expected_rc: int,
+    expected_logged: set[int],
+) -> None:
+    """Every PR is evaluated concurrently; a raising PR is logged with its number instead of aborting the run."""
+    mocker.patch.object(trigger, "load_prs_for_project")
+    mock_check = mocker.patch.object(trigger, "check_pullrequest", side_effect=side_effect)
+    log_exception = mocker.patch("openqabot.giteatrigger.log.exception")
+    prs = [MagicMock(number=n) for n in (1, 2, 3)]
+    trigger.prs = {"SLFO": cast("list[PullRequest]", prs)}
+    assert trigger() == expected_rc
+    assert {c.args[0] for c in mock_check.call_args_list} == set(prs)
+    assert {c.args[1] for c in log_exception.call_args_list} == expected_logged
+
+
 def test_trigger_call_execution_duplicate_prs(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
     """Cover __call__ duplicate PR filtering logic."""
     mocker.patch.object(trigger, "load_prs_for_project")

@@ -3,6 +3,7 @@
 """Trigger testing for PR(s) with certain label."""
 
 from argparse import Namespace
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import chain
 from logging import getLogger
@@ -362,16 +363,24 @@ class GiteaTrigger:
         self.prs[project] = get_open_prs(self.gitea_token, project, number=self.pr_number)
         log.info("Loaded %d active PRs from %s", len(self.prs[project]), project)
 
+    def _evaluate_pullrequest_safely(self, pullrequest: PullRequest) -> bool:
+        try:
+            self.check_pullrequest(pullrequest)
+        except Exception:
+            log.exception("Unexpected failure while evaluating PR %s", pullrequest.number)
+            return True
+        return False
+
     def __call__(self) -> int:
         """Run test triggering logic.
 
         Returns:
-            int: 0 if all went well
+            int: 0 if every pull request was evaluated, 1 if any evaluation raised
 
         """
         for trigger_config in self.config_list:
             self.load_prs_for_project(trigger_config.project)
-        for pr in chain.from_iterable(self.prs.values()):
-            self.check_pullrequest(pr)
 
-        return 0
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
+            failures = sum(executor.map(self._evaluate_pullrequest_safely, chain.from_iterable(self.prs.values())))
+        return 1 if failures else 0
