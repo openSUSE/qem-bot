@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
     retry: int = Field(default=2, alias="QEM_BOT_RETRY")
+    max_workers: int | None = Field(default=None, alias="QEM_BOT_MAX_WORKERS")
     approve_comment: bool = Field(default=False, alias="QEM_BOT_APPROVE_COMMENT")
 
     # App-specific settings
