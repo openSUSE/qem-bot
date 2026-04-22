@@ -596,7 +596,7 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
     """Aggregate build results from multiple OBS URLs into a submission."""
     results = BuildResults()
 
-    with futures.ThreadPoolExecutor() as executor:
+    with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
         futs = [executor.submit(_fetch_obs_url_data, url, dry=dry) for url in obs_urls]
         _process_fetched_data(submission, results, futs)
 
@@ -823,7 +823,7 @@ def get_submissions_from_open_prs(
     # configure osc to be able to request build info from OBS
     osc.conf.get_config(override_apiurl=config.settings.obs_url)
 
-    with futures.ThreadPoolExecutor() as executor:
+    with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
         future_sub = [
             executor.submit(
                 make_submission_from_gitea_pr,
