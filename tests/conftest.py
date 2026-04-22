@@ -15,7 +15,7 @@ import pytest
 import responses
 
 import openqabot.config as config_module
-from openqabot.approver import Approver
+from openqabot.approver import Approver, validate_job_qam
 from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
@@ -199,7 +199,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     OpenQAInterface.is_devel_group.cache_clear()
 
     Approver.is_job_marked_acceptable_for_submission.cache_clear()
-    Approver.validate_job_qam.cache_clear()
+    validate_job_qam.cache_clear()
     Approver.was_ok_before.cache_clear()
     Approver.get_jobs.cache_clear()
 

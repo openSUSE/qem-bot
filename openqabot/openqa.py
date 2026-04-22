@@ -31,6 +31,12 @@ if TYPE_CHECKING:
 log = logging.getLogger("bot.openqa")
 
 
+def handle_job_not_found(job_id: int) -> None:
+    """Handle case where a job is not found on openQA."""
+    log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
+    update_job(job_id, {"obsolete": True})
+
+
 class OpenQAInterface:
     """Interface to openQA."""
 
@@ -69,12 +75,6 @@ class OpenQAInterface:
         except Exception as e:
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
-
-    @staticmethod
-    def handle_job_not_found(job_id: int) -> None:
-        """Handle case where a job is not found on openQA."""
-        log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
-        update_job(job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         """Fetch openQA jobs matching the given criteria."""

@@ -45,6 +45,7 @@ check-conventions: ## Check for banned coding patterns
 		echo "   Fix: Use the 'mocker' fixture (pytest-mock) or a 'with patch():' context manager."; \
 		exit 1; \
 	fi
+	python3 scripts/check_conventions.py
 
 .PHONY: check-code-health
 check-code-health: ## Find dead code (vulture)

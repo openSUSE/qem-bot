@@ -92,10 +92,8 @@ def test_submissions_call_with_issues() -> None:
 @pytest.fixture
 def request_mock(mocker: MockerFixture) -> Generator[None, None, None]:
     class MockResponse:
-        # mock json() method always returns a specific testing dictionary
-        @staticmethod
-        def json() -> list[dict]:
-            return [{"flavor": None}]
+        def __init__(self) -> None:
+            self.json = lambda: [{"flavor": None}]
 
     return mocker.patch("openqabot.types.submissions.retried_requests.get", return_value=MockResponse())
 

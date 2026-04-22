@@ -11,7 +11,14 @@ import pytest
 from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
-from openqabot.osclib.comments import CommentAPI, OscCommentsEmptyError, OscCommentsValueError, comment_as_dict
+from openqabot.osclib.comments import (
+    CommentAPI,
+    OscCommentsEmptyError,
+    OscCommentsValueError,
+    add_marker,
+    comment_as_dict,
+    truncate,
+)
 
 
 def test_comment_as_dict() -> None:
@@ -77,13 +84,13 @@ def test_comment_find() -> None:
 
 
 def test_add_marker() -> None:
-    res = CommentAPI.add_marker("text", "bot", {"k": "v"})
+    res = add_marker("text", "bot", {"k": "v"})
     assert "<!-- bot k=v -->" in res
     assert "text" in res
 
 
 def test_add_marker_no_info() -> None:
-    res = CommentAPI.add_marker("text", "bot")
+    res = add_marker("text", "bot")
     assert "<!-- bot -->" in res
     assert "text" in res
 
@@ -102,20 +109,19 @@ def test_add_comment(mocker: MockerFixture) -> None:
 
 
 def test_truncate() -> None:
-    assert CommentAPI.truncate("abc", length=3) == "abc"
-    assert CommentAPI.truncate("abcd", length=3) == "abc"
+    assert truncate("abc", length=3) == "abc"
+    assert truncate("abcd", length=3) == "abc"
     # test truncation length
-    res = CommentAPI.truncate("very long comment", length=10)
+    res = truncate("very long comment", length=10)
     assert len(res) <= 10
     # pre tags - just check it doesn't crash and returns something within length
-    res = CommentAPI.truncate("<pre>code</pre>", length=10)
+    res = truncate("<pre>code</pre>", length=10)
     assert len(res) <= 17  # length + suffix + \n</pre>
 
 
 def test_truncate_long() -> None:
-    api = CommentAPI("https://api.url")
     long_msg = "a" * 2000
-    res = api.truncate(long_msg, length=1000)
+    res = truncate(long_msg, length=1000)
     assert len(res) <= 1000
     assert res.endswith("...")
 
@@ -137,15 +143,13 @@ def test_comment_find_wrong_bot() -> None:
 
 
 def test_truncate_very_short() -> None:
-    api = CommentAPI("https://api.url")
-    assert api.truncate("some long comment", length=5) == "some "
+    assert truncate("some long comment", length=5) == "some "
 
 
 def test_truncate_near_closing_pre() -> None:
-    api = CommentAPI("https://api.url")
     msg = "text <pre>code</pre> more"
     # end near </pre> (index 15)
-    res = api.truncate(msg, length=18)
+    res = truncate(msg, length=18)
     assert res == "text ..."
 
 
@@ -215,10 +219,9 @@ def test_add_comment_with_parent(mocker: MockerFixture) -> None:
 
 
 def test_truncate_unbalanced_pre() -> None:
-    api = CommentAPI("https://api.url")
     # more <pre> than </pre>, and length triggers truncation
     msg = "<pre>some very long code block"
-    res = api.truncate(msg, length=15)
+    res = truncate(msg, length=15)
     # length 15 - suffix 3 = 12. <pre> found, so end -= 7 -> 5.
     assert res == "<pre>...\n</pre>"
 

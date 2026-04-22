@@ -29,6 +29,43 @@ log = getLogger("bot.types.aggregate")
 ALL_ISSUES_KEY = "TEST_ISSUES[]"
 
 
+def _normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
+    """Normalize repository configuration from config.settings."""
+    try:
+        return {key: ProdVer.from_issue_channel(value) for key, value in config["test_issues"].items()}
+    except KeyError as e:
+        raise NoTestIssuesError from e
+
+
+def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
+    """Determine the next build number based on current date and repohash."""
+    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+
+    if build.startswith(today) and repohash == old_repohash:
+        raise SameBuildExistsError
+
+    counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
+    return f"{today}-{counter}"
+
+
+def _add_incident_data(full_post: dict[str, Any], data: PostData) -> None:
+    """Add incident-specific data to the dashboard post."""
+    for template, issues in data.test_submissions.items():
+        full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
+        full_post["qem"]["incidents"] += issues
+    for template, issues in data.test_repos.items():
+        full_post["openqa"][template] = ",".join(issues)
+
+    # Remove duplicates while preserving Submission objects
+    seen = set()
+    unique_incidents = []
+    for sub in full_post["qem"]["incidents"]:
+        if sub.id not in seen:
+            seen.add(sub.id)
+            unique_incidents.append(sub)
+    full_post["qem"]["incidents"] = unique_incidents
+
+
 class PostData(NamedTuple):
     """Data to be posted to dashboard."""
 
@@ -47,30 +84,11 @@ class Aggregate(BaseConf):
         self.flavor = config.config["FLAVOR"]
         self.archs = config.config["archs"]
         self.onetime = config.config.get("onetime", False)
-        self.test_issues = self.normalize_repos(config.config)
-
-    @staticmethod
-    def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:
-        """Normalize repository configuration from config.settings."""
-        try:
-            return {key: ProdVer.from_issue_channel(value) for key, value in config["test_issues"].items()}
-        except KeyError as e:
-            raise NoTestIssuesError from e
+        self.test_issues = _normalize_repos(config.config)
 
     def __repr__(self) -> str:
         """Return a string representation of the Aggregate."""
         return f"<Aggregate product: {self.product}>"
-
-    @staticmethod
-    def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
-        """Determine the next build number based on current date and repohash."""
-        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-
-        if build.startswith(today) and repohash == old_repohash:
-            raise SameBuildExistsError
-
-        counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
-        return f"{today}-{counter}"
 
     def filter_submissions(self, submissions: list[Submission]) -> list[Submission]:
         """Filter out submissions that are not suitable for aggregate tests."""
@@ -111,23 +129,6 @@ class Aggregate(BaseConf):
         version = self.test_issues[issue].version
         base_url = f"{config.settings.download_maintenance}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if get_channel_type(product) == ChannelType.OPENSUSE else f"{base_url}_{issues_arch}/"
-
-    def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # noqa: PLR6301
-        """Add incident-specific data to the dashboard post."""
-        for template, issues in data.test_submissions.items():
-            full_post["openqa"][template] = ",".join(str(x.id) for x in issues)
-            full_post["qem"]["incidents"] += issues
-        for template, issues in data.test_repos.items():
-            full_post["openqa"][template] = ",".join(issues)
-
-        # Remove duplicates while preserving Submission objects
-        seen = set()
-        unique_incidents = []
-        for sub in full_post["qem"]["incidents"]:
-            if sub.id not in seen:
-                seen.add(sub.id)
-                unique_incidents.append(sub)
-        full_post["qem"]["incidents"] = unique_incidents
 
     def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
         """Finalize the dashboard post with metadata and summary information."""
@@ -175,7 +176,7 @@ class Aggregate(BaseConf):
         if config.settings.deprioritize_limit is not None:
             full_post["openqa"]["_DEPRIORITIZE_LIMIT"] = config.settings.deprioritize_limit
 
-        self._add_incident_data(full_post, data)
+        _add_incident_data(full_post, data)
 
         if not full_post["qem"]["incidents"]:
             return None
@@ -228,7 +229,7 @@ class Aggregate(BaseConf):
         old_build = old_jobs[0].get("build", "") if old_jobs else ""
 
         try:
-            build = self.get_buildnr(
+            build = get_buildnr(
                 repohash,
                 old_repohash,
                 old_build,
