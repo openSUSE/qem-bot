@@ -76,7 +76,7 @@ class OpenQABot:
             else:
                 self.post_qem(job["qem"], job["api"])
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config_module.settings.max_workers) as executor:
             wait([executor.submit(poster, job) for job in post])
         log.info("Bot run completed")
         return 0
