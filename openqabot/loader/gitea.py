@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from openqabot.types.pullrequest import PullRequest
-    from openqabot.types.types import Repos
+from openqabot.types.types import VERSION_EXTRACT_REGEX, ProductVersion, Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 
@@ -54,7 +54,6 @@ class BuildResults:
 
 PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
-VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
 OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
 # Regex to find all HTTPS URLs, excluding common trailing punctuation like dots or parentheses
 # that are likely part of the surrounding text (e.g. at the end of a sentence or in Markdown).
@@ -175,10 +174,10 @@ def get_product_name(obs_project: str) -> str:
     return product_match.group(1) if product_match else ""
 
 
-def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, str]:
+def get_product_name_and_version_from_scmsync(scmsync_url: str) -> tuple[str, ProductVersion | None]:
     """Extract product name and version from an scmsync URL."""
     m = SCMSYNC_REGEX.search(scmsync_url)
-    return (m.group(1), m.group(2)) if m else ("", "")
+    return (m.group(1), ProductVersion(m.group(2))) if m else ("", None)
 
 
 def compute_repo_url_for_job_setting(
@@ -321,14 +320,17 @@ def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
     return len(qam_states)
 
 
-def _extract_version(name: str, prefix: str) -> str:
+def _extract_version(name: str, prefix: str) -> ProductVersion | None:
     """Extract version number from a package name string."""
     remainder = name.removeprefix(prefix)
-    return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
+    return next(
+        (ProductVersion(part) for part in remainder.split("-") if VERSION_EXTRACT_REGEX.fullmatch(part)),
+        None,
+    )
 
 
 @lru_cache(maxsize=512)
-def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
+def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> ProductVersion | None:
     """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
     url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo"
@@ -339,34 +341,34 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
         data = r.json()["data"]
     except requests.exceptions.HTTPError as e:
         log.warning("Repo ignored: Could not query repository '%s' (%s->%s): %s", repository, product_name, project, e)
-        return ""
+        return None
     # Catching both because requests' JSONDecodeError might not inherit from json's
     except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
         log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
-        return ""
+        return None
     except requests.exceptions.RequestException as e:
         log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
-        return ""
+        return None
     versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
-    return next((v for v in versions if len(v) > 0), "")
+    return next((v for v in versions if v is not None), None)
 
 
-def _get_product_version(res: etree._Element, project: str, product_name: str) -> str:
+def _get_product_version(res: etree._Element, project: str, product_name: str) -> ProductVersion | None:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
     product_version = next(
         (
             pv
-            for _, pv in (get_product_name_and_version_from_scmsync(e.text) for e in res.findall("scmsync"))
-            if len(pv) > 0
+            for _, pv in (get_product_name_and_version_from_scmsync(e.text) for e in res.findall("scmsync") if e.text)
+            if pv is not None
         ),
-        "",
+        None,
     )
 
     # read product version from directory listing if the project is for a concrete product
     if (
-        len(product_name) != 0
-        and len(product_version) == 0
+        product_name
+        and product_version is None
         and ("all" in config.settings.obs_products_set or product_name in config.settings.obs_products_set)
     ):
         product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
@@ -389,9 +391,9 @@ def add_channel_for_build_result(
     product_version = _get_product_version(res, project, product_name)
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
-    if len(product_version) > 0:
+    if product_version is not None:
         channel = f"{channel}#{product_version}"
-    elif len(product_name) > 0:
+    elif product_name:
         log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
 
