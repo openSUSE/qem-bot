@@ -372,7 +372,7 @@ class GiteaTrigger:
         for trigger_config in self.config_list:
             self.load_prs_for_project(trigger_config.project)
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             futures = [executor.submit(self.check_pullrequest, pr) for pr in chain.from_iterable(self.prs.values())]
             for future in as_completed(futures):
                 future.result()

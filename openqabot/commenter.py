@@ -47,7 +47,7 @@ class Commenter:
         """Run the commenting process."""
         log.info("Starting to comment SMELT incidents in OBS")
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             futures = [executor.submit(self.comment_on_submission, sub) for sub in self.submissions]
             for future in as_completed(futures):
                 future.result()
