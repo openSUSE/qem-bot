@@ -46,12 +46,12 @@ class GiteaTrigger:
         """
         self.dry: bool = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
-        self.gitea_repo: Any = args.gitea_repo
+        self.gitea_project: Any = args.gitea_project
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface()
         self.pr_required_labels: set[str] = set(args.pr_label.split(","))
         staging_config: Any = get_gitea_staging_config(self.gitea_token)
-        self.gitea_project = staging_config["StagingProject"].replace(":", ":/")
+        self.staging_config_project = staging_config["StagingProject"].replace(":", ":/")
         self.staging_config_qa_labels: dict[str, str] = {
             item["Label"]: item["Name"] for item in staging_config.get("QA", [])
         }
@@ -97,7 +97,7 @@ class GiteaTrigger:
 
         """
         log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
-        repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.gitea_project)
+        repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.staging_config_project)
         matched_iso = Crawler(verify=True).get_regex_match_from_url(repo_url, ISO_REGEX)
 
         if not matched_iso:
@@ -153,13 +153,13 @@ class GiteaTrigger:
         """Get all open PRs and filter them by defined label."""
         open_prs: list[PullRequest] = get_open_prs(
             self.gitea_token,
-            self.gitea_repo,
+            self.gitea_project,
             number=self.pr_number,
         )
         log.info(
             "Loaded %d active PRs from %s",
             len(open_prs),
-            self.gitea_repo,
+            self.gitea_project,
         )
         for pr in open_prs:
             # we're looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
