@@ -57,7 +57,13 @@ def test_updates_run(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_sync_smelt(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.SMELTSync")
     syncer.return_value.return_value = 0
+    # Test top-level (deprecated)
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "smelt-sync"])
+    assert result.exit_code == 0
+    syncer.assert_called_once()
+    # Test advanced group
+    syncer.reset_mock()
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "smelt-sync"])
     assert result.exit_code == 0
     syncer.assert_called_once()
 
@@ -65,9 +71,26 @@ def test_sync_smelt(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_sync_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.GiteaSync")
     syncer.return_value.return_value = 0
+    # Test top-level (deprecated)
     result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-sync"])
     assert result.exit_code == 0
     syncer.assert_called_once()
+    # Test advanced group
+    syncer.reset_mock()
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "gitea-sync"])
+    assert result.exit_code == 0
+    syncer.assert_called_once()
+
+
+def test_sync(mocker: MockerFixture, tmp_path: Path) -> None:
+    smelt = mocker.patch("openqabot.args.SMELTSync")
+    smelt.return_value.return_value = 0
+    gitea = mocker.patch("openqabot.args.GiteaSync")
+    gitea.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sync"])
+    assert result.exit_code == 0
+    smelt.assert_called_once()
+    gitea.assert_called_once()
 
 
 def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -106,7 +129,7 @@ def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
     mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
     comment.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-comment"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "sub-comment"])
     assert result.exit_code == 0
     comment.assert_called_once()
 
@@ -165,7 +188,7 @@ def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
     repo_diff = mocker.patch("openqabot.args.RepoDiff")
     repo_diff.return_value.return_value = 0
     # Provide a valid configs directory to avoid Configuration error in main callback
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "repo-diff"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "repo-diff"])
     assert result.exit_code == 0
     repo_diff.assert_called_once()
 
