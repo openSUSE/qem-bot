@@ -162,7 +162,7 @@ class GiteaTrigger:
             self.gitea_repo,
         )
         for pr in open_prs:
-            # we looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
+            # we're looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
             # at least one for labels defined in staging.config
             qa_labels = set(self.staging_config_qa_labels.keys())
             if pr.has_all_labels(self.pr_required_labels) and pr.has_any_label(qa_labels):
