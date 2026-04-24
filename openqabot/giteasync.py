@@ -25,7 +25,7 @@ class GiteaSync:
         self.fake_data: bool = args.fake_data
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         self.pr_number: int | None = args.pr_number
-        self.gitea_repo: str = args.gitea_repo
+        self.gitea_project: str = args.gitea_project
         self.allow_build_failures: bool = args.allow_build_failures
         self.consider_unrequested_prs: bool = args.consider_unrequested_prs
         self.retry = args.retry
@@ -54,13 +54,13 @@ class GiteaSync:
     def _initial_sync(self) -> int:
         open_prs: list[Any] = get_open_prs(
             self.gitea_token,
-            self.gitea_repo,
+            self.gitea_project,
             number=self.pr_number,
         )
         log.info(
             "Loaded %d active PRs from %s",
             len(open_prs),
-            self.gitea_repo,
+            self.gitea_project,
         )
         submissions = get_submissions_from_open_prs(
             open_prs,
@@ -79,8 +79,8 @@ class GiteaSync:
 
     def _on_amqp_message(self, message: dict[str, Any], _: str) -> None:
         pr = PullRequest.from_json(message["pull_request"])
-        if pr and pr.project == self.gitea_repo:
-            log.info("PR #%s on %s %s", pr.number, self.gitea_repo, message["action"])
+        if pr and pr.project == self.gitea_project:
+            log.info("PR #%s on %s %s", pr.number, self.gitea_project, message["action"])
             submission = make_submission_from_gitea_pr(
                 pr,
                 self.gitea_token,

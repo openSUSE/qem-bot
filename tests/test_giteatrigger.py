@@ -23,7 +23,7 @@ def mock_args() -> Namespace:
     return Namespace(
         dry=False,
         gitea_token="fake_token",
-        gitea_repo="repo/name",
+        gitea_project="repo/name",
         pr_number=None,
         pr_label="needs-testing",
         token="dashboard_token",

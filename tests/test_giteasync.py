@@ -120,7 +120,7 @@ def args() -> Namespace:
         token="123",
         gitea_token="456",
         retry=False,
-        gitea_repo="products/SLFO",
+        gitea_project="products/SLFO",
         allow_build_failures=True,
         consider_unrequested_prs=False,
         pr_number=None,
