@@ -400,6 +400,13 @@ def gitea_trigger(  # noqa: PLR0913
     fallback_contact: fallback_contact_option = None,
     generic_tool_issues_contact: generic_tool_issues_contact_option = None,
     max_detailed_comment_entries: max_detailed_comment_entries_option = None,
+    trigger_config: Annotated[
+        Path,
+        typer.Option(
+            "--trigger-config",
+            help="YAML document with necessary values needed for triggering",
+        ),
+    ],
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
@@ -407,6 +414,7 @@ def gitea_trigger(  # noqa: PLR0913
     args.pr_number = pr_number
     args.pr_label = pr_label
     args.comment = comment
+    args.trigger_config = trigger_config
 
     _apply_detailed_comment_options(
         args,

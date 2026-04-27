@@ -15,6 +15,8 @@ from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFound
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer, Repos
 
+from .fixtures.submissions import MockSubmission
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
@@ -419,3 +421,16 @@ def test_rev_filtering_slfo_no_compatible_repos(mocker: MockerFixture) -> None:
     # Should raise NoRepoFoundError (caught by compute_revisions_for_product_repo returning False)
     # because the only repo is SLES but we want SL-Micro
     assert not sub.compute_revisions_for_product_repo("SL-Micro", "16.0")
+
+
+def test_mock_submission_revisions_fallback_none() -> None:
+    # Coverage for line 44 in tests/fixtures/submissions.py
+    sub = MockSubmission(revisions=None)
+    assert sub.revisions_with_fallback("arch", "ver") is None
+
+
+def test_mock_submission_contains_package_none() -> None:
+    # Coverage for line 49 in tests/fixtures/submissions.py
+    sub = MockSubmission(packages=["pkg1"])
+    assert sub.contains_package(["pkg1"]) is True
+    assert sub.contains_package(["other"]) is False
