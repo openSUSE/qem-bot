@@ -11,12 +11,12 @@ import pytest
 import responses
 from responses import registries
 
+from openqabot.loader.config import get_yml_list
 from openqabot.types.types import Data
 from openqabot.utils import (
     compare_submission_data,
     create_logger,
     extract_contact_from_description,
-    get_yml_list,
     make_retry_session,
     normalize_results,
     unique_dicts,

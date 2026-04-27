@@ -5,9 +5,13 @@
 from __future__ import annotations
 
 from enum import Enum, auto
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from openqabot.config import OBS_REPO_TYPE
+
+if TYPE_CHECKING:
+    from openqabot.loader.triggerconfig import TriggerConfig
+    from openqabot.types.isomatch import IsoMatch
 
 
 class ChannelType(Enum):
@@ -108,6 +112,23 @@ class Data(NamedTuple):
     version: str
     build: str
     product: str
+
+    @classmethod
+    def from_trigger_config_and_matched_iso(
+        cls, trigger_config: TriggerConfig, matched_iso: IsoMatch, submission_id: int
+    ) -> Data:
+        """Generate Data object from TriggerConfig and IsoMatch."""
+        return cls(
+            submission_id,
+            "git",
+            0,
+            trigger_config.flavor,
+            matched_iso.arch,
+            trigger_config.distri,
+            matched_iso.version,
+            matched_iso.build,
+            matched_iso.product,
+        )
 
 
 class ArchVer(NamedTuple):

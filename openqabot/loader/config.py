@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from ruamel.yaml import YAML, YAMLError
 from ruamel.yaml.constructor import ConstructorError, SafeConstructor
@@ -16,14 +16,81 @@ from openqabot.types.aggregate import Aggregate
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Data
-from openqabot.utils import get_yml_list
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
 
 log = getLogger("bot.loader.config")
+
+
+class ConfigWithSettings(Protocol):
+    """Protocol for configuration objects with settings attribute."""
+
+    settings: dict[str, Any]
+
+
+T = TypeVar("T", bound="ConfigWithSettings")
+
+
+def get_yml_list(path: Path) -> list[Path]:
+    """Create a list of YAML filenames from a directory or a single file path."""
+    return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
+
+
+def _load_one_config(
+    file_path: Path,
+    yaml_reader: YAML,
+    config_key: str,
+    loader_func: Callable[[Any], T],
+    *,
+    load_defaults: bool,
+) -> Iterator[T]:
+    """Load configurations from a single YAML file.
+
+    Yields:
+        Loaded configuration objects.
+
+    """
+    try:
+        log.debug("Loading %s's configuration from '%s'", config_key, file_path)
+        yaml_data = yaml_reader.load(file_path)
+        if not yaml_data:
+            return
+
+        raw_items = yaml_data.get(config_key, [])
+        if isinstance(raw_items, dict):
+            raw_items = list(raw_items.values())
+
+        items = [loader_func(item) for item in raw_items]
+
+        if load_defaults:
+            defaults = yaml_data.get("settings", {})
+            for item in items:
+                item.settings = defaults | item.settings
+
+        yield from items
+    except AttributeError:
+        log.debug("File '%s' skipped: Not a valid %s's configuration", file_path, config_key)
+    except (YAMLError, FileNotFoundError, PermissionError) as e:
+        log.info("%s's configuration skipped: Could not load '%s': %s", config_key, file_path, e)
+
+
+def get_configs_from_path(
+    path: Path,
+    config_key: str,
+    loader_func: Callable[[Any], T],
+    *,
+    load_defaults: bool = True,
+) -> list[T]:
+    """Load configurations from a file or directory."""
+    yaml_reader = YAML(typ="safe")
+    return [
+        item
+        for file_path in get_yml_list(path)
+        for item in _load_one_config(file_path, yaml_reader, config_key, loader_func, load_defaults=load_defaults)
+    ]
 
 
 def _try_load(loader: YAML, path: Path) -> dict | None:

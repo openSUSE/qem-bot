@@ -6,21 +6,16 @@ from __future__ import annotations
 
 import pprint
 import re
-from dataclasses import dataclass, field
-from itertools import chain
+from dataclasses import dataclass, field, fields, replace
 from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
-import ruamel.yaml
-from ruamel.yaml import YAML
-
 from openqabot import config
-from openqabot.utils import get_yml_list
+
+from .config import get_configs_from_path
 
 if TYPE_CHECKING:
     from argparse import Namespace
-    from collections.abc import Iterator
-    from pathlib import Path
 
     from openqabot.types.increment import BuildInfo
 
@@ -112,10 +107,10 @@ class IncrementConfig:
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
         return f"{self.distri} ({settings_str})"
 
-    @staticmethod
-    def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
+    @classmethod
+    def from_config_entry(cls, entry: dict[str, Any]) -> IncrementConfig:
         """Create an IncrementConfig from a dictionary entry."""
-        return IncrementConfig(
+        return cls(
             distri=entry["distri"],
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
@@ -138,74 +133,38 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path, *, load_defaults: bool = True) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a YAML file."""
-        try:
-            log.debug("Loading increment configuration from '%s'", file_path)
-            yaml = YAML(typ="safe").load(file_path)
-            items = list(
-                map(
-                    IncrementConfig.from_config_entry,
-                    yaml.get("product_increments", []),
-                )
-            )
-            # Apply default settings to all items
-            if load_defaults:
-                defaults = yaml.get("settings", {})
-                for item in items:
-                    item.settings = defaults | item.settings
-        except AttributeError:
-            log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
-            return iter(())
-        except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
-            log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
-            return iter(())
-        else:
-            return iter(items)
-
-    @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a file or directory."""
-        return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
-
-    @staticmethod
     def from_args(args: Namespace) -> list[IncrementConfig]:
         """Create increment configurations from command line arguments."""
         source = args.increment_config or (
             args.configs if getattr(args, "configs", None) and args.configs.exists() else None
         )
 
-        if configs := (list(IncrementConfig.from_config_path(source)) if source else []):
-            # Apply CLI filter overrides to YAML-loaded configs if they differ from defaults
-            overrides = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
-            for c in configs:
-                for field, default in overrides.items():
-                    if (val := getattr(args, field, default)) != default:
-                        setattr(c, field, val)
-            return configs
+        if source:
+            configs = get_configs_from_path(source, "product_increments", IncrementConfig.from_config_entry)
+            if configs:
+                return IncrementConfig._apply_cli_overrides(configs, args)
 
-        # Create a dictionary from arguments for IncrementConfig
-        config_args = {
-            field_name: getattr(args, field_name)
-            for field_name in [
-                "distri",
-                "version",
-                "flavor",
-                "arch",
-                "flavor_suffix",
-                "project_base",
-                "build_project_suffix",
-                "diff_project_suffix",
-                "build_listing_sub_path",
-                "build_regex",
-                "product_regex",
-                "version_regex",
-                "packages",
-                "archs",
-                "settings",
-                "additional_builds",
-                "reference_repos",
-            ]
-            if hasattr(args, field_name)
-        }
-        return [IncrementConfig(**config_args)]
+        return [IncrementConfig._create_from_args(args)]
+
+    @staticmethod
+    def _apply_cli_overrides(configs: list[IncrementConfig], args: Namespace) -> list[IncrementConfig]:
+        """Apply CLI argument overrides to loaded configs.
+
+        Only override when CLI args differ from expected defaults (not dataclass defaults).
+        This allows configs to specify their own values while still supporting CLI overrides.
+        """
+        cli_defaults = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
+        overrides = {}
+
+        for field_name, default_value in cli_defaults.items():
+            if hasattr(args, field_name) and (arg_value := getattr(args, field_name)) != default_value:
+                overrides[field_name] = arg_value
+
+        return [replace(config, **overrides) if overrides else config for config in configs]
+
+    @staticmethod
+    def _create_from_args(args: Namespace) -> IncrementConfig:
+        """Create a single IncrementConfig from CLI arguments."""
+        all_fields = {f.name for f in fields(IncrementConfig)}
+        config_args = {field_name: getattr(args, field_name) for field_name in all_fields if hasattr(args, field_name)}
+        return IncrementConfig(**config_args)

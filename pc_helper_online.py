@@ -10,8 +10,9 @@ from typing import Any
 
 from ruamel.yaml import YAML, YAMLError
 
+from openqabot.loader.config import get_yml_list
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
-from openqabot.utils import create_logger, get_yml_list
+from openqabot.utils import create_logger
 
 
 def _process_config_file(p: Path, loader: YAML, log: Any) -> None:  # noqa: ANN401

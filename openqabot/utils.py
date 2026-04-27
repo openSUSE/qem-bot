@@ -15,9 +15,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from .types.types import Data
+
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
@@ -47,11 +46,6 @@ def normalize_whitespace(text: str) -> str:
     text = re.sub(r" +", " ", text)
     # Strip leading/trailing whitespace from each line and the whole block
     return "\n".join(line.strip() for line in text.splitlines()).strip()
-
-
-def get_yml_list(path: Path) -> list[Path]:
-    """Create a list of YAML filenames from a directory or a single file path."""
-    return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
 
 
 def walk(data: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
