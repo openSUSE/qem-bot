@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, NoReturn, cast
+from typing import TYPE_CHECKING, Any, NoReturn
 from unittest.mock import MagicMock
 
 import pytest
@@ -181,7 +181,7 @@ def test_slfo_channels_and_revisions() -> None:
 
 def test_sub_rev_multiple_repos(mocker: MockerFixture) -> None:
     data: Any = deepcopy(test_data)
-    cast("Any", data["channels"]).append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
+    data["channels"].append("SUSE:Updates:SLE-Module-Basesystem:15-SP4:x86_64")
     sub = Submission(data)
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
     sub.compute_revisions_for_product_repo(None, None)

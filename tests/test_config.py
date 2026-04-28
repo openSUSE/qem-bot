@@ -24,25 +24,25 @@ def _keyword_str_values(tree: ast.AST, arg: str) -> set[str]:
 
 def test_download_maintenance_override() -> None:
     """Test that download_maintenance_base_url overrides the default."""
-    settings = Settings(download_maintenance_base_url="http://custom.url")
+    settings = Settings(DOWNLOAD_MAINTENANCE_BASE_URL="http://custom.url")
     assert settings.download_maintenance == "http://custom.url"
 
 
 def test_git_review_bot_user_default() -> None:
     """Test the default value for git_review_bot_user."""
-    settings = Settings(obs_group="mygroup")
+    settings = Settings(OBS_GROUP="mygroup")
     assert settings.git_review_bot_user == "mygroup-review"
 
 
 def test_git_review_bot_user_override() -> None:
     """Test that GIT_REVIEW_BOT overrides the default."""
-    settings = Settings(git_review_bot="mybot")
+    settings = Settings(GIT_REVIEW_BOT="mybot")
     assert settings.git_review_bot_user == "mybot"
 
 
 def test_git_review_bot_user_empty() -> None:
     """Test that explicit empty GIT_REVIEW_BOT disables the bot user."""
-    settings = Settings(git_review_bot="")
+    settings = Settings(GIT_REVIEW_BOT="")
     assert not settings.git_review_bot_user
 
 
@@ -75,32 +75,32 @@ def test_cli_envvars_covered_by_settings() -> None:
 def test_obs_web_url_property(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test the obs_web_url property."""
     monkeypatch.delenv("OBS_URL", raising=False)
-    settings = Settings(obs_url="https://api.suse.de")
+    settings = Settings(OBS_URL="https://api.suse.de")
     assert settings.obs_web_url == "https://build.suse.de"
 
-    settings = Settings(obs_url="https://api.opensuse.org")
+    settings = Settings(OBS_URL="https://api.opensuse.org")
     assert settings.obs_web_url == "https://build.opensuse.org"
 
-    settings = Settings(obs_url="https://some.api.server.com")
+    settings = Settings(OBS_URL="https://some.api.server.com")
     assert settings.obs_web_url == "https://some.build.server.com"
 
 
 def test_obs_products_set() -> None:
     """Test the obs_products_set property."""
-    settings = Settings(obs_products="p1,p2,p3")
+    settings = Settings(OBS_PRODUCTS="p1,p2,p3")
     assert settings.obs_products_set == {"p1", "p2", "p3"}
 
 
 def test_dashboard_token_dict() -> None:
     """Test the dashboard_token_dict property."""
-    settings = Settings(token="mytoken")
+    settings = Settings(QEM_BOT_TOKEN="mytoken")
     assert settings.dashboard_token_dict == {"Authorization": "Token mytoken"}
 
 
 def test_insecure_setting() -> None:
     """Test the insecure setting."""
-    settings = Settings(insecure=True)
+    settings = Settings(QEM_BOT_INSECURE=True)
     assert settings.insecure is True
 
-    settings = Settings(insecure=False)
+    settings = Settings(QEM_BOT_INSECURE=False)
     assert settings.insecure is False
