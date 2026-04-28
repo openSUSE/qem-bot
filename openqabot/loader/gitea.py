@@ -157,10 +157,10 @@ def reviews_url(repo_name: str, number: int) -> str:
     return f"repos/{repo_name}/pulls/{number}/reviews"
 
 
-def changed_files_url(repo_name: str, number: int) -> str:
+def changed_files_url(project: str, number: int) -> str:
     """Construct the URL for PR changed files."""
     # https://docs.gitea.com/api/1.25/#tag/repository/operation/repoGetPullRequestFiles
-    return f"repos/{repo_name}/pulls/{number}/files"
+    return f"repos/{project}/pulls/{number}/files"
 
 
 def comments_url(repo_name: str, number: int) -> str:
@@ -215,10 +215,10 @@ def get_open_prs(token: dict[str, str], repo: str, *, number: int | None) -> lis
     return _get_single_pr(token, repo, number)
 
 
-def _get_single_pr(token: dict[str, str], repo: str, number: int) -> list[PullRequest]:
+def _get_single_pr(token: dict[str, str], project: str, number: int) -> list[PullRequest]:
     try:
         # https://docs.gitea.com/api/1.25/#tag/repository/operation/repolistPullRequests
-        if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{repo}/pulls/{number}", token))):
+        if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{project}/pulls/{number}", token))):
             return [pr]
     except (requests.exceptions.RequestException, json.JSONDecodeError) as ex:
         log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # noqa: G201

@@ -5,29 +5,17 @@
 import logging
 from argparse import Namespace
 from pathlib import Path
-from unittest.mock import ANY
 
 import pytest
-from pytest_mock import MockerFixture
 
 from openqabot.loader.incrementconfig import IncrementConfig
-
-
-def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) -> None:
-    invalid_yaml_file = tmp_path / "invalid.yml"
-    invalid_yaml_file.write_text("key: value:")
-
-    mock_logger = mocker.patch("openqabot.loader.incrementconfig.log")
-    configs = list(IncrementConfig.from_config_file(invalid_yaml_file))
-
-    assert configs == []
-    mock_logger.info.assert_any_call("Increment configuration skipped: Could not load '%s': %s", invalid_yaml_file, ANY)
+from openqabot.utils import get_configs_from_path
 
 
 def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.increment_config")
     path = Path("tests/fixtures/config-increment-approver")
-    configs = [*IncrementConfig.from_config_path(path)]
+    configs = get_configs_from_path(path, "product_increments", IncrementConfig.from_config_entry)
     assert configs[0].distri == "foo"
     assert configs[0].version == "any"
     assert configs[0].flavor == "any"
@@ -49,11 +37,16 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert configs[1].diff_project() == "none"
 
     path = Path("tests/fixtures/config")
-    caplog.set_level(logging.DEBUG, logger="bot.increment_approver")
-    configs = IncrementConfig.from_config_path(path)
-    assert [*configs] == []
-    assert "File 'tests/fixtures/config/01_single.yml' skipped: Not a valid increment configuration" in caplog.text
-    assert "Loading increment configuration from 'tests/fixtures/config/03_no_tes" in caplog.text
+    caplog.set_level(logging.DEBUG, logger="bot.utils")
+    configs = get_configs_from_path(path, "product_increments", IncrementConfig.from_config_entry)
+    assert configs == []
+    assert (
+        "File 'tests/fixtures/config/01_single.yml' skipped: Not a valid product_increments's configuration"
+        in caplog.text
+    )
+    assert (
+        "Loading product_increments's configuration from 'tests/fixtures/config/03_no_test_issues.yml'" in caplog.text
+    )
 
 
 def test_config_parsing_from_args() -> None:
@@ -83,6 +76,22 @@ def test_config_parsing_from_args_with_path(config_index: int, expected_distri: 
         "ADDITIONAL_SETTING2": "also here",
     }
     assert additional_settings.items() <= config.settings.items()
+
+
+def test_concat_project() -> None:
+    config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="Online-Increments",
+        project_base="BASE",
+        build_project_suffix="",
+    )
+    assert config.build_project() == "BASE"
+    config.project_base = ""
+    assert config.build_project() == ""  # noqa: PLC1901
+    config.project_base = "BASE"
+    config.build_project_suffix = "SUFFIX"
+    assert config.build_project() == "BASE:SUFFIX"
 
 
 def test_config_parsing_reference_repos() -> None:

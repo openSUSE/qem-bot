@@ -6,20 +6,14 @@ from __future__ import annotations
 
 import pprint
 from dataclasses import dataclass, field
-from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
-import ruamel.yaml
-from ruamel.yaml import YAML
-
 from openqabot import config
-from openqabot.utils import get_yml_list
+from openqabot.utils import get_configs_from_path
 
 if TYPE_CHECKING:
     from argparse import Namespace
-    from collections.abc import Iterator
-    from pathlib import Path
 
 log = getLogger("bot.increment_config")
 DEFAULT_FLAVOR_SUFFIX = "Increments"
@@ -75,10 +69,10 @@ class IncrementConfig:
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
         return f"{self.distri} ({settings_str})"
 
-    @staticmethod
-    def from_config_entry(entry: dict[str, Any]) -> IncrementConfig:
+    @classmethod
+    def from_config_entry(cls, entry: dict[str, Any]) -> IncrementConfig:
         """Create an IncrementConfig from a dictionary entry."""
-        return IncrementConfig(
+        return cls(
             distri=entry["distri"],
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
@@ -101,41 +95,12 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_config_file(file_path: Path, *, load_defaults: bool = True) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a YAML file."""
-        try:
-            log.debug("Loading increment configuration from '%s'", file_path)
-            yaml = YAML(typ="safe").load(file_path)
-            items = list(
-                map(
-                    IncrementConfig.from_config_entry,
-                    yaml.get("product_increments", []),
-                )
-            )
-            # Apply default settings to all items
-            if load_defaults:
-                defaults = yaml.get("settings", {})
-                for item in items:
-                    item.settings = defaults | item.settings
-        except AttributeError:
-            log.debug("File '%s' skipped: Not a valid increment configuration", file_path)
-            return iter(())
-        except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
-            log.info("Increment configuration skipped: Could not load '%s': %s", file_path, e)
-            return iter(())
-        else:
-            return iter(items)
-
-    @staticmethod
-    def from_config_path(file_or_dir_path: Path) -> Iterator[IncrementConfig]:
-        """Load increment configurations from a file or directory."""
-        return chain.from_iterable(IncrementConfig.from_config_file(p) for p in get_yml_list(file_or_dir_path))
-
-    @staticmethod
     def from_args(args: Namespace) -> list[IncrementConfig]:
         """Create increment configurations from command line arguments."""
         if args.increment_config:
-            configs = list(IncrementConfig.from_config_path(args.increment_config))
+            configs = get_configs_from_path(
+                args.increment_config, "product_increments", IncrementConfig.from_config_entry
+            )
             # Apply CLI filter overrides to YAML-loaded configs if they differ from defaults
             overrides = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
             for c in configs:

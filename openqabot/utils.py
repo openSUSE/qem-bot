@@ -8,18 +8,28 @@ import logging
 import os
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
+import ruamel.yaml
 from requests import Session
 from requests.adapters import HTTPAdapter
+from ruamel.yaml import YAML
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from .types.types import Data
 
+    class ConfigWithSettings(Protocol):
+        """Protocol for configuration objects with settings attribute."""
+
+        settings: dict[str, Any]
+
+
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+T = TypeVar("T", bound="ConfigWithSettings")
 
 
 def create_logger(name: str) -> logging.Logger:
@@ -34,6 +44,9 @@ def create_logger(name: str) -> logging.Logger:
     log.addHandler(handler)
     log.setLevel(logging.INFO)
     return log
+
+
+log = create_logger("bot.utils")
 
 
 def strip_ansi(text: str) -> str:
@@ -52,6 +65,43 @@ def normalize_whitespace(text: str) -> str:
 def get_yml_list(path: Path) -> list[Path]:
     """Create a list of YAML filenames from a directory or a single file path."""
     return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
+
+
+def get_configs_from_path(
+    path: Path,
+    config_key: str,
+    loader_func: Callable[[Any], T],
+    *,
+    load_defaults: bool = True,
+) -> list[T]:
+    """Load configurations from a file or directory."""
+    configs: list[T] = []
+    yaml_reader = YAML(typ="safe")
+
+    for file_path in get_yml_list(path):
+        try:
+            log.debug("Loading %s's configuration from '%s'", config_key, file_path)
+            yaml_data = yaml_reader.load(file_path)
+            if not yaml_data:
+                continue
+
+            raw_items = yaml_data.get(config_key, [])
+            if isinstance(raw_items, dict):
+                raw_items = list(raw_items.values())
+
+            items = [loader_func(item) for item in raw_items]
+
+            if load_defaults:
+                defaults = yaml_data.get("settings", {})
+                for item in items:
+                    item.settings = defaults | item.settings
+            configs.extend(items)
+        except AttributeError:
+            log.debug("File '%s' skipped: Not a valid %s's configuration", file_path, config_key)
+        except (ruamel.yaml.YAMLError, FileNotFoundError, PermissionError) as e:
+            log.info("%s's configuration skipped: Could not load '%s': %s", config_key, file_path, e)
+
+    return configs
 
 
 def walk(data: list[Any] | dict[str, Any]) -> list[Any] | dict[str, Any]:
