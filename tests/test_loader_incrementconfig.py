@@ -85,6 +85,25 @@ def test_config_parsing_from_args_with_path(config_index: int, expected_distri: 
     assert additional_settings.items() <= config.settings.items()
 
 
+def test_config_parsing_from_args_with_auto_discovery() -> None:
+    path = Path("tests/fixtures/config-increment-approver")
+    configs = IncrementConfig.from_args(
+        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
+    )
+    assert len(configs) == 2
+    assert configs[0].distri == "foo"
+    assert configs[1].distri == "bar"
+
+
+def test_config_parsing_from_args_fallback_to_cli() -> None:
+    path = Path("tests/fixtures/config")
+    configs = IncrementConfig.from_args(
+        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
+    )
+    assert len(configs) == 1
+    assert configs[0].distri == "sle"
+
+
 def test_config_parsing_reference_repos() -> None:
     entry = {
         "distri": "sle",

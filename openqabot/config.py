@@ -31,6 +31,13 @@ def get_default_obs_url() -> str:
 class Settings(BaseSettings):
     """Configuration settings managed by Pydantic."""
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+        """Initialize settings with optional overrides.
+
+        This explicit constructor helps type checkers like 'ty' recognize valid parameters.
+        """
+        super().__init__(*args, **kwargs)
+
     # Global options
     configs: Path = Field(default=Path("/etc/openqabot"), alias="QEM_BOT_CONFIGS")
     dry: bool = Field(default=False, alias="QEM_BOT_DRY")

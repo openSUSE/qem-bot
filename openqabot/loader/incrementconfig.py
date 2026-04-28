@@ -134,8 +134,11 @@ class IncrementConfig:
     @staticmethod
     def from_args(args: Namespace) -> list[IncrementConfig]:
         """Create increment configurations from command line arguments."""
-        if args.increment_config:
-            configs = list(IncrementConfig.from_config_path(args.increment_config))
+        source = args.increment_config or (
+            args.configs if getattr(args, "configs", None) and args.configs.exists() else None
+        )
+
+        if configs := (list(IncrementConfig.from_config_path(source)) if source else []):
             # Apply CLI filter overrides to YAML-loaded configs if they differ from defaults
             overrides = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
             for c in configs:
@@ -143,6 +146,7 @@ class IncrementConfig:
                     if (val := getattr(args, field, default)) != default:
                         setattr(c, field, val)
             return configs
+
         # Create a dictionary from arguments for IncrementConfig
         config_args = {
             field_name: getattr(args, field_name)
