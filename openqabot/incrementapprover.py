@@ -563,12 +563,10 @@ class IncrementApprover:
             build_infos = load_build_info(
                 rep_config,
                 rep_config.build_regex,
-                rep_config.product_regex,
-                rep_config.version_regex,
                 self.get_regex_match,
             )
+            request = find_request_on_obs(self.args, rep_config.build_project())
             for config_inc in configs:
-                request = find_request_on_obs(self.args, config_inc.build_project())
                 error_count += self.process_request_for_config(request, config_inc, build_infos)
 
         for request in self.requests_to_approve.values():

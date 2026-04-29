@@ -24,8 +24,6 @@ default_flavor = "Online"
 def load_build_info(
     config: IncrementConfig,
     build_regex: str,
-    product_regex: str,
-    version_regex: str,
     get_regex_match: Callable[[str, str], re.Match | None],
 ) -> set[BuildInfo]:
     """Determine build information from the project's repository listing."""
@@ -44,14 +42,8 @@ def load_build_info(
             return None
 
         product = m.group("product")
-        if not get_regex_match(product_regex, product):
-            return None
-
         distri = config.distri
         version = m.group("version")
-        if not get_regex_match(version_regex, version):
-            log.info("Skipping version string '%s' not matching version regex '%s'", version, version_regex)
-            return None
         arch = m.group("arch")
         build = m.group("build")
         try:
