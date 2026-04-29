@@ -10,8 +10,9 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum, auto
 from functools import lru_cache
-from itertools import chain
+from itertools import chain, groupby
 from logging import getLogger
+from operator import itemgetter
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
@@ -20,7 +21,7 @@ import osc.core
 
 from openqabot import config
 from openqabot.config import OBSOLETE_PARAMS
-from openqabot.openqa import OpenQAInterface
+from openqabot.openqa import ENRICH_KEYS, OpenQAInterface
 from openqabot.pc_helper import apply_public_cloud_settings
 
 from .commenter import Commenter
@@ -168,34 +169,41 @@ class IncrementApprover:
         self,
         results: OpenQAResult,
         ok_jobs: set[int],
-        not_ok_jobs: dict[str, set[str]],
         jobs: list[dict[str, Any]],
         request: osc.core.Request,
     ) -> None:
-        """Evaluate openQA job results and sort them into ok and not_ok sets."""
+        """Evaluate openQA job results, collecting ok job ids and job metadata."""
         for result, info in chain.from_iterable(results.get(s, {}).items() for s in final_states):
             ids = info["job_ids"]
-            common = {k: info.get(k) for k in ("group_id", "build", "distri", "version")}
+            common = {k: info.get(k) for k in ENRICH_KEYS}
             jobs.extend({**common, "id": j, "status": result} for j in ids)
-            (ok_jobs if result in ok_results else not_ok_jobs[result]).update(ids)
+            if result in ok_results:
+                ok_jobs.update(ids)
             self.check_unique_jobid_request_pair(ids, request)
 
     def evaluate_list_of_openqa_job_results(
         self, list_of_results: OpenQAResults, request: osc.core.Request
-    ) -> tuple[set[int], list[str], list[dict[str, Any]]]:
+    ) -> tuple[set[int], list[dict[str, Any]]]:
         """Evaluate a list of openQA job results."""
-        ok_jobs = set()  # keep track of ok jobs
-        not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
+        ok_jobs: set[int] = set()
         jobs: list[dict[str, Any]] = []
-        openqa_url = self.client.url.geturl()
         for results in list_of_results:
-            self.evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs, jobs, request)
-        reasons_to_disapprove = [
-            f"The following openQA jobs ended up with result '{result}':\n"
-            + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            for result, job_ids in not_ok_jobs.items()
+            self.evaluate_openqa_job_results(results, ok_jobs, jobs, request)
+        return (ok_jobs, jobs)
+
+    def _generate_job_reasons(self, jobs: list[dict[str, Any]]) -> list[str]:
+        """Generate disapproval reasons grouped by non-ok openQA result."""
+        openqa_url = self.client.url.geturl()
+        failed = sorted((j for j in jobs if j["status"] not in ok_results), key=itemgetter("status", "id"))
+        return [
+            f"The following openQA jobs ended up with result '{res}':\n"
+            + "\n".join(
+                f" - {openqa_url}/tests/{j['id']} ({j.get('name') or 'Unknown'}) "
+                f"in group '{j.get('group') or 'Unknown'}'"
+                for j in group
+            )
+            for res, group in groupby(failed, key=itemgetter("status"))
         ]
-        return (ok_jobs, reasons_to_disapprove, jobs)
 
     def approve_on_obs(self, reqid: str, msg: str) -> None:
         """Change the review state of a request on OBS to accepted."""
@@ -215,24 +223,26 @@ class IncrementApprover:
         reqid = approval_status.request.reqid
         id_msg = f"OBS request {config.settings.obs_web_url}/request/show/{reqid}"
 
+        all_reasons = reasons_to_disapprove + self._generate_job_reasons(approval_status.jobs)
+
         # Safeguard: only block if NO jobs were ever identified for this request.
         # If processed_jobs is set but ok_jobs is empty, it means all jobs were filtered
         # (e.g. development groups) and approval should proceed if there are no other blockers.
-        if not reasons_to_disapprove and not approval_status.ok_jobs and not approval_status.processed_jobs:
-            reasons_to_disapprove.append("No openQA jobs were found/checked for this request.")
+        if not all_reasons and not approval_status.ok_jobs and not approval_status.processed_jobs:
+            all_reasons.append("No openQA jobs were found/checked for this request.")
 
         if self.comment and approval_status.builds:
-            state = "passed" if not reasons_to_disapprove else "failed"
+            state = "passed" if not all_reasons else "failed"
             msg = self.commenter.summarize_message(approval_status.builds, approval_status.jobs)
             self.commenter.osc_comment_on_request(str(reqid), msg, state)
 
-        if not reasons_to_disapprove:
+        if not all_reasons:
             results_str = "/".join(sorted(ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
             self.approve_on_obs(str(reqid), message)
             log.info("Approving %s: %s", id_msg, message)
         else:
-            reasons_str = "\n\t".join(reasons_to_disapprove)
+            reasons_str = "\n\t".join(all_reasons)
             end_str = f"End of reasons for not approving {id_msg}"
             log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
@@ -481,9 +491,9 @@ class IncrementApprover:
 
         openqa_jobs_ready = self.check_openqa_jobs(filtered_results, build_info, params)
         if openqa_jobs_ready is JobState.FINISHED:
-            ok_jobs, reasons, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
+            ok_jobs, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
             builds = {BuildIdentifier.from_params(p) for p in params if "BUILD" in p}
-            approval_status.add(ok_jobs, reasons, builds, jobs)
+            approval_status.add(ok_jobs, [], builds, jobs)
             return 0
 
         return self._handle_not_ready_jobs(

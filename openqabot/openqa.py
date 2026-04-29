@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("bot.openqa")
 
 MAX_JOBS_PER_API_REQUEST = 200
-ENRICH_KEYS = ("group", "group_id", "distri", "version", "build")
+ENRICH_KEYS = ("group_id", "group", "build", "distri", "version", "flavor", "arch", "name")
 
 
 class OpenQAInterface:
