@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from itertools import chain
 from logging import getLogger
+from operator import itemgetter
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
@@ -111,11 +112,37 @@ class IncrementApprover:
         """Remove jobs belonging to development groups from openQA results."""
         return [{s: f for s, j in res.items() if (f := self._filter_jobs(j))} for res in results]
 
+    @staticmethod
+    def _enrich_job_info(info: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+        """Enrich job information with metadata from the first job ID."""
+        if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
+            return info
+
+        settings = job.get("settings", {})
+        return info | {
+            "group": job.get("group"),
+            "group_id": job.get("group_id"),
+            "distri": job.get("distri") or settings.get("DISTRI"),
+            "version": job.get("version") or settings.get("VERSION"),
+            "build": job.get("build") or settings.get("BUILD"),
+            "flavor": settings.get("FLAVOR"),
+            "arch": job.get("arch") or settings.get("ARCH"),
+            "name": job.get("name"),
+        }
+
+    @staticmethod
+    def _enrich_stats(stat: OpenQAResult, job_map: dict[int, dict[str, Any]]) -> OpenQAResult:
+        """Enrich all jobs in a scheduled product result with metadata."""
+        return {
+            status: {name: IncrementApprover._enrich_job_info(info, job_map) for name, info in jobs.items()}
+            for status, jobs in stat.items()
+        }
+
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
 
-        def fetch(p: dict[str, Any]) -> OpenQAResult:
+        def fetch_stats(p: dict[str, Any]) -> OpenQAResult:
             return self.client.get_scheduled_product_stats({
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
@@ -126,7 +153,19 @@ class IncrementApprover:
             })
 
         with ThreadPoolExecutor() as executor:
-            res = list(executor.map(fetch, params))
+            stats = list(executor.map(fetch_stats, params))
+
+        # Fetch all relevant job details in a single API call to avoid N+1 query problem
+        job_ids = [
+            int(ids[0])
+            for stat in stats
+            for jobs in stat.values()
+            for info in jobs.values()
+            if (ids := info.get("job_ids"))
+        ]
+        job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
+
+        res = [IncrementApprover._enrich_stats(stat, job_map) for stat in stats]
 
         log.debug("Job statistics:\n%s", pformat(res))
         return res
@@ -155,7 +194,9 @@ class IncrementApprover:
         """Evaluate openQA job results and sort them into ok and not_ok sets."""
         for result, info in chain.from_iterable(results.get(s, {}).items() for s in final_states):
             ids = info["job_ids"]
-            common = {k: info.get(k) for k in ("group_id", "build", "distri", "version")}
+            common = {
+                k: info.get(k) for k in ("group_id", "group", "build", "distri", "version", "flavor", "arch", "name")
+            }
             jobs.extend({**common, "id": j, "status": result} for j in ids)
             (ok_jobs if result in ok_results else not_ok_jobs[result]).update(ids)
             self.check_unique_jobid_request_pair(ids, request)
@@ -167,15 +208,26 @@ class IncrementApprover:
         ok_jobs = set()  # keep track of ok jobs
         not_ok_jobs = defaultdict(set)  # keep track of not ok jobs
         jobs: list[dict[str, Any]] = []
-        openqa_url = self.client.url.geturl()
         for results in list_of_results:
             self.evaluate_openqa_job_results(results, ok_jobs, not_ok_jobs, jobs, request)
-        reasons_to_disapprove = [
-            f"The following openQA jobs ended up with result '{result}':\n"
-            + "\n".join(f" - {openqa_url}/tests/{i}" for i in job_ids)
-            for result, job_ids in not_ok_jobs.items()
+        return (ok_jobs, [], jobs)
+
+    def _generate_job_reasons(self, jobs: list[dict[str, Any]]) -> list[str]:
+        """Generate reasons for disapproval based on openQA job results."""
+        openqa_url = self.client.url.geturl()
+        failed_jobs = defaultdict(list)
+        for job in filter(lambda j: j["status"] not in ok_results, jobs):
+            failed_jobs[job["status"]].append(job)
+
+        return [
+            f"The following openQA jobs ended up with result '{res}':\n"
+            + "\n".join(
+                f" - {openqa_url}/tests/{j['id']} ({j.get('name') or 'Unknown'}) "
+                f"in group '{j.get('group') or 'Unknown'}'"
+                for j in sorted(jobs_list, key=itemgetter("id"))
+            )
+            for res, jobs_list in failed_jobs.items()
         ]
-        return (ok_jobs, reasons_to_disapprove, jobs)
 
     def approve_on_obs(self, reqid: str, msg: str) -> None:
         """Change the review state of a request on OBS to accepted."""
@@ -195,24 +247,26 @@ class IncrementApprover:
         reqid = approval_status.request.reqid
         id_msg = f"OBS request {config.settings.obs_web_url}/request/show/{reqid}"
 
+        all_reasons = reasons_to_disapprove + self._generate_job_reasons(approval_status.jobs)
+
         # Safeguard: only block if NO jobs were ever identified for this request.
         # If processed_jobs is set but ok_jobs is empty, it means all jobs were filtered
         # (e.g. development groups) and approval should proceed if there are no other blockers.
-        if not reasons_to_disapprove and not approval_status.ok_jobs and not approval_status.processed_jobs:
-            reasons_to_disapprove.append("No openQA jobs were found/checked for this request.")
+        if not all_reasons and not approval_status.ok_jobs and not approval_status.processed_jobs:
+            all_reasons.append("No openQA jobs were found/checked for this request.")
 
         if self.comment and approval_status.builds:
-            state = "passed" if not reasons_to_disapprove else "failed"
+            state = "passed" if not all_reasons else "failed"
             msg = self.commenter.summarize_message(approval_status.builds, approval_status.jobs)
             self.commenter.osc_comment_on_request(str(reqid), msg, state)
 
-        if not reasons_to_disapprove:
+        if not all_reasons:
             results_str = "/".join(sorted(ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
             self.approve_on_obs(str(reqid), message)
             log.info("Approving %s: %s", id_msg, message)
         else:
-            reasons_str = "\n\t".join(reasons_to_disapprove)
+            reasons_str = "\n\t".join(all_reasons)
             end_str = f"End of reasons for not approving {id_msg}"
             log.info("Not approving %s for the following reasons:\n\t%s\n%s", id_msg, reasons_str, end_str)
         return 0
@@ -224,25 +278,27 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Check if an additional build matches a package and return extra parameters."""
-        package_name_match = self._match_package_name_and_version(package, additional_build)
-        if package_name_match is None:
+        if (archs := additional_build.get("archs")) and package.arch not in archs:
             return None
 
-        groups = package_name_match.groupdict()
-        extra_build = [f"PI-{build_info.build}", additional_build["build_suffix"]]
-        extra_params: dict[str, str] = {}
+        if not (match := self._match_package_name_and_version(package, additional_build)):
+            return None
 
-        if kind := groups.get("kind"):
-            extra_build.append(kind)
+        groups = match.groupdict()
+        kernel_version = (groups.get("kernel_version") or "").replace("_", ".")
 
-        if kernel_version := groups.get("kernel_version"):
-            kernel_version = kernel_version.replace("_", ".")
-            extra_build.append(kernel_version)
-            extra_params["KERNEL_VERSION"] = kernel_version
+        build_parts = [
+            f"PI-{build_info.build}",
+            additional_build["build_suffix"],
+            groups.get("kind"),
+            kernel_version,
+        ]
 
-        extra_params["BUILD"] = "-".join(extra_build)
-        extra_params.update(additional_build["settings"])
-        return extra_params
+        params = {"BUILD": "-".join(filter(None, build_parts))}
+        if kernel_version:
+            params["KERNEL_VERSION"] = kernel_version
+
+        return params | additional_build["settings"]
 
     def _match_package_name_and_version(self, package: Package, additional_build: dict[str, Any]) -> re.Match | None:
         """Match package name and version against regexes."""
@@ -255,6 +311,18 @@ class IncrementApprover:
             return None
         return match
 
+    @staticmethod
+    def _is_initial_version(package: Package) -> bool:
+        return bool(package.version and re.match(r"^1(?:\..*)?$", package.version))
+
+    @staticmethod
+    def _is_placeholder(package: Package) -> bool:
+        return not package.version
+
+    @staticmethod
+    def _is_debug_asset(package: Package) -> bool:
+        return "debug" in package.name or package.arch in {"src", "nosrc"}
+
     def extra_builds_for_package(
         self,
         package: Package,
@@ -262,15 +330,17 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if re.match(r"^1(?:\..*)?$", package.version):
-            return None
-        if "debug" in package.name or package.arch in {"src", "nosrc"}:
+        if self._is_placeholder(package) or self._is_initial_version(package) or self._is_debug_asset(package):
             return None
 
-        for additional_build in config_inc.additional_builds:
-            if (res := self._match_additional_build(package, additional_build, build_info)) is not None:
-                return res
-        return None
+        return next(
+            (
+                res
+                for additional_build in config_inc.additional_builds
+                if (res := self._match_additional_build(package, additional_build, build_info)) is not None
+            ),
+            None,
+        )
 
     def extra_builds_for_additional_builds(
         self,
@@ -517,7 +587,9 @@ class IncrementApprover:
         self.requests_to_approve[request_id] = status
         return status
 
-    def process_request_for_config(self, request: osc.core.Request | None, config_inc: IncrementConfig) -> int:
+    def process_request_for_config(
+        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_infos: set[BuildInfo]
+    ) -> int:
         """Process an OBS request for a specific configuration."""
         if request is None:
             return 0
@@ -525,13 +597,12 @@ class IncrementApprover:
         approval_status = self._get_approval_status(request)
         error_count = 0
         found_relevant_build = False
-        for build_info in load_build_info(
-            config_inc,
-            config_inc.build_regex,
-            config_inc.product_regex,
-            config_inc.version_regex,
-            self.get_regex_match,
-        ):
+        for build_info in build_infos:
+            if not all(
+                getattr(config_inc, k) in {"any", getattr(build_info, k)}
+                for k in ("distri", "flavor", "version", "arch")
+            ):
+                continue
             if len(config_inc.archs) > 0 and build_info.arch not in config_inc.archs:
                 continue
             found_relevant_build = True
@@ -549,6 +620,8 @@ class IncrementApprover:
         single_request = (
             osc.core.Request.from_api(config.settings.obs_url, self.args.request_id) if self.args.request_id else None
         )
+
+        grouped_configs: dict[tuple, list[IncrementConfig]] = defaultdict(list)
         for config_inc in self.config:
             if single_request and single_request.actions[0].src_project != config_inc.build_project():
                 log.debug(
@@ -558,8 +631,21 @@ class IncrementApprover:
                     single_request.actions[0].src_project,
                 )
                 continue
-            request = find_request_on_obs(self.args, config_inc.build_project())
-            error_count += self.process_request_for_config(request, config_inc)
+            grouped_configs[config_inc.group_key].append(config_inc)
+
+        for configs in grouped_configs.values():
+            rep_config = configs[0]
+            build_infos = load_build_info(
+                rep_config,
+                rep_config.build_regex,
+                rep_config.product_regex,
+                rep_config.version_regex,
+                self.get_regex_match,
+            )
+            for config_inc in configs:
+                request = find_request_on_obs(self.args, config_inc.build_project())
+                error_count += self.process_request_for_config(request, config_inc, build_infos)
+
         for request in self.requests_to_approve.values():
             error_count += self.handle_approval(request)
         return error_count

@@ -70,6 +70,20 @@ class IncrementConfig:
         base_path = self.build_project().replace(":", ":/")
         return f"{base_url or config.settings.obs_download_url}/{base_path}"
 
+    @property
+    def group_key(self) -> tuple[str, str, str, str, str, str, str, str]:
+        """Return a unique key for grouping configs."""
+        return (
+            self.build_project(),
+            self.build_project_url(),
+            self.build_listing_sub_path,
+            self.build_regex,
+            self.product_regex,
+            self.version_regex,
+            self.distri,
+            self.flavor_suffix,
+        )
+
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""
         settings_str = pprint.pformat(self.settings, compact=True, depth=1) if self.settings else "no settings"
