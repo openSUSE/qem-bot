@@ -21,12 +21,12 @@ product_increments:
     FOO: bar
   additional_builds:
   - build_suffix: kernel-livepatch
-    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>rt)'
+    regex: 'kernel-livepatch-(?P<kernel_version>[^-]+(?:-[^-]+)?)(?:-(?P<kind>rt))?$'
     settings:
       FLAVOR: Base-RT-Updates
       KGRAFT: '1'
   - build_suffix: kernel-livepatch
-    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>.*)'
+    regex: 'kernel-livepatch-(?P<kernel_version>[^-]+(?:-[^-]+)?)(?:-(?P<kind>[^-]+))?$'
     settings:
       FLAVOR: Default-qcow-Updates
       KGRAFT: '1'

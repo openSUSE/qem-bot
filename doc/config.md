@@ -191,9 +191,9 @@ product_increments:
   - foo
   - bar
   additional_builds:
-  - build_suffix: kernel-livepatch
-    regex: 'kernel-livepatch-(?P<kernel_version>[^\-]*?-[^\-]*?)-(?P<kind>rt)'
-    settings:
+   - build_suffix: kernel-livepatch
+     regex: 'kernel-livepatch-(?P<kernel_version>[^-]+(?:-[^-]+)?)(?:-(?P<kind>rt))?$'
+     settings:
       FLAVOR: Base-RT-Updates
       KGRAFT: '1'
   - build_suffix: …
