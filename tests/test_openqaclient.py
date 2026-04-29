@@ -95,7 +95,24 @@ def test_get_methods_handle_errors_gracefully() -> None:
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
         assert client.get_job_comments(42) == []
         assert not client.get_single_job(42)
+        assert client.get_jobs_by_ids([1, 2]) == []
         assert client.get_older_jobs(42, 0) == {"data": []}
+
+
+@responses.activate
+def test_get_jobs_by_ids(fake_openqa_url: str) -> None:
+    client = oQAI()
+    mock_jobs = [{"id": 1}, {"id": 2}]
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/jobs",
+        json={"jobs": mock_jobs},
+        status=200,
+        match=[matchers.query_param_matcher({"ids": "1,2"})],
+    )
+
+    assert client.get_jobs_by_ids([2, 1, 2]) == mock_jobs
+    assert client.get_jobs_by_ids([]) == []
 
 
 def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:

@@ -123,6 +123,18 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching job %s", job_id)
         return None
 
+    def get_jobs_by_ids(self, job_ids: list[int]) -> list[dict[str, Any]]:
+        """Fetch details for multiple jobs in a single API call."""
+        if not job_ids:
+            return []
+
+        ids_str = ",".join(map(str, sorted(set(job_ids))))
+        try:
+            return self.openqa.openqa_request("GET", "jobs", {"ids": ids_str}).get("jobs", [])
+        except RequestError:
+            log.exception("openQA API error when fetching multiple jobs")
+        return []
+
     def is_in_devel_group(self, job: dict[str, Any]) -> bool:
         """Check if a job belongs to a development group."""
         if config.settings.allow_development_groups:

@@ -98,6 +98,13 @@ class Settings(BaseSettings):
     )
     max_detailed_comment_entries: int = Field(default=7, alias="QEM_MAX_DETAILED_COMMENT_ENTRIES")
 
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401
+        """Initialize settings with optional overrides.
+
+        This explicit constructor helps type checkers like 'ty' recognize valid parameters.
+        """
+        super().__init__(**kwargs)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

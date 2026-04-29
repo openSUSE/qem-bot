@@ -73,7 +73,8 @@ def test_skipping_with_failing_openqa_jobs_for_one_config(
     increment_approver()
     last_message = caplog.messages[-1]
     assert "have passed" not in last_message
-    assert f"ended up with result 'failed':\n - {fake_openqa_url}/tests/21" in last_message
+    reason = f"result 'failed':\n - {fake_openqa_url}/tests/21 (testname) in group 'Production'"
+    assert reason in last_message
 
 
 @responses.activate
@@ -107,6 +108,7 @@ def test_skipping_with_no_openqa_jobs_verifying_that_expected_scheduled_products
 def test_skipping_with_only_jobs_of_additional_builds_present(
     caplog: pytest.LogCaptureFixture,
     fake_only_jobs_of_additional_builds_with_param_matching: list[responses.Response],
+    fake_openqa_url: str,
 ) -> None:
     increment_approver = prepare_approver_with_additional_config(caplog)
     increment_approver()
@@ -119,7 +121,9 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
         "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"
         in caplog.messages[-1]
     )
-    assert re.search(R".*openQA jobs.*with result 'failed':\n - http://instance.qa/tests/21", caplog.messages[-1])
+    r_url = re.escape(f"{fake_openqa_url}/tests/21")
+    reason = f"openQA jobs.*with result 'failed':\n - {r_url} \\(testname\\) in group 'Production'"
+    assert re.search(reason, caplog.messages[-1])
 
 
 @responses.activate
@@ -236,15 +240,27 @@ def test_evaluate_list_of_openqa_job_results(
     caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request, fake_openqa_url: str
 ) -> None:
     approver = prepare_approver(caplog)
+    passed = {"job_ids": [1], "name": "testname", "group": "Production"}
+    failed = {"job_ids": [2], "name": "testname", "group": "Production"}
+    softfailed = {"job_ids": [3], "name": "testname", "group": "Production"}
+    incomplete = {"job_ids": [4], "name": "testname", "group": "Production"}
+
     results = [
-        {"done": {"passed": {"job_ids": [1]}, "failed": {"job_ids": [2]}}},
-        {"done": {"softfailed": {"job_ids": [3]}, "incomplete": {"job_ids": [4]}}},
+        {"done": {"passed": passed, "failed": failed}},
+        {"done": {"softfailed": softfailed, "incomplete": incomplete}},
     ]
     ok_jobs, reasons, jobs = approver.evaluate_list_of_openqa_job_results(results, fake_osc_request)
     assert ok_jobs == {1, 3}
     assert len(jobs) == 4
-    assert any(f"result 'failed':\n - {fake_openqa_url}/tests/2" in r for r in reasons)
-    assert any(f"result 'incomplete':\n - {fake_openqa_url}/tests/4" in r for r in reasons)
+    assert reasons == []
+
+    status = ApprovalStatus(fake_osc_request, ok_jobs, reasons, set(), set(), jobs)
+    approver.handle_approval(status)
+
+    f_reason = f"result 'failed':\n - {fake_openqa_url}/tests/2 (testname) in group 'Production'"
+    i_reason = f"result 'incomplete':\n - {fake_openqa_url}/tests/4 (testname) in group 'Production'"
+    assert f_reason in caplog.text
+    assert i_reason in caplog.text
 
 
 def test_check_unique_jobid_request_pair_all_jobs_unique(
@@ -343,7 +359,7 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
         req.reqid = "42"
         # mock get_package_diff to return empty diff
         mocker.patch.object(approver, "get_package_diff", return_value=defaultdict(set))
-        approver.process_request_for_config(req, configs[0])
+        approver.process_request_for_config(req, configs[0], set(mock_load.return_value))
 
     assert "Skipping" in caplog.text
     assert "filtered out via 'packages' or 'archs' setting" in caplog.text
@@ -512,7 +528,7 @@ def test_approval_if_failing_jobs_are_in_development_group(
     responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"failed": {"job_ids": [123], "group_id": 9}}})
     increment_approver = prepare_approver(caplog, schedule=schedule)
     # is_devel_group is called with group_id (int), unlike is_in_devel_group which takes a job dict
-    increment_approver.client.get_single_job = mocker.Mock(return_value=_devel_job(123, result="failed"))
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(return_value=[_devel_job(123, result="failed")])
     increment_approver.client.is_devel_group = mocker.Mock(return_value=True)
     mock_post_job = mocker.patch.object(increment_approver.client, "post_job")
     mock_change_review = mocker.patch("osc.core.change_review_state")
@@ -544,7 +560,9 @@ def test_approval_with_mixed_jobs_development_ignored(
     job_map = {123: _devel_job(123, result="failed"), 456: _prod_job(456, result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
     increment_approver = prepare_approver(caplog)
-    increment_approver.client.get_single_job = mocker.Mock(side_effect=job_map.get)
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(
+        side_effect=lambda ids: [job_map[jid] for jid in ids if jid in job_map]
+    )
     increment_approver.client.is_devel_group = mocker.Mock(side_effect=lambda gid: gid == 9)
     increment_approver()
 
@@ -573,7 +591,9 @@ def test_approval_if_running_jobs_are_in_development_group(
     job_map = {123: _devel_job(123, state="running"), 456: _prod_job(456, state="done", result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
     increment_approver = prepare_approver(caplog)
-    increment_approver.client.get_single_job = mocker.Mock(side_effect=job_map.get)
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(
+        side_effect=lambda ids: [job_map[jid] for jid in ids if jid in job_map]
+    )
     increment_approver.client.is_in_devel_group = mocker.Mock(side_effect=lambda j: "Development" in j.get("group", ""))
     increment_approver()
 
