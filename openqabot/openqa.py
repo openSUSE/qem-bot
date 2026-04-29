@@ -197,7 +197,16 @@ class OpenQAInterface:
         if not target_job:
             return updated_info
 
-        return updated_info | {k: target_job.get(k) for k in ENRICH_KEYS}
+        return updated_info | {
+            "group": target_job.get("group"),
+            "group_id": target_job.get("group_id"),
+            "distri": target_job.get("distri"),
+            "version": target_job.get("version"),
+            "build": target_job.get("build"),
+            "flavor": target_job.get("flavor"),
+            "arch": target_job.get("arch"),
+            "name": target_job.get("name"),
+        }
 
     def enrich_stats(self, stat: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
         """Enrich all jobs in a scheduled product result with metadata."""
