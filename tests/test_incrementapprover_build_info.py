@@ -136,7 +136,8 @@ def testload_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker
     res = load_build_info(
         config, config.build_regex, config.product_regex, config.version_regex, approver.get_regex_match
     )
-    assert res == set()
+    assert len(res) == 1
+    assert next(iter(res)).version == "16.0"
 
 
 def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFixture) -> None:
