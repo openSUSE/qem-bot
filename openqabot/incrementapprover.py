@@ -258,6 +258,9 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Check if an additional build matches a package and return extra parameters."""
+        if (archs := additional_build.get("archs")) and package.arch not in archs:
+            return None
+
         package_name_match = self._match_package_name_and_version(package, additional_build)
         if package_name_match is None:
             return None
@@ -296,7 +299,7 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if re.match(r"^1(?:\..*)?$", package.version):
+        if not package.version or re.match(r"^1(?:\..*)?$", package.version):
             return None
         if "debug" in package.name or package.arch in {"src", "nosrc"}:
             return None
