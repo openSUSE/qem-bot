@@ -41,6 +41,21 @@ class Package(NamedTuple):
     rel: str
     arch: str
 
+    @property
+    def is_initial_version(self) -> bool:
+        """Check if package is an initial version."""
+        return bool(self.version and re.match(r"^1(?:\..*)?$", self.version))
+
+    @property
+    def is_placeholder(self) -> bool:
+        """Check if package version is a placeholder (empty)."""
+        return not self.version
+
+    @property
+    def is_debug_asset(self) -> bool:
+        """Check if package is a debug asset."""
+        return "debug" in self.name or self.arch in {"src", "nosrc"}
+
 
 class RepoDiff:
     """Repository diff computation."""
