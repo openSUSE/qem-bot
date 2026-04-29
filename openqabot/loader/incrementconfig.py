@@ -21,9 +21,22 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
+    from openqabot.types.increment import BuildInfo
+
 log = getLogger("bot.increment_config")
 DEFAULT_FLAVOR_SUFFIX = "Increments"
 DEFAULT_VERSION_REGEX = r"[\d.]+"
+
+
+@dataclass(frozen=True)
+class GroupKey:
+    """Unique key for grouping increment configurations."""
+
+    build_project: str
+    build_listing_sub_path: str
+    build_regex: str
+    distri: str
+    flavor_suffix: str
 
 
 @dataclass
@@ -69,6 +82,25 @@ class IncrementConfig:
         """Return the URL of the build project."""
         base_path = self.build_project().replace(":", ":/")
         return f"{base_url or config.settings.obs_download_url}/{base_path}"
+
+    @property
+    def group_key(self) -> GroupKey:
+        """Return a unique key for grouping configs."""
+        return GroupKey(
+            build_project=self.build_project(),
+            build_listing_sub_path=self.build_listing_sub_path,
+            build_regex=self.build_regex,
+            distri=self.distri,
+            flavor_suffix=self.flavor_suffix,
+        )
+
+    def accepts_build_info(self, build_info: BuildInfo) -> bool:
+        """Return True if the build information matches this configuration."""
+        if not all(
+            getattr(self, k) in {"any", getattr(build_info, k)} for k in ("distri", "flavor", "version", "arch")
+        ):
+            return False
+        return not (len(self.archs) > 0 and build_info.arch not in self.archs)
 
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""
