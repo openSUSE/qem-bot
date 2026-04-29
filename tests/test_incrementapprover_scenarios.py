@@ -512,7 +512,7 @@ def test_approval_if_failing_jobs_are_in_development_group(
     responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"failed": {"job_ids": [123], "group_id": 9}}})
     increment_approver = prepare_approver(caplog, schedule=schedule)
     # is_devel_group is called with group_id (int), unlike is_in_devel_group which takes a job dict
-    increment_approver.client.get_single_job = mocker.Mock(return_value=_devel_job(123, result="failed"))
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(return_value=[_devel_job(123, result="failed")])
     increment_approver.client.is_devel_group = mocker.Mock(return_value=True)
     mock_post_job = mocker.patch.object(increment_approver.client, "post_job")
     mock_change_review = mocker.patch("osc.core.change_review_state")
@@ -544,7 +544,9 @@ def test_approval_with_mixed_jobs_development_ignored(
     job_map = {123: _devel_job(123, result="failed"), 456: _prod_job(456, result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
     increment_approver = prepare_approver(caplog)
-    increment_approver.client.get_single_job = mocker.Mock(side_effect=job_map.get)
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(
+        side_effect=lambda ids: [job_map[jid] for jid in ids if jid in job_map]
+    )
     increment_approver.client.is_devel_group = mocker.Mock(side_effect=lambda gid: gid == 9)
     increment_approver()
 
@@ -573,7 +575,9 @@ def test_approval_if_running_jobs_are_in_development_group(
     job_map = {123: _devel_job(123, state="running"), 456: _prod_job(456, state="done", result="passed")}
     mock_osc_approve = mocker.patch("osc.core.change_review_state")
     increment_approver = prepare_approver(caplog)
-    increment_approver.client.get_single_job = mocker.Mock(side_effect=job_map.get)
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(
+        side_effect=lambda ids: [job_map[jid] for jid in ids if jid in job_map]
+    )
     increment_approver.client.is_in_devel_group = mocker.Mock(side_effect=lambda j: "Development" in j.get("group", ""))
     increment_approver()
 

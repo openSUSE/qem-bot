@@ -111,11 +111,33 @@ class IncrementApprover:
         """Remove jobs belonging to development groups from openQA results."""
         return [{s: f for s, j in res.items() if (f := self._filter_jobs(j))} for res in results]
 
+    @staticmethod
+    def _enrich_job_info(info: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+        """Enrich job information with metadata from the first job ID."""
+        if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
+            return info
+
+        return info | {
+            "group": job.get("group"),
+            "group_id": job.get("group_id"),
+            "distri": job.get("distri"),
+            "version": job.get("version"),
+            "build": job.get("build"),
+        }
+
+    @staticmethod
+    def _enrich_stats(stat: OpenQAResult, job_map: dict[int, dict[str, Any]]) -> OpenQAResult:
+        """Enrich all jobs in a scheduled product result with metadata."""
+        return {
+            status: {name: IncrementApprover._enrich_job_info(info, job_map) for name, info in jobs.items()}
+            for status, jobs in stat.items()
+        }
+
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
 
-        def fetch(p: dict[str, Any]) -> OpenQAResult:
+        def fetch_stats(p: dict[str, Any]) -> OpenQAResult:
             return self.client.get_scheduled_product_stats({
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
@@ -126,7 +148,19 @@ class IncrementApprover:
             })
 
         with ThreadPoolExecutor() as executor:
-            res = list(executor.map(fetch, params))
+            stats = list(executor.map(fetch_stats, params))
+
+        # Fetch all relevant job details in a single API call to avoid N+1 query problem
+        job_ids = [
+            int(ids[0])
+            for stat in stats
+            for jobs in stat.values()
+            for info in jobs.values()
+            if (ids := info.get("job_ids"))
+        ]
+        job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
+
+        res = [IncrementApprover._enrich_stats(stat, job_map) for stat in stats]
 
         log.debug("Job statistics:\n%s", pformat(res))
         return res

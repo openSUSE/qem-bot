@@ -255,6 +255,9 @@ def prepare_approver(
         approver.client.get_single_job = MagicMock(  # ty: ignore[invalid-assignment]
             side_effect=lambda job_id: {"id": job_id, "group": "Production", "group_id": 1}
         )
+        approver.client.get_jobs_by_ids = MagicMock(  # ty: ignore[invalid-assignment]
+            side_effect=lambda ids: [{"id": jid, "group": "Production", "group_id": 1} for jid in ids]
+        )
         approver.client.is_devel_group = MagicMock(return_value=False)  # ty: ignore[invalid-assignment]
         return approver
 
