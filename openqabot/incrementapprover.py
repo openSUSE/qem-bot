@@ -551,7 +551,9 @@ class IncrementApprover:
         self.requests_to_approve[request_id] = status
         return status
 
-    def process_request_for_config(self, request: osc.core.Request | None, config_inc: IncrementConfig) -> int:
+    def process_request_for_config(
+        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_infos: set[BuildInfo]
+    ) -> int:
         """Process an OBS request for a specific configuration."""
         if request is None:
             return 0
@@ -559,13 +561,12 @@ class IncrementApprover:
         approval_status = self._get_approval_status(request)
         error_count = 0
         found_relevant_build = False
-        for build_info in load_build_info(
-            config_inc,
-            config_inc.build_regex,
-            config_inc.product_regex,
-            config_inc.version_regex,
-            self.get_regex_match,
-        ):
+        for build_info in build_infos:
+            if not all(
+                getattr(config_inc, k) in {"any", getattr(build_info, k)}
+                for k in ("distri", "flavor", "version", "arch")
+            ):
+                continue
             if len(config_inc.archs) > 0 and build_info.arch not in config_inc.archs:
                 continue
             found_relevant_build = True
@@ -583,6 +584,8 @@ class IncrementApprover:
         single_request = (
             osc.core.Request.from_api(config.settings.obs_url, self.args.request_id) if self.args.request_id else None
         )
+
+        grouped_configs: dict[tuple, list[IncrementConfig]] = defaultdict(list)
         for config_inc in self.config:
             if single_request and single_request.actions[0].src_project != config_inc.build_project():
                 log.debug(
@@ -592,8 +595,21 @@ class IncrementApprover:
                     single_request.actions[0].src_project,
                 )
                 continue
-            request = find_request_on_obs(self.args, config_inc.build_project())
-            error_count += self.process_request_for_config(request, config_inc)
+            grouped_configs[config_inc.group_key].append(config_inc)
+
+        for configs in grouped_configs.values():
+            rep_config = configs[0]
+            build_infos = load_build_info(
+                rep_config,
+                rep_config.build_regex,
+                rep_config.product_regex,
+                rep_config.version_regex,
+                self.get_regex_match,
+            )
+            for config_inc in configs:
+                request = find_request_on_obs(self.args, config_inc.build_project())
+                error_count += self.process_request_for_config(request, config_inc, build_infos)
+
         for request in self.requests_to_approve.values():
             error_count += self.handle_approval(request)
         return error_count
