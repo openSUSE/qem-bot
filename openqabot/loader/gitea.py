@@ -531,8 +531,8 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
     """Aggregate build results from multiple OBS URLs into a submission."""
     results = BuildResults()
 
-    for url in obs_urls:
-        _process_obs_url(url, submission, dry=dry, results=results)
+    with futures.ThreadPoolExecutor() as executor:
+        list(executor.map(lambda url: _process_obs_url(url, submission, dry=dry, results=results), obs_urls))
 
     if results.unpublished:
         log.info(

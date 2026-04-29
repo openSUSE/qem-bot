@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
@@ -46,8 +47,8 @@ class Commenter:
         """Run the commenting process."""
         log.info("Starting to comment SMELT incidents in OBS")
 
-        for sub in self.submissions:
-            self.comment_on_submission(sub)
+        with ThreadPoolExecutor() as executor:
+            list(executor.map(self.comment_on_submission, self.submissions))
 
         return 0
 
