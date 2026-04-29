@@ -343,7 +343,7 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
         req.reqid = "42"
         # mock get_package_diff to return empty diff
         mocker.patch.object(approver, "get_package_diff", return_value=defaultdict(set))
-        approver.process_request_for_config(req, configs[0])
+        approver.process_request_for_config(req, configs[0], set(mock_load.return_value))
 
     assert "Skipping" in caplog.text
     assert "filtered out via 'packages' or 'archs' setting" in caplog.text
