@@ -94,3 +94,37 @@ def test_filter_results(caplog: pytest.LogCaptureFixture, mocker: MockerFixture)
     ]
     expected = [{"passed": {"j1": {"job_ids": [1], "group_id": 1}}}]
     assert approver._filter_results(results) == expected  # noqa: SLF001
+
+
+@responses.activate
+def test_request_openqa_job_results_enrichment_missing_data(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
+    """Test job results enrichment with missing or incomplete data."""
+    approver = prepare_approver(caplog)
+
+    mock_stats = {
+        "done": {
+            "passed": {"no_job_ids": []},  # Missing job_ids
+            "failed": {"job_ids": ["123"]},  # get_single_job will return None
+        }
+    }
+
+    mocker.patch.object(approver.client, "get_scheduled_product_stats", return_value=mock_stats)
+    mocker.patch.object(approver.client, "get_jobs_by_ids", return_value=[])
+
+    params: list[dict[str, str]] = [
+        {
+            "DISTRI": "sle",
+            "VERSION": "15-SP4",
+            "FLAVOR": "Online",
+            "ARCH": "x86_64",
+            "BUILD": "123",
+            "PRODUCT": "SLES",
+        }
+    ]
+
+    res = approver.request_openqa_job_results(params, "info")
+
+    assert len(res) == 1
+    assert "done" in res[0]

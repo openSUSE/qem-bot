@@ -123,6 +123,18 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching job %s", job_id)
         return None
 
+    def get_jobs_by_ids(self, job_ids: list[int]) -> list[dict[str, Any]]:
+        """Fetch details for multiple jobs in a single API call."""
+        if not job_ids:
+            return []
+
+        ids_str = ",".join(map(str, sorted(set(job_ids))))
+        try:
+            return self.openqa.openqa_request("GET", "jobs", {"ids": ids_str}).get("jobs", [])
+        except RequestError:
+            log.exception("openQA API error when fetching multiple jobs")
+        return []
+
     def is_in_devel_group(self, job: dict[str, Any]) -> bool:
         """Check if a job belongs to a development group."""
         if config.settings.allow_development_groups:
@@ -164,3 +176,25 @@ class OpenQAInterface:
         except RequestError:
             log.exception("openQA API error when fetching job group %s", group_id)
         return None
+
+    @staticmethod
+    def enrich_job_info(info: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+        """Enrich job information with metadata from the first job ID."""
+        if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
+            return info
+
+        return info | {
+            "group": job.get("group"),
+            "group_id": job.get("group_id"),
+            "distri": job.get("distri"),
+            "version": job.get("version"),
+            "build": job.get("build"),
+        }
+
+    @staticmethod
+    def enrich_stats(stat: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+        """Enrich all jobs in a scheduled product result with metadata."""
+        return {
+            status: {name: OpenQAInterface.enrich_job_info(info, job_map) for name, info in jobs.items()}
+            for status, jobs in stat.items()
+        }

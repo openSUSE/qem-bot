@@ -115,7 +115,7 @@ class IncrementApprover:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
 
-        def fetch(p: dict[str, Any]) -> OpenQAResult:
+        def fetch_stats(p: dict[str, Any]) -> OpenQAResult:
             return self.client.get_scheduled_product_stats({
                 "distri": p["DISTRI"],
                 "version": p["VERSION"],
@@ -126,7 +126,19 @@ class IncrementApprover:
             })
 
         with ThreadPoolExecutor() as executor:
-            res = list(executor.map(fetch, params))
+            stats = list(executor.map(fetch_stats, params))
+
+        # Fetch all relevant job details in a single API call to avoid N+1 query problem
+        job_ids = [
+            int(ids[0])
+            for stat in stats
+            for jobs in stat.values()
+            for info in jobs.values()
+            if (ids := info.get("job_ids"))
+        ]
+        job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
+
+        res = [self.client.enrich_stats(stat, job_map) for stat in stats]
 
         log.debug("Job statistics:\n%s", pformat(res))
         return res
