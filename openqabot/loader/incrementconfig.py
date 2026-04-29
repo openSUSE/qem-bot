@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import pprint
+import re
 from dataclasses import dataclass, field
 from itertools import chain
 from logging import getLogger
@@ -100,7 +101,11 @@ class IncrementConfig:
             getattr(self, k) in {"any", getattr(build_info, k)} for k in ("distri", "flavor", "version", "arch")
         ):
             return False
-        return not (len(self.archs) > 0 and build_info.arch not in self.archs)
+        if self.archs and build_info.arch not in self.archs:
+            return False
+        if not re.search(self.product_regex, build_info.product):
+            return False
+        return bool(re.search(self.version_regex, build_info.version))
 
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""
