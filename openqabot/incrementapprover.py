@@ -261,25 +261,24 @@ class IncrementApprover:
         if (archs := additional_build.get("archs")) and package.arch not in archs:
             return None
 
-        package_name_match = self._match_package_name_and_version(package, additional_build)
-        if package_name_match is None:
+        if not (match := self._match_package_name_and_version(package, additional_build)):
             return None
 
-        groups = package_name_match.groupdict()
-        extra_build = [f"PI-{build_info.build}", additional_build["build_suffix"]]
-        extra_params: dict[str, str] = {}
+        groups = match.groupdict()
+        kernel_version = (groups.get("kernel_version") or "").replace("_", ".")
 
-        if kind := groups.get("kind"):
-            extra_build.append(kind)
+        build_parts = [
+            f"PI-{build_info.build}",
+            additional_build["build_suffix"],
+            groups.get("kind"),
+            kernel_version,
+        ]
 
-        if kernel_version := groups.get("kernel_version"):
-            kernel_version = kernel_version.replace("_", ".")
-            extra_build.append(kernel_version)
-            extra_params["KERNEL_VERSION"] = kernel_version
+        params = {"BUILD": "-".join(filter(None, build_parts))}
+        if kernel_version:
+            params["KERNEL_VERSION"] = kernel_version
 
-        extra_params["BUILD"] = "-".join(extra_build)
-        extra_params.update(additional_build["settings"])
-        return extra_params
+        return params | additional_build["settings"]
 
     def _match_package_name_and_version(self, package: Package, additional_build: dict[str, Any]) -> re.Match | None:
         """Match package name and version against regexes."""
@@ -292,6 +291,18 @@ class IncrementApprover:
             return None
         return match
 
+    @staticmethod
+    def _is_initial_version(package: Package) -> bool:
+        return bool(package.version and re.match(r"^1(?:\..*)?$", package.version))
+
+    @staticmethod
+    def _is_placeholder(package: Package) -> bool:
+        return not package.version
+
+    @staticmethod
+    def _is_debug_asset(package: Package) -> bool:
+        return "debug" in package.name or package.arch in {"src", "nosrc"}
+
     def extra_builds_for_package(
         self,
         package: Package,
@@ -299,15 +310,17 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if not package.version or re.match(r"^1(?:\..*)?$", package.version):
-            return None
-        if "debug" in package.name or package.arch in {"src", "nosrc"}:
+        if self._is_placeholder(package) or self._is_initial_version(package) or self._is_debug_asset(package):
             return None
 
-        for additional_build in config_inc.additional_builds:
-            if (res := self._match_additional_build(package, additional_build, build_info)) is not None:
-                return res
-        return None
+        return next(
+            (
+                res
+                for additional_build in config_inc.additional_builds
+                if (res := self._match_additional_build(package, additional_build, build_info)) is not None
+            ),
+            None,
+        )
 
     def extra_builds_for_additional_builds(
         self,
