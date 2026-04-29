@@ -11,6 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.loader.incrementconfig import IncrementConfig
+from openqabot.types.increment import BuildInfo
 
 
 def test_from_config_file_invalid_yaml(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -117,3 +118,23 @@ def test_config_parsing_reference_repos() -> None:
     }
     config = IncrementConfig.from_config_entry(entry)
     assert config.reference_repos == {"SLES": "REPO1", "SLES-SAP": "REPO2"}
+
+
+def test_accepts_build_info_regex() -> None:
+    config = IncrementConfig(
+        distri="sle",
+        version="any",
+        flavor="Online-Increments",
+        arch="x86_64",
+        product_regex="^SLES",
+        version_regex="^15.5",
+    )
+
+    # Matches everything
+    assert config.accepts_build_info(BuildInfo("sle", "SLES", "15.5", "Online-Increments", "x86_64", "1"))
+
+    # Mismatch product
+    assert not config.accepts_build_info(BuildInfo("sle", "SLED", "15.5", "Online-Increments", "x86_64", "1"))
+
+    # Mismatch version
+    assert not config.accepts_build_info(BuildInfo("sle", "SLES", "15.4", "Online-Increments", "x86_64", "1"))

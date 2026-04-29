@@ -25,7 +25,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import IncrementConfig
+from .loader.incrementconfig import GroupKey, IncrementConfig
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
@@ -517,7 +517,9 @@ class IncrementApprover:
         self.requests_to_approve[request_id] = status
         return status
 
-    def process_request_for_config(self, request: osc.core.Request | None, config_inc: IncrementConfig) -> int:
+    def process_request_for_config(
+        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_infos: set[BuildInfo]
+    ) -> int:
         """Process an OBS request for a specific configuration."""
         if request is None:
             return 0
@@ -525,14 +527,8 @@ class IncrementApprover:
         approval_status = self._get_approval_status(request)
         error_count = 0
         found_relevant_build = False
-        for build_info in load_build_info(
-            config_inc,
-            config_inc.build_regex,
-            config_inc.product_regex,
-            config_inc.version_regex,
-            self.get_regex_match,
-        ):
-            if len(config_inc.archs) > 0 and build_info.arch not in config_inc.archs:
+        for build_info in build_infos:
+            if not config_inc.accepts_build_info(build_info):
                 continue
             found_relevant_build = True
             error_count += self.process_build_info(config_inc, build_info, request, approval_status)
@@ -549,6 +545,8 @@ class IncrementApprover:
         single_request = (
             osc.core.Request.from_api(config.settings.obs_url, self.args.request_id) if self.args.request_id else None
         )
+
+        grouped_configs: dict[GroupKey, list[IncrementConfig]] = defaultdict(list)
         for config_inc in self.config:
             if single_request and single_request.actions[0].src_project != config_inc.build_project():
                 log.debug(
@@ -558,8 +556,19 @@ class IncrementApprover:
                     single_request.actions[0].src_project,
                 )
                 continue
-            request = find_request_on_obs(self.args, config_inc.build_project())
-            error_count += self.process_request_for_config(request, config_inc)
+            grouped_configs[config_inc.group_key].append(config_inc)
+
+        for configs in grouped_configs.values():
+            rep_config = configs[0]
+            build_infos = load_build_info(
+                rep_config,
+                rep_config.build_regex,
+                self.get_regex_match,
+            )
+            request = find_request_on_obs(self.args, rep_config.build_project())
+            for config_inc in configs:
+                error_count += self.process_request_for_config(request, config_inc, build_infos)
+
         for request in self.requests_to_approve.values():
             error_count += self.handle_approval(request)
         return error_count
