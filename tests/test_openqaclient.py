@@ -95,7 +95,24 @@ def test_get_methods_handle_errors_gracefully() -> None:
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
         assert client.get_job_comments(42) == []
         assert not client.get_single_job(42)
+        assert client.get_jobs_by_ids([1, 2]) == []
         assert client.get_older_jobs(42, 0) == {"data": []}
+
+
+@responses.activate
+def test_get_jobs_by_ids(fake_openqa_url: str) -> None:
+    client = oQAI()
+    mock_jobs = [{"id": 1}, {"id": 2}]
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/jobs",
+        json={"jobs": mock_jobs},
+        status=200,
+        match=[matchers.query_param_matcher({"ids": "1,2"})],
+    )
+
+    assert client.get_jobs_by_ids([2, 1, 2]) == mock_jobs
+    assert client.get_jobs_by_ids([]) == []
 
 
 def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
@@ -166,3 +183,46 @@ def test_get_job_group_info_error(fake_openqa_url: str, caplog: pytest.LogCaptur
     result = client.get_job_group_info(42)
     assert result is None
     assert "openQA API error when fetching job group 42" in caplog.text
+
+
+def test_enrich_job_info() -> None:
+    """Test enrich_job_info with various inputs."""
+    job_map = {
+        1: {
+            "id": 1,
+            "group": "Group1",
+            "group_id": 10,
+            "distri": "dist",
+            "version": "1.0",
+            "build": "123",
+        }
+    }
+
+    # Successful enrichment
+    info = {"job_ids": [1], "other": "data"}
+    enriched = oQAI.enrich_job_info(info, job_map)
+    assert enriched["group"] == "Group1"
+    assert enriched["group_id"] == 10
+    assert enriched["distri"] == "dist"
+    assert enriched["other"] == "data"
+
+    # Missing job_ids
+    info2 = {"other": "data"}
+    assert oQAI.enrich_job_info(info2, job_map) == info2
+
+    # Job ID not in map
+    info3 = {"job_ids": [2]}
+    assert oQAI.enrich_job_info(info3, job_map) == info3
+
+
+def test_enrich_stats() -> None:
+    """Test enrich_stats properly traverses the stats structure."""
+    job_map = {1: {"id": 1, "group": "G1", "group_id": 10, "distri": "d", "version": "v", "build": "b"}}
+    stats = {
+        "passed": {"job1": {"job_ids": [1], "result": "passed"}},
+        "failed": {"job2": {"job_ids": [2], "result": "failed"}},
+    }
+
+    enriched = oQAI.enrich_stats(stats, job_map)
+    assert enriched["passed"]["job1"]["group"] == "G1"
+    assert "group" not in enriched["failed"]["job2"]
