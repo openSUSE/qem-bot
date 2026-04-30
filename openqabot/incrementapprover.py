@@ -274,7 +274,7 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Determine extra build parameters for a specific package."""
-        if re.match(r"^1(?:\..*)?$", package.version):
+        if not package.version or re.match(r"^1(?:\..*)?$", package.version):
             return None
         if "debug" in package.name or package.arch in {"src", "nosrc"}:
             return None
