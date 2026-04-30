@@ -82,6 +82,28 @@ def test_extra_builds_for_package_filtering(caplog: pytest.LogCaptureFixture) ->
     assert approver.extra_builds_for_package(pkg5, config, build_info) is None
 
 
+def test_extra_builds_arch_filtering(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
+    config = approver.config[0]
+    config.additional_builds = [
+        {
+            "build_suffix": "test-build",
+            "regex": ".*",
+            "archs": ["x86_64"],
+            "settings": {"FOO": "BAR"},
+        }
+    ]
+    build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
+
+    # Matching arch
+    pkg_ok = Package("kernel-livepatch", "0", "20240101", "1.1", "x86_64")
+    assert approver.extra_builds_for_package(pkg_ok, config, build_info) is not None
+
+    # Mismatching arch
+    pkg_fail = Package("kernel-livepatch", "0", "20240101", "1.1", "s390x")
+    assert approver.extra_builds_for_package(pkg_fail, config, build_info) is None
+
+
 def test_filter_results(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     mocker.patch.object(approver.client, "is_in_devel_group", side_effect=lambda j: j.get("group_id") == 9)
