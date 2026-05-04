@@ -74,7 +74,9 @@ def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
 
     assert len(res) == 1
     assert res[0].id == 1
-    mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, verify=True)
+    mock_get_json.assert_called_once_with(
+        "api/incidents", headers=settings.dashboard_token_dict, verify=not settings.insecure
+    )
 
 
 def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:

@@ -39,6 +39,7 @@ class OpenQAInterface:
         self.url: ParseResult = urlparse(config_module.settings.openqa_instance)
         self.dry: bool = config_module.settings.dry
         self.openqa = OpenQA_Client(server=self.url.netloc, scheme=self.url.scheme)
+        self.openqa.session.verify = not config_module.settings.insecure
         self.retries = number_of_retries()
         user_agent = {"User-Agent": "python-OpenQA_Client/qem-bot/1.0.0"}
         self.openqa.session.headers.update(user_agent)

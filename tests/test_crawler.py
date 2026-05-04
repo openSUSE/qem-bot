@@ -8,12 +8,13 @@ import pytest
 import requests
 from requests.exceptions import RequestException
 
+from openqabot.config import settings
 from openqabot.loader.crawler import Crawler
 
 
 @pytest.fixture
 def crawler() -> Crawler:
-    return Crawler(verify=True)
+    return Crawler(verify=not settings.insecure)
 
 
 def test_get_regex_match_success(crawler: Crawler, mocker: MagicMock) -> None:
@@ -93,6 +94,6 @@ def test_crawl_json_decode_error(crawler: Crawler, mocker: MagicMock, caplog: py
 
 def test_crawler_init_settings(crawler: Crawler) -> None:
     """Cover __init__ and retry adapter mounting."""
-    assert crawler.verify is True
+    assert crawler.verify is not settings.insecure
     assert "https://" in crawler.retry_session.adapters
     assert "http://" in crawler.retry_session.adapters

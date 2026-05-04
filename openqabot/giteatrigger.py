@@ -98,7 +98,7 @@ class GiteaTrigger:
         """
         log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
         repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.gitea_project)
-        matched_iso = Crawler(verify=True).get_regex_match_from_url(repo_url, ISO_REGEX)
+        matched_iso = Crawler(verify=not config.settings.insecure).get_regex_match_from_url(repo_url, ISO_REGEX)
 
         if not matched_iso:
             log.warning("No ISO found for %s in %s", pullrequest, repo_url)

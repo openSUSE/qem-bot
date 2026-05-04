@@ -81,7 +81,9 @@ def get_submissions(submission: str | None = None) -> list[Submission]:
         submissions = [_get_submission(int(s_id), s_type)]
     else:
         submissions = dashboard.get_json(
-            "api/incidents", headers=config_module.settings.dashboard_token_dict, verify=True
+            "api/incidents",
+            headers=config_module.settings.dashboard_token_dict,
+            verify=not config_module.settings.insecure,
         )
 
     if "error" in submissions:
