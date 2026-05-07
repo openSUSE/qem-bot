@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 """Increment configuration loader."""
 
+#comment
+
 from __future__ import annotations
 
 import pprint
