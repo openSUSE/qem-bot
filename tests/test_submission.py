@@ -46,7 +46,7 @@ test_data = {
 
 
 @pytest.fixture
-def mock_good(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_good(mocker: MockerFixture) -> Generator[None]:
     def fake(*_args: Any, **_kwargs: Any) -> int:
         return 12345
 
@@ -54,7 +54,7 @@ def mock_good(mocker: MockerFixture) -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def mock_ex(mocker: MockerFixture) -> Generator[None, None, None]:
+def mock_ex(mocker: MockerFixture) -> Generator[None]:
     def fake(*_args: Any, **_kwargs: Any) -> NoReturn:
         raise NoRepoFoundError
 

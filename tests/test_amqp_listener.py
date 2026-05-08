@@ -43,6 +43,26 @@ def test_listener_full_workflow(mocker: MagicMock) -> None:
     assert received_data[0] == ({"foo": "bar"}, "test.key")
 
 
+def test_on_message_routing_key_types() -> None:
+    received_data = []
+
+    def fake_handler(msg: Any, key: str) -> None:
+        received_data.append((msg, key))
+
+    listener = AMQPListener(url="url", routing_keys=[], handler=fake_handler)
+    fake_body = json.dumps({"foo": "bar"}).encode("utf-8")
+
+    # Test routing_key as bytes
+    fake_method_bytes = MagicMock(routing_key=b"bytes.key")
+    listener._on_message(None, fake_method_bytes, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
+    assert received_data[0] == ({"foo": "bar"}, "bytes.key")
+
+    # Test routing_key as None
+    fake_method_none = MagicMock(routing_key=None)
+    listener._on_message(None, fake_method_none, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
+    assert received_data[1] == ({"foo": "bar"}, "")
+
+
 def test_listen_no_url(caplog: pytest.LogCaptureFixture) -> None:
     listener = AMQPListener(url="", routing_keys=[], handler=lambda _, __: None)
     listener.listen()

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol
 
 from ruamel.yaml import YAML, YAMLError
 from ruamel.yaml.constructor import ConstructorError, SafeConstructor
@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def get_yml_list(path: Path) -> list[Path]:
+    """Create a list of YAML filenames from a directory or a single file path."""
+    return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
+
+
 log = getLogger("bot.loader.config")
 
 
@@ -31,15 +36,7 @@ class ConfigWithSettings(Protocol):
     settings: dict[str, Any]
 
 
-T = TypeVar("T", bound="ConfigWithSettings")
-
-
-def get_yml_list(path: Path) -> list[Path]:
-    """Create a list of YAML filenames from a directory or a single file path."""
-    return [f for ext in ("yml", "yaml") for f in path.glob("*." + ext)] if path.is_dir() else [path]
-
-
-def _load_one_config(
+def _load_one_config[T: ConfigWithSettings](
     file_path: Path,
     yaml_reader: YAML,
     config_key: str,
@@ -77,7 +74,7 @@ def _load_one_config(
         log.info("%s's configuration skipped: Could not load '%s': %s", config_key, file_path, e)
 
 
-def get_configs_from_path(
+def get_configs_from_path[T: ConfigWithSettings](
     path: Path,
     config_key: str,
     loader_func: Callable[[Any], T],

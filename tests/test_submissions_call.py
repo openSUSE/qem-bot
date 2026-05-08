@@ -90,7 +90,7 @@ def test_submissions_call_with_issues() -> None:
 
 
 @pytest.fixture
-def request_mock(mocker: MockerFixture) -> Generator[None, None, None]:
+def request_mock(mocker: MockerFixture) -> Generator[None]:
     class MockResponse:
         # mock json() method always returns a specific testing dictionary
         @staticmethod
