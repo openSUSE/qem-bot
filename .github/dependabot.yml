@@ -6,18 +6,19 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    labels:
+      - "waiting"
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: scope
     groups:
       dev-dependencies:
         patterns:
           - "*"
         update-types:
           - "major"
-
-    labels:
-      - "dependencies"
-      - "python"
-
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -25,5 +26,12 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
     labels:
+      - "waiting"
       - "dependencies"
-      - "github-actions"
+    commit-message:
+      prefix: "chore"
+      include: scope
+    groups:
+      all-actions:
+        patterns:
+          - "*"
