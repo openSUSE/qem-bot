@@ -248,6 +248,8 @@ class IncrementApprover:
             extra_build.append(kind)
 
         if kernel_version := groups.get("kernel_version"):
+            if not kernel_version[0].isdigit():
+                return None
             kernel_version = kernel_version.replace("_", ".")
             extra_build.append(kernel_version)
             extra_params["KERNEL_VERSION"] = kernel_version
