@@ -42,6 +42,10 @@ class PullRequest:
         """Alias for number for consistency with Submission."""
         return self.number
 
+    def generate_webhook_id(self) -> str:
+        """Generate a webhook identifier for this pull request."""
+        return f"gitea:pr:{self.number}"
+
     def __post_init__(self) -> None:
         """Extract names from the raw label dictionaries into a set."""
         self.labels = {label["name"] for label in self.raw_labels}
@@ -49,10 +53,6 @@ class PullRequest:
     def has_all_labels(self, required_labels: set[str]) -> bool:
         """Check if pull request has ALL labels provided in the input list."""
         return self.labels.issuperset(required_labels)
-
-    def has_any_label(self, search_labels: set[str]) -> bool:
-        """Check if pull request has at least one label from the input set."""
-        return not self.labels.isdisjoint(search_labels)
 
     def is_active(self) -> bool:
         """Check if the pull request is in an active state."""

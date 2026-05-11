@@ -4,14 +4,12 @@
 
 import json
 import logging
-import re
 from unittest.mock import MagicMock
 
 import pytest
 import requests
 from pytest_mock import MockerFixture
 
-from openqabot.errors import NoRepoFoundError
 from openqabot.loader import gitea
 from openqabot.types.pullrequest import PullRequest
 
@@ -223,45 +221,6 @@ def test_is_build_acceptable_success() -> None:
     assert gitea.is_build_acceptable_and_log_if_not(incident, 123)
 
 
-def test_generate_repo_url_success(mocker: MockerFixture, labeled_pr: PullRequest) -> None:
-    """Cover the actual logic of generate_repo_url."""
-    mocker.patch("openqabot.config.settings.obs_download_url", "https://download.obs.com")
-    url = gitea.generate_repo_url(labeled_pr, {"label1": "SLES"}, "openQA:/Staging:/A")
-
-    assert url == "https://download.obs.com/openQA:/Staging:/A:/555:/SLES/product/iso"
-
-
-@pytest.mark.usefixtures("mock_get")
-def test_generate_repo_url_two_label_match(labeled_pr: PullRequest) -> None:
-    """Cover the actual logic of generate_repo_url."""
-    labeled_pr.labels.add("label2")
-    with pytest.raises(NoRepoFoundError):
-        gitea.generate_repo_url(labeled_pr, {"label1": "SLES", "label2": "B"}, "openQA:/Staging:/A")
-
-
-@pytest.mark.usefixtures("mock_get")
-def test_get_gitea_staging_config(mocked_response: dict[str, str | list]) -> None:
-    conf = gitea.get_gitea_staging_config({"token": "token"})
-    assert conf == mocked_response
-
-
-def test_get_gitea_staging_config_decode_error(mocker: MockerFixture) -> None:
-    mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get")
-    mock_response = MagicMock()
-    mock_response.url = "https://src.suse.de/staging.config"
-    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
-    mock_get.return_value = mock_response
-
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Failed to decode staging config JSON from https://src.suse.de/staging.config. "
-            "Is the Gitea token missing or invalid?"
-        ),
-    ):
-        gitea.get_gitea_staging_config({"token": "token"})
-
-
 @pytest.fixture
 def mock_review_pr(mocker: MockerFixture) -> MagicMock:
     return mocker.patch("openqabot.loader.gitea.review_pr")
@@ -335,6 +294,54 @@ def test_approve_pr_scenarios(
         mock_review_pr.assert_called_once_with({}, "repo", 123, "msg", "sha123", approve=True)
     else:
         mock_review_pr.assert_not_called()
+
+
+def test_review_url() -> None:
+    """Verify review_url construction."""
+    assert gitea.review_url("repo", 123, 456) == "repos/repo/pulls/123/reviews/456"
+
+
+def test_commit_status_url() -> None:
+    """Verify commit_status_url construction."""
+    pr = PullRequest(
+        number=123,
+        state="open",
+        project="test-project",
+        branch="main",
+        url="http://url",
+        commit_sha="sha123",
+        raw_labels=[],
+    )
+    assert gitea.commit_status_url(pr) == "repos/test-project/statuses/sha123"
+
+
+def test_get_events_by_timeline(mocker: MockerFixture) -> None:
+    """Verify get_events_by_timeline logic including push event reset and duplicate events."""
+    # Scenario 1: Multiple events including duplicates and pull_push break
+    mock_events = [
+        {"type": "comment", "user": {"login": "user3"}},  # Not reached
+        {"type": "pull_push", "user": {"login": "user1"}},  # Loop break
+        {"type": "review", "user": {"login": "user2"}},  # New user
+        {"type": "review", "user": {"login": "user1"}},  # New event type for same user
+        {"type": "comment", "user": {"login": "user1"}},  # Duplicate event type for same user
+        {"type": "comment", "user": {"login": "user1"}},
+    ]
+    mock_iter = mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=mock_events)
+
+    events = gitea.get_events_by_timeline({}, "repo", 123)
+
+    assert "user1" in events
+    assert "comment" in events["user1"]
+    assert "review" in events["user1"]
+    assert "user2" in events
+    assert "review" in events["user2"]
+    assert "user3" not in events
+    assert mock_iter.call_count == 1
+
+    # Scenario 2: Empty timeline
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
+    events = gitea.get_events_by_timeline({}, "repo", 456)
+    assert events == {}
 
 
 def test_approve_pr_exception(

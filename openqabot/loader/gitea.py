@@ -25,7 +25,6 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
-from openqabot.errors import NoRepoFoundError
 from openqabot.types.pullrequest import PullRequest
 from openqabot.utils import retry10 as retried_requests
 
@@ -167,6 +166,16 @@ def comments_url(repo_name: str, number: int) -> str:
     """Construct the URL for PR comments."""
     # https://docs.gitea.com/api/1.25/#tag/issue/operation/issueCreateComment
     return f"repos/{repo_name}/issues/{number}/comments"
+
+
+def commit_status_url(pullrequest: PullRequest) -> str:
+    """Construct the Gitea API URL for a PR commit status."""
+    return f"repos/{pullrequest.project}/statuses/{pullrequest.commit_sha}"
+
+
+def review_url(repo_name: str, number: int, review_id: int) -> str:
+    """Construct the URL for a PR review."""
+    return f"repos/{repo_name}/pulls/{number}/reviews/{review_id}"
 
 
 def get_product_name(obs_project: str) -> str:
@@ -591,55 +600,6 @@ def add_comments_and_referenced_build_results(
         )
 
 
-def get_gitea_staging_config(token: dict[str, str]) -> dict:
-    """Get content of staging.config file from repository defined in settings.
-
-    Args:
-        token (dict[str, str]): security token for Gitea API
-
-    Returns:
-        dict: JSON content of staging.config
-
-    """
-    response = retried_requests.get(
-        config.settings.gitea_staging_config_url,
-        verify=not config.settings.insecure,
-        headers=token,
-    )
-    response.raise_for_status()
-    try:
-        return response.json()
-    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
-        msg = f"Failed to decode staging config JSON from {response.url}. Is the Gitea token missing or invalid?"
-        raise ValueError(msg) from e
-
-
-def generate_repo_url(pullrequest: PullRequest, staging_config_qa_labels: dict[str, str], project: str) -> str:
-    """Generate repository URL for certain pull request.
-
-    Args:
-        pullrequest (PullRequest): pull request for which URL needs to be generated
-        staging_config_qa_labels (dict[str, str]): List of labels identifying
-                                                    PRs needed testing taken from staging.config
-        project (str): "StagingProject" value taken from staging.config file
-
-    Returns:
-        str: URL pointing to a folder with iso images generated for certain pullrequest
-
-    Raises:
-        NoRepoFoundError: raised when required_labels has more than one match in staging.config
-
-    """
-    common_labels = set(staging_config_qa_labels.keys()) & pullrequest.labels
-
-    if len(common_labels) != 1:
-        log.error("Expected exactly one matching label but found %d: %s", len(common_labels), common_labels)
-        raise NoRepoFoundError
-
-    label = staging_config_qa_labels[common_labels.pop()]
-    return f"{config.settings.obs_download_url}/{project}:/{pullrequest.number}:/{label}/product/iso"
-
-
 def add_packages_from_patchinfo(
     submission: dict[str, Any],
     token: dict[str, str],
@@ -765,6 +725,37 @@ def _build_submission_record(
         return None
 
     return submission
+
+
+def get_events_by_timeline(token: dict[str, str], repo: str, number: int) -> dict[str, dict[str, Any]]:
+    """Fetch and filter events from a PR's timeline.
+
+    Args:
+        token (dict[str, str]): security token for Gitea API.
+        repo (str): Repository name.
+        number (int): PR number.
+
+    Returns:
+        dict[str, dict[str, Any]]: Filtered events grouped by user and type.
+
+    """
+    log.debug("Getting events in PR#%d", number)
+    events = {}
+    # reset the timeline every time a pull_push event happens
+    for event in reversed(list(iter_gitea_items(f"repos/{repo}/issues/{number}/timeline", token))):
+        if event["type"] == "pull_push":
+            break
+
+        user_login = event["user"]["login"]
+        event_type = event["type"]
+
+        if user_login not in events:
+            events[user_login] = {}
+
+        if event_type not in events[user_login]:
+            events[user_login][event_type] = event
+
+    return events
 
 
 def make_submission_from_gitea_pr(
