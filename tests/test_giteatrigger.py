@@ -152,7 +152,7 @@ def test_get_prs_by_label_filtering(trigger: GiteaTrigger, mocker: MockerFixture
         ],
     )
 
-    trigger.get_prs_by_label()
+    trigger.load_pullrequests()
     assert len(trigger.prs) == 1
     assert trigger.prs[0].number == 1
     assert trigger.prs[0].project == "owner/r"
@@ -199,7 +199,7 @@ def test_get_prs_by_label_api_exception(trigger: GiteaTrigger, mocker: MockerFix
     mocker.patch("openqabot.giteatrigger.get_open_prs", side_effect=Exception("API Down"))
 
     with pytest.raises(Exception, match="API Down"):
-        trigger.get_prs_by_label()
+        trigger.load_pullrequests()
 
 
 def test_trigger_call_execution(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
@@ -238,7 +238,7 @@ def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFi
     )
 
     trigger = GiteaTrigger(mock_args)
-    trigger.get_prs_by_label()
+    trigger.load_pullrequests()
 
     mock_get_pr.assert_called_once()
     assert len(trigger.prs) == 1
