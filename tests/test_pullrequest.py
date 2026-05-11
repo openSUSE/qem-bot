@@ -26,6 +26,31 @@ def test_pull_request_has_labels() -> None:
     assert not pr.has_all_labels({"feature"})
 
 
+def test_pull_request_is_active() -> None:
+    """Verify that is_active returns True only for open PRs."""
+    pr_open = PullRequest(
+        number=124,
+        state="open",
+        project="os-autoinst",
+        branch="master",
+        url="http://gitea/pull/124",
+        commit_sha="abcd123",
+        raw_labels=[],
+    )
+    assert pr_open.is_active()
+
+    pr_closed = PullRequest(
+        number=124,
+        state="closed",
+        project="os-autoinst",
+        branch="master",
+        url="http://gitea/pull/124",
+        commit_sha="abcd123",
+        raw_labels=[],
+    )
+    assert not pr_closed.is_active()
+
+
 def test_pull_request_id_property() -> None:
     """Verify that id property returns the same value as number."""
     pr = PullRequest(
@@ -38,6 +63,7 @@ def test_pull_request_id_property() -> None:
         raw_labels=[],
     )
     assert pr.id == 124
+    assert pr.generate_webhook_id() == "gitea:pr:124"
 
 
 def test_create_from_json_invalid_data(caplog: pytest.LogCaptureFixture) -> None:
