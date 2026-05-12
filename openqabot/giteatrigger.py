@@ -112,7 +112,8 @@ class GiteaTrigger:
 
         if self.is_openqa_triggering_needed(matched_iso, trigger_config):
             openqa_settings = {
-                "ISO_URL": f"{repo_url}/{matched_iso_regex.group(0)}",
+                "ISO_1_URL": f"{repo_url}/{matched_iso_regex.group(0)}",
+                "ISO_1": f"{matched_iso_regex.group(0)}",
                 "_GITEA_PR": str(pullrequest.number),
                 "VERSION": matched_iso.version,
                 "FLAVOR": trigger_config.flavor,

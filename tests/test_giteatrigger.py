@@ -95,7 +95,8 @@ def test_check_pullrequest_triggers_job(
     assert settings["FLAVOR"] == "Online-Staging"
     assert settings["VERSION"] == "15.5:PR-123"
     assert settings["BUILD"] == "PR-123-1.1:SLES-15.5"
-    assert settings["ISO_URL"] == "http://fake.url//SLES-15.5-Online-x86_64-Build1.1.install.iso"
+    assert settings["ISO_1_URL"] == "http://fake.url//SLES-15.5-Online-x86_64-Build1.1.install.iso"
+    assert settings["ISO_1"] == "SLES-15.5-Online-x86_64-Build1.1.install.iso"
 
 
 def test_is_openqatriggering_needed_false(
