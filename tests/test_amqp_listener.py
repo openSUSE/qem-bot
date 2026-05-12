@@ -63,6 +63,22 @@ def test_on_message_routing_key_types() -> None:
     assert received_data[1] == ({"foo": "bar"}, "")
 
 
+def test_listen_invalid_queue_name(mocker: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    mock_conn = mocker.patch("pika.BlockingConnection")
+    mock_channel = MagicMock()
+    mock_conn.return_value.channel.return_value = mock_channel
+
+    # Force queue_name to be None
+    mock_channel.queue_declare.return_value.method.queue = None
+
+    listener = AMQPListener(
+        url="amqp://guest:guest@localhost:5672/%2f", routing_keys=["test"], handler=lambda _, __: None
+    )
+    listener.listen()
+
+    assert "Failed to declare queue or received invalid queue name" in caplog.text
+
+
 def test_listen_no_url(caplog: pytest.LogCaptureFixture) -> None:
     listener = AMQPListener(url="", routing_keys=[], handler=lambda _, __: None)
     listener.listen()

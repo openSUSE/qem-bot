@@ -42,7 +42,10 @@ class AMQPListener:
             self.channel.exchange_declare(exchange="pubsub", exchange_type="topic", passive=True, durable=True)
 
             result = self.channel.queue_declare("", exclusive=True)
-            queue_name = str(result.method.queue)
+            queue_name = result.method.queue
+            if not isinstance(queue_name, str):
+                log.error("Failed to declare queue or received invalid queue name")
+                return
 
             for key in self.routing_keys:
                 self.channel.queue_bind(exchange="pubsub", queue=queue_name, routing_key=key)
@@ -59,13 +62,10 @@ class AMQPListener:
         self, _ch: BlockingChannel, method: Basic.Deliver, _properties: BasicProperties, body: bytes
     ) -> None:
         message = json.loads(body)
-        routing_key = method.routing_key
+        routing_key = method.routing_key if method.routing_key is not None else ""
         if isinstance(routing_key, bytes):
             routing_key = routing_key.decode("utf-8")
-        elif routing_key is None:
-            routing_key = ""
-
-        self.handler(message, routing_key)
+        self.handler(message, str(routing_key))
 
     def stop(self) -> None:
         """Close connection if it is open."""
