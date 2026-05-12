@@ -125,6 +125,18 @@ def test_sub_nochannels2() -> None:
         Submission(bad_data)
 
 
+@pytest.mark.usefixtures("mock_good")
+def test_sub_null_elements_ignored() -> None:
+    data = deepcopy(test_data)
+    data["channels"].append(None)  # ty: ignore
+    data["packages"].append(None)  # ty: ignore
+    sub = Submission(data)
+    # The null elements should just be ignored, and valid ones remain
+    assert Repos(product="openSUSE-SLE", version="15.4", arch="x86_64") in sub.channels
+    assert "some" in sub.packages
+    assert None not in sub.packages
+
+
 def test_sub_create(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO)
 
