@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     token: str | None = Field(default=None, alias="QEM_BOT_TOKEN")
     gitea_token: str | None = Field(default=None, alias="QEM_BOT_GITEA_TOKEN")
     gitea_pr_label: str | None = Field(default=None, alias="PR_LABEL")
-    gitea_project: str | None = Field(default="SLFO", alias="GITEA_PROJECT")
+    gitea_project: str | None = Field(default="products/SLFO", alias="GITEA_PROJECT")
     gitea_branch_name: str | None = Field(default="slfo-main", alias="GITEA_BRANCH_NAME")
     openqa_instance: str = Field(default="https://openqa.suse.de", alias="OPENQA_INSTANCE")
     singlearch: Path = Field(default=Path("/etc/openqabot/singlearch.yml"), alias="QEM_BOT_SINGLEARCH")
