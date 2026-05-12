@@ -52,16 +52,20 @@ class GiteaTrigger:
         self.config_list: list[TriggerConfig] = get_configs_from_path(
             args.configs, "trigger_config", TriggerConfig.from_config_entry
         )
-        self.gitea_project: Any = args.gitea_project
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface()
-        self.pr_required_labels: set[str] = set(args.pr_label.split(","))
-        staging_config: Any = get_gitea_staging_config(self.gitea_token)
-        self.staging_config_project = staging_config["StagingProject"].replace(":", ":/")
-        self.staging_config_qa_labels: dict[str, str] = {
-            item["Label"]: item["Name"] for item in staging_config.get("QA", [])
-        }
-        self.prs: list[PullRequest] = []
+        self.is_opensuse = args.opensuse
+        if not self.is_opensuse:
+            self.pr_required_labels: set[str] = set(args.pr_label.split(","))
+            staging_config: Any = get_gitea_staging_config(self.gitea_token)
+            self.staging_config_project = staging_config["StagingProject"].replace(":", ":/")
+            self.staging_config_qa_labels: dict[str, str] = {
+                item["Label"]: item["Name"] for item in staging_config.get("QA", [])
+            }
+            # we're looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
+            # at least one for labels defined in staging.config
+            self.qa_labels = set(self.staging_config_qa_labels.keys())
+        self.prs: dict[str, list[PullRequest]] = {}
         self.comment: bool = getattr(args, "comment", False)
         self.commenter: Commenter = Commenter(args, submissions=[])
         conf.get_config(override_apiurl=config.settings.obs_url)
@@ -100,6 +104,8 @@ class GiteaTrigger:
             trigger_config (TriggerConfig): The triggering configuration.
 
         """
+        if self.is_pullrequest_can_be_skipped(pullrequest, trigger_config):
+            return
         log.info("Evaluating PR %s for openQA triggering with config: %s", pullrequest.number, trigger_config)
         repo_url = generate_repo_url(pullrequest, self.staging_config_qa_labels, self.staging_config_project)
         matched_iso_regex = Crawler(verify=not config.settings.insecure).get_regex_match_from_url(repo_url, ISO_REGEX)
@@ -150,31 +156,22 @@ class GiteaTrigger:
                     )
                     approve_pr(self.gitea_token, pullrequest.project, pullrequest.number, pullrequest.commit_sha, msg)
 
-    def get_prs_by_label(self) -> None:
-        """Get all open PRs and filter them by defined label."""
-        open_prs: list[PullRequest] = get_open_prs(
-            self.gitea_token,
-            self.gitea_project,
-            number=self.pr_number,
-        )
-        log.info(
-            "Loaded %d active PRs from %s",
-            len(open_prs),
-            self.gitea_project,
-        )
-        for pr in open_prs:
-            # we're looking only for PRs which has ALL labels defined via '--pr-label' parameter AND
-            # at least one for labels defined in staging.config
-            qa_labels = set(self.staging_config_qa_labels.keys())
-            if pr.has_all_labels(self.pr_required_labels) and pr.has_any_label(qa_labels):
-                self.prs.append(pr)
-            else:
-                log.debug("PR %s disregarded (labels: %s)", pr.number, pr.labels)
-        log.debug(
-            "Data for %d pullrequest: %s",
-            len(self.prs),
-            pformat(self.prs),
-        )
+    def is_pullrequest_can_be_skipped(self, pr: PullRequest, trigger_config: TriggerConfig) -> bool:
+        if self.is_opensuse:
+            if pr.branch != trigger_config.branch:
+                return True
+            return False
+        else:
+            if pr.has_all_labels(self.pr_required_labels) and pr.has_any_label(self.qa_labels):
+                return False
+            log.debug("PR %s disregarded (labels: %s)", pr.number, pr.labels)
+            return True
+
+    def load_prs_for_project(self, project: str) -> None:
+        if project in self.prs.keys():
+            return
+        self.prs[project] = get_open_prs(self.gitea_token, project, number=self.pr_number)
+        log.info("Loaded %d active PRs from %s", len(self.prs), project)
 
     def __call__(self) -> int:
         """Run test triggering logic.
@@ -183,10 +180,9 @@ class GiteaTrigger:
             int: 0 if all went well
 
         """
-        self.get_prs_by_label()
-
         for trigger_config in self.config_list:
-            for pr in self.prs:
+            self.load_prs_for_project(trigger_config.project)
+            for pr in self.prs[trigger_config.project]:
                 self.check_pullrequest(pr, trigger_config)
 
         return 0

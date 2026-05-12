@@ -15,6 +15,8 @@ class TriggerConfig:
 
     distri: str
     flavor: str
+    branch: str
+    project: str
     settings: dict[str, str] = field(default_factory=dict)
 
     def __str__(self) -> str:
@@ -28,5 +30,7 @@ class TriggerConfig:
         return cls(
             distri=entry["distri"],
             flavor=entry.get("flavor", "any"),
+            branch=entry.get("branch", "slfo-main"),
+            project=entry.get("project","SLFO"),
             settings=entry.get("settings", {}),
         )
