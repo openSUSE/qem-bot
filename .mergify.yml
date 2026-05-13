@@ -1,3 +1,10 @@
+merge_queue:
+  max_parallel_checks: 1
+
+queue_rules:
+  - name: default
+    batch_size: 1
+
 pull_request_rules:
   - name: automatic merge
     conditions:
@@ -20,8 +27,42 @@ pull_request_rules:
   - name: automatic merge on special label
     conditions:
       - and: *base_checks
-      - "label=merge-fast"
+      - and:
+        # mergify config checks needs at least two rules in "and" so we repeat
+        # one from the base checks
+        - base=main
+        - "label=merge-fast"
     actions: *merge
+  - name: automatic merge for dependabot updates
+    conditions:
+      - and: *base_checks
+      - and:
+        # mergify config checks needs at least two rules in "and" so we repeat
+        # one from the base checks
+        - base=main
+        - author=dependabot[bot]
+        - "label=waited"
+    actions:
+      queue:
+      merge:
+        method: squash
+  - name: Wait for some time before validating merge
+    actions:
+      label:
+        add:
+          - waited
+        remove:
+          - waiting
+    conditions:
+      - and:
+          - updated-at<4 days ago
+          - author=dependabot[bot]
+  - name: continuously rebase pull requests when it's labeled with `rebase` or `waited`
+    conditions:
+      - label~=rebase|waited
+    actions:
+      rebase:
+        bot_account: suse-qe-tools-mergify
   - name: ask to resolve conflict
     conditions:
       - conflict
