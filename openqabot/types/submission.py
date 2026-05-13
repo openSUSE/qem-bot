@@ -39,9 +39,9 @@ class Submission:
         self.type: str = submission.get("type") or config.settings.default_submission_type
         self.url: str | None = submission.get("url")
 
-        self._initialize_channels(submission["channels"])
+        self._initialize_channels([item for item in submission["channels"] if item is not None])
         self._validate_channels()
-        self._initialize_packages(submission["packages"])
+        self._initialize_packages([item for item in submission["packages"] if item is not None])
         self.emu: bool = submission["emu"]
         self.revisions: dict[ArchVer, int] | None = None  # lazy-initialized via revisions_with_fallback()
         self.rev_cache_params: tuple[Any, ...] | None = None
