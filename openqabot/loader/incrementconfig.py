@@ -70,14 +70,20 @@ class IncrementConfig:
         """Return the build project name."""
         return self._concat_project(self.build_project_suffix)
 
-    def diff_project(self) -> str:
-        """Return the project name to compute diff against."""
-        return self._concat_project(self.diff_project_suffix)
+    @staticmethod
+    def to_url(path: str, base_url: str | None = None) -> str:
+        """Return the absolute HTTP URL for a given path or OBS project."""
+        if path.startswith(("http://", "https://")):
+            return path
+        return f"{base_url or config.settings.obs_download_url}/{path.replace(':', ':/')}"
 
     def build_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the build project."""
-        base_path = self.build_project().replace(":", ":/")
-        return f"{base_url or config.settings.obs_download_url}/{base_path}"
+        return self.to_url(self.build_project(), base_url)
+
+    def diff_project_url(self, base_url: str | None = None) -> str:
+        """Return the URL of the diff project."""
+        return self.to_url(self._concat_project(self.diff_project_suffix), base_url)
 
     @property
     def group_key(self) -> GroupKey:

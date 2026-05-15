@@ -10,6 +10,7 @@ import pytest
 from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
+from openqabot.config import settings
 from openqabot.repodiff import RepoDiff
 
 
@@ -20,6 +21,23 @@ def diff(mocker: MockerFixture) -> RepoDiff:
     args.fake_data = False
     args.dump_data = False
     return RepoDiff(args)
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            f"{settings.obs_download_url}/SUSE/Products/SL-Micro/6.2/x86_64/product/x86_64",
+            f"{settings.obs_download_url}/SUSE/Products/SL-Micro/6.2/x86_64/product/x86_64/repodata/",
+        ),
+        (
+            "https://example.com/repo/product/x86_64/",
+            "https://example.com/repo/product/x86_64/repodata/",
+        ),
+    ],
+)
+def test_make_repodata_url_http(diff: RepoDiff, url: str, expected: str) -> None:
+    assert diff.make_repodata_url(url) == expected
 
 
 def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
@@ -33,8 +51,8 @@ def test_repodiff(capsys: pytest.CaptureFixture[str]) -> None:
         Namespace(
             dry=True,
             fake_data=True,
-            repo_a="OBS:PROJECT:PUBLISH_product",
-            repo_b="OBS:PROJECT:TEST_product",
+            repo_a=f"{settings.obs_download_url}/OBS:/PROJECT:/PUBLISH_product",
+            repo_b=f"{settings.obs_download_url}/OBS:/PROJECT:/TEST_product",
         ),
     )()
     res = json.loads(capsys.readouterr().out)
@@ -46,8 +64,8 @@ def test_repodiff_compression(capsys: pytest.CaptureFixture[str]) -> None:
         Namespace(
             dry=True,
             fake_data=True,
-            repo_a="OBS:PROJECT:PUBLISH_product_zst",
-            repo_b="OBS:PROJECT:TEST_product_gz",
+            repo_a=f"{settings.obs_download_url}/OBS:/PROJECT:/PUBLISH_product_zst",
+            repo_b=f"{settings.obs_download_url}/OBS:/PROJECT:/TEST_product_gz",
         ),
     )()
     res = json.loads(capsys.readouterr().out)
@@ -81,7 +99,7 @@ def test_load_repodata_error(diff: RepoDiff, mocker: MockerFixture, caplog: pyte
     mocker.patch.object(diff, "request_and_dump", return_value=None)
     res = diff.load_repodata("project")
     assert res is None
-    assert "Could not load repo data for project project" in caplog.text
+    assert "Could not load repo data for URL project" in caplog.text
 
 
 def test_load_packages_empty(diff: RepoDiff, mocker: MockerFixture) -> None:
@@ -95,7 +113,7 @@ def test_load_packages_invalid_data(diff: RepoDiff, mocker: MockerFixture, caplo
     mocker.patch.object(diff, "load_repodata", return_value={"invalid": "data"})
     res = diff.load_packages("project")
     assert res == {}
-    assert "Could not load repo data for project project" in caplog.text
+    assert "Could not load repo data for URL project" in caplog.text
 
 
 def test_request_and_dump_exception(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -109,7 +127,7 @@ def test_compute_diff_exception(diff: RepoDiff, mocker: MockerFixture, caplog: p
     mocker.patch.object(diff, "load_packages", side_effect=Exception("foo"))
     res = diff.compute_diff("repo_a", "repo_b")
     assert res == (defaultdict(set), 0)
-    assert "Repo diff computation failed for projects repo_a and repo_b" in caplog.text
+    assert "Repo diff computation failed for repositories repo_a and repo_b" in caplog.text
 
 
 def test_request_and_dump_dump_data(mocker: MockerFixture) -> None:

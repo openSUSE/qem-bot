@@ -29,13 +29,13 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert configs[0].archs == {"x86_64", "aarch64", "ppc64le"}
     assert configs[0].packages == ["kernel-source", "kernel-azure"]
     assert configs[0].build_project() == "FOO:TEST"
-    assert configs[0].diff_project() == "FOO:PUBLISH/product"
+    assert configs[0].diff_project_url() == "http://download.suse.de/ibs/FOO:/PUBLISH/product"
     assert configs[1].distri == "bar"
     assert configs[1].version == "42"
     assert configs[1].flavor == "Test-Increments"
     assert configs[1].project_base == ""  # noqa: PLC1901
     assert configs[1].build_project() == "ToTest"
-    assert configs[1].diff_project() == "none"
+    assert configs[1].diff_project_url() == "http://download.suse.de/ibs/none"
 
     path = Path("tests/fixtures/config")
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")

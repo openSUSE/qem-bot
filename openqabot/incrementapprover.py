@@ -327,45 +327,51 @@ class IncrementApprover:
         self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
     ) -> defaultdict[str, set[Package]]:
         """Compute package diff by comparing repositories."""
-        build_project = config_inc.build_project() + repo_sub_path
+        build_url = config_inc.build_project_url() + repo_sub_path
 
         is_reference_repo = False
-        diff_project = config_inc.diff_project()
-        if build_info and build_info.flavor in config_inc.reference_repos:
-            is_reference_repo = True
-            diff_project = config_inc.reference_repos[build_info.flavor]
-
-            channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
-            params = {
-                "base": "",
-                "project": config_inc.build_project(),
-                "version": build_info.version,
-                "arch": build_info.arch,
-                "channel": channel,
-                "suffix": config_inc.diff_project_suffix,
-                "product": build_info.product,
-            }
-            build_project = (
-                config_inc.build_repo_template.format(**(params | {"base": build_project}))
-                if config_inc.build_repo_template
-                else f"{build_project}/{channel}/{build_info.arch}"
+        diff_url = config_inc.diff_project_url()
+        if build_info:
+            # Check for a specific reference repository override by product name first, falling back to flavor
+            ref_repo = config_inc.reference_repos.get(build_info.product) or config_inc.reference_repos.get(
+                build_info.flavor
             )
-            diff_project = (
-                config_inc.diff_repo_template.format(**(params | {"base": diff_project}))
-                if config_inc.diff_repo_template
-                else f"{diff_project}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
-            )
+            if ref_repo:
+                is_reference_repo = True
+                diff_url = config_inc.to_url(ref_repo)
 
-        if not is_reference_repo and any(s in diff_project for s in ("-Debug", "-Source")):
-            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_project)
+            if is_reference_repo:
+                channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
+                params = {
+                    "base": "",
+                    "project": config_inc.build_project(),
+                    "version": build_info.version,
+                    "arch": build_info.arch,
+                    "channel": channel,
+                    "suffix": config_inc.diff_project_suffix,
+                    "product": build_info.product,
+                }
+                build_url = (
+                    config_inc.to_url(config_inc.build_repo_template.format(**(params | {"base": build_url})))
+                    if config_inc.build_repo_template
+                    else f"{build_url}/{channel}/{build_info.arch}"
+                )
+                diff_url = (
+                    config_inc.to_url(config_inc.diff_repo_template.format(**(params | {"base": diff_url})))
+                    if config_inc.diff_repo_template
+                    else f"{diff_url}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
+                )
+
+        if not is_reference_repo and any(s in diff_url for s in ("-Debug", "-Source")):
+            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_url)
             return defaultdict(set)
 
-        diff_key = f"{build_project}:{diff_project}"
+        diff_key = f"{build_url}:{diff_url}"
         if diff_key in self.package_diff:
             return self.package_diff[diff_key]
 
-        log.debug("Computing repo diff to project %s", diff_project)
-        self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(diff_project, build_project)[0]
+        log.debug("Computing repo diff to project %s", diff_url)
+        self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(diff_url, build_url)[0]
         return self.package_diff[diff_key]
 
     def get_package_diff(

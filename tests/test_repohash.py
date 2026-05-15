@@ -15,6 +15,7 @@ from requests import ConnectionError as RequestsConnectionError
 from requests import HTTPError as RequestsHTTPError
 
 import openqabot.loader.repohash as rp
+from openqabot.config import settings
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
 from openqabot.types.types import Repos
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 BASE_XML = '<repomd xmlns="http://linux.duke.edu/metadata/repo" xmlns:rpm="http://linux.duke.edu/metadata/rpm"><revision>%s</revision></repomd>'
 SLES = BASE_XML % "256"
 PROJECT = "SUSE:Maintenance:12345"
-SLES_URL = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml"
+SLES_URL = f"{settings.obs_download_url}/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15SP3_x86_64/repodata/repomd.xml"
 
 
 @responses.activate
@@ -42,7 +43,7 @@ def test_get_max_revision_opensuse() -> None:
     arch = "aarch64"
     repos = [Repos("openSUSE-SLE", "4.1", arch)]
     opensuse = BASE_XML % "256"
-    url = "http://download.suse.de/ibs/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml"
+    url = f"{settings.obs_download_url}/SUSE:/Maintenance:/12345/SUSE_Updates_openSUSE-SLE_4.1/repodata/repomd.xml"
     responses.add(responses.GET, url=url, body=opensuse)
     ret = rp.get_max_revision(repos, arch, PROJECT)
     assert ret == 256
@@ -165,7 +166,7 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
     product_version = "15.99"
 
     mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
-    url = "http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml"
+    url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
     mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "123")
 
@@ -194,7 +195,7 @@ def test_get_max_revision_slfo_with_repo_version(mocker: MockerFixture) -> None:
     project = "SLFO"
 
     mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
-    url = "http://download.suse.de/ibs/SLFO/repo/repodata/repomd.xml"
+    url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
     mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "456")
 

@@ -17,7 +17,6 @@ import pyzstd
 import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 
-from .config import settings
 from .utils import get_obs_filter_params
 from .utils import retry10 as retried_requests
 
@@ -50,10 +49,9 @@ class RepoDiff:
         """Initialize the RepoDiff class."""
         self.args = args
 
-    def make_repodata_url(self, project: str) -> str:  # noqa: PLR6301
+    def make_repodata_url(self, url: str) -> str:  # noqa: PLR6301
         """Construct the URL for repository metadata."""
-        path = project.replace(":", ":/")
-        return f"{settings.obs_download_url}/{path}/repodata/"
+        return f"{url.rstrip('/')}/repodata/"
 
     def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
         """Find the primary XML metadata file in a list of repository files."""
@@ -102,39 +100,39 @@ class RepoDiff:
             log.exception("Failed to fetch or dump data from %s", source)
         return None
 
-    def load_repodata(self, project: str) -> etree.Element | None:
-        """Load and parse repository primary metadata for an OBS project."""
-        url = self.make_repodata_url(project)
+    def load_repodata(self, url: str) -> etree.Element | None:
+        """Load and parse repository primary metadata for a repository URL."""
+        repodata_url = self.make_repodata_url(url)
         repo_data_listing = self.request_and_dump(
-            url,
-            f"repodata-listing-{project}.json",
+            repodata_url,
+            f"repodata-listing-{url.replace('/', '_').replace(':', '_')}.json",
             as_json=True,
             params=get_obs_filter_params(r".*-primary\.xml.*"),
         )
         if not repo_data_listing or not isinstance(repo_data_listing, dict):
-            log.error("Could not load repo data for project %s", project)
+            log.error("Could not load repo data for URL %s", url)
             return None
 
         rows = repo_data_listing.get("data", [])
         repo_data_file = self.find_primary_repodata(rows)
         if repo_data_file is None:
-            log.warning("Repository metadata not found: Primary repodata missing in %s", url)
+            log.warning("Repository metadata not found: Primary repodata missing in %s", repodata_url)
             return None
-        repo_data_raw = self.request_and_dump(url + repo_data_file, repo_data_file)
+        repo_data_raw = self.request_and_dump(repodata_url + repo_data_file, repo_data_file)
         if not isinstance(repo_data_raw, bytes):
             return None
         repo_data = RepoDiff.decompress(repo_data_file, repo_data_raw)
         log.debug("Parsing repository metadata file: %s", repo_data_file)
         return etree.fromstring(repo_data)
 
-    def load_packages(self, project: str) -> defaultdict[str, set[Package]]:
-        """Load the list of packages from an OBS project repository."""
-        repo_data = self.load_repodata(project)
+    def load_packages(self, url: str) -> defaultdict[str, set[Package]]:
+        """Load the list of packages from a repository URL."""
+        repo_data = self.load_repodata(url)
         packages_by_arch = defaultdict(set)
         if repo_data is None or not hasattr(repo_data, "iterfind"):
-            log.error("Could not load repo data for project %s", project)
+            log.error("Could not load repo data for URL %s", url)
             return packages_by_arch
-        log.debug("Loading package list for project %s", project)
+        log.debug("Loading package list for repository %s", url)
         for package in repo_data.iterfind(package_tag):
             if package.get("type") != "rpm":
                 continue
@@ -167,13 +165,13 @@ class RepoDiff:
         return (diff_by_arch, count)
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
-        """Compute the package diff between two OBS projects."""
+        """Compute the package diff between two repositories."""
         try:
             packages_by_arch_a = self.load_packages(repo_a)
             packages_by_arch_b = self.load_packages(repo_b)
             return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
         except Exception:
-            log.exception("Repo diff computation failed for projects %s and %s", repo_a, repo_b)
+            log.exception("Repo diff computation failed for repositories %s and %s", repo_a, repo_b)
             return defaultdict(set), 0
 
     def __call__(self) -> int:
