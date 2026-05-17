@@ -28,6 +28,7 @@ from openqabot.loader.qem import (
     get_submissions,
     get_submissions_approver,
     post_job,
+    update_incident_reason,
     update_job,
     update_submissions,
 )
@@ -427,6 +428,30 @@ def test_update_job_request_exception(mock_patch: MagicMock, caplog: pytest.LogC
     caplog.set_level(logging.ERROR)
     mock_patch.side_effect = requests.exceptions.RequestException
     update_job(1, {})
+    assert "QEM Dashboard API request failed" in caplog.text
+
+
+def test_update_incident_reason_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_patch.return_value.status_code = 200
+
+    update_incident_reason(1, "reason")
+    assert "error" not in caplog.text
+
+
+def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    mock_patch.return_value.status_code = 400
+    mock_patch.return_value.text = "Error message"
+    caplog.set_level(logging.ERROR)
+
+    update_incident_reason(1, "reason")
+    assert "Error message" in caplog.text
+
+
+def test_update_incident_reason_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_patch.side_effect = requests.exceptions.RequestException
+    update_incident_reason(1, "reason")
     assert "QEM Dashboard API request failed" in caplog.text
 
 

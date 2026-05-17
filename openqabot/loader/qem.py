@@ -318,3 +318,21 @@ def update_job(job_id: int, data: dict[str, Any]) -> None:
 
     except requests.exceptions.RequestException:
         log.exception("QEM Dashboard API request failed")
+
+
+def update_incident_reason(incident_number: int, reason: str | None) -> None:
+    """Update the rejection reason for a submission on the dashboard."""
+    try:
+        result = dashboard.patch(
+            f"api/incidents/{incident_number}/rejection_reason",
+            headers=config_module.settings.dashboard_token_dict,
+            json={"rejection_reason": reason},
+        )
+        if result.status_code != HTTPStatus.OK:
+            log.error(
+                "Dashboard API error: Could not update rejection reason for incident %s: %s",
+                incident_number,
+                result.text,
+            )
+    except requests.exceptions.RequestException:
+        log.exception("QEM Dashboard API request failed")

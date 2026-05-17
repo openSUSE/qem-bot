@@ -12,7 +12,7 @@ import pytest
 from openqa_client.exceptions import RequestError
 
 from openqabot.approver import Approver
-from openqabot.loader.qem import JobAggr
+from openqabot.loader.qem import JobAggr, SubReq
 
 from .helpers import args, make_approver_args
 
@@ -99,7 +99,35 @@ def test_was_ok_before_no_suitable_older_jobs(
     assert any(log_message in m for m in caplog.messages)
 
 
-def test_get_submission_result_empty_jobs() -> None:
+def test_reject_calls_update_incident_reason(mocker: MockerFixture) -> None:
+    approver = Approver(make_approver_args())
+    approver.dry = False
+    mock_update = mocker.patch("openqabot.approver.update_incident_reason")
+    sub = SubReq(1, 2)
+    assert approver._reject(sub, "Reason %s") is False  # noqa: SLF001
+    mock_update.assert_called_once_with(1, "Reason SUSE:Maintenance:1:2")
+
+
+def test_reject_dry_run_skips_update_incident_reason(mocker: MockerFixture) -> None:
+    approver = Approver(make_approver_args())
+    approver.dry = True
+    mock_update = mocker.patch("openqabot.approver.update_incident_reason")
+    sub = SubReq(1, 2)
+    assert approver._reject(sub, "Reason %s") is False  # noqa: SLF001
+    mock_update.assert_not_called()
+
+
+def test_approvable_clears_reason(mocker: MockerFixture) -> None:
+    approver = Approver(make_approver_args())
+    approver.dry = False
+    mock_update = mocker.patch("openqabot.approver.update_incident_reason")
+    mocker.patch("openqabot.approver.get_submission_settings", return_value=[])
+    mocker.patch("openqabot.approver.get_aggregate_settings", return_value=[])
+    mocker.patch.object(approver, "get_submission_result", return_value=True)
+
+    sub = SubReq(1, 2)
+    assert approver.approvable(sub) is True
+    mock_update.assert_called_once_with(1, None)
     approver_instance = Approver(args)
     assert approver_instance.get_submission_result([], "api/", 1) is False
 
