@@ -32,6 +32,7 @@ from .loader.qem import (
     get_single_submission,
     get_submission_settings,
     get_submissions_approver,
+    update_incident_reason,
 )
 
 if TYPE_CHECKING:
@@ -149,6 +150,8 @@ class Approver:
         log.info(reason, ms2str(sub))
         if self.comment and sub.submission:
             self.commenter.comment_on_submission(sub.submission)
+        if not self.dry:
+            update_incident_reason(sub.sub, reason % ms2str(sub))
         return False
 
     def approvable(self, sub: SubReq) -> bool:
@@ -162,8 +165,7 @@ class Approver:
             a_jobs = get_aggregate_settings(sub.sub, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
-                log.info("Required aggregate tests missing for %s", ms2str(sub))
-                return False
+                return self._reject(sub, "Required aggregate tests missing for %s")
             log.debug("Aggregate tests optional and not found: %s", e)
             a_jobs = []
 
@@ -174,6 +176,9 @@ class Approver:
             a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
         ):
             return self._reject(sub, "%s has at least one not-ok job in aggregate tests")
+
+        if not self.dry:
+            update_incident_reason(sub.sub, None)
 
         # everything is green --> add submission to approve list
         return True
