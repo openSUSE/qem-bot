@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 log = getLogger("bot.increment_config")
 DEFAULT_FLAVOR_SUFFIX = "Increments"
 DEFAULT_VERSION_REGEX = r"[\d.]+"
+TEMPLATE_VARS = ("base", "project", "version", "arch", "channel", "suffix", "product")
 
 
 @dataclass(frozen=True)
@@ -56,6 +57,7 @@ class IncrementConfig:
     settings: dict[str, str] = field(default_factory=dict)
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
     reference_repos: dict[str, str] = field(default_factory=dict)
+    # Template for URL construction. Variables: base, project, version, arch, channel, suffix, product.
     build_repo_template: str = ""
     diff_repo_template: str = ""
 
@@ -84,6 +86,30 @@ class IncrementConfig:
     def diff_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the diff project."""
         return self.to_url(self._concat_project(self.diff_project_suffix), base_url)
+
+    def _get_template_params(self, base: str, build_info: BuildInfo) -> dict[str, Any]:
+        return {
+            "base": base,
+            "project": self.build_project(),
+            "version": build_info.version,
+            "arch": build_info.arch,
+            "channel": build_info.flavor.removesuffix(f"-{self.flavor_suffix}"),
+            "suffix": self.diff_project_suffix,
+            "product": build_info.product,
+        }
+
+    def render_build_url(self, base: str, build_info: BuildInfo) -> str:
+        """Render the build repository URL using a template or fallback."""
+        if not self.build_repo_template:
+            channel = build_info.flavor.removesuffix(f"-{self.flavor_suffix}")
+            return f"{base}/{channel}/{build_info.arch}"
+        return self.to_url(self.build_repo_template.format(**self._get_template_params(base, build_info)))
+
+    def render_diff_url(self, base: str, build_info: BuildInfo) -> str:
+        """Render the diff repository URL using a template or fallback."""
+        if not self.diff_repo_template:
+            return f"{base}/{build_info.version}/{self.diff_project_suffix}/{build_info.arch}"
+        return self.to_url(self.diff_repo_template.format(**self._get_template_params(base, build_info)))
 
     @property
     def group_key(self) -> GroupKey:

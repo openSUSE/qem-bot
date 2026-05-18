@@ -25,7 +25,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import GroupKey, IncrementConfig
+from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
@@ -341,26 +341,16 @@ class IncrementApprover:
                 diff_url = config_inc.to_url(ref_repo)
 
             if is_reference_repo:
-                channel = build_info.flavor.removesuffix(f"-{config_inc.flavor_suffix}")
-                params = {
-                    "base": "",
-                    "project": config_inc.build_project(),
-                    "version": build_info.version,
-                    "arch": build_info.arch,
-                    "channel": channel,
-                    "suffix": config_inc.diff_project_suffix,
-                    "product": build_info.product,
-                }
-                build_url = (
-                    config_inc.to_url(config_inc.build_repo_template.format(**(params | {"base": build_url})))
-                    if config_inc.build_repo_template
-                    else f"{build_url}/{channel}/{build_info.arch}"
-                )
-                diff_url = (
-                    config_inc.to_url(config_inc.diff_repo_template.format(**(params | {"base": diff_url})))
-                    if config_inc.diff_repo_template
-                    else f"{diff_url}/{build_info.version}/{config_inc.diff_project_suffix}/{build_info.arch}"
-                )
+                try:
+                    build_url = config_inc.render_build_url(build_url, build_info)
+                    diff_url = config_inc.render_diff_url(diff_url, build_info)
+                except KeyError:
+                    log.exception(
+                        "Invalid template variable in config for %s. Available: %s",
+                        config_inc.distri,
+                        ", ".join(TEMPLATE_VARS),
+                    )
+                    return defaultdict(set)
 
         if not is_reference_repo and any(s in diff_url for s in ("-Debug", "-Source")):
             log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_url)

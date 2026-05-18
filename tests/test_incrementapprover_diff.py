@@ -125,3 +125,24 @@ def test_package_diff_skip_debug(caplog: pytest.LogCaptureFixture) -> None:
     res = approver.get_package_diff(None, config, "/product")
     assert res == {}
     assert f"Skipping repo diffing for {settings.obs_download_url}/BASE:/DIFF-Debug" in caplog.text
+
+
+def test_package_diff_invalid_template(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
+    config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="any",
+        project_base="BASE",
+        build_project_suffix="BUILD",
+        diff_project_suffix="DIFF",
+        flavor_suffix="Increments",
+        reference_repos={"SLES": "https://ref.repo/SLES"},
+        build_repo_template="{invalid_var}",
+    )
+    build_info = BuildInfo("sle", "SLES", "16.0", "SLES-Increments", "x86_64", "123")
+    res = approver.get_package_diff(None, config, "/product", build_info)
+    assert res == {}
+    assert "Invalid template variable in config for sle" in caplog.text
+    assert "KeyError: 'invalid_var'" in caplog.text
+    assert "Available: base, project, version, arch, channel, suffix, product" in caplog.text
