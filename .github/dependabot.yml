@@ -16,7 +16,6 @@ updates:
 
     labels:
       - "dependencies"
-      - "python"
 
   - package-ecosystem: "github-actions"
     directory: "/"
