@@ -69,6 +69,10 @@ updates information about submissions and related openQA tests.
     │ --retry            -r                   INTEGER  Number of retries           │
     │                                                  [env var: QEM_BOT_RETRY]    │
     │                                                  [default: 2]                │
+    │ --max-workers                           INTEGER  Maximum number of workers   │
+    │                                                  for parallel processing     │
+    │                                                  [env var:                   │
+    │                                                  QEM_BOT_MAX_WORKERS]        │
     │ --help                                           Show this message and exit. │
     ╰──────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────╮

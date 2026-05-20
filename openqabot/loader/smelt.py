@@ -178,7 +178,7 @@ def get_submission_from_smelt(incident: int) -> dict[str, Any] | None:
 
 def get_submissions(active: set[int]) -> list[dict[str, Any]]:
     """Fetch detailed information for a set of submissions from SMELT in parallel."""
-    with futures.ThreadPoolExecutor() as executor:
+    with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
         future_sub = [executor.submit(get_submission_from_smelt, inc) for inc in active]
         submissions = (future.result() for future in futures.as_completed(future_sub))
         return [sub for sub in submissions if sub]

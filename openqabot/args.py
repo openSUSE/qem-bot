@@ -202,6 +202,14 @@ def main(  # noqa: PLR0913
         ),
     ] = Path("/etc/openqabot/singlearch.yml"),
     retry: Annotated[int, typer.Option("-r", "--retry", envvar="QEM_BOT_RETRY", help="Number of retries")] = 2,
+    max_workers: Annotated[
+        int | None,
+        typer.Option(
+            "--max-workers",
+            envvar="QEM_BOT_MAX_WORKERS",
+            help="Maximum number of workers for parallel processing",
+        ),
+    ] = None,
 ) -> None:
     """QEM-Dashboard, SMELT, Gitea and openQA connector."""
     # Configure logging
@@ -241,11 +249,13 @@ def main(  # noqa: PLR0913
         gitea_token=gitea_token,
         singlearch=singlearch,
         retry=retry,
+        max_workers=max_workers,
     )
 
     config_module.settings.openqa_instance = openqa_instance
     config_module.settings.dry = dry
     config_module.settings.token = token
+    config_module.settings.max_workers = max_workers
 
 
 @app.command()
