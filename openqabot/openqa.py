@@ -184,12 +184,16 @@ class OpenQAInterface:
         if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
             return info
 
+        settings = job.get("settings", {})
         return info | {
             "group": job.get("group"),
             "group_id": job.get("group_id"),
-            "distri": job.get("distri"),
-            "version": job.get("version"),
-            "build": job.get("build"),
+            "distri": job.get("distri") or settings.get("DISTRI"),
+            "version": job.get("version") or settings.get("VERSION"),
+            "build": job.get("build") or settings.get("BUILD"),
+            "flavor": settings.get("FLAVOR"),
+            "arch": job.get("arch") or settings.get("ARCH"),
+            "name": job.get("name"),
         }
 
     @staticmethod
