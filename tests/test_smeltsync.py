@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 from responses import matchers
 
 from openqabot.config import QEM_DASHBOARD, SMELT
-from openqabot.smeltsync import SMELTSync
+from openqabot.smeltsync import SMELTSync, has_qam_review, is_inreview, is_revoked, review_rrequest
 
 
 @pytest.fixture
@@ -159,28 +159,28 @@ def test_sync_dry_run(caplog: pytest.LogCaptureFixture, args: Namespace) -> None
 
 def test_review_rrequest_with_invalid_valid_and_empty_is_handled_gracefully() -> None:
     request_set = [{"requestId": 1, "status": {"name": "declined"}}]
-    assert SMELTSync.review_rrequest(request_set) is None
+    assert review_rrequest(request_set) is None
     request_set = [{"requestId": 1, "status": {"name": "review"}}]
-    assert SMELTSync.review_rrequest(request_set) is not None
-    assert SMELTSync.review_rrequest([]) is None
+    assert review_rrequest(request_set) is not None
+    assert review_rrequest([]) is None
 
 
 def test_is_inreview() -> None:
     rr_number = {"status": {"name": "new"}, "reviewSet": [{"foo": "bar"}]}
-    assert not SMELTSync.is_inreview(rr_number)
+    assert not is_inreview(rr_number)
     rr_number = {"status": {"name": "review"}, "reviewSet": [{"foo": "bar"}]}
-    assert SMELTSync.is_inreview(rr_number)
+    assert is_inreview(rr_number)
     rr_number = {"status": {"name": "new"}, "reviewSet": []}
-    assert not SMELTSync.is_inreview(rr_number)
+    assert not is_inreview(rr_number)
 
 
 def test_is_revoked() -> None:
     rr_number = {"status": {"name": "new"}, "reviewSet": [{"foo": "bar"}]}
-    assert not SMELTSync.is_revoked(rr_number)
+    assert not is_revoked(rr_number)
     rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
-    assert SMELTSync.is_revoked(rr_number)
+    assert is_revoked(rr_number)
     rr_number = {"status": {"name": "new"}, "reviewSet": []}
-    assert not SMELTSync.is_revoked(rr_number)
+    assert not is_revoked(rr_number)
 
 
 def test_create_record_no_request_set() -> None:
@@ -202,14 +202,14 @@ def test_create_record_no_request_set() -> None:
 
 def test_is_revoked_true() -> None:
     rr_number = {"status": {"name": "revoked"}, "reviewSet": [{"foo": "bar"}]}
-    assert SMELTSync.is_revoked(rr_number)
+    assert is_revoked(rr_number)
 
 
 def test_has_qam_review_correct_status_passes() -> None:
     rr_number = {"reviewSet": [{"assignedByGroup": {"name": "qam-openqa"}, "status": {"name": "review"}}]}
-    assert SMELTSync.has_qam_review(rr_number)
+    assert has_qam_review(rr_number)
 
 
 def test_has_qam_review_empty_set_fails() -> None:
     rr_number = {"reviewSet": []}
-    assert not SMELTSync.has_qam_review(rr_number)
+    assert not has_qam_review(rr_number)

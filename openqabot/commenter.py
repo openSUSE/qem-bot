@@ -111,7 +111,9 @@ class Commenter:
         if revisions:
             info.update(revisions)
 
-        msg = truncate(add_marker(msg, bot_name, info).strip())
+        msg = add_marker(msg, bot_name, info)
+        msg = truncate(msg.strip())
+
         comments = self.commentapi.get_comments(request_id=request_id)
         comment, _ = self.commentapi.comment_find(comments, bot_name, info)
 
@@ -276,24 +278,24 @@ class Commenter:
                 "contact": g["contact"],
                 "build": g["build"],
                 "status": g["status"],
-                "overview_url": self._generate_overview_url(base_url, g, name),
-                "badge_url": self._generate_overview_url(base_url, g, name, badge=True, label=name),
+                "overview_url": _generate_overview_url(base_url, g, name),
+                "badge_url": _generate_overview_url(base_url, g, name, badge=True, label=name),
             }
             for g in groups.values()
         ]
 
-    @staticmethod
-    def _generate_overview_url(
-        base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False, label: str | None = None
-    ) -> str:
-        """Generate overview or badge URL for a specific job group."""
-        params = BuildIdentifier(
-            group.get("build", ""), group.get("distri", ""), group.get("version", "")
-        ).get_base_badge_params()
-        params["group"] = group_name
-        if label:
-            params["label"] = label
 
-        query = urlencode(params, safe="*")
-        path = "/tests/overview/badge" if badge else "/tests/overview"
-        return f"{base_url}{path}?{query}"
+def _generate_overview_url(
+    base_url: str, group: dict[str, Any], group_name: str, *, badge: bool = False, label: str | None = None
+) -> str:
+    """Generate overview or badge URL for a specific job group."""
+    params = BuildIdentifier(
+        group.get("build", ""), group.get("distri", ""), group.get("version", "")
+    ).get_base_badge_params()
+    params["group"] = group_name
+    if label:
+        params["label"] = label
+
+    query = urlencode(params, safe="*")
+    path = "/tests/overview/badge" if badge else "/tests/overview"
+    return f"{base_url}{path}?{query}"

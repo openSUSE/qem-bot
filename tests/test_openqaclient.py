@@ -16,6 +16,7 @@ from responses import matchers
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import OpenQAInterface as oQAI
+from openqabot.openqa import handle_job_not_found
 
 
 @pytest.fixture
@@ -81,8 +82,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture, fake_openqa_url: str)
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
 def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.openqa")
-    client = oQAI()
-    client.handle_job_not_found(42)
+    handle_job_not_found(42)
     assert len(caplog.messages) == 2
     assert len(responses.calls) == 1
     assert "Job 42 not found on openQA, marking as obsolete on dashboard" in caplog.messages
