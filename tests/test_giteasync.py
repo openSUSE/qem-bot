@@ -168,6 +168,7 @@ def test_gitea_sync_on_dry_run_does_not_sync(args: Namespace, caplog: pytest.Log
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
 def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
+    mocker.patch("openqabot.loader.gitea.verify_repo_exists", return_value=True)
     run_gitea_sync(mocker, caplog, args)
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in caplog.messages
@@ -207,6 +208,7 @@ def test_sync_with_product_version_from_repo_listing(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     mocker.patch("openqabot.config.settings.obs_repo_type", "standard")  # has no scmsync so repo listing is used
+    mocker.patch("openqabot.loader.gitea.verify_repo_exists", return_value=True)
     run_gitea_sync(mocker, caplog, args)
 
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
