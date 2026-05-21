@@ -57,7 +57,20 @@ def _fake_get_gitea_staging_config(mocker: MockerFixture) -> None:
 
 
 @pytest.fixture
-def trigger(mock_args: Namespace, mocker: MockerFixture, _fake_get_gitea_staging_config: MockerFixture) -> GiteaTrigger:
+def _fake_get_configs_from_path(mocker: MockerFixture, mock_trigger_config: TriggerConfig) -> None:
+    mocker.patch(
+        "openqabot.giteatrigger.get_configs_from_path",
+        return_value=[mock_trigger_config],
+    )
+
+
+@pytest.fixture
+def trigger(
+    mock_args: Namespace,
+    mocker: MockerFixture,
+    _fake_get_gitea_staging_config: MockerFixture,
+    _fake_get_configs_from_path: None,
+) -> GiteaTrigger:
     """Initialize GiteaTrigger with mocked external integrations."""
     mocker.patch("openqabot.giteatrigger.OpenQAInterface")
     mocker.patch("openqabot.giteatrigger.Commenter")
@@ -217,7 +230,7 @@ def test_trigger_call_execution(trigger: GiteaTrigger, mocker: MockerFixture) ->
     mock_check.assert_called_once_with(mock_pr, mocker.ANY)
 
 
-@pytest.mark.usefixtures("_fake_get_gitea_staging_config")
+@pytest.mark.usefixtures("_fake_get_gitea_staging_config", "_fake_get_configs_from_path")
 def test_get_prs_by_label_specific_number(mock_args: Namespace, mocker: MockerFixture) -> None:
     """Cover user provides a specific PR number via CLI."""
     mock_args.pr_number = 1337
@@ -386,3 +399,12 @@ def test_is_openqa_triggering_needed_with_results(trigger: GiteaTrigger, mock_tr
     cast("MagicMock", trigger.openqa.get_scheduled_product_stats).return_value = {"job": "done"}
     mock_iso = MagicMock()
     assert trigger.is_openqa_triggering_needed(mock_iso, mock_trigger_config) is False
+
+
+def test_trigger_init_no_configs(mock_args: Namespace, mocker: MockerFixture) -> None:
+    """Verify that ValueError is raised if no configs are found."""
+    mocker.patch("openqabot.giteatrigger.get_configs_from_path", return_value=[])
+    mocker.patch("openqabot.loader.gitea.make_token_header")
+
+    with pytest.raises(ValueError, match="No configs were found"):
+        GiteaTrigger(mock_args)

@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from openqabot.loader.config import get_configs_from_path
 
 
@@ -77,3 +79,26 @@ trigger_config:
     assert len(configs) == 1
     assert configs[0].distri == "sle"
     assert configs[0].settings == {"GLOBAL": "value", "LOCAL": "local_value"}
+
+
+def test_get_configs_from_path_yaml_error(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test get_configs_from_path with a YAML error."""
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("invalid: yaml: :")
+
+    with caplog.at_level("INFO", logger="bot.loader.config"):
+        configs = get_configs_from_path(config_file, "trigger_config", MockConfig.from_config_entry)
+
+    assert configs == []
+    assert "configuration skipped: could not load" in caplog.text.lower()
+
+
+def test_get_configs_from_path_not_found(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Test get_configs_from_path with a non-existent file."""
+    config_file = tmp_path / "non_existent.yml"
+
+    with caplog.at_level("INFO", logger="bot.loader.config"):
+        configs = get_configs_from_path(config_file, "trigger_config", MockConfig.from_config_entry)
+
+    assert configs == []
+    assert "configuration skipped: could not load" in caplog.text.lower()

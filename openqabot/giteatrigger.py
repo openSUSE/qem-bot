@@ -52,6 +52,9 @@ class GiteaTrigger:
         self.config_list: list[TriggerConfig] = get_configs_from_path(
             args.configs, "trigger_config", TriggerConfig.from_config_entry
         )
+        if not self.config_list:
+            error_msg = "No configs were found"
+            raise ValueError(error_msg)
         self.gitea_project: Any = args.gitea_project
         self.pr_number: int = args.pr_number
         self.openqa: OpenQAInterface = OpenQAInterface()
