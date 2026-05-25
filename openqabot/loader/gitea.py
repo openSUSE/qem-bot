@@ -265,29 +265,37 @@ def review_pr(  # noqa: PLR0913
     post_json(review_url, token, review_data)
 
 
+def _is_already_approved(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str) -> bool:
+    bot_user = config.settings.git_review_bot_user
+
+    if bot_user:
+        comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
+        if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
+            log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
+            return True
+    else:
+        reviews = iter_gitea_items(reviews_url(repo_name, pr_number), token)
+        if any(
+            (r.get("commit_id"), r.get("state")) == (commit_id, "APPROVED") and is_review_requested_by(r)
+            for r in reviews
+        ):
+            log.info("PR %s already approved for commit %s", pr_number, commit_id)
+            return True
+
+    return False
+
+
 def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str, msg: str) -> bool:
     """Approve a PR on Gitea using its repository name and commit ID."""
     try:
-        bot_user = config.settings.git_review_bot_user
-        if bot_user:
-            comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
-            if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
-                log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
-                return True
-        else:
-            reviews = iter_gitea_items(reviews_url(repo_name, pr_number), token)
-            if any(
-                (r.get("commit_id"), r.get("state")) == (commit_id, "APPROVED") and is_review_requested_by(r)
-                for r in reviews
-            ):
-                log.info("PR %s already approved for commit %s", pr_number, commit_id)
-                return True
-
+        if _is_already_approved(token, repo_name, pr_number, commit_id):
+            return True
         log.info("PR %s approved for commit %s", pr_number, commit_id)
         review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
     except Exception:
         log.exception("Gitea API error: Failed to approve PR %s", pr_number)
         return False
+
     return True
 
 
@@ -726,6 +734,35 @@ def _validate_submission(
     return not (only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number))
 
 
+def _build_submission_record(
+    pr: PullRequest,
+    token: dict[str, str],
+    *,
+    only_successful_builds: bool,
+    only_requested_prs: bool,
+    dry: bool,
+) -> dict[str, Any] | None:
+    submission = _init_submission_dict(pr)
+    reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
+
+    if add_reviews(submission, reviews) < 1 and only_requested_prs:
+        log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
+        return None
+
+    add_comments_and_referenced_build_results(submission, comments, dry=dry)
+
+    if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
+        return None
+
+    add_packages_from_files(submission, token, files, dry=dry)
+
+    if not submission["packages"]:
+        log.info("PR git:%s skipped: No packages found", pr.number)
+        return None
+
+    return submission
+
+
 def make_submission_from_gitea_pr(
     pr: PullRequest,
     token: dict[str, str],
@@ -737,25 +774,12 @@ def make_submission_from_gitea_pr(
     """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.number)
     try:
-        submission = _init_submission_dict(pr)
-        reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
-
-        if add_reviews(submission, reviews) < 1 and only_requested_prs:
-            log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
-            return None
-
-        add_comments_and_referenced_build_results(submission, comments, dry=dry)
-        if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
-            return None
-        add_packages_from_files(submission, token, files, dry=dry)
-        if not submission["packages"]:
-            log.info("PR git:%s skipped: No packages found", pr.number)
-            return None
-
+        return _build_submission_record(
+            pr, token, only_successful_builds=only_successful_builds, only_requested_prs=only_requested_prs, dry=dry
+        )
     except Exception:
         log.exception("Gitea API error: Unable to process PR git:%s", pr.number)
         return None
-    return submission
 
 
 def get_submissions_from_open_prs(

@@ -66,6 +66,24 @@ class RepoDiff:
             return pyzstd.decompress(repo_data_raw)
         return repo_data_raw
 
+    @staticmethod
+    def _fetch_or_read_bytes(
+        url: str, filepath: str, *, fake_data: bool, dump_data: bool, params: dict[str, Any] | None
+    ) -> bytes | None:
+
+        if fake_data:
+            return Path(filepath).read_bytes()
+
+        resp = retried_requests.get(url, params=params)
+        if not resp.ok:
+            log.info("Failed to fetch data from %s: %s %s", url, resp.status_code, resp.reason)
+            return None
+
+        if dump_data:
+            Path(filepath).write_bytes(resp.content)
+
+        return resp.content
+
     def request_and_dump(
         self,
         url: str,
@@ -76,29 +94,32 @@ class RepoDiff:
     ) -> bytes | dict[str, Any] | None:
         """Fetch data from a URL and optionally dump it to a file for fake data usage."""
         log.debug("Fetching repository data from %s", url)
-        name = "tests/fixtures/responses/" + name.replace("/", "_")
-        fake_data = self.args is not None and self.args.fake_data
-        source = name if fake_data else url
-        try:
-            if fake_data:
-                content = Path(name).read_bytes()
-            else:
-                resp = retried_requests.get(url, params=params)
-                if not resp.ok:
-                    log.info("Failed to fetch data from %s: %s %s", source, resp.status_code, resp.reason)
-                    return None
-                content = resp.content
-                if self.args is not None and self.args.dump_data:
-                    Path(name).write_bytes(content)
+        filepath = "tests/fixtures/responses/" + name.replace("/", "_")
 
-            return json.loads(content) if as_json else content
+        fake_data = self.args is not None and getattr(self.args, "fake_data", False)
+        dump_data = self.args is not None and getattr(self.args, "dump_data", False)
+        source = filepath if fake_data else url
+
+        try:
+            content = self._fetch_or_read_bytes(url, filepath, fake_data=fake_data, dump_data=dump_data, params=params)
         except (FileNotFoundError, PermissionError):
             log.info("Failed to read %s: File not found", source)
-        except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
-            log.info("Failed to parse %s", source)
+            return None
         except Exception:
             log.exception("Failed to fetch or dump data from %s", source)
-        return None
+            return None
+
+        if content is None:
+            return None
+
+        if not as_json:
+            return content
+
+        try:
+            return json.loads(content)
+        except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
+            log.info("Failed to parse %s", source)
+            return None
 
     def load_repodata(self, url: str) -> etree.Element | None:
         """Load and parse repository primary metadata for a repository URL."""

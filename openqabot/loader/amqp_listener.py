@@ -32,31 +32,34 @@ class AMQPListener:
 
     def listen(self) -> None:
         """Initialize and start the blocking consumer loop."""
+        try:
+            self._connect_and_consume()
+        finally:
+            self.stop()
+
+    def _connect_and_consume(self) -> None:
         if not self.url:
             log.error("AMQP URL not provided")
             return
 
-        try:
-            self.connection = pika.BlockingConnection(pika.URLParameters(self.url))
-            self.channel = self.connection.channel()
-            self.channel.exchange_declare(exchange="pubsub", exchange_type="topic", passive=True, durable=True)
+        self.connection = pika.BlockingConnection(pika.URLParameters(self.url))
+        self.channel = self.connection.channel()
+        self.channel.exchange_declare(exchange="pubsub", exchange_type="topic", passive=True, durable=True)
 
-            result = self.channel.queue_declare("", exclusive=True)
-            queue_name = result.method.queue
-            if not isinstance(queue_name, str):
-                log.error("Failed to declare queue or received invalid queue name")
-                return
+        result = self.channel.queue_declare("", exclusive=True)
+        queue_name = result.method.queue
+        if not isinstance(queue_name, str):
+            log.error("Failed to declare queue or received invalid queue name")
+            return
 
-            for key in self.routing_keys:
-                self.channel.queue_bind(exchange="pubsub", queue=queue_name, routing_key=key)
+        for key in self.routing_keys:
+            self.channel.queue_bind(exchange="pubsub", queue=queue_name, routing_key=key)
 
-            self.channel.basic_consume(queue_name, self._on_message, auto_ack=True)
+        self.channel.basic_consume(queue_name, self._on_message, auto_ack=True)
 
-            log.info("Starting AMQP listener on %s", self.url)
-            with contextlib.suppress(KeyboardInterrupt):
-                self.channel.start_consuming()
-        finally:
-            self.stop()
+        log.info("Starting AMQP listener on %s", self.url)
+        with contextlib.suppress(KeyboardInterrupt):
+            self.channel.start_consuming()
 
     def _on_message(
         self, _ch: BlockingChannel, method: Basic.Deliver, _properties: BasicProperties, body: bytes

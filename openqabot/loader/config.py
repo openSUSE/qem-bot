@@ -57,21 +57,24 @@ def _load_one_config[T: ConfigWithSettings](
             return
 
         raw_items = yaml_data.get(config_key, [])
-        if isinstance(raw_items, dict):
-            raw_items = list(raw_items.values())
-
-        items = [loader_func(item) for item in raw_items]
-
-        if load_defaults:
-            defaults = yaml_data.get("settings", {})
-            for item in items:
-                item.settings = defaults | item.settings
-
-        yield from items
     except AttributeError:
         log.debug("File '%s' skipped: Not a valid %s's configuration", file_path, config_key)
+        return
     except (YAMLError, FileNotFoundError, PermissionError) as e:
         log.info("%s's configuration skipped: Could not load '%s': %s", config_key, file_path, e)
+        return
+
+    if isinstance(raw_items, dict):
+        raw_items = list(raw_items.values())
+
+    items = [loader_func(item) for item in raw_items]
+
+    if load_defaults:
+        defaults = yaml_data.get("settings", {})
+        for item in items:
+            item.settings = defaults | item.settings
+
+    yield from items
 
 
 def get_configs_from_path[T: ConfigWithSettings](
@@ -229,13 +232,9 @@ def _parse_product(path: Path, data: dict) -> Iterator[Data]:
 
     """
     try:
-        aggregate = data["aggregate"]
-        flavor = aggregate["FLAVOR"]
-        archs = aggregate["archs"]
-        settings = data["settings"]
-        distri = settings["DISTRI"]
-        version = settings["VERSION"]
-        product = data["product"]
+        aggregate, settings, product = data["aggregate"], data["settings"], data["product"]
+        flavor, archs = aggregate["FLAVOR"], aggregate["archs"]
+        distri, version = settings["DISTRI"], settings["VERSION"]
     except KeyError as e:
         log.info("Configuration skipped: File %s missing required setting %s", path, e)
         return

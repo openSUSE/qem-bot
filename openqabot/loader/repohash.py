@@ -58,11 +58,9 @@ def get_max_revision(
 
         try:
             req = retried_requests.get(url)
-            if not req.ok:
-                log.info("Submission skipped: RepoHash metadata not found at %s", url)
-                continue
-            root = etree.fromstring(req.content)
-            cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
+            if req.ok:
+                root = etree.fromstring(req.content)
+                cs = root.find(".//{http://linux.duke.edu/metadata/repo}revision")
         except (
             etree.ParseError,
             requests.ConnectionError,
@@ -71,6 +69,10 @@ def get_max_revision(
         ) as e:  # for now, use logger.exception to determine possible exceptions in this code :D
             log.info("%s: RepoHash metadata not found at %s", sub_msg, url)
             raise NoRepoFoundError from e
+
+        if not req.ok:
+            log.info("Submission skipped: RepoHash metadata not found at %s", url)
+            continue
 
         if cs is None:
             log.info("%s: RepoHash calculation failed, no revision tag found in %s", sub_msg, url)
