@@ -57,9 +57,3 @@ pull_request_rules:
     actions:
       rebase:
         bot_account: suse-qe-tools-mergify
-  - name: ask to resolve conflict
-    conditions:
-      - conflict
-    actions:
-      comment:
-        message: This pull request is now in conflicts. Could you fix it? 🙏
