@@ -30,10 +30,12 @@ pull_request_rules:
     actions: *merge
   - name: automatic merge for dependabot updates
     conditions:
-      - and: *base_checks
-      - and:
-          - author=dependabot[bot]
-          - "label=waited"
+      - base=master
+      - -label~=^acceptance-tests-needed|not-ready
+      - "#check-failure=0"
+      - "#check-pending=0"
+      - author=dependabot[bot]
+      - "label=waited"
     actions:
       queue:
       merge:
@@ -49,23 +51,9 @@ pull_request_rules:
       - and:
           - updated-at<4 days ago
           - author=dependabot[bot]
-  - name: ask dependabot to rebase its own pull requests
+  - name: keep dependabot pull requests updated
     conditions:
       - author=dependabot[bot]
-      - -label=rebase-requested
       - "#commits-behind>=1"
     actions:
-      comment:
-        message: "@dependabot rebase"
-      label:
-        add:
-          - rebase-requested
-  - name: clear rebase-requested label once dependabot has rebased
-    conditions:
-      - label=rebase-requested
-      - author=dependabot[bot]
-      - "#commits-behind=0"
-    actions:
-      label:
-        remove:
-          - rebase-requested
+      update: {}
