@@ -49,9 +49,23 @@ pull_request_rules:
       - and:
           - updated-at<4 days ago
           - author=dependabot[bot]
-  - name: continuously rebase pull requests when it's labeled with `rebase` or `waited`
+  - name: ask dependabot to rebase its own pull requests
     conditions:
-      - label~=rebase|waited
+      - author=dependabot[bot]
+      - -label=rebase-requested
+      - "#commits-behind>=1"
     actions:
-      rebase:
-        bot_account: suse-qe-tools-mergify
+      comment:
+        message: "@dependabot rebase"
+      label:
+        add:
+          - rebase-requested
+  - name: clear rebase-requested label once dependabot has rebased
+    conditions:
+      - label=rebase-requested
+      - author=dependabot[bot]
+      - "#commits-behind=0"
+    actions:
+      label:
+        remove:
+          - rebase-requested
