@@ -16,6 +16,7 @@ class TriggerConfig:
     distri: str
     flavor: str
     settings: dict[str, str] = field(default_factory=dict)
+    image_regex: str | None = None
 
     def __str__(self) -> str:
         """Return a string representation of the increment configuration."""
@@ -29,4 +30,5 @@ class TriggerConfig:
             distri=entry["distri"],
             flavor=entry.get("flavor", "any"),
             settings=entry.get("settings", {}),
+            image_regex=entry.get("image_regex", ""),
         )

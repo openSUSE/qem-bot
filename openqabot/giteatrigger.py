@@ -115,8 +115,6 @@ class GiteaTrigger:
 
         if self.is_openqa_triggering_needed(matched_iso, trigger_config):
             openqa_settings = {
-                "ISO_1_URL": f"{repo_url}/{matched_iso_regex.group(0)}",
-                "ISO_1": f"{matched_iso_regex.group(0)}",
                 "_GITEA_PR": str(pullrequest.number),
                 "VERSION": matched_iso.version,
                 "FLAVOR": trigger_config.flavor,
@@ -124,6 +122,29 @@ class GiteaTrigger:
                 "DISTRI": trigger_config.distri,
                 "BUILD": matched_iso.build,
             }
+
+            # Add HDD parameters if image_regex is configured, otherwise use ISO
+            if trigger_config.image_regex:
+                # Images are in /images/ directory instead of /product/iso/
+                images_url = repo_url.replace("/product/iso", "/images")
+                matched_image_regex = Crawler(verify=not config.settings.insecure).get_regex_match_from_url(
+                    images_url, trigger_config.image_regex
+                )
+                if matched_image_regex:
+                    openqa_settings["HDD_1_URL"] = f"{images_url}/{matched_image_regex.group(0)}"
+                    openqa_settings["HDD_1"] = matched_image_regex.group(0)
+                else:
+                    log.warning(
+                        "No image found matching regex '%s' for PR %s in %s",
+                        trigger_config.image_regex,
+                        pullrequest.number,
+                        images_url,
+                    )
+            else:
+                # No image_regex configured, use ISO parameters
+                openqa_settings["ISO_1_URL"] = f"{repo_url}/{matched_iso_regex.group(0)}"
+                openqa_settings["ISO_1"] = matched_iso_regex.group(0)
+
             self.openqa.post_job(openqa_settings)
             log.info("Triggered openQA tests for PR %s on %s", pullrequest.number, matched_iso.arch)
         else:

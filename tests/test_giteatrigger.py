@@ -112,6 +112,106 @@ def test_check_pullrequest_triggers_job(
     assert settings["ISO_1"] == "SLES-15.5-Online-x86_64-Build1.1.install.iso"
 
 
+def test_check_pullrequest_with_image_regex(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
+    """Verifies that HDD parameters are used when image_regex is configured and image is found."""
+    # Create a trigger config with image_regex
+    trigger_config_with_image = TriggerConfig(
+        distri="sle",
+        flavor="Minimal-VM-Cloud-Staging-dev",
+        image_regex=r"SLES-[\d\.]+-Minimal-VM\.(?P<arch>\w+)-Cloud-Build[0-9\.]+\.qcow2",
+    )
+
+    # Mock ISO match
+    mock_iso_match = MagicMock()
+    mock_iso_match.group.side_effect = lambda x: {
+        0: "SLES-16.1-Online-x86_64-Build2.1.install.iso",
+        "product": "SLES",
+        "version": "16.1",
+        "arch": "x86_64",
+        "build": "2.1",
+    }[x]
+
+    # Mock image match
+    mock_image_match = MagicMock()
+    mock_image_match.group.side_effect = lambda x: {
+        0: "SLES-16.1-Minimal-VM.x86_64-Cloud-Build2.1.qcow2",
+    }.get(x, "SLES-16.1-Minimal-VM.x86_64-Cloud-Build2.1.qcow2")
+
+    # Mock Crawler to return different matches based on URL
+    mock_crawler = mocker.patch("openqabot.giteatrigger.Crawler")
+    mock_crawler.return_value.get_regex_match_from_url.side_effect = lambda url, _: (
+        mock_image_match if "/images" in url else mock_iso_match
+    )
+
+    mocker.patch("openqabot.giteatrigger.generate_repo_url", return_value="http://fake.url/product/iso")
+    mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
+    mock_pr = MagicMock(number=456)
+    trigger.check_pullrequest(mock_pr, trigger_config_with_image)
+
+    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    settings = args[0]
+
+    # Verify HDD parameters are set
+    assert settings["HDD_1_URL"] == "http://fake.url/images/SLES-16.1-Minimal-VM.x86_64-Cloud-Build2.1.qcow2"
+    assert settings["HDD_1"] == "SLES-16.1-Minimal-VM.x86_64-Cloud-Build2.1.qcow2"
+
+    # Verify ISO parameters are NOT set
+    assert "ISO_1_URL" not in settings
+    assert "ISO_1" not in settings
+
+    # Verify common parameters are still set
+    assert settings["FLAVOR"] == "Minimal-VM-Cloud-Staging-dev"
+    assert settings["VERSION"] == "16.1:PR-456"
+    assert settings["BUILD"] == "PR-456-2.1:SLES-16.1"
+
+
+def test_check_pullrequest_with_image_regex_not_found(
+    trigger: GiteaTrigger, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Verifies warning is logged when image_regex is configured but no matching image is found."""
+    trigger_config_with_image = TriggerConfig(
+        distri="sle",
+        flavor="Minimal-VM-Cloud-Staging-dev",
+        image_regex=r"SLES-[\d\.]+-Minimal-VM\.(?P<arch>\w+)-Cloud-Build[0-9\.]+\.qcow2",
+    )
+
+    # Mock ISO match
+    mock_iso_match = MagicMock()
+    mock_iso_match.group.side_effect = lambda x: {
+        0: "SLES-16.1-Online-x86_64-Build2.1.install.iso",
+        "product": "SLES",
+        "version": "16.1",
+        "arch": "x86_64",
+        "build": "2.1",
+    }[x]
+
+    # Mock Crawler to return ISO match but None for image
+    mock_crawler = mocker.patch("openqabot.giteatrigger.Crawler")
+    mock_crawler.return_value.get_regex_match_from_url.side_effect = lambda url, _: (
+        None if "/images" in url else mock_iso_match
+    )
+
+    mocker.patch("openqabot.giteatrigger.generate_repo_url", return_value="http://fake.url/product/iso")
+    mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
+    mock_pr = MagicMock(number=789)
+    trigger.check_pullrequest(mock_pr, trigger_config_with_image)
+
+    # Verify warning was logged
+    assert "No image found matching regex" in caplog.text
+
+    # Verify post_job was still called (without HDD or ISO parameters)
+    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    settings = args[0]
+
+    # Verify neither HDD nor ISO parameters are set
+    assert "HDD_1_URL" not in settings
+    assert "HDD_1" not in settings
+    assert "ISO_1_URL" not in settings
+    assert "ISO_1" not in settings
+
+
 def test_is_openqatriggering_needed_false(
     trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
