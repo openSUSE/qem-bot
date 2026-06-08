@@ -15,7 +15,6 @@ from unittest.mock import patch
 import osc.core
 import pytest
 import responses
-from pytest_mock import MockerFixture
 
 from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import IncrementApprover
