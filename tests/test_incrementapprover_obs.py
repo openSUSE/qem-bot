@@ -43,7 +43,10 @@ def test_specified_obs_request_not_found_skips_approval(
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     run_approver(mocker, caplog, request_id=43)
     assert "Checking specified request 43" in caplog.messages
-    assert "Skipping approval: OBS:PROJECT:TEST: No relevant requests in states new/review/accepted" in caplog.messages
+    expected_msg = (
+        f"Skipping approval: OBS:PROJECT:TEST on {settings.obs_url}: No relevant requests in states new/review/accepted"
+    )
+    assert expected_msg in caplog.messages
 
 
 @responses.activate
@@ -180,3 +183,17 @@ def testfind_request_on_obs_not_accepted(caplog: pytest.LogCaptureFixture, mocke
     mock_get_list = mocker.patch("openqabot.requests.get_obs_request_list", return_value=[])
     find_request_on_obs(approver.args, "project")
     assert mock_get_list.call_args[0][1] == ("new", "review")
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo")
+def test_find_request_on_obs_with_custom_obs_url(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    mock_get_list = mocker.patch("openqabot.requests.get_obs_request_list", return_value=[])
+    find_request_on_obs(approver.args, "project", obs_url="https://api.custom.obs")
+    assert mock_get_list.call_args[0][0] == "project"
+    assert mock_get_list.call_args[0][2] == "https://api.custom.obs"
+    assert (
+        "Skipping approval: project on https://api.custom.obs: No relevant requests in states new/review/accepted"
+        in caplog.messages
+    )
