@@ -16,6 +16,7 @@ import osc.core
 import pytest
 import responses
 
+from openqabot.config import settings
 from openqabot.errors import AmbiguousApprovalStatusError
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.config import get_configs_from_path
@@ -235,7 +236,15 @@ def test_evaluate_list_of_openqa_job_results(
     assert ok_jobs == {1, 3}
     assert len(jobs) == 4
 
-    status = ApprovalStatus(fake_osc_request, ok_jobs, [], set(), set(), jobs)
+    status = ApprovalStatus(
+        fake_osc_request,
+        ok_jobs,
+        [],
+        set(),
+        set(),
+        jobs,
+        obs_url=settings.obs_url,
+    )
     approver.handle_approval(status)
 
     f_reason = f"result 'failed':\n - {fake_openqa_url}/tests/2 (testname) in group 'Production'"
@@ -265,7 +274,13 @@ def test_check_unique_jobid_request_pair_ambiguity_found(
 def test_handle_approval_valid_request_id(caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request) -> None:
     approver = prepare_approver(caplog)
     status = ApprovalStatus(
-        fake_osc_request, ok_jobs={1, 2}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[]
+        fake_osc_request,
+        ok_jobs={1, 2},
+        reasons_to_disapprove=[],
+        processed_jobs=set(),
+        builds=set(),
+        jobs=[],
+        obs_url=settings.obs_url,
     )
 
     approver.handle_approval(status)
@@ -284,6 +299,7 @@ def test_handle_approval_disapprove(caplog: pytest.LogCaptureFixture, fake_osc_r
         processed_jobs=set(),
         builds=set(),
         jobs=[],
+        obs_url=settings.obs_url,
     )
 
     approver.handle_approval(status)
@@ -597,6 +613,7 @@ def test_handle_approval_with_comment_flag(
         processed_jobs=set(),
         builds={BuildIdentifier("fake_build", "fake_distri", "fake_version")},
         jobs=[{"build": "fake_build", "distri": "fake_distri", "version": "fake_version", "status": "passed"}],
+        obs_url=settings.obs_url,
     )
 
     approver.handle_approval(status)

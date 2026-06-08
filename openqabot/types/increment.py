@@ -93,6 +93,7 @@ class ApprovalStatus(NamedTuple):
     processed_jobs: set[tuple[str, str, str, str, str, str]]
     builds: set[BuildIdentifier]
     jobs: list[dict[str, Any]]
+    obs_url: str
 
     def add(
         self,

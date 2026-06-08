@@ -206,12 +206,12 @@ class IncrementApprover:
             for res, group in groupby(failed, key=itemgetter("status"))
         ]
 
-    def approve_on_obs(self, reqid: str, msg: str) -> None:
+    def approve_on_obs(self, reqid: str, msg: str, obs_url: str) -> None:
         """Change the review state of a request on OBS to accepted."""
         if self.args.dry:
             return
         osc.core.change_review_state(
-            apiurl=config.settings.obs_url,
+            apiurl=obs_url,
             reqid=reqid,
             newstate="accepted",
             by_group=config.settings.obs_group,
@@ -235,12 +235,12 @@ class IncrementApprover:
         if self.comment and approval_status.builds:
             state = "passed" if not all_reasons else "failed"
             msg = self.commenter.summarize_message(OBSCommentable(reqid), approval_status.builds, approval_status.jobs)
-            self.commenter.osc_comment_on_request(str(reqid), msg, state)
+            self.commenter.osc_comment_on_request(str(reqid), msg, state, obs_url=approval_status.obs_url)
 
         if not all_reasons:
             results_str = "/".join(sorted(ok_results))
             message = f"All {len(approval_status.ok_jobs)} openQA jobs have {results_str}"
-            self.approve_on_obs(str(reqid), message)
+            self.approve_on_obs(str(reqid), message, approval_status.obs_url)
             log.info("Approving %s: %s", id_msg, message)
         else:
             reasons_str = "\n\t".join(all_reasons)
@@ -505,24 +505,28 @@ class IncrementApprover:
             jobs_were_filtered=unfiltered_results != filtered_results,
         )
 
-    def _get_approval_status(self, request: osc.core.Request) -> ApprovalStatus:
+    def _get_approval_status(self, request: osc.core.Request, obs_url: str) -> ApprovalStatus:
         """Get or create the approval status for an OBS request."""
         request_id = request.reqid
         if request_id in self.requests_to_approve:
             return self.requests_to_approve[request_id]
 
-        status = ApprovalStatus(request, set(), [], set(), set(), [])
+        status = ApprovalStatus(request, set(), [], set(), set(), [], obs_url)
         self.requests_to_approve[request_id] = status
         return status
 
     def process_request_for_config(
-        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_infos: set[BuildInfo]
+        self,
+        request: osc.core.Request | None,
+        config_inc: IncrementConfig,
+        build_infos: set[BuildInfo],
+        obs_url: str | None = None,
     ) -> int:
         """Process an OBS request for a specific configuration."""
         if request is None:
             return 0
 
-        approval_status = self._get_approval_status(request)
+        approval_status = self._get_approval_status(request, obs_url or config.settings.obs_url)
         error_count = 0
         found_relevant_build = False
         for build_info in build_infos:
@@ -540,6 +544,8 @@ class IncrementApprover:
     def __call__(self) -> int:
         """Run the increment approval process."""
         error_count = 0
+        # --request-id is an explicit, ad-hoc operator override: the caller is expected to
+        # know which OBS instance hosts that request, so per-config obs_url is not applied here.
         single_request = (
             osc.core.Request.from_api(config.settings.obs_url, self.args.request_id) if self.args.request_id else None
         )
@@ -563,9 +569,10 @@ class IncrementApprover:
                 rep_config.build_regex,
                 self.get_regex_match,
             )
-            request = find_request_on_obs(self.args, rep_config.build_project())
+            resolved_obs_url = rep_config.obs_url or config.settings.obs_url
+            request = find_request_on_obs(self.args, rep_config.build_project(), obs_url=resolved_obs_url)
             for config_inc in configs:
-                error_count += self.process_request_for_config(request, config_inc, build_infos)
+                error_count += self.process_request_for_config(request, config_inc, build_infos, resolved_obs_url)
 
         for request in self.requests_to_approve.values():
             error_count += self.handle_approval(request)

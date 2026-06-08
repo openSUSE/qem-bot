@@ -57,6 +57,7 @@ class IncrementConfig:
     settings: dict[str, str] = field(default_factory=dict)
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
     reference_repos: dict[str, str] = field(default_factory=dict)
+    obs_url: str | None = None
     # Template for URL construction. Variables: base, project, version, arch, channel, suffix, product.
     build_repo_template: str = ""
     diff_repo_template: str = ""
@@ -160,6 +161,7 @@ class IncrementConfig:
             settings=entry.get("settings", {}),
             additional_builds=entry.get("additional_builds", []),
             reference_repos=entry.get("reference_repos", {}),
+            obs_url=entry.get("obs_url"),
             build_repo_template=entry.get("build_repo_template", ""),
             diff_repo_template=entry.get("diff_repo_template", ""),
         )

@@ -102,18 +102,25 @@ class Commenter:
         return msg, state
 
     def osc_comment_on_request(
-        self, request_id: str, msg: str, state: str, revisions: dict[str, Any] | None = None
+        self,
+        request_id: str,
+        msg: str,
+        state: str,
+        revisions: dict[str, Any] | None = None,
+        obs_url: str | None = None,
     ) -> None:
         """Comment on an OBS request."""
-        osc.conf.get_config(override_apiurl=config.settings.obs_url)
+        obs_url = obs_url or config.settings.obs_url
+        osc.conf.get_config(override_apiurl=obs_url)
+        commentapi = self.commentapi if obs_url == config.settings.obs_url else CommentAPI(obs_url)
         bot_name = "openqa"
         info: dict[str, Any] = {"state": state}
         if revisions:
             info.update(revisions)
 
         msg = truncate(add_marker(msg, bot_name, info).strip())
-        comments = self.commentapi.get_comments(request_id=request_id)
-        comment, _ = self.commentapi.comment_find(comments, bot_name, info)
+        comments = commentapi.get_comments(request_id=request_id)
+        comment, _ = commentapi.comment_find(comments, bot_name, info)
 
         # To prevent spam, assume same state/result
         # and number of lines in message is a duplicate message
@@ -123,17 +130,17 @@ class Commenter:
 
         if comment is None:
             log.debug("No comment with this state, looking without the state filter")
-            comment, _ = self.commentapi.comment_find(comments, bot_name)
+            comment, _ = commentapi.comment_find(comments, bot_name)
 
         if comment is None:
             log.debug("No previous comment found to replace")
         elif not self.dry:
-            self.commentapi.delete(comment["id"])
+            commentapi.delete(comment["id"])
         else:
             log.info("Dry run: Would delete comment %s", comment["id"])
 
         if not self.dry:
-            self.commentapi.add_comment(comment=msg, request_id=request_id)
+            commentapi.add_comment(comment=msg, request_id=request_id)
         else:
             log.info("Dry run: Would write comment to request %s", request_id)
             log.debug(pformat(msg))

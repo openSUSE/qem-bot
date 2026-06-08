@@ -89,7 +89,7 @@ def mock_git_sub() -> MagicMock:
 @pytest.fixture
 def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
     mock_client = mocker.patch("openqabot.commenter.OpenQAInterface")
-    mocker.patch("openqabot.commenter.osc.conf.get_config")
+    mock_get_config = mocker.patch("openqabot.commenter.osc.conf.get_config")
     mock_comment_api = mocker.patch("openqabot.commenter.CommentAPI")
     mock_gitea = mocker.patch("openqabot.commenter.gitea")
     mocker.patch(
@@ -104,6 +104,7 @@ def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
 
     return {
         "client": mock_client,
+        "get_config": mock_get_config,
         "comment_api": mock_comment_api,
         "gitea": mock_gitea,
     }
@@ -206,6 +207,23 @@ def test_osc_comment_dry_run(
     c.osc_comment(mock_smelt_sub, "Test message", "passed")
     assert "Would write comment to request" in caplog.text
     assert not comment_api.add_comment.called
+
+
+@pytest.mark.usefixtures("commenter_setup")
+def test_osc_comment_on_request_uses_custom_obs_url(
+    mock_args: Namespace,
+    make_comment_api: Callable,
+    commenter_setup: dict[str, MagicMock],
+) -> None:
+    """A custom obs_url must be used for both the osc config and the CommentAPI, not the global default."""
+    custom_url = "https://api.custom.obs"
+    commenter_setup["comment_api"].return_value = make_comment_api(comment_find_results=[(None, None), (None, None)])
+
+    c = Commenter(mock_args, submissions=[])
+    c.osc_comment_on_request("123", "Test message", "passed", obs_url=custom_url)
+
+    commenter_setup["get_config"].assert_called_once_with(override_apiurl=custom_url)
+    commenter_setup["comment_api"].assert_called_with(custom_url)
 
 
 @pytest.mark.usefixtures("commenter_setup")

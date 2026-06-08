@@ -43,7 +43,10 @@ def test_specified_obs_request_not_found_skips_approval(
     mocker.patch("osc.core.Request.from_api", side_effect=fake_request_from_api)
     run_approver(mocker, caplog, request_id=43)
     assert "Checking specified request 43" in caplog.messages
-    assert "Skipping approval: OBS:PROJECT:TEST: No relevant requests in states new/review/accepted" in caplog.messages
+    expected_msg = (
+        f"Skipping approval: OBS:PROJECT:TEST on {settings.obs_url}: No relevant requests in states new/review/accepted"
+    )
+    assert expected_msg in caplog.messages
 
 
 @responses.activate
@@ -142,7 +145,15 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         approver = IncrementApprover(args)
         req = mocker.Mock(spec=osc.core.Request)
         req.reqid = 123
-        status = ApprovalStatus(req, ok_jobs={1}, reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
+        status = ApprovalStatus(
+            req,
+            ok_jobs={1},
+            reasons_to_disapprove=[],
+            processed_jobs=set(),
+            builds=set(),
+            jobs=[],
+            obs_url="https://api.suse.de",
+        )
         mock_osc_change = mocker.patch("osc.core.change_review_state")
 
         approver.handle_approval(status)
@@ -157,15 +168,33 @@ def testapprove_on_obs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixtu
     approver = prepare_approver(caplog)
     approver.args.dry = True
     mock_osc_change = mocker.patch("osc.core.change_review_state")
-    approver.approve_on_obs("123", "msg")
+    approver.approve_on_obs("123", "msg", settings.obs_url)
     mock_osc_change.assert_not_called()
+
+
+def testapprove_on_obs_uses_passed_obs_url(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    """approve_on_obs must use the explicit obs_url, not the global default, e.g. for internal IBS projects."""
+    approver = prepare_approver(caplog)
+    mock_osc_change = mocker.patch("osc.core.change_review_state")
+    custom_url = "https://api.custom.obs"
+    approver.approve_on_obs("123", "msg", custom_url)
+    assert mock_osc_change.call_args.kwargs["apiurl"] == custom_url
+    assert custom_url != settings.obs_url
 
 
 def testhandle_approval_no_jobs_safeguard(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     approver = prepare_approver(caplog)
     req = mocker.Mock(spec=osc.core.Request)
     req.reqid = 123
-    status = ApprovalStatus(req, ok_jobs=set(), reasons_to_disapprove=[], processed_jobs=set(), builds=set(), jobs=[])
+    status = ApprovalStatus(
+        req,
+        ok_jobs=set(),
+        reasons_to_disapprove=[],
+        processed_jobs=set(),
+        builds=set(),
+        jobs=[],
+        obs_url=settings.obs_url,
+    )
 
     approver.handle_approval(status)
     assert "No openQA jobs were found/checked for this request." in caplog.text
@@ -180,3 +209,47 @@ def testfind_request_on_obs_not_accepted(caplog: pytest.LogCaptureFixture, mocke
     mock_get_list = mocker.patch("openqabot.requests.get_obs_request_list", return_value=[])
     find_request_on_obs(approver.args, "project")
     assert mock_get_list.call_args[0][1] == ("new", "review")
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo")
+def test_find_request_on_obs_with_custom_obs_url(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    mock_get_list = mocker.patch("openqabot.requests.get_obs_request_list", return_value=[])
+    find_request_on_obs(approver.args, "project", obs_url="https://api.custom.obs")
+    assert mock_get_list.call_args[0][0] == "project"
+    assert mock_get_list.call_args[0][2] == "https://api.custom.obs"
+    assert (
+        "Skipping approval: project on https://api.custom.obs: No relevant requests in states new/review/accepted"
+        in caplog.messages
+    )
+
+
+def test_call_passes_resolved_obs_url_to_find_request_on_obs(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
+    """__call__ must resolve IncrementConfig.obs_url per group and forward it, not just the global default."""
+    approver = prepare_approver(caplog)
+    custom_url = "https://api.custom.obs"
+    approver.config[0].obs_url = custom_url
+    mock_find = mocker.patch("openqabot.incrementapprover.find_request_on_obs", return_value=None)
+    mocker.patch("openqabot.incrementapprover.load_build_info", return_value=set())
+
+    approver()
+
+    assert mock_find.call_args.kwargs["obs_url"] == custom_url
+
+
+def test_process_request_for_config_stores_resolved_obs_url_in_approval_status(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+) -> None:
+    """The obs_url used to find a request must be carried into its ApprovalStatus for later approval/comment."""
+    approver = prepare_approver(caplog)
+    req = mocker.Mock(spec=osc.core.Request)
+    req.reqid = "999"
+    custom_url = "https://api.custom.obs"
+    mocker.patch.object(approver, "get_package_diff_from_repo", return_value={})
+
+    approver.process_request_for_config(req, approver.config[0], set(), obs_url=custom_url)
+
+    assert approver.requests_to_approve["999"].obs_url == custom_url
