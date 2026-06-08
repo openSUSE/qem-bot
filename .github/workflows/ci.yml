@@ -34,7 +34,7 @@ jobs:
       - name: Run tests + cov report
         run: uv run make ISOLATE=0 test-with-coverage
       - name: Upload coverage to CodeCov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
