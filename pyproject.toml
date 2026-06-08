@@ -46,7 +46,7 @@ dev = [
     "ruff==0.15.16",
     "pytest-mock==3.15.1",
     "vulture==2.16",
-    "ty==0.0.37",
+    "ty==0.0.44",
     "pre-commit==4.6.0",
     "gitlint==0.19.1",
 ]
