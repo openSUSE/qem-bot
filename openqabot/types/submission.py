@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from logging import getLogger
-from typing import Any, cast
+from typing import Any
 
 from openqabot import config
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
@@ -60,7 +60,7 @@ class Submission:
 
     def _initialize_packages(self, raw_packages: list[str]) -> None:
         """Initialize packages from raw package data."""
-        self.packages: list[str] = cast("list[str]", sorted(raw_packages, key=len))
+        self.packages: list[str] = sorted(raw_packages, key=len)
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
