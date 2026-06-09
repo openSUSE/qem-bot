@@ -256,7 +256,7 @@ def test_submissions_call_with_params_expand_distri_version() -> None:
         ignore_onetime=False,
     )
     assert len(res) == 1
-    assert res[0]["openqa"]["VERSION"] == "1.2.3"
+    assert res[0]["openqa"]["VERSION"] == "1.2.3:inc-0"
     assert res[0]["openqa"]["DISTRI"] == "IM_A_DISTRI"
     assert res[0]["openqa"]["SOMETHING"] == "flavor win"
 
