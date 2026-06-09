@@ -16,7 +16,7 @@ import osc.core
 from lxml import etree  # ty: ignore[unresolved-import]
 
 from openqabot import config
-from openqabot.repodiff import Package, RepoDiff
+from openqabot.repodiff import Package, compute_diff_for_packages
 from openqabot.types.types import OBSBinary
 
 log = getLogger("bot.loader.sourcereport")
@@ -105,7 +105,6 @@ def compute_packages_of_request_from_source_report(
     repo_a: defaultdict[str, set[Package]] = defaultdict(set)
     # source projects (e.g. `SUSE:SLFO:Products:SLES:16.0:TEST`)
     repo_b: defaultdict[str, set[Package]] = defaultdict(set)
-
     def worker(action: Any, binary: OBSBinary) -> defaultdict[str, set[Package]]:  # noqa: ANN401
         packages: defaultdict[str, set[Package]] = defaultdict(set)
         load_packages_from_source_report(action, binary, packages)
@@ -127,4 +126,4 @@ def compute_packages_of_request_from_source_report(
         for arch, pks in res.items():
             target_repo[arch].update(pks)
 
-    return RepoDiff.compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
+    return compute_diff_for_packages("product repo", repo_a, "TEST repo", repo_b)
