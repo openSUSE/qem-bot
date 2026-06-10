@@ -185,7 +185,7 @@ class Submissions(BaseConf):
             **self.settings,
             "ARCH": arch,
             "FLAVOR": flavor,
-            "VERSION": f"{self.settings['VERSION']}:{'inc' if sub.type == 'smelt' else 'PR'}-{sub.id}",
+            "VERSION": f"{self.settings['VERSION']}:{sub.type}-{sub.id}",
             "DISTRI": self.settings["DISTRI"],
             "INCIDENT_ID": sub.id,
             "REPOHASH": revs,
