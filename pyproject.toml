@@ -39,6 +39,7 @@ qem-bot = "openqabot.main:main"
 dev = [
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
+    "pytest-env==1.6.0",
     "pytest-xdist==3.8.0",
     "pyupgrade==3.21.2",
     "coverage==7.14.1",
@@ -50,6 +51,9 @@ dev = [
     "pre-commit==4.6.0",
     "gitlint==0.19.1",
 ]
+
+[tool.pytest_env]
+QEM_DASHBOARD_URL = { unset = true }
 
 [tool.coverage.run]
 source = ["openqabot"]
