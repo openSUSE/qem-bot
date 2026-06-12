@@ -603,11 +603,15 @@ def get_gitea_staging_config(token: dict[str, str]) -> dict:
     """
     response = retried_requests.get(
         config.settings.gitea_staging_config_url,
-        verify=False,
+        verify=not config.settings.insecure,
         headers=token,
     )
     response.raise_for_status()
-    return response.json()
+    try:
+        return response.json()
+    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
+        msg = f"Failed to decode staging config JSON from {response.url}. Is the Gitea token missing or invalid?"
+        raise ValueError(msg) from e
 
 
 def generate_repo_url(pullrequest: PullRequest, staging_config_qa_labels: dict[str, str], project: str) -> str:

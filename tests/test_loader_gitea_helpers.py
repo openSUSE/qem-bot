@@ -4,6 +4,7 @@
 
 import json
 import logging
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -242,6 +243,23 @@ def test_generate_repo_url_two_label_match(labeled_pr: PullRequest) -> None:
 def test_get_gitea_staging_config(mocked_response: dict[str, str | list]) -> None:
     conf = gitea.get_gitea_staging_config({"token": "token"})
     assert conf == mocked_response
+
+
+def test_get_gitea_staging_config_decode_error(mocker: MockerFixture) -> None:
+    mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get")
+    mock_response = MagicMock()
+    mock_response.url = "https://src.suse.de/staging.config"
+    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
+    mock_get.return_value = mock_response
+
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Failed to decode staging config JSON from https://src.suse.de/staging.config. "
+            "Is the Gitea token missing or invalid?"
+        ),
+    ):
+        gitea.get_gitea_staging_config({"token": "token"})
 
 
 @pytest.fixture
