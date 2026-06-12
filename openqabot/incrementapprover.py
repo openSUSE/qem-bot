@@ -576,7 +576,7 @@ class IncrementApprover:
                 rep_config.build_regex,
                 self.get_regex_match,
             )
-            request = find_request_on_obs(self.args, rep_config.build_project())
+            request = find_request_on_obs(self.args, rep_config.build_project(), obs_url=rep_config.obs_url)
             for config_inc in configs:
                 error_count += self.process_request_for_config(request, config_inc, build_infos)
 
