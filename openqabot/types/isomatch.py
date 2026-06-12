@@ -3,6 +3,7 @@
 """ISO match information extracted from artifacts."""
 
 from re import Match
+from typing import Self
 
 
 class IsoMatch:
@@ -13,10 +14,19 @@ class IsoMatch:
     arch: str
     build: str
 
-    def __init__(self, iso_match: Match[str], pr_number: int) -> None:  # noqa: D107
-        self.product = iso_match.group("product")
+    def __init__(self, product: str, version: str, build: str, arch: str = "x86_64") -> None:  # noqa: D107
+        self.product = product
+        self.version = version
+        self.arch = arch
+        self.build = build
+
+    @classmethod
+    def from_regex_match(cls: type[Self], iso_match: Match[str], pr_number: int) -> Self:
+        """Create an IsoMatch instance from a regex match."""
+        product = iso_match.group("product")
         version = iso_match.group("version")
-        self.arch = iso_match.group("arch")
+        arch = iso_match.group("arch")
         build_num = iso_match.group("build")
-        self.version = f"{version}:PR-{pr_number}"
-        self.build = f"PR-{pr_number}-{build_num}:{self.product}-{version}"
+        version_str = f"{version}:PR-{pr_number}"
+        build_str = f"PR-{pr_number}-{build_num}:{product}-{version}"
+        return cls(product, version_str, build_str, arch)

@@ -1,0 +1,13 @@
+        # IMHO needs to be moved out from script :
+        # "PRIO": "100",
+        # # add "target URL" for the "Details" button of the CI status
+        # "CI_TARGET_URL": self.openqa.url,
+        # # openSUSE:Maintenance key
+        # "IMPORT_GPG_KEYS": "gpg-pubkey-b3fd7e48-5549fd0f",
+        # "ZYPPER_ADD_REPO_PREFIX": "staged-updates",
+
+        # so tests can do zypper in -t patch $INCIDENT_PATCH
+        # TODO: figure out from to get it
+        # "INCIDENT_PATCH": obs_project.replace(":", "_"),
+        # TODO: figure out from to get it
+        # "OS_TEST_ISSUES": pr,
