@@ -19,7 +19,7 @@ PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" 
 
 .PHONY: test-unit
 test-unit: ## Run dynamic tests with coverage report
-	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) -v --cov --cov-report=xml --cov-report=term-missing
+	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) --cov --cov-report=xml --cov-report=term-missing
 
 .PHONY: test-unit-no-coverage
 test-unit-no-coverage: ## Run dynamic tests without coverage analysis and without style checks
