@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
 from logging import getLogger
 
+from . import config
 from .loader.config import read_products
 from .loader.qem import get_aggregate_settings_data
 from .syncres import SyncRes
@@ -30,7 +31,7 @@ class AggregateResultsSync(SyncRes):
         update_setting = list(chain.from_iterable(get_aggregate_settings_data(product) for product in self.product))
 
         job_results = {}
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             future_j = {executor.submit(self.client.get_jobs, f): f for f in update_setting}
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()

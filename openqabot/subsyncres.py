@@ -7,6 +7,7 @@ from concurrent import futures
 from itertools import chain
 from logging import getLogger
 
+from . import config
 from .loader.qem import get_active_submissions, get_submission_settings_data
 from .syncres import SyncRes
 
@@ -28,7 +29,7 @@ class SubResultsSync(SyncRes):
         log.info("Synchronizing results for %s active submissions...", len(self.active))
         submissions = list(chain.from_iterable(get_submission_settings_data(sub) for sub in self.active))
         full = {}
-        with futures.ThreadPoolExecutor() as executor:
+        with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             future_result = {executor.submit(self.client.get_jobs, f): f for f in submissions}
             for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()

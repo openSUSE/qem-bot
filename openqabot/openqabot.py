@@ -3,7 +3,7 @@
 """Main OpenQABot logic."""
 
 from argparse import Namespace
-from concurrent.futures import ThreadPoolExecutor, wait
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger
 from os import environ
 from typing import Any
@@ -76,7 +76,9 @@ class OpenQABot:
             else:
                 self.post_qem(job["qem"], job["api"])
 
-        with ThreadPoolExecutor() as executor:
-            wait([executor.submit(poster, job) for job in post])
+        with ThreadPoolExecutor(max_workers=config_module.settings.max_workers) as executor:
+            futures = [executor.submit(poster, job) for job in post]
+            for future in as_completed(futures):
+                future.result()
         log.info("Bot run completed")
         return 0
