@@ -39,7 +39,7 @@ def _assert_gitea_settings(
         "INCIDENT_ID": sub_id,
         "INCIDENT_REPO": f"{expected_repo}-{arch}/",
         "REPOHASH": repo_hash,
-        "VERSION": product_ver,
+        "VERSION": f"{product_ver}:git-{sub_id}",
     }
 
     for s in [result["openqa"], qem["settings"]]:
