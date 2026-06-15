@@ -13,12 +13,6 @@ updates:
     commit-message:
       prefix: "chore"
       include: scope
-    groups:
-      dev-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -31,7 +25,3 @@ updates:
     commit-message:
       prefix: "chore"
       include: scope
-    groups:
-      all-actions:
-        patterns:
-          - "*"
