@@ -13,16 +13,26 @@ updates:
     commit-message:
       prefix: "chore"
       include: scope
-    groups:
-      dev-dependencies:
-        patterns:
-          - "*"
-        update-types:
-          - "major"
+    allow:
+      - dependency-type: "production"
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "waiting"
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: scope
+    allow:
+      - dependency-type: "development"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
       day: "monday"
     open-pull-requests-limit: 5
     labels:
