@@ -185,7 +185,9 @@ class Submissions(BaseConf):
             **self.settings,
             "ARCH": arch,
             "FLAVOR": flavor,
-            "VERSION": f"{self.settings['VERSION']}:{sub.type}-{sub.id}",
+            "VERSION": f"{self.settings['VERSION']}:{sub.type}-{sub.id}"
+            if ctx.data.get("versioned_by_submission", False)
+            else self.settings["VERSION"],
             "DISTRI": self.settings["DISTRI"],
             "INCIDENT_ID": sub.id,
             "REPOHASH": revs,

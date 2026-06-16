@@ -59,7 +59,7 @@ def test_gitea_submissions() -> None:
     settings = {"VERSION": product_ver, "DISTRI": "sles"}
     issues = {"BASE_TEST_ISSUES": "SLFO:1.1.99#15.99"}
     flavor = "AAA"
-    test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues}}}
+    test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues, "versioned_by_submission": True}}}
 
     # create a Git-based submission
     sub = MockSubmission(type="git")

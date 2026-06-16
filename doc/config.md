@@ -105,6 +105,7 @@ incidents:
          - KEYTWO
          - KEYTHREE
       override_priority: 100
+      versioned_by_submission: false
       params_expand:
         FOO: foo
         BAR: bar
@@ -126,6 +127,7 @@ incidents:
 * `aggregate_job` - optional, boolean value, by default is `true`. When set to `false` it indicates this FLAVOR doesn't need an aggregate job for approval.
 * `aggregate_check_true` and `aggregate_check_false` - optional, list of keywords, used only with `aggregate_job: false`. Conditions to finely tune the need for Aggregate jobs for approval. Keywords are keys of variables used by job.
 * `override_priority` - optional, integer. Overrides the default priority of the job. (default = 50, with modifiers for `*Minimal`, EMU and staging Incidents)
+* `versioned_by_submission` - optional, boolean. Whether to include the submission type and ID in the `VERSION`.
 * `packages` - optional, list of package names (or first part of pkg name). The incident must contain a package from this list to be scheduled into openQA.
 * `excluded_packages` - optional, list of package names, opposite of `packages`. If the Incident contains a package in this list, it isn't scheduled.
 * `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values take precedence over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
