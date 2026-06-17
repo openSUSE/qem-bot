@@ -14,6 +14,7 @@ from openqabot.mock_interceptor import (
     MockInterceptorState,
     gitea_pr_details_callback,
     gitea_pulls_callback,
+    gitea_staging_config_callback,
     mock_http_get,
     openqa_jobs_callback,
     patchinfo_callback,
@@ -112,6 +113,14 @@ def test_gitea_pr_details_callback() -> None:
         assert gitea_pr_details_callback(MockRequest("http://test/comments")) == (200, {}, "details_data")
         assert gitea_pr_details_callback(MockRequest("http://test/files")) == (200, {}, "details_data")
         assert gitea_pr_details_callback(MockRequest("http://test/unknown")) == (404, {}, "{}")
+
+
+def test_gitea_staging_config_callback() -> None:
+    """Test Gitea staging.config mock callback."""
+    status, _, data = gitea_staging_config_callback(MockRequest("http://test"))
+    assert status == 200
+    assert "StagingProject" in data
+    assert "QA" in data
 
 
 def test_smelt_graphql_callback() -> None:

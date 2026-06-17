@@ -15,3 +15,5 @@ incidents:
         - x86_64
       issues:
         BASE_TEST_ISSUES: Mock:15-SP3
+trigger_config:
+  - distri: sle
