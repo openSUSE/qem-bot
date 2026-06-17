@@ -185,6 +185,19 @@ def test_get_job_group_info_error(fake_openqa_url: str, caplog: pytest.LogCaptur
     assert "openQA API error when fetching job group 42" in caplog.text
 
 
+@pytest.fixture
+def fake_job_group_10_api(fake_openqa_url: str) -> None:
+    """Mock openQA job group 10."""
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/job_groups/10",
+        json=[{"parent_id": 50}],
+        status=200,
+    )
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_job_group_10_api")
 def test_enrich_job_info() -> None:
     """Test enrich_job_info with various inputs."""
     job_map = {
@@ -195,26 +208,45 @@ def test_enrich_job_info() -> None:
             "distri": "dist",
             "version": "1.0",
             "build": "123",
-        }
+        },
+        2: {
+            "id": 2,
+            "group": "Devel: Test",
+            "group_id": 11,
+            "distri": "dist",
+            "version": "1.0",
+            "build": "123",
+        },
     }
 
-    # Successful enrichment
-    info = {"job_ids": [1], "other": "data"}
-    enriched = oQAI.enrich_job_info(info, job_map)
+    # Successful enrichment (filters out job 2 because it's in a devel group)
+    info = {"job_ids": [1, 2], "other": "data"}
+    client = oQAI()
+    enriched = client.enrich_job_info(info, job_map)
+    assert enriched["job_ids"] == [1]
     assert enriched["group"] == "Group1"
     assert enriched["group_id"] == 10
     assert enriched["distri"] == "dist"
     assert enriched["other"] == "data"
 
+    # Only devel jobs in job_ids
+    info_devel_only = {"job_ids": [2], "other": "data"}
+    enriched_devel_only = client.enrich_job_info(info_devel_only, job_map)
+    assert enriched_devel_only["job_ids"] == [2]
+    assert enriched_devel_only["group"] == "Devel: Test"
+    assert enriched_devel_only["group_id"] == 11
+
     # Missing job_ids
     info2 = {"other": "data"}
-    assert oQAI.enrich_job_info(info2, job_map) == info2
+    assert client.enrich_job_info(info2, job_map) == info2
 
     # Job ID not in map
-    info3 = {"job_ids": [2]}
-    assert oQAI.enrich_job_info(info3, job_map) == info3
+    info3 = {"job_ids": [3]}
+    assert client.enrich_job_info(info3, job_map) == info3
 
 
+@responses.activate
+@pytest.mark.usefixtures("fake_job_group_10_api")
 def test_enrich_stats() -> None:
     """Test enrich_stats properly traverses the stats structure."""
     job_map = {1: {"id": 1, "group": "G1", "group_id": 10, "distri": "d", "version": "v", "build": "b"}}
@@ -223,6 +255,7 @@ def test_enrich_stats() -> None:
         "failed": {"job2": {"job_ids": [2], "result": "failed"}},
     }
 
-    enriched = oQAI.enrich_stats(stats, job_map)
+    client = oQAI()
+    enriched = client.enrich_stats(stats, job_map)
     assert enriched["passed"]["job1"]["group"] == "G1"
     assert "group" not in enriched["failed"]["job2"]

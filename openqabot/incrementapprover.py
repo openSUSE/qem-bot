@@ -128,13 +128,12 @@ class IncrementApprover:
         with ThreadPoolExecutor() as executor:
             stats = list(executor.map(fetch_stats, params))
 
-        # Fetch all relevant job details in a single API call to avoid N+1 query problem
         job_ids = [
-            int(ids[0])
+            int(i)
             for stat in stats
             for jobs in stat.values()
             for info in jobs.values()
-            if (ids := info.get("job_ids"))
+            for i in info.get("job_ids", [])
         ]
         job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
 
