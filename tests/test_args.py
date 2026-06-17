@@ -147,6 +147,7 @@ def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -
             "foo",
             "--configs",
             str(tmp_path),
+            "advanced",
             "sub-comment",
             "--enable-detailed-comments",
             "--fallback-contact",

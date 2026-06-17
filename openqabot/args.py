@@ -61,6 +61,14 @@ gitea_project_arg = Annotated[
         help="Project in Gitea to check for PRs. Project defined by {owner}/{repo}",
     ),
 ]
+gitea_repo_arg = Annotated[
+    str,
+    typer.Option(
+        "--gitea-repo",
+        envvar="GITEA_PROJECT",
+        help="Project in Gitea to check for PRs. Project defined by {owner}/{repo}",
+    ),
+]
 
 comment_option = Annotated[
     bool,
@@ -390,7 +398,7 @@ def sync(  # noqa: PLR0913
     smelt_ret = SMELTSync(args)()
 
     # Gitea sync
-    args.gitea_repo = gitea_repo
+    args.gitea_project = gitea_repo
     args.allow_build_failures = allow_build_failures
     args.consider_unrequested_prs = consider_unrequested_prs
     args.pr_number = pr_number
@@ -489,7 +497,7 @@ def gitea_sync_deprecated(  # noqa: PLR0913
     """DEPRECATED: Sync data from Gitea into QEM Dashboard (use sync or advanced gitea-sync)."""  # noqa: D401
     gitea_sync(
         ctx,
-        gitea_repo=gitea_repo,
+        gitea_project=gitea_repo,
         allow_build_failures=allow_build_failures,
         consider_unrequested_prs=consider_unrequested_prs,
         pr_number=pr_number,
