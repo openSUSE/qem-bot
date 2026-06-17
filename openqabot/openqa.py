@@ -31,6 +31,12 @@ if TYPE_CHECKING:
 log = logging.getLogger("bot.openqa")
 
 
+def handle_job_not_found(job_id: int) -> None:
+    """Handle case where a job is not found on openQA."""
+    log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
+    update_job(job_id, {"obsolete": True})
+
+
 class OpenQAInterface:
     """Interface to openQA."""
 
@@ -70,12 +76,6 @@ class OpenQAInterface:
         except Exception as e:
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
-
-    @staticmethod
-    def handle_job_not_found(job_id: int) -> None:
-        """Handle case where a job is not found on openQA."""
-        log.info("Job %s not found on openQA, marking as obsolete on dashboard", job_id)
-        update_job(job_id, {"obsolete": True})
 
     def get_jobs(self, data: Data) -> list[dict[str, Any]]:
         """Fetch openQA jobs matching the given criteria."""
@@ -178,24 +178,23 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching job group %s", group_id)
         return None
 
-    @staticmethod
-    def enrich_job_info(info: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
-        """Enrich job information with metadata from the first job ID."""
-        if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
-            return info
 
-        return info | {
-            "group": job.get("group"),
-            "group_id": job.get("group_id"),
-            "distri": job.get("distri"),
-            "version": job.get("version"),
-            "build": job.get("build"),
-        }
+def enrich_job_info(info: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Enrich job information with metadata from the first job ID."""
+    if not (ids := info.get("job_ids")) or not (job := job_map.get(int(ids[0]))):
+        return info
 
-    @staticmethod
-    def enrich_stats(stat: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
-        """Enrich all jobs in a scheduled product result with metadata."""
-        return {
-            status: {name: OpenQAInterface.enrich_job_info(info, job_map) for name, info in jobs.items()}
-            for status, jobs in stat.items()
-        }
+    return info | {
+        "group": job.get("group"),
+        "group_id": job.get("group_id"),
+        "distri": job.get("distri"),
+        "version": job.get("version"),
+        "build": job.get("build"),
+    }
+
+
+def enrich_stats(stat: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Enrich all jobs in a scheduled product result with metadata."""
+    return {
+        status: {name: enrich_job_info(info, job_map) for name, info in jobs.items()} for status, jobs in stat.items()
+    }

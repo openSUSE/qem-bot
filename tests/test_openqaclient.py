@@ -16,6 +16,7 @@ from responses import matchers
 from openqabot.config import QEM_DASHBOARD
 from openqabot.errors import PostOpenQAError
 from openqabot.openqa import OpenQAInterface as oQAI
+from openqabot.openqa import enrich_job_info, enrich_stats, handle_job_not_found
 
 
 @pytest.fixture
@@ -81,8 +82,7 @@ def test_post_job_passed(caplog: pytest.LogCaptureFixture, fake_openqa_url: str)
 @pytest.mark.usefixtures("fake_responses_failing_job_update")
 def test_handle_job_not_found(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.openqa")
-    client = oQAI()
-    client.handle_job_not_found(42)
+    handle_job_not_found(42)
     assert len(caplog.messages) == 2
     assert len(responses.calls) == 1
     assert "Job 42 not found on openQA, marking as obsolete on dashboard" in caplog.messages
@@ -200,7 +200,7 @@ def test_enrich_job_info() -> None:
 
     # Successful enrichment
     info = {"job_ids": [1], "other": "data"}
-    enriched = oQAI.enrich_job_info(info, job_map)
+    enriched = enrich_job_info(info, job_map)
     assert enriched["group"] == "Group1"
     assert enriched["group_id"] == 10
     assert enriched["distri"] == "dist"
@@ -208,11 +208,11 @@ def test_enrich_job_info() -> None:
 
     # Missing job_ids
     info2 = {"other": "data"}
-    assert oQAI.enrich_job_info(info2, job_map) == info2
+    assert enrich_job_info(info2, job_map) == info2
 
     # Job ID not in map
     info3 = {"job_ids": [2]}
-    assert oQAI.enrich_job_info(info3, job_map) == info3
+    assert enrich_job_info(info3, job_map) == info3
 
 
 def test_enrich_stats() -> None:
@@ -223,6 +223,6 @@ def test_enrich_stats() -> None:
         "failed": {"job2": {"job_ids": [2], "result": "failed"}},
     }
 
-    enriched = oQAI.enrich_stats(stats, job_map)
+    enriched = enrich_stats(stats, job_map)
     assert enriched["passed"]["job1"]["group"] == "G1"
     assert "group" not in enriched["failed"]["job2"]
