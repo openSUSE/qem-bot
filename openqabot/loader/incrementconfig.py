@@ -98,6 +98,13 @@ def from_args(args: Namespace) -> list[IncrementConfig]:
     return [_create_from_args(args)]
 
 
+def to_url(path: str, base_url: str | None = None) -> str:
+    """Return the absolute HTTP URL for a given path or OBS project."""
+    if path.startswith(("http://", "https://")):
+        return path
+    return f"{base_url or config.settings.obs_download_url}/{path.replace(':', ':/')}"
+
+
 @dataclass
 class IncrementConfig:
     """Configuration for product increments."""
@@ -134,20 +141,13 @@ class IncrementConfig:
         """Return the build project name."""
         return self._concat_project(self.build_project_suffix)
 
-    @staticmethod
-    def to_url(path: str, base_url: str | None = None) -> str:
-        """Return the absolute HTTP URL for a given path or OBS project."""
-        if path.startswith(("http://", "https://")):
-            return path
-        return f"{base_url or config.settings.obs_download_url}/{path.replace(':', ':/')}"
-
     def build_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the build project."""
-        return self.to_url(self.build_project(), base_url)
+        return to_url(self.build_project(), base_url)
 
     def diff_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the diff project."""
-        return self.to_url(self._concat_project(self.diff_project_suffix), base_url)
+        return to_url(self._concat_project(self.diff_project_suffix), base_url)
 
     def _get_template_params(self, base: str, build_info: BuildInfo) -> dict[str, Any]:
         return {
@@ -165,13 +165,13 @@ class IncrementConfig:
         if not self.build_repo_template:
             channel = build_info.flavor.removesuffix(f"-{self.flavor_suffix}")
             return f"{base}/{channel}/{build_info.arch}"
-        return self.to_url(self.build_repo_template.format(**self._get_template_params(base, build_info)))
+        return to_url(self.build_repo_template.format(**self._get_template_params(base, build_info)))
 
     def render_diff_url(self, base: str, build_info: BuildInfo) -> str:
         """Render the diff repository URL using a template or fallback."""
         if not self.diff_repo_template:
             return f"{base}/{build_info.version}/{self.diff_project_suffix}/{build_info.arch}"
-        return self.to_url(self.diff_repo_template.format(**self._get_template_params(base, build_info)))
+        return to_url(self.diff_repo_template.format(**self._get_template_params(base, build_info)))
 
     @property
     def group_key(self) -> GroupKey:

@@ -12,20 +12,20 @@ from functools import lru_cache
 from itertools import chain
 from logging import getLogger
 from pprint import pformat
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import osc.conf
 import osc.core
 
 from openqabot import config
 from openqabot.config import OBSOLETE_PARAMS
-from openqabot.openqa import OpenQAInterface
+from openqabot.openqa import OpenQAInterface, enrich_stats
 from openqabot.pc_helper import apply_public_cloud_settings
 
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig, from_args
+from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig, from_args, to_url
 from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
@@ -80,14 +80,6 @@ def match_packages(package_diff: set[Package], packages_to_find: list[str]) -> b
         return True
     names_of_changed_packages = {p.name for p in package_diff}
     return any(package in names_of_changed_packages for package in packages_to_find)
-
-
-def _get_diff_project(config_inc: IncrementConfig, build_info: BuildInfo | None) -> tuple[str, bool]:
-    """Return the project to compute diff against and whether it is a reference repo."""
-    diff_project = config_inc.diff_project()
-    if build_info and build_info.flavor in config_inc.reference_repos:
-        return config_inc.reference_repos[build_info.flavor], True
-    return diff_project, False
 
 
 def _match_package_name_and_version(package: Package, additional_build: dict[str, Any]) -> re.Match | None:
@@ -244,7 +236,7 @@ class IncrementApprover:
         ]
         job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
 
-        res = [self.client.enrich_stats(stat, job_map) for stat in stats]
+        res = [enrich_stats(stat, job_map) for stat in stats]
 
         log.debug("Job statistics:\n%s", pformat(res))
         return res
@@ -349,7 +341,7 @@ class IncrementApprover:
             )
             if ref_repo:
                 is_reference_repo = True
-                diff_url = config_inc.to_url(ref_repo)
+                diff_url = to_url(ref_repo)
 
             if is_reference_repo:
                 try:
