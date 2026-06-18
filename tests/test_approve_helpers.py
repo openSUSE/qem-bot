@@ -129,7 +129,7 @@ def test_approvable_clears_reason(mocker: MockerFixture) -> None:
     assert approver.approvable(sub) is True
     mock_update.assert_called_once_with(1, None)
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is False
+    assert approver_instance.get_submission_result([], "api/", 1) is None
 
 
 def test_job_contains_submission_no_job_settings(mocker: MockerFixture) -> None:

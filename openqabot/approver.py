@@ -154,6 +154,22 @@ class Approver:
             update_incident_reason(sub.sub, reason % ms2str(sub))
         return False
 
+    def _evaluate_results(self, sub: SubReq, s_jobs: list[JobAggr], a_jobs: list[JobAggr]) -> bool:
+        s_res = self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type)
+        if s_res is False:
+            return self._reject(sub, "%s has at least one not-ok job in submission tests")
+        if s_res is None:
+            return self._reject(sub, "%s has no jobs in submission tests (openQA job template mismatch?)")
+
+        if any(s.with_aggregate for s in s_jobs):
+            a_res = self.get_submission_result(a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type)
+            if a_res is False:
+                return self._reject(sub, "%s has at least one not-ok job in aggregate tests")
+            if a_res is None:
+                return self._reject(sub, "%s has no jobs in aggregate tests (openQA job template mismatch?)")
+
+        return True
+
     def approvable(self, sub: SubReq) -> bool:
         """Check if a submission is ready for approval."""
         try:
@@ -169,13 +185,8 @@ class Approver:
             log.debug("Aggregate tests optional and not found: %s", e)
             a_jobs = []
 
-        if not self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type):
-            return self._reject(sub, "%s has at least one not-ok job in submission tests")
-
-        if any(s.with_aggregate for s in s_jobs) and not self.get_submission_result(
-            a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type
-        ):
-            return self._reject(sub, "%s has at least one not-ok job in aggregate tests")
+        if not self._evaluate_results(sub, s_jobs, a_jobs):
+            return False
 
         if not self.dry:
             update_incident_reason(sub.sub, None)
@@ -403,20 +414,20 @@ class Approver:
 
     def get_submission_result(
         self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
-    ) -> bool:
+    ) -> bool | None:
         """Summarize results for all jobs of a submission."""
         if not jobs:
-            return False
+            return None
 
-        res = False
+        has_passed = False
         for job_aggr in jobs:
             success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
             if success is False:
                 return False
             if success is True:
-                res = True
+                has_passed = True
 
-        return res
+        return True if has_passed else None
 
     def approve(self, sub: SubReq) -> bool:
         """Approve a submission in OBS or Gitea."""
