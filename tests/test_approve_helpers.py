@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, NoReturn
 import pytest
 from openqa_client.exceptions import RequestError
 
-from openqabot.approver import Approver
+from openqabot.approver import Approver, JobResult, OlderJobResult
 from openqabot.loader.qem import JobAggr, SubReq
 
 from .helpers import args, make_approver_args
@@ -53,18 +53,24 @@ def test_validate_job_qam_no_qam_data(json_data: dict, mocker: MockerFixture) ->
 
 
 @pytest.mark.parametrize(
-    ("job", "log_message"),
+    ("job", "log_message", "expected"),
     [
-        ({"build": "invalid-date", "result": "passed", "id": 123}, "Could not parse build date"),
-        ({"build": "20200101-1", "result": "passed", "id": 123}, "Older jobs are too old"),
+        (
+            {"build": "invalid-date", "result": "passed", "id": 123},
+            "Could not parse build date",
+            OlderJobResult.KEEP_SEARCHING,
+        ),
+        ({"build": "20200101-1", "result": "passed", "id": 123}, "Older jobs are too old", OlderJobResult.NOT_OK),
     ],
 )
-def test_was_older_job_ok_returns_none(job: dict, log_message: str, caplog: pytest.LogCaptureFixture) -> None:
+def test_was_older_job_ok_returns_none(
+    job: dict, log_message: str, expected: OlderJobResult, caplog: pytest.LogCaptureFixture
+) -> None:
     approver_instance = Approver(args)
     oldest_build_usable = datetime.now(UTC) - timedelta(days=1)
 
     caplog.set_level(logging.INFO)
-    assert not approver_instance.was_older_job_ok(1, 1, job, oldest_build_usable)
+    assert approver_instance.was_older_job_ok(1, 1, job, oldest_build_usable) is expected
     assert any(log_message in m for m in caplog.messages)
 
 
@@ -123,13 +129,13 @@ def test_approvable_clears_reason(mocker: MockerFixture) -> None:
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
     mocker.patch("openqabot.approver.get_submission_settings", return_value=[])
     mocker.patch("openqabot.approver.get_aggregate_settings", return_value=[])
-    mocker.patch.object(approver, "get_submission_result", return_value=True)
+    mocker.patch.object(approver, "get_submission_result", return_value=JobResult.PASSED)
 
     sub = SubReq(1, 2)
     assert approver.approvable(sub) is True
     mock_update.assert_called_once_with(1, None)
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is False
+    assert approver_instance.get_submission_result([], "api/", 1) is JobResult.NO_JOBS
 
 
 def test_job_contains_submission_no_job_settings(mocker: MockerFixture) -> None:
@@ -150,7 +156,7 @@ def test_clone_dedup_latest_passes_approves(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
     result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
-    assert result is True
+    assert result is JobResult.PASSED
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -167,7 +173,7 @@ def test_clone_dedup_latest_fails_blocks(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
     result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
-    assert result is False
+    assert result is JobResult.FAILED
 
 
 def test_validate_job_qam_not_passed(mocker: MockerFixture) -> None:
@@ -193,7 +199,7 @@ def test_clone_dedup_different_scenarios(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
     result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
-    assert result is True
+    assert result is JobResult.PASSED
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -209,7 +215,7 @@ def test_clone_dedup_two_scenarios_one_fails_blocks(mocker: MockerFixture) -> No
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
     result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
-    assert result is False
+    assert result is JobResult.FAILED
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -230,8 +236,8 @@ def test_clone_dedup_fallback_to_other_urls(mocker: MockerFixture) -> None:
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
     result_incident = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
     result_update = approver.get_jobs(mock_aggr, "api/jobs/update/", 1)
-    assert result_incident is True
-    assert result_update is True
+    assert result_incident is JobResult.PASSED
+    assert result_update is JobResult.PASSED
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -242,7 +248,7 @@ def test_clone_dedup_empty_results(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
     result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
-    assert result is None
+    assert result is JobResult.NO_JOBS
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -255,7 +261,7 @@ def test_clone_dedup_error_results(mocker: MockerFixture, caplog: pytest.LogCapt
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
     result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
-    assert result is None
+    assert result is JobResult.NO_JOBS
     assert any("Unexpected job results format" in msg for msg in caplog.messages)
 
 
@@ -271,7 +277,7 @@ def test_clone_dedup_jobs_without_job_id(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
     result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
-    assert result is True
+    assert result is JobResult.PASSED
 
 
 @pytest.mark.qem_behavior("NoResultsError isn't raised")
@@ -286,4 +292,4 @@ def test_clone_dedup_keeps_highest_job_id(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
     result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
-    assert result is True
+    assert result is JobResult.PASSED
