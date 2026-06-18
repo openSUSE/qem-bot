@@ -31,6 +31,7 @@ from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
 from .types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
+from .types.pullrequest import OBSCommentable
 from .utils import merge_dicts, unique_dicts
 
 if TYPE_CHECKING:
@@ -233,7 +234,7 @@ class IncrementApprover:
 
         if self.comment and approval_status.builds:
             state = "passed" if not all_reasons else "failed"
-            msg = self.commenter.summarize_message(approval_status.builds, approval_status.jobs)
+            msg = self.commenter.summarize_message(OBSCommentable(reqid), approval_status.builds, approval_status.jobs)
             self.commenter.osc_comment_on_request(str(reqid), msg, state)
 
         if not all_reasons:

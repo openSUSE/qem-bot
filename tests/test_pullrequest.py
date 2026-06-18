@@ -4,7 +4,7 @@
 
 import pytest
 
-from openqabot.types.pullrequest import PullRequest
+from openqabot.types.pullrequest import OBSCommentable, PullRequest
 
 
 def test_pull_request_has_labels() -> None:
@@ -64,6 +64,19 @@ def test_pull_request_id_property() -> None:
     )
     assert pr.id == 124
     assert pr.generate_webhook_id() == "gitea:pr:124"
+    assert pr.is_gitea is True
+    assert pr.format_link("Label", "http://url", "http://img") == "[![Label](http://img)](http://url)"
+    assert pr.format_link("Label", "http://url") == "[Label](http://url)"
+
+
+def test_obs_commentable() -> None:
+    """Verify that OBSCommentable correctly implements CommentableProtocol."""
+    obs = OBSCommentable(12345, "http://obs/12345")
+    assert obs.id == 12345
+    assert obs.url == "http://obs/12345"
+    assert obs.is_gitea is False
+    assert obs.format_link("Label", "http://url", "http://img") == "[Label](http://url)"
+    assert obs.format_link("Label", "http://url") == "[Label](http://url)"
 
 
 def test_create_from_json_invalid_data(caplog: pytest.LogCaptureFixture) -> None:

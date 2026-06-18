@@ -14,6 +14,7 @@ import pytest
 from openqabot.commenter import Commenter
 from openqabot.errors import EmptyCommentError, NoResultsError
 from openqabot.types.increment import BuildIdentifier
+from openqabot.types.pullrequest import OBSCommentable
 from openqabot.types.submission import Submission
 from openqabot.types.types import ArchVer
 
@@ -336,14 +337,28 @@ def test_summarize_message(
     mocker.patch("openqabot.config.settings.allow_development_groups", new=None)
     c = Commenter(mock_args, submissions=[])
     builds = [BuildIdentifier("1.1", "sle", "15"), BuildIdentifier("1.2", "", "")]
-    result = c.summarize_message(set(builds), [])
+    sub_gitea = MagicMock(is_gitea=True)
+    sub_gitea.format_link = lambda label, url, image_url=None: (
+        f"[![{label}]({image_url})]({url})" if image_url else f"[{label}]({url})"
+    )
+    result_gitea = c.summarize_message(sub_gitea, set(builds), [])
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1"
-        in result
+        in result_gitea
     )
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2"
-        in result
+        in result_gitea
+    )
+
+    result_obs = c.summarize_message(OBSCommentable(124), set(builds), [])
+    assert (
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1)"
+        in result_obs
+    )
+    assert (
+        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2)"
+        in result_obs
     )
 
 
@@ -357,11 +372,22 @@ def test_summarize_message_allow_devel(
     mocker.patch("openqabot.config.settings.allow_development_groups", new="1")
     c = Commenter(mock_args, submissions=[])
     builds = [BuildIdentifier("1.1", "opensuse", "Tumbleweed")]
-    result = c.summarize_message({builds[0]}, [])
-    assert "not_group_glob" not in result
+    sub_gitea = MagicMock(is_gitea=True)
+    sub_gitea.format_link = lambda label, url, image_url=None: (
+        f"[![{label}]({image_url})]({url})" if image_url else f"[{label}]({url})"
+    )
+    result_gitea = c.summarize_message(sub_gitea, {builds[0]}, [])
+    assert "not_group_glob" not in result_gitea
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1"
-        in result
+        in result_gitea
+    )
+
+    result_obs = c.summarize_message(OBSCommentable(124), {builds[0]}, [])
+    assert "not_group_glob" not in result_obs
+    assert (
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1)"
+        in result_obs
     )
 
 
@@ -643,7 +669,7 @@ def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
         {"id": 2, "state": "running", "build": "1"},
     ]
     # Should postpone due to running job
-    assert c.generate_comment(MagicMock(), raw_jobs) is None
+    assert c.generate_comment(OBSCommentable(124), raw_jobs) is None
 
     # All done
     raw_jobs_done = [
@@ -651,7 +677,7 @@ def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
         {"id": 2, "state": "done", "result": "softfailed", "build": "1"},
     ]
     c.client.openqa.baseurl = "https://openqa"
-    res = c.generate_comment(MagicMock(), raw_jobs_done)
+    res = c.generate_comment(OBSCommentable(124), raw_jobs_done)
     assert res is not None
     msg, state = res
     assert state == "passed"
@@ -789,8 +815,9 @@ def test_summarize_message_detailed_comments(
     mocker.patch("openqabot.config.settings.allow_development_groups", new=allow_devel)
     detailed_comment_mocks["client"].return_value.get_job_group_info.return_value = group_info
     c = Commenter(mock_args, submissions=[])
+
     builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
-    result = c.summarize_message(builds, jobs)
+    result = c.summarize_message(OBSCommentable(124), builds, jobs)
     for text in expected_contains:
         assert text in result
     for text in expected_not_contains:
@@ -814,7 +841,18 @@ def test_summarize_message_detailed_comments_duplicate_group(
         {"build": "1.1", "status": "failed", "group_id": 42},
     ]
     builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
-    result = c.summarize_message(builds, jobs)
-    assert "Functional" in result
-    assert result.count("![Functional Test Results]") == 1
-    assert "label=Functional" in result
+
+    sub_gitea = MagicMock(is_gitea=True)
+    sub_gitea.format_link = lambda label, url, image_url=None: (
+        f"[![{label}]({image_url})]({url})" if image_url else f"[{label}]({url})"
+    )
+
+    result_gitea = c.summarize_message(sub_gitea, builds, jobs)
+    assert "Functional" in result_gitea
+    assert result_gitea.count("![Functional Test Results]") == 1
+    assert "label=Functional" in result_gitea
+
+    result_obs = c.summarize_message(OBSCommentable(124), builds, jobs)
+    assert "Functional" in result_obs
+    assert result_obs.count("[Functional Test Results]") == 1
+    assert "label=Functional" not in result_obs

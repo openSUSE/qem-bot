@@ -49,6 +49,17 @@ class Submission:
         self._logged_skipped: bool = False
         self.livepatch: bool = self.is_livepatch(self.packages)
 
+    @property
+    def is_gitea(self) -> bool:
+        """Check if the submission is from Gitea."""
+        return self.type == "git"
+
+    def format_link(self, label: str, url: str, image_url: str | None = None) -> str:
+        """Format a link with an optional image badge."""
+        if self.is_gitea and image_url:
+            return f"[![{label}]({image_url})]({url})"
+        return f"[{label}]({url})"
+
     def _initialize_channels(self, raw_channels: list[str]) -> None:
         """Initialize channels and skipped products from raw channel data."""
         self.channels, self.skipped_products = self._parse_channels(raw_channels)

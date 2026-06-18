@@ -22,6 +22,38 @@ class CommentableProtocol(Protocol):
         """The URL of the pull request."""
         ...
 
+    @property
+    def is_gitea(self) -> bool:
+        """Check if representing a Gitea pull request."""
+        ...
+
+    def format_link(self, label: str, url: str, image_url: str | None = None) -> str:
+        """Format a link with an optional image badge."""
+        ...
+
+
+class OBSCommentable:
+    """Implement CommentableProtocol for OBS requests/incidents."""
+
+    def __init__(self, obj_id: int | str | None, url: str | None = None) -> None:
+        """Initialize OBSCommentable."""
+        self.id = int(obj_id) if obj_id is not None else 0
+        self.url = url
+
+    @property
+    def is_gitea(self) -> bool:
+        """Check if representing a Gitea pull request."""
+        return False
+
+    def format_link(  # noqa: PLR6301 - Interface compatibility requires format_link to be a non-static method
+        self,
+        label: str,
+        url: str,
+        image_url: str | None = None,  # noqa: ARG002  - Interface compatibility
+    ) -> str:
+        """Format a link with an optional image badge."""
+        return f"[{label}]({url})"
+
 
 @dataclass
 class PullRequest:
@@ -41,6 +73,17 @@ class PullRequest:
     def id(self) -> int:
         """Alias for number for consistency with Submission."""
         return self.number
+
+    @property
+    def is_gitea(self) -> bool:
+        """Check if representing a Gitea pull request."""
+        return True
+
+    def format_link(self, label: str, url: str, image_url: str | None = None) -> str:  # noqa: PLR6301 - Interface compatibility requires format_link to be a non-static method
+        """Format a link with an optional image badge."""
+        if image_url:
+            return f"[![{label}]({image_url})]({url})"
+        return f"[{label}]({url})"
 
     def generate_webhook_id(self) -> str:
         """Generate a webhook identifier for this pull request."""

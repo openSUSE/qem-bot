@@ -95,7 +95,7 @@ class Commenter:
         log.debug("Determined comment state for %s: %s", sub, state)
 
         builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
-        msg = self.summarize_message(builds, jobs)
+        msg = self.summarize_message(sub, builds, jobs)
         if not msg:
             raise EmptyCommentError(sub)
 
@@ -186,9 +186,11 @@ class Commenter:
         else:
             gitea.patch_json(f"repos/{repo}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
 
-    def summarize_message(self, builds: set[BuildIdentifier], jobs: list[dict[str, Any]]) -> str:
+    def summarize_message(
+        self, sub: CommentableProtocol, builds: set[BuildIdentifier], jobs: list[dict[str, Any]]
+    ) -> str:
         """Create markdown containing openQA badges."""
-        badge_msg = self._generate_badge_section(builds)
+        badge_msg = self._generate_badge_section(sub, builds)
 
         if not config.settings.enable_detailed_comments:
             return badge_msg
@@ -197,9 +199,9 @@ class Commenter:
         if not job_groups:
             return badge_msg
 
-        return badge_msg + "\n\n" + self._generate_detail_section(job_groups, sorted(builds))
+        return badge_msg + "\n\n" + self._generate_detail_section(sub, job_groups, sorted(builds))
 
-    def _generate_badge_section(self, builds: set[BuildIdentifier]) -> str:
+    def _generate_badge_section(self, sub: CommentableProtocol, builds: set[BuildIdentifier]) -> str:
         """Generate markdown for openQA badges."""
         base_url = self.client.openqa.baseurl
         badge_msg = ""
@@ -210,10 +212,12 @@ class Commenter:
             query = urlencode(params, safe="*")
             badge_url = f"{base_url}/tests/overview/badge?{query}"
             link_url = f"{base_url}/tests/overview?{query}"
-            badge_msg += f"[![{label} Results]({badge_url})]({link_url})\n"
+            badge_msg += sub.format_link(f"{label} Results", link_url, badge_url) + "\n"
         return badge_msg.strip()
 
-    def _generate_detail_section(self, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier]) -> str:
+    def _generate_detail_section(
+        self, sub: CommentableProtocol, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier]
+    ) -> str:
         """Generate markdown for detailed failure information."""
         max_entries = config.settings.max_detailed_comment_entries
         display_groups = job_groups[:max_entries]
@@ -223,7 +227,7 @@ class Commenter:
         base_url = self.client.openqa.baseurl
 
         table_rows = [
-            f"| [![{g['name']} Test Results]({g['badge_url']})]({g['overview_url']}) | "
+            f"| {sub.format_link(g['name'] + ' Test Results', g['overview_url'], g['badge_url'])} | "
             f"{g['contact'] or f'No contact provided: {fallback}'} |"
             for g in display_groups
         ]
