@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Tests for common type definitions."""
 
+import re
+
 import pytest
 
+from openqabot.types.isomatch import IsoMatch
 from openqabot.types.types import ChannelType, ProdVer, Repos, get_channel_type
 
 
@@ -74,3 +77,27 @@ def test_repos_compute_url_updates_with_project() -> None:
     repo = Repos("SLES", "15-SP3", "x86_64")
     url = repo.compute_url("base", path="repomd.xml", project="SUSE:Maintenance:12345")
     assert url == "base/SUSE:/Maintenance:/12345/SUSE_Updates_SLES_15-SP3_x86_64/repomd.xml"
+
+
+def test_isomatch_from_regex_match() -> None:
+    """Test IsoMatch.from_regex_match classmethod."""
+    pattern = re.compile(r"(?P<product>\w+)-(?P<version>[\d\.]+)-(?P<arch>\w+)-Build(?P<build>[\d\.]+)\.iso")
+    match = pattern.match("SLES-15.5-x86_64-Build1.1.iso")
+    assert match is not None
+    isomatch = IsoMatch.from_regex_match(match, 123)
+    assert isomatch.product == "SLES"
+    assert isomatch.version == "15.5:PR-123"
+    assert isomatch.arch == "x86_64"
+    assert isomatch.build == "PR-123-1.1:SLES-15.5"
+
+
+def test_isomatch_constructor() -> None:
+    """Test IsoMatch init using raw values."""
+    isomatch = IsoMatch("SLES", "15.5", "PR-123")
+    assert isomatch.product == "SLES"
+    assert isomatch.version == "15.5"
+    assert isomatch.arch == "x86_64"
+    assert isomatch.build == "PR-123"
+
+    isomatch_custom_arch = IsoMatch("SLES", "15.5", "PR-123", arch="aarch64")
+    assert isomatch_custom_arch.arch == "aarch64"

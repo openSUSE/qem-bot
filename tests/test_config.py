@@ -28,8 +28,9 @@ def test_download_maintenance_override() -> None:
     assert settings.download_maintenance == "http://custom.url"
 
 
-def test_git_review_bot_user_default() -> None:
+def test_git_review_bot_user_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test the default value for git_review_bot_user."""
+    monkeypatch.delenv("GIT_REVIEW_BOT", raising=False)
     settings = Settings(OBS_GROUP="mygroup")
     assert settings.git_review_bot_user == "mygroup-review"
 

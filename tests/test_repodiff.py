@@ -11,6 +11,7 @@ from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.config import settings
+from openqabot.errors import NoResultsError
 from openqabot.repodiff import RepoDiff
 
 
@@ -220,3 +221,20 @@ def test_load_packages_not_rpm(diff: RepoDiff, mocker: MockerFixture) -> None:
     mocker.patch.object(diff, "load_repodata", return_value=xml)
     res = diff.load_packages("project")
     assert res == {}
+
+
+def test_get_staged_update_name_success(diff: RepoDiff, mocker: MockerFixture) -> None:
+    """Test get_staged_update_name happy path."""
+    pkg1 = mocker.Mock()
+    pkg1.name = "pkg-b"
+    pkg2 = mocker.Mock()
+    pkg2.name = "pkg-a"
+    mocker.patch.object(diff, "load_packages", return_value={"x86_64": {pkg1, pkg2}})
+    assert diff.get_staged_update_name("http://repo") == "pkg-a"
+
+
+def test_get_staged_update_name_empty(diff: RepoDiff, mocker: MockerFixture) -> None:
+    """Test get_staged_update_name raises NoResultsError when no packages are found."""
+    mocker.patch.object(diff, "load_packages", return_value={"x86_64": set()})
+    with pytest.raises(NoResultsError, match="No packages detected"):
+        diff.get_staged_update_name("http://repo")

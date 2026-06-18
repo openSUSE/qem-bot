@@ -17,6 +17,8 @@ import pyzstd
 import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 
+from openqabot.errors import NoResultsError
+
 from .utils import get_obs_filter_params
 from .utils import retry10 as retried_requests
 
@@ -135,6 +137,15 @@ class RepoDiff:
         except (json.JSONDecodeError, requests.exceptions.JSONDecodeError):
             log.info("Failed to parse %s", source)
             return None
+
+    def get_staged_update_name(self, repo_url: str) -> str:
+        """Get the name of the staged update package from a repository URL."""
+        packages_by_arch = self.load_packages(repo_url)
+        packages = set().union(*packages_by_arch.values())
+        if len(packages) == 0:
+            error_msg = "No packages detected"
+            raise NoResultsError(error_msg)
+        return min(packages, key=lambda p: p.name).name
 
     def load_repodata(self, url: str) -> etree.Element | None:
         """Load and parse repository primary metadata for a repository URL."""
