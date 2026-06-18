@@ -66,7 +66,8 @@ class Commenter:
 
         all_jobs = get_jobs(get_submission_results) + get_jobs(get_aggregate_results)
 
-        if res := self.generate_comment(sub, all_jobs):
+        is_gitea = sub.type == "git"
+        if res := self.generate_comment(sub, all_jobs, is_gitea=is_gitea):
             handlers = {config.settings.default_submission_type: self.osc_comment, "git": self.gitea_comment}
             handlers[sub.type](sub, *res)
 
@@ -74,7 +75,9 @@ class Commenter:
         """Calculate overall state of jobs."""
         return "passed" if all(j["status"] in {"passed", "softfailed"} for j in jobs) else "failed"
 
-    def generate_comment(self, sub: CommentableProtocol, jobs: list[dict[str, Any]]) -> tuple[str, str] | None:
+    def generate_comment(
+        self, sub: CommentableProtocol, jobs: list[dict[str, Any]], *, is_gitea: bool = False
+    ) -> tuple[str, str] | None:
         """Generate comment message and state for a set of jobs."""
         if not jobs:
             log.debug("No jobs found for submission %s", sub)
@@ -95,7 +98,7 @@ class Commenter:
         log.debug("Determined comment state for %s: %s", sub, state)
 
         builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
-        msg = self.summarize_message(builds, jobs)
+        msg = self.summarize_message(builds, jobs, is_gitea=is_gitea)
         if not msg:
             raise EmptyCommentError(sub)
 
@@ -186,9 +189,11 @@ class Commenter:
         else:
             gitea.patch_json(f"repos/{repo}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
 
-    def summarize_message(self, builds: set[BuildIdentifier], jobs: list[dict[str, Any]]) -> str:
+    def summarize_message(
+        self, builds: set[BuildIdentifier], jobs: list[dict[str, Any]], *, is_gitea: bool = False
+    ) -> str:
         """Create markdown containing openQA badges."""
-        badge_msg = self._generate_badge_section(builds)
+        badge_msg = self._generate_badge_section(builds, is_gitea=is_gitea)
 
         if not config.settings.enable_detailed_comments:
             return badge_msg
@@ -197,9 +202,9 @@ class Commenter:
         if not job_groups:
             return badge_msg
 
-        return badge_msg + "\n\n" + self._generate_detail_section(job_groups, sorted(builds))
+        return badge_msg + "\n\n" + self._generate_detail_section(job_groups, sorted(builds), is_gitea=is_gitea)
 
-    def _generate_badge_section(self, builds: set[BuildIdentifier]) -> str:
+    def _generate_badge_section(self, builds: set[BuildIdentifier], *, is_gitea: bool = False) -> str:
         """Generate markdown for openQA badges."""
         base_url = self.client.openqa.baseurl
         badge_msg = ""
@@ -210,10 +215,15 @@ class Commenter:
             query = urlencode(params, safe="*")
             badge_url = f"{base_url}/tests/overview/badge?{query}"
             link_url = f"{base_url}/tests/overview?{query}"
-            badge_msg += f"[![{label} Results]({badge_url})]({link_url})\n"
+            if is_gitea:
+                badge_msg += f"[![{label} Results]({badge_url})]({link_url})\n"
+            else:
+                badge_msg += f"[{label} Results]({link_url})\n"
         return badge_msg.strip()
 
-    def _generate_detail_section(self, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier]) -> str:
+    def _generate_detail_section(
+        self, job_groups: list[dict[str, Any]], sorted_builds: list[BuildIdentifier], *, is_gitea: bool = False
+    ) -> str:
         """Generate markdown for detailed failure information."""
         max_entries = config.settings.max_detailed_comment_entries
         display_groups = job_groups[:max_entries]
@@ -222,11 +232,18 @@ class Commenter:
         fallback = config.settings.fallback_contact
         base_url = self.client.openqa.baseurl
 
-        table_rows = [
-            f"| [![{g['name']} Test Results]({g['badge_url']})]({g['overview_url']}) | "
-            f"{g['contact'] or f'No contact provided: {fallback}'} |"
-            for g in display_groups
-        ]
+        if is_gitea:
+            table_rows = [
+                f"| [![{g['name']} Test Results]({g['badge_url']})]({g['overview_url']}) | "
+                f"{g['contact'] or f'No contact provided: {fallback}'} |"
+                for g in display_groups
+            ]
+        else:
+            table_rows = [
+                f"| [{g['name']} Test Results]({g['overview_url']}) | "
+                f"{g['contact'] or f'No contact provided: {fallback}'} |"
+                for g in display_groups
+            ]
 
         detail_msg = "\n\n| *Job Group with blocking failures* | *Group Owner's contact information*\n| --- | --- |\n"
         detail_msg += "\n".join(table_rows)

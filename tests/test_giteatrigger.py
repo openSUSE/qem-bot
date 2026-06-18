@@ -407,7 +407,7 @@ def test_comment_on_pr_build_injection(
     trigger.comment_on_pr(mock_pr, data)
 
     assert mock_jobs[0]["build"] == "PR-BUILD"
-    cast("MagicMock", trigger.commenter.generate_comment).assert_called_once_with(mock_pr, mock_jobs)
+    cast("MagicMock", trigger.commenter.generate_comment).assert_called_once_with(mock_pr, mock_jobs, is_gitea=True)
     mock_approve_pr.assert_called_once_with(trigger.gitea_token, "fake_repo", 123, "sha123", mocker.ANY)
 
 
