@@ -106,9 +106,16 @@ class Submission:
     @classmethod
     def create(cls, data: dict) -> Submission | None:
         """Create a Submission instance from a dictionary, handling errors."""
+        if "error" in data:
+            log.warning("Invalid submission data: %s", data.get("error"))
+            return None
+
         sub_id = f"{data.get('type') or config.settings.default_submission_type}:{data.get('number')}"
         try:
             return cls(data)
+        except KeyError as e:
+            log.warning("Submission %s creation failed: Missing key %s in data", sub_id, e)
+            return None
         except EmptyChannelsError:
             log.info("Submission %s ignored: No channels found for project %s", sub_id, data.get("project"))
             return None

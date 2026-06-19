@@ -153,6 +153,19 @@ def test_sub_create(caplog: pytest.LogCaptureFixture) -> None:
     assert Submission.create(bad_data) is None
     assert "ignored: No packages found for project" in caplog.text
 
+    # Test error dict
+    caplog.clear()
+    error_data = {"error": "Some incident not found error"}
+    assert Submission.create(error_data) is None
+    assert "Invalid submission data: Some incident not found error" in caplog.text
+
+    # Test KeyError on missing crucial key
+    caplog.clear()
+    bad_data = deepcopy(test_data)
+    del bad_data["rr_number"]
+    assert Submission.create(bad_data) is None
+    assert "creation failed: Missing key 'rr_number' in data" in caplog.text
+
 
 @pytest.mark.usefixtures("mock_good")
 def test_sub_revisions() -> None:
