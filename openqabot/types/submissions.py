@@ -201,15 +201,15 @@ class Submissions(BaseConf):
     def get_priority(self, ctx: SubContext) -> int | None:  # noqa: PLR6301
         """Calculate job priority for a submission."""
         sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
-        if delta_prio := data.get("override_priority", 0):
-            delta_prio -= 50
+        if "override_priority" in data:
+            delta_prio = data["override_priority"] - 50
         else:
             delta_prio = 5 if flavor.endswith("Minimal") else 10
             if sub.emu:
                 delta_prio = -20
-            if sub.priority:
+            if sub.priority is not None:
                 delta_prio -= sub.priority // settings.priority_scale
-        return settings.base_prio + delta_prio if delta_prio else None
+        return settings.base_prio + delta_prio
 
     def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:  # noqa: PLR6301
         """Apply 'params_expand' settings from metadata."""
