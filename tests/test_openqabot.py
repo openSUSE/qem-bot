@@ -15,6 +15,7 @@ import pytest
 import responses
 from typer.testing import CliRunner
 
+from openqabot import dashboard
 from openqabot.args import app
 from openqabot.args import main as args_main
 from openqabot.config import QEM_DASHBOARD
@@ -261,3 +262,17 @@ def test_post_qem_dry(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> No
     bot.post_qem(test_data, test_api)
 
     assert len(responses.calls) == 0
+
+
+def test_dashboard_dry_run_patch_put(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.dashboard.settings.dry", new=True)
+
+    resp_patch = dashboard.patch("api/test_route", json={"foo": "bar"})
+    assert resp_patch.status_code == 200
+    assert resp_patch.json() == {"id": "dry_run"}
+    assert resp_patch.text == '{"id": "dry_run"}'
+
+    resp_put = dashboard.put("api/test_route", json={"hello": "world"})
+    assert resp_put.status_code == 200
+    assert resp_put.json() == {"id": "dry_run"}
+    assert resp_put.text == '{"id": "dry_run"}'
