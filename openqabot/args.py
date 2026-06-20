@@ -389,13 +389,19 @@ def gitea_sync(  # noqa: PLR0913
 def gitea_trigger(  # noqa: PLR0913
     ctx: typer.Context,
     *,
-    gitea_project: gitea_project_arg = "products/SLFO",
     pr_label: Annotated[
         str,
         typer.Option("--pr-label", envvar="PR_LABEL", help="Gitea PRs label for which to trigger tests"),
     ] = "staging/In Progress",
     pr_number: pr_number_arg = None,
     comment: comment_option = True,
+    maintenance: Annotated[
+        bool,
+        typer.Option(
+            "--maintenance",
+            help="Controls type of pull requests processed",
+        ),
+    ] = False,
     enable_detailed_comments: enable_detailed_comments_option = None,
     fallback_contact: fallback_contact_option = None,
     generic_tool_issues_contact: generic_tool_issues_contact_option = None,
@@ -403,10 +409,10 @@ def gitea_trigger(  # noqa: PLR0913
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
-    args.gitea_project = gitea_project
     args.pr_number = pr_number
     args.pr_label = pr_label
     args.comment = comment
+    args.maintenance = maintenance
 
     _apply_detailed_comment_options(
         args,
@@ -607,6 +613,10 @@ def increment_approve(  # noqa: PLR0913
         ),
     ] = None,
     comment: comment_option = True,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
 ) -> None:
     """Approve the most recent product increment for an OBS project if tests passed."""
     args = ctx.obj
@@ -627,6 +637,14 @@ def increment_approve(  # noqa: PLR0913
     args.product_regex = product_regex
     args.increment_config = increment_config
     args.comment = comment
+
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
 
     approve = IncrementApprover(args)
     sys.exit(approve())

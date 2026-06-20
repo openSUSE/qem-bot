@@ -52,6 +52,10 @@ class OpenQABot:
             log.warning("Skipping dashboard update: No valid openQA configuration found for data: %s", data)
             return
 
+        if self.dry:
+            log.info("Dry run: Would update QEM Dashboard for %s with data: %s", api, data)
+            return
+
         res = dashboard.put(api, headers=config_module.settings.dashboard_token_dict, json=data)
         res_id = res.json().get("id", "unknown")
         log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)

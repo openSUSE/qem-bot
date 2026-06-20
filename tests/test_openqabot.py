@@ -247,3 +247,17 @@ def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -
 
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url == f"{QEM_DASHBOARD}{test_api}"
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_dry(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> None:
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.dry = True
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    test_api = "api/jobs/incident/1"
+    test_data = {"status": "passed", "job_id": 999}
+
+    bot.post_qem(test_data, test_api)
+
+    assert len(responses.calls) == 0

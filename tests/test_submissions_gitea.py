@@ -39,7 +39,7 @@ def _assert_gitea_settings(
         "INCIDENT_ID": sub_id,
         "INCIDENT_REPO": f"{expected_repo}-{arch}/",
         "REPOHASH": repo_hash,
-        "VERSION": product_ver,
+        "VERSION": f"{product_ver}:git-{sub_id}",
     }
 
     for s in [result["openqa"], qem["settings"]]:
@@ -59,7 +59,7 @@ def test_gitea_submissions() -> None:
     settings = {"VERSION": product_ver, "DISTRI": "sles"}
     issues = {"BASE_TEST_ISSUES": "SLFO:1.1.99#15.99"}
     flavor = "AAA"
-    test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues}}}
+    test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues, "versioned_by_submission": True}}}
 
     # create a Git-based submission
     sub = MockSubmission(type="git")

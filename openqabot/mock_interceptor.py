@@ -45,6 +45,15 @@ def mock_gitea_pr_details() -> None:
     )
 
 
+def mock_gitea_staging_config() -> None:
+    """Mock Gitea staging.config download."""
+    responses.add_callback(
+        responses.GET,
+        re.compile(r".*/raw/branch/.*/staging.config$"),
+        callback=gitea_staging_config_callback,
+    )
+
+
 def mock_smelt_graphql() -> None:
     """Mock SMELT GraphQL API."""
     responses.add_callback(
@@ -120,6 +129,7 @@ def setup_mock_responses() -> None:
 
     mock_gitea_pulls()
     mock_gitea_pr_details()
+    mock_gitea_staging_config()
     mock_smelt_graphql()
     mock_openqa_jobs()
     mock_repomd()
@@ -154,6 +164,18 @@ def gitea_pr_details_callback(request: requests.PreparedRequest) -> tuple[int, d
     if "files" in url:
         return (200, {}, read_fixture("files-124.json"))
     return (404, {}, "{}")
+
+
+def gitea_staging_config_callback(_request: requests.PreparedRequest) -> tuple[int, dict[str, str], str]:
+    """Return Gitea staging.config mock response."""
+    return (
+        200,
+        {},
+        json.dumps({
+            "StagingProject": "openQA:Staging:A",
+            "QA": [{"Name": "SLES", "Label": "label1"}, {"Name": "SLES", "Label": "label2"}],
+        }),
+    )
 
 
 def smelt_graphql_callback(_request: requests.PreparedRequest) -> tuple[int, dict[str, str], str]:

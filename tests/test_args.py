@@ -163,6 +163,35 @@ def test_increment_approve(mocker: MockerFixture, tmp_path: Path) -> None:
     approve.assert_called_once()
 
 
+def test_increment_approve_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:
+    approve = mocker.patch("openqabot.args.IncrementApprover")
+    approve.return_value.return_value = 0
+    result = runner.invoke(
+        app,
+        [
+            "--token",
+            "foo",
+            "--configs",
+            str(tmp_path),
+            "increment-approve",
+            "--enable-detailed-comments",
+            "--fallback-contact",
+            "Test Contact",
+            "--generic-tool-issues-contact",
+            "@test",
+            "--max-detailed-comment-entries",
+            "5",
+        ],
+    )
+    assert result.exit_code == 0
+    approve.assert_called_once()
+    args = approve.call_args[0][0]
+    assert args.enable_detailed_comments is True
+    assert args.fallback_contact == "Test Contact"
+    assert args.generic_tool_issues_contact == "@test"
+    assert args.max_detailed_comment_entries == 5
+
+
 def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
     repo_diff = mocker.patch("openqabot.args.RepoDiff")
     repo_diff.return_value.return_value = 0
