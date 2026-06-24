@@ -198,7 +198,7 @@ class Submissions(BaseConf):
             **({"RRID": sub.rrid} if sub.rrid else {}),
         }
 
-    def get_priority(self, ctx: SubContext) -> int | None:  # noqa: PLR6301
+    def get_priority(self, ctx: SubContext) -> int:  # noqa: PLR6301
         """Calculate job priority for a submission."""
         sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
         if "override_priority" in data:
@@ -268,8 +268,7 @@ class Submissions(BaseConf):
         repos = {c for c in all_repos if c.product_version == version} or all_repos
         settings["INCIDENT_REPO"] = ",".join(sorted(self.make_repo_url(ctx.sub, chan) for chan in repos))
 
-        if prio := self.get_priority(ctx):
-            settings["_PRIORITY"] = prio
+        settings["_PRIORITY"] = self.get_priority(ctx)
 
         if not self.apply_params_expand(settings, ctx.data, ctx.flavor):
             return None

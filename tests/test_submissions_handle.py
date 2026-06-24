@@ -506,15 +506,17 @@ def test_process_sub_context_norepfound(mocker: MockerFixture) -> None:
     [
         ({"emu": True, "staging": False}, {}, 30),
         ({"staging": False, "emu": False}, {}, 60),
-        ({"staging": False, "emu": False}, {"override_priority": 50}, None),
+        ({"staging": False, "emu": False}, {"override_priority": 50}, 50),
         ({}, {"override_priority": 100}, 100),
         ({"staging": False}, {"flavor": "Minimal"}, 55),
         ({"staging": False, "priority": 100}, {}, 55),
         ({"staging": False, "emu": True, "priority": 100}, {}, 25),
+        ({"priority": 200}, {}, 50),
+        ({}, {"override_priority": 0}, 0),
     ],
 )
 def test_handle_submission_priority_logic(
-    mocker: MockerFixture, inc_kwargs: dict, flavor_kwargs: dict, expected_prio: int | None
+    mocker: MockerFixture, inc_kwargs: dict, flavor_kwargs: dict, expected_prio: int
 ) -> None:
     flavor = flavor_kwargs.pop("flavor", "AAA")
     sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123, **inc_kwargs)
@@ -527,10 +529,7 @@ def test_handle_submission_priority_logic(
     mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
-    if expected_prio is None:
-        assert "_PRIORITY" not in result["openqa"]
-    else:
-        assert result["openqa"]["_PRIORITY"] == expected_prio
+    assert result["openqa"]["_PRIORITY"] == expected_prio
 
 
 def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None:
