@@ -74,7 +74,7 @@ def test_no_jobs(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> Non
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=[])
     mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
     approver()
-    assert "SUSE:Maintenance:4:400 has at least one not-ok job in submission tests" in caplog.messages
+    assert "SUSE:Maintenance:4:400 has no jobs in submission tests (openQA job template mismatch?)" in caplog.messages
     assert "Submissions to approve:" in caplog.messages
     assert "Submission approval process finished" in caplog.messages
     assert "* SUSE:Maintenance:4:400" not in caplog.messages
@@ -338,6 +338,38 @@ def test_single_submission_aggr_not_ok_no_data(caplog: pytest.LogCaptureFixture,
     mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
     approver(submission=1)
     assert "smelt:1 has at least one not-ok job in aggregate tests" in caplog.messages
+    mock_comment.assert_not_called()
+    mock_handle_job_not_found.assert_not_called()
+
+
+@responses.activate
+@with_fake_qem("NoResultsError isn't raised")
+@pytest.mark.usefixtures("fake_single_submission_mocks")
+def test_single_submission_aggr_no_jobs(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.approver")
+
+    # Mock dashboard responses to return empty for updates
+    def mock_get_json(url: str, **_kwargs: Any) -> Any:
+        if "update" in url:
+            return []
+        return [{"job_id": 100000, "status": "passed"}]
+
+    mocker.patch(
+        "openqabot.approver.get_single_submission",
+        return_value=[SubReq(sub=1, req=100, type="smelt", submission=None)],
+    )
+    mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
+    mock_comment = mocker.patch("openqabot.commenter.Commenter.comment_on_submission")
+    mocker.patch("openqabot.approver.Approver.was_ok_before", return_value=False)
+
+    # We need s_jobs to have with_aggregate=True to reach the aggregate check
+    mocker.patch(
+        "openqabot.approver.get_submission_settings",
+        return_value=[JobAggr(1000, aggregate=False, with_aggregate=True)],
+    )
+    mock_handle_job_not_found = mocker.patch("openqabot.approver.OpenQAInterface.handle_job_not_found")
+    approver(submission=1)
+    assert "smelt:1 has no jobs in aggregate tests (openQA job template mismatch?)" in caplog.messages
     mock_comment.assert_not_called()
     mock_handle_job_not_found.assert_not_called()
 

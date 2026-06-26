@@ -507,6 +507,12 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
 def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | None) -> bool:
     """Check if a build result is relevant for the current product and architecture."""
     if config.settings.obs_repo_type and res.get("repository") != config.settings.obs_repo_type:
+        log.debug(
+            "Build result %s:%s ignored (obs_repo_type='%s')",
+            res.get("project"),
+            res.get("repository"),
+            config.settings.obs_repo_type,
+        )
         return False
     arch = res.get("arch")
     return arch == "local" or relevant_archs is None or arch in relevant_archs
@@ -693,7 +699,11 @@ def _validate_submission(
 ) -> bool:
     """Validate if the submission has channels, acceptable builds, and packages."""
     if not submission["channels"]:
-        log.info("PR git:%s skipped: No channels found", number)
+        log.info(
+            "PR git:%s skipped: No channels found (check OBS_REPO_TYPE, currently '%s')",
+            number,
+            config.settings.obs_repo_type,
+        )
         return False
     return not (only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number))
 
