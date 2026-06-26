@@ -8,6 +8,7 @@ import os
 import re
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
 from logging import getLogger
@@ -34,6 +35,15 @@ from .utils import merge_dicts, unique_dicts
 
 if TYPE_CHECKING:
     from argparse import Namespace
+
+
+class JobState(Enum):
+    """Job state of openQA jobs in product increments."""
+
+    FINISHED = auto()
+    PENDING = auto()
+    NO_JOBS = auto()
+
 
 log = getLogger("bot.increment_approver")
 ok_results = {"passed", "softfailed"}
@@ -143,17 +153,17 @@ class IncrementApprover:
         return res
 
     @staticmethod
-    def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> bool | None:
+    def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> JobState:
         """Check if all openQA jobs are finished."""
         actual_states = {state for result in results for state in result}
         pending_states = actual_states - final_states
         if len(actual_states) == 0:
             build_info.log_no_jobs(params)
-            return None
+            return JobState.NO_JOBS
         if len(pending_states):
             build_info.log_pending_jobs(pending_states)
-            return False
-        return True
+            return JobState.PENDING
+        return JobState.FINISHED
 
     def evaluate_openqa_job_results(
         self,
@@ -433,7 +443,7 @@ class IncrementApprover:
         build_info: BuildInfo,
         params: ScheduleParams,
         *,
-        openqa_jobs_ready: bool | None,
+        openqa_jobs_ready: JobState,
         approval_status: ApprovalStatus,
         jobs_were_filtered: bool = False,
     ) -> int:
@@ -442,7 +452,7 @@ class IncrementApprover:
         Args:
             build_info (BuildInfo): Metadata regarding the product and build version.
             params (ScheduleParams): The parameters required to identify or schedule openQA jobs.
-            openqa_jobs_ready (bool | None): Job state (None for missing, False for pending).
+            openqa_jobs_ready (JobState): Job state.
             approval_status (ApprovalStatus): The status container updated with disapproval reasons.
             jobs_were_filtered (bool): Controls if some jobs were filtered which would mean that we
                 should exclude them from approval status.
@@ -452,7 +462,7 @@ class IncrementApprover:
 
         """
         info_str = build_info.format_multi_build(params)
-        if openqa_jobs_ready is False:
+        if openqa_jobs_ready is JobState.PENDING:
             approval_status.reasons_to_disapprove.append(f"Not all jobs ready for {info_str}")
             return 0
 
@@ -504,7 +514,7 @@ class IncrementApprover:
             return self.schedule_openqa_jobs(build_info, params)
 
         openqa_jobs_ready = self.check_openqa_jobs(filtered_results, build_info, params)
-        if openqa_jobs_ready:
+        if openqa_jobs_ready is JobState.FINISHED:
             ok_jobs, reasons, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
             builds = {BuildIdentifier.from_params(p) for p in params if "BUILD" in p}
             approval_status.add(ok_jobs, reasons, builds, jobs)

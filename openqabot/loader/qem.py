@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import sys
 from http import HTTPStatus
 from itertools import chain
 from logging import getLogger
@@ -78,7 +79,13 @@ def get_submissions(submission: str | None = None) -> list[Submission]:
     """Fetch all or a specific submission from the dashboard and wrap them in Submission objects."""
     if submission:
         s_type, s_id = submission.split(":")
-        submissions = [_get_submission(int(s_id), s_type)]
+        res = _get_submission(int(s_id), s_type)
+        if isinstance(res, dict) and "error" in res:
+            log.error("Submission %s:%s was not found on the QEM Dashboard or is invalid.", s_type, s_id)
+            log.error("Dashboard error details: %s", res.get("error"))
+            log.error("Please verify that the submission ID is correct and active on the dashboard.")
+            sys.exit(1)
+        submissions = [res]
     else:
         submissions = dashboard.get_json(
             "api/incidents",

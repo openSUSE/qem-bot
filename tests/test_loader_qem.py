@@ -86,6 +86,16 @@ def test_get_submissions_on_submission_returns_single_submission(mocker: MockerF
     get_sub_mock.assert_called_once_with(42, "git")
 
 
+def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.qem._get_submission", return_value={"error": "Incident not found"})
+    mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
+    mock_log = mocker.patch("openqabot.loader.qem.log.error")
+    with pytest.raises(SystemExit):
+        get_submissions("git:42")
+    mock_exit.assert_called_once_with(1)
+    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", "42")
+
+
 def test_get_submissions_error(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = {"error": "some error"}
     with pytest.raises(LoaderQemError):
