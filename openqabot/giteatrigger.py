@@ -228,7 +228,7 @@ class GiteaTrigger:
             log.exception("Failed to fetch jobs for PR %s", pullrequest.number)
             return
 
-        if res := self.commenter.generate_comment(pullrequest, jobs):
+        if res := self.commenter.generate_comment(pullrequest, jobs, is_gitea=True):
             self.commenter.gitea_comment(pullrequest, *res)
             if res[1] == "passed":
                 if self.dry:

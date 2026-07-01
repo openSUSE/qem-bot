@@ -336,14 +336,23 @@ def test_summarize_message(
     mocker.patch("openqabot.config.settings.allow_development_groups", new=None)
     c = Commenter(mock_args, submissions=[])
     builds = [BuildIdentifier("1.1", "sle", "15"), BuildIdentifier("1.2", "", "")]
-    result = c.summarize_message(set(builds), [])
+    result_gitea = c.summarize_message(set(builds), [], is_gitea=True)
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1"
-        in result
+        in result_gitea
     )
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2"
-        in result
+        in result_gitea
+    )
+    result_obs = c.summarize_message(set(builds), [], is_gitea=False)
+    assert (
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1)"
+        in result_obs
+    )
+    assert (
+        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2)"
+        in result_obs
     )
 
 
@@ -357,11 +366,17 @@ def test_summarize_message_allow_devel(
     mocker.patch("openqabot.config.settings.allow_development_groups", new="1")
     c = Commenter(mock_args, submissions=[])
     builds = [BuildIdentifier("1.1", "opensuse", "Tumbleweed")]
-    result = c.summarize_message({builds[0]}, [])
-    assert "not_group_glob" not in result
+    result_gitea = c.summarize_message({builds[0]}, [], is_gitea=True)
+    assert "not_group_glob" not in result_gitea
     assert (
         "https://openqa.opensuse.org/tests/overview/badge?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1"
-        in result
+        in result_gitea
+    )
+    result_obs = c.summarize_message({builds[0]}, [], is_gitea=False)
+    assert "not_group_glob" not in result_obs
+    assert (
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1)"
+        in result_obs
     )
 
 
@@ -814,7 +829,13 @@ def test_summarize_message_detailed_comments_duplicate_group(
         {"build": "1.1", "status": "failed", "group_id": 42},
     ]
     builds = {BuildIdentifier.from_job(j) for j in jobs if "build" in j}
-    result = c.summarize_message(builds, jobs)
-    assert "Functional" in result
-    assert result.count("![Functional Test Results]") == 1
-    assert "label=Functional" in result
+
+    result_gitea = c.summarize_message(builds, jobs, is_gitea=True)
+    assert "Functional" in result_gitea
+    assert result_gitea.count("![Functional Test Results]") == 1
+    assert "label=Functional" in result_gitea
+
+    result_obs = c.summarize_message(builds, jobs, is_gitea=False)
+    assert "Functional" in result_obs
+    assert result_obs.count("[Functional Test Results]") == 1
+    assert "label=Functional" not in result_obs
