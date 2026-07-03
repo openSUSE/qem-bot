@@ -128,8 +128,7 @@ test-integration: ## Automatically start environment, run integration tests, and
 .PHONY: test-integration-payload
 test-integration-payload: env-dashboard-wait  ## Test qem-bot against a local dashboard instance
 	$(QEM_BOT_BASE_CMD) sync
-	$(QEM_BOT_BASE_CMD) --dry submissions-run
-	$(QEM_BOT_BASE_CMD) --dry sub-approve
+	$(QEM_BOT_BASE_CMD) --dry submissions-run sub-approve
 
 .PHONY: setup-hooks
 setup-hooks: ## Install pre-commit git hooks
