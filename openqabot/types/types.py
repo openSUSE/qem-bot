@@ -136,12 +136,3 @@ class ArchVer(NamedTuple):
 
     arch: str
     version: str  # the product version (and not the codestream version) if present in the context ArchVer is used
-
-
-class OBSBinary(NamedTuple):
-    """OBS binary coordinates."""
-
-    project: str
-    package: str
-    repo: str
-    arch: str

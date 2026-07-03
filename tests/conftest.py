@@ -258,7 +258,7 @@ def fake_product_repo() -> None:
 def fakeget_package_diff(mocker: MockerFixture) -> None:
     package_diff = defaultdict(set)
     package_diff["x86_64"] = {Package("foo", "1", "2", "3", "x86_64")}
-    mocker.patch("openqabot.incrementapprover.IncrementApprover.get_package_diff", return_value=package_diff)
+    mocker.patch("openqabot.incrementapprover.IncrementApprover.get_package_diff_from_repo", return_value=package_diff)
 
 
 @pytest.fixture(autouse=True)  # noqa: RUF076 - pytest autouse required to mock osc automatically for all tests

@@ -22,15 +22,8 @@ def test_package_diff_repo(caplog: pytest.LogCaptureFixture, mocker: MockerFixtu
     config = IncrementConfig(distri="sle", version="any", flavor="any", project_base="BASE", diff_project_suffix="DIFF")
     mock_diff = mocker.patch("openqabot.incrementapprover.RepoDiff")
     mock_diff.return_value.compute_diff.return_value = [{"some": "diff"}, 1]
-    res = approver.get_package_diff(None, config, "/product")
+    res = approver.get_package_diff_from_repo(config, "/product")
     assert res == {"some": "diff"}
-
-
-def test_package_diff_none(caplog: pytest.LogCaptureFixture) -> None:
-    approver = prepare_approver(caplog)
-    config = IncrementConfig(distri="sle", version="any", flavor="any", diff_project_suffix="none")
-    res = approver.get_package_diff(None, config, "/product")
-    assert res == {}
 
 
 def test_package_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
@@ -45,18 +38,8 @@ def test_package_diff_cached(caplog: pytest.LogCaptureFixture) -> None:
     )
     diff_key = f"{settings.obs_download_url}/BASE:/TEST/product:{settings.obs_download_url}/BASE:/DIFF"
     approver.package_diff[diff_key] = {"cached": "diff"}
-    res = approver.get_package_diff(None, config, "/product")
+    res = approver.get_package_diff_from_repo(config, "/product")
     assert res == {"cached": "diff"}
-
-
-def test_package_diff_source_report_no_request(caplog: pytest.LogCaptureFixture) -> None:
-    approver = prepare_approver(caplog)
-    config = IncrementConfig(
-        distri="sle", version="any", flavor="any", project_base="BASE", diff_project_suffix="source-report"
-    )
-    res = approver.get_package_diff(None, config, "/product")
-    assert res == {}
-    assert "Source report diff requested but no request found" in caplog.text
 
 
 def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
@@ -76,7 +59,7 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
 
     # flavor SLES-Increments should use REF_REPO_SLES with augmentation
     build_info_sles = BuildInfo("sle", "SLES", "16.0", "SLES-Increments", "x86_64", "123")
-    res = approver.get_package_diff(None, config, "/product", build_info_sles)
+    res = approver.get_package_diff_from_repo(config, "/product", build_info_sles)
     # Expected augmented paths for build_project and diff_project
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/DIFF/x86_64",
@@ -87,7 +70,7 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     # flavor SLES-Increments with templates
     config.build_repo_template = "{project}/repo/{product}-{version}-{arch}"
     config.diff_repo_template = "{base}/{version}/{arch}/{suffix}"
-    approver.get_package_diff(None, config, "/product", build_info_sles)
+    approver.get_package_diff_from_repo(config, "/product", build_info_sles)
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/x86_64/DIFF",
         f"{settings.obs_download_url}/BASE:/BUILD/repo/SLES-16.0-x86_64",
@@ -97,7 +80,7 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     config.reference_repos = {"SLES-Increments": "https://ref.repo/SLES"}
     mock_diff.return_value.compute_diff.reset_mock()
     build_info_other = BuildInfo("sle", "SLES", "16.0", "OTHER", "x86_64", "123")
-    approver.get_package_diff(None, config, "/product", build_info_other)
+    approver.get_package_diff_from_repo(config, "/product", build_info_other)
     mock_diff.return_value.compute_diff.assert_called_with(
         f"{settings.obs_download_url}/BASE:/DIFF", f"{settings.obs_download_url}/BASE:/BUILD/product"
     )
@@ -105,7 +88,7 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     # checking via product instead of flavor
     approver.package_diff.clear()
     config.reference_repos = {"SLES": "https://ref.repo/SLES"}
-    res = approver.get_package_diff(None, config, "/product", build_info_sles)
+    res = approver.get_package_diff_from_repo(config, "/product", build_info_sles)
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/x86_64/DIFF",
         f"{settings.obs_download_url}/BASE:/BUILD/repo/SLES-16.0-x86_64",
@@ -122,7 +105,7 @@ def test_package_diff_skip_debug(caplog: pytest.LogCaptureFixture) -> None:
         build_project_suffix="BUILD",
         diff_project_suffix="DIFF-Debug",
     )
-    res = approver.get_package_diff(None, config, "/product")
+    res = approver.get_package_diff_from_repo(config, "/product")
     assert res == {}
     assert f"Skipping repo diffing for {settings.obs_download_url}/BASE:/DIFF-Debug" in caplog.text
 
@@ -141,7 +124,7 @@ def test_package_diff_invalid_template(caplog: pytest.LogCaptureFixture) -> None
         build_repo_template="{invalid_var}",
     )
     build_info = BuildInfo("sle", "SLES", "16.0", "SLES-Increments", "x86_64", "123")
-    res = approver.get_package_diff(None, config, "/product", build_info)
+    res = approver.get_package_diff_from_repo(config, "/product", build_info)
     assert res == {}
     assert "Invalid template variable in config for sle" in caplog.text
     assert "KeyError: 'invalid_var'" in caplog.text

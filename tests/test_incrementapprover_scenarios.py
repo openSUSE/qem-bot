@@ -25,9 +25,6 @@ from openqabot.types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
 from .helpers import (
     Action,
     ReviewState,
-    fake_get_binary_file,
-    fake_get_binarylist,
-    fake_get_repos_of_project,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
@@ -199,25 +196,6 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
 
 
 @responses.activate
-@pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
-def test_scheduling_extra_livepatching_builds_based_on_source_report(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
-    configs = iter(
-        get_configs_from_path(path, "product_increments", IncrementConfig.from_config_entry, load_defaults=False)
-    )
-    mocker.patch("osc.core.get_repos_of_project", side_effect=fake_get_repos_of_project)
-    mocker.patch("osc.core.get_binarylist", side_effect=fake_get_binarylist)
-    mocker.patch("osc.core.get_binary_file", side_effect=fake_get_binary_file)
-    (errors, jobs) = run_approver(
-        mocker, caplog, schedule=True, diff_project_suffix="source-report", config=next(configs)
-    )
-    assert "Computing source report diff for OBS request https://build.suse.de/request/show/42" in caplog.messages
-    assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
-
-
-@responses.activate
 @pytest.mark.usefixtures("fake_pending_jobs", "fake_product_repo")
 def test_skipping_with_pending_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     run_approver(mocker, caplog)
@@ -345,8 +323,8 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
         )
         req = mocker.Mock(spec=osc.core.Request)
         req.reqid = "42"
-        # mock get_package_diff to return empty diff
-        mocker.patch.object(approver, "get_package_diff", return_value=defaultdict(set))
+        # mock get_package_diff_from_repo to return empty diff
+        mocker.patch.object(approver, "get_package_diff_from_repo", return_value=defaultdict(set))
         approver.process_request_for_config(req, configs[0], set(mock_load.return_value))
 
     assert "Skipping" in caplog.text

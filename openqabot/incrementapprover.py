@@ -27,7 +27,6 @@ from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
 from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig
-from .loader.sourcereport import compute_packages_of_request_from_source_report
 from .repodiff import Package, RepoDiff
 from .requests import find_request_on_obs
 from .types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
@@ -321,18 +320,6 @@ class IncrementApprover:
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
-    def get_package_diff_from_source_report(self, request: osc.core.Request) -> defaultdict[str, set[Package]]:
-        """Compute package diff using source reports."""
-        diff_key = "request:" + str(request.reqid)
-        package_diff = self.package_diff.get(diff_key)
-        if package_diff is None:
-            id_url = f"{config.settings.obs_web_url}/request/show/{request.reqid}"
-            log.info("Computing source report diff for OBS request %s", id_url)
-            package_diff = compute_packages_of_request_from_source_report(request)[0]
-            log.debug("Packages updated by OBS request %s: %s", id_url, pformat(package_diff))
-            self.package_diff[diff_key] = package_diff
-        return package_diff
-
     def get_package_diff_from_repo(
         self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
     ) -> defaultdict[str, set[Package]]:
@@ -374,28 +361,7 @@ class IncrementApprover:
         self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(diff_url, build_url)[0]
         return self.package_diff[diff_key]
 
-    def get_package_diff(
-        self,
-        request: osc.core.Request | None,
-        config_inc: IncrementConfig,
-        repo_sub_path: str,
-        build_info: BuildInfo | None = None,
-    ) -> defaultdict[str, set[Package]]:
-        """Get the package diff for a configuration."""
-        if config_inc.diff_project_suffix == "source-report":
-            if not request:
-                log.error("Source report diff requested but no request found")
-                return defaultdict(set)
-            return self.get_package_diff_from_source_report(request)
-
-        if config_inc.diff_project_suffix != "none":
-            return self.get_package_diff_from_repo(config_inc, repo_sub_path, build_info)
-
-        return defaultdict(set)
-
-    def make_scheduling_parameters(
-        self, request: osc.core.Request | None, config_inc: IncrementConfig, build_info: BuildInfo
-    ) -> ScheduleParams:
+    def make_scheduling_parameters(self, config_inc: IncrementConfig, build_info: BuildInfo) -> ScheduleParams:
         """Prepare scheduling parameters for a build."""
         repo_sub_path = "/product"
         base_params = {
@@ -412,7 +378,7 @@ class IncrementApprover:
         base_params.update(config_inc.settings)
         extra_params = []
         if config_inc.diff_project_suffix != "none":
-            package_diff = self.get_package_diff(request, config_inc, repo_sub_path, build_info)
+            package_diff = self.get_package_diff_from_repo(config_inc, repo_sub_path, build_info)
             relevant_diff = package_diff[build_info.arch] | package_diff["noarch"]
             # schedule base params if package filter is empty for matching
             if IncrementApprover.match_packages(relevant_diff, config_inc.packages):
@@ -481,7 +447,7 @@ class IncrementApprover:
         approval_status: ApprovalStatus,
     ) -> int:
         """Process a single build and update its approval status."""
-        params = self.make_scheduling_parameters(request, config_inc, build_info)
+        params = self.make_scheduling_parameters(config_inc, build_info)
 
         if not params:
             log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
