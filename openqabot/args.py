@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 import responses
 import typer
+from typer.core import TyperGroup
 
 import openqabot.config as config_module
 
@@ -31,11 +32,71 @@ from .smeltsync import SMELTSync
 from .subsyncres import SubResultsSync
 from .utils import create_logger
 
+
+class _ChainedTyperGroup(TyperGroup):
+    """Support command chaining under newer Click/Typer versions."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401 - dictated by Click's interface
+        kwargs.pop("chain", True)
+        super().__init__(*args, **kwargs)
+        self.chain = True
+
+    def parse_args(self, ctx: typer._click.core.Context, args: list[str]) -> list[str]:
+        if not args and self.no_args_is_help and not ctx.resilient_parsing:
+            raise typer._click.exceptions.NoArgsIsHelpError(ctx)  # noqa: SLF001 - private Click/Typer APIs
+
+        rest = typer._click.core.Command.parse_args(self, ctx, args)  # noqa: SLF001 - private Click/Typer APIs
+
+        ctx._protected_args = rest  # noqa: SLF001 - private Click/Typer APIs
+        ctx.args = []
+
+        return ctx.args
+
+    def collect_usage_pieces(self, ctx: typer._click.core.Context) -> list[str]:
+        rest = typer._click.core.Command.collect_usage_pieces(self, ctx)  # noqa: SLF001 - private Click/Typer APIs
+        rest.append("COMMAND1 [ARGS]... [COMMAND2 [ARGS]...]...")
+        return rest
+
+    def invoke(self, ctx: typer._click.core.Context) -> Any:  # noqa: ANN401 - dictated by Click's interface
+        if not ctx._protected_args:  # noqa: SLF001 - private Click/Typer APIs
+            ctx.fail("Missing command.")
+
+        args = [*ctx._protected_args, *ctx.args]  # noqa: SLF001 - private Click/Typer APIs
+        ctx.args = []
+        ctx._protected_args = []  # noqa: SLF001 - private Click/Typer APIs
+
+        with ctx:
+            ctx.invoked_subcommand = "*" if args else None
+            typer._click.core.Command.invoke(self, ctx)  # noqa: SLF001 - private Click/Typer APIs
+
+            contexts = []
+            while args:
+                cmd_name, cmd, args = self.resolve_command(ctx, args)
+                assert cmd is not None  # noqa: S101 - type narrowing
+                sub_ctx = cmd.make_context(
+                    cmd_name,
+                    args,
+                    parent=ctx,
+                    allow_extra_args=True,
+                    allow_interspersed_args=False,
+                )
+                contexts.append(sub_ctx)
+                args, sub_ctx.args = sub_ctx.args, []
+
+            rv = []
+            for sub_ctx in contexts:
+                with sub_ctx:
+                    rv.append(sub_ctx.command.invoke(sub_ctx))
+            return rv
+
+
 app = typer.Typer(
     name="qem-bot",
     help="QEM-Dashboard, SMELT, Gitea and openQA connector",
     no_args_is_help=True,
     add_completion=False,
+    cls=_ChainedTyperGroup,
+    chain=True,
 )
 log = logging.getLogger("bot")
 
@@ -332,7 +393,8 @@ def full_run(
     args.disable_aggregates = False
 
     bot = OpenQABot(args)
-    sys.exit(bot())
+    if (ret := bot()) != 0:
+        sys.exit(ret)
 
 
 @app.command("submissions-run")
@@ -361,7 +423,8 @@ def submissions_run(
     args.disable_aggregates = True
 
     bot = OpenQABot(args)
-    sys.exit(bot())
+    if (ret := bot()) != 0:
+        sys.exit(ret)
 
 
 @app.command("updates-run")
@@ -381,7 +444,8 @@ def updates_run(
     args.disable_submissions = True
 
     bot = OpenQABot(args)
-    sys.exit(bot())
+    if (ret := bot()) != 0:
+        sys.exit(ret)
 
 
 @app.command("smelt-sync")
@@ -391,7 +455,8 @@ def smelt_sync(ctx: typer.Context) -> None:
     _require_token(args)
 
     syncer = SMELTSync(args)
-    sys.exit(syncer())
+    if (ret := syncer()) != 0:
+        sys.exit(ret)
 
 
 @app.command("gitea-sync")
@@ -441,7 +506,8 @@ def gitea_sync(  # ruff: ignore[too-many-arguments]
     args.skip_initial_sync = skip_initial_sync
 
     syncer = GiteaSync(args)
-    sys.exit(syncer())
+    if (ret := syncer()) != 0:
+        sys.exit(ret)
 
 
 @app.command("gitea-trigger")
@@ -483,7 +549,8 @@ def gitea_trigger(  # ruff: ignore[too-many-arguments]
     )
 
     syncer = GiteaTrigger(args)
-    sys.exit(syncer())
+    if (ret := syncer()) != 0:
+        sys.exit(ret)
 
 
 @app.command("sub-approve")
@@ -525,7 +592,8 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
     )
 
     approve = Approver(args)
-    sys.exit(approve())
+    if (ret := approve()) != 0:
+        sys.exit(ret)
 
 
 @app.command("sub-comment")
@@ -550,7 +618,8 @@ def sub_comment(
 
     submissions = get_submissions()
     comment = Commenter(args, submissions)
-    sys.exit(comment())
+    if (ret := comment()) != 0:
+        sys.exit(ret)
 
 
 @app.command("sub-sync-results")
@@ -560,7 +629,8 @@ def sub_sync_results(ctx: typer.Context) -> None:
     _require_token(args)
 
     syncer = SubResultsSync(args)
-    sys.exit(syncer())
+    if (ret := syncer()) != 0:
+        sys.exit(ret)
 
 
 @app.command("aggr-sync-results")
@@ -570,7 +640,8 @@ def aggr_sync_results(ctx: typer.Context) -> None:
     _require_token(args)
 
     syncer = AggregateResultsSync(args)
-    sys.exit(syncer())
+    if (ret := syncer()) != 0:
+        sys.exit(ret)
 
 
 @app.command("increment-approve")
@@ -707,7 +778,8 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
     )
 
     approve = IncrementApprover(args)
-    sys.exit(approve())
+    if (ret := approve()) != 0:
+        sys.exit(ret)
 
 
 @app.command("repo-diff")
@@ -727,7 +799,8 @@ def repo_diff(
     args.repo_b = repo_b
 
     repo_diff_obj = RepoDiff(args)
-    sys.exit(repo_diff_obj())
+    if (ret := repo_diff_obj()) != 0:
+        sys.exit(ret)
 
 
 @app.command("amqp")
@@ -746,4 +819,5 @@ def amqp_cmd(
         args.url = config_module.settings.amqp_url
 
     amqp_obj = AMQP(args)
-    sys.exit(amqp_obj())
+    if (ret := amqp_obj()) != 0:
+        sys.exit(ret)
