@@ -22,63 +22,49 @@ if TYPE_CHECKING:
 runner = CliRunner()
 
 
-def test_full_run(mocker: MockerFixture, tmp_path: Path) -> None:
-    bot = mocker.patch("openqabot.args.OpenQABot")
-    bot.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run"])
-    assert result.exit_code == 0
-    bot.assert_called_once()
-    args = bot.call_args[0][0]
-    assert not args.disable_aggregates
-    assert not args.disable_submissions
+@pytest.mark.parametrize(
+    ("cmd", "mock_path", "disable_aggregates", "disable_submissions"),
+    [
+        ("full-run", "openqabot.args.OpenQABot", False, False),
+        ("submissions-run", "openqabot.args.OpenQABot", True, False),
+        ("updates-run", "openqabot.args.OpenQABot", False, True),
+        ("smelt-sync", "openqabot.args.SMELTSync", None, None),
+        ("gitea-sync", "openqabot.args.GiteaSync", None, None),
+        ("gitea-trigger", "openqabot.args.GiteaTrigger", None, None),
+        ("sub-comment", "openqabot.args.Commenter", None, None),
+        ("sub-sync-results", "openqabot.args.SubResultsSync", None, None),
+        ("aggr-sync-results", "openqabot.args.AggregateResultsSync", None, None),
+        ("increment-approve", "openqabot.args.IncrementApprover", None, None),
+        ("repo-diff", "openqabot.args.RepoDiff", None, None),
+    ],
+)
+def test_command_success_exits(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    cmd: str,
+    mock_path: str,
+    *,
+    disable_aggregates: bool | None,
+    disable_submissions: bool | None,
+) -> None:
+    """Test that each command correctly exits with 0 and invokes the proper class on success."""
+    if cmd == "sub-comment":
+        mocker.patch("openqabot.args.get_submissions", return_value=[])
 
-
-def test_submission_schedule(mocker: MockerFixture, tmp_path: Path) -> None:
-    bot = mocker.patch("openqabot.args.OpenQABot")
-    bot.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "submissions-run"])
-    assert result.exit_code == 0
-    bot.assert_called_once()
-    args = bot.call_args[0][0]
-    assert args.disable_aggregates
-    assert not args.disable_submissions
-
-
-def test_updates_run(mocker: MockerFixture, tmp_path: Path) -> None:
-    bot = mocker.patch("openqabot.args.OpenQABot")
-    bot.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "updates-run"])
-    assert result.exit_code == 0
-    bot.assert_called_once()
-    args = bot.call_args[0][0]
-    assert not args.disable_aggregates
-    assert args.disable_submissions
-
-
-def test_sync_smelt(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.SMELTSync")
-    syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "smelt-sync"])
-    assert result.exit_code == 0
-    syncer.assert_called_once()
-
-
-def test_sync_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.GiteaSync")
-    syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), "gitea-sync"])
-    assert result.exit_code == 0
-    syncer.assert_called_once()
-
-
-def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.GiteaTrigger")
-    syncer.return_value.return_value = 0
     config_file = tmp_path / "trigger.yml"
     config_file.write_text("trigger_config: []")
-    result = runner.invoke(app, ["--gitea-token", "bar", "--configs", str(tmp_path), "gitea-trigger"])
+
+    mock_obj = mocker.patch(mock_path)
+    mock_obj.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), cmd])
     assert result.exit_code == 0
-    syncer.assert_called_once()
+    mock_obj.assert_called_once()
+
+    if disable_aggregates is not None:
+        args = mock_obj.call_args[0][0]
+        assert args.disable_aggregates is disable_aggregates
+        assert args.disable_submissions is disable_submissions
 
 
 @pytest.mark.parametrize(
@@ -105,15 +91,6 @@ def test_sub_approve(
     assert approve.call_args[0][0].comment is expected_comment
 
 
-def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
-    mocker.patch("openqabot.args.get_submissions", return_value=[])
-    comment = mocker.patch("openqabot.args.Commenter")
-    comment.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-comment"])
-    assert result.exit_code == 0
-    comment.assert_called_once()
-
-
 def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:
     mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
@@ -137,31 +114,6 @@ def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -
     )
     assert result.exit_code == 0
     comment.assert_called_once()
-
-
-def test_sub_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.SubResultsSync")
-    syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-sync-results"])
-    assert result.exit_code == 0
-    syncer.assert_called_once()
-
-
-def test_aggr_sync_results(mocker: MockerFixture, tmp_path: Path) -> None:
-    syncer = mocker.patch("openqabot.args.AggregateResultsSync")
-    syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "aggr-sync-results"])
-    assert result.exit_code == 0
-    syncer.assert_called_once()
-
-
-def test_increment_approve(mocker: MockerFixture, tmp_path: Path) -> None:
-    approve = mocker.patch("openqabot.args.IncrementApprover")
-    approve.return_value.return_value = 0
-    # Provide a valid configs directory to avoid Configuration error in main callback
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "increment-approve"])
-    assert result.exit_code == 0
-    approve.assert_called_once()
 
 
 def test_increment_approve_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -191,15 +143,6 @@ def test_increment_approve_with_detailed_args(mocker: MockerFixture, tmp_path: P
     assert args.fallback_contact == "Test Contact"
     assert args.generic_tool_issues_contact == "@test"
     assert args.max_detailed_comment_entries == 5
-
-
-def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
-    repo_diff = mocker.patch("openqabot.args.RepoDiff")
-    repo_diff.return_value.return_value = 0
-    # Provide a valid configs directory to avoid Configuration error in main callback
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "repo-diff"])
-    assert result.exit_code == 0
-    repo_diff.assert_called_once()
 
 
 def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -401,3 +344,70 @@ def test_cli_options_override_config_yml(mocker: MockerFixture, tmp_path: Path) 
     assert settings.insecure is True
     assert settings.dry is True
     assert settings.openqa_instance == "https://override.openqa"
+
+
+@pytest.mark.parametrize(
+    ("cmd", "mock_path"),
+    [
+        ("full-run", "openqabot.args.OpenQABot"),
+        ("submissions-run", "openqabot.args.OpenQABot"),
+        ("updates-run", "openqabot.args.OpenQABot"),
+        ("smelt-sync", "openqabot.args.SMELTSync"),
+        ("gitea-sync", "openqabot.args.GiteaSync"),
+        ("gitea-trigger", "openqabot.args.GiteaTrigger"),
+        ("sub-approve", "openqabot.args.Approver"),
+        ("sub-comment", "openqabot.args.Commenter"),
+        ("sub-sync-results", "openqabot.args.SubResultsSync"),
+        ("aggr-sync-results", "openqabot.args.AggregateResultsSync"),
+        ("increment-approve", "openqabot.args.IncrementApprover"),
+        ("repo-diff", "openqabot.args.RepoDiff"),
+        ("amqp", "openqabot.args.AMQP"),
+    ],
+)
+def test_command_failure_exits(mocker: MockerFixture, tmp_path: Path, cmd: str, mock_path: str) -> None:
+    """Test that each command correctly exits with 1 when it fails."""
+    if cmd == "sub-comment":
+        mocker.patch("openqabot.args.get_submissions", return_value=[])
+
+    config_file = tmp_path / "trigger.yml"
+    config_file.write_text("trigger_config: []")
+
+    mock_obj = mocker.patch(mock_path)
+    mock_obj.return_value.return_value = 1
+
+    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), cmd])
+    assert result.exit_code == 1
+    mock_obj.assert_called_once()
+
+
+def test_command_chaining_success(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test executing multiple commands sequentially when they all succeed."""
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    syncer = mocker.patch("openqabot.args.SMELTSync")
+    syncer.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run", "smelt-sync"])
+    assert result.exit_code == 0
+    bot.assert_called_once()
+    syncer.assert_called_once()
+
+
+def test_command_chaining_fail_fast(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test executing multiple commands sequentially halts on first failure."""
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 1
+    syncer = mocker.patch("openqabot.args.SMELTSync")
+    syncer.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run", "smelt-sync"])
+    assert result.exit_code == 1
+    bot.assert_called_once()
+    syncer.assert_not_called()
+
+
+def test_command_chaining_missing_command(tmp_path: Path) -> None:
+    """Test that calling the app with options but no command fails with "Missing command."."""
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path)])
+    assert result.exit_code == 2
+    assert "Missing command." in result.output
