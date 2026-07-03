@@ -345,3 +345,63 @@ def test_main_fake_data(mocker: MockerFixture, tmp_path: Path) -> None:
     result = runner.invoke(app, ["--fake-data", "--token", "foo", "--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 0
     setup_mock.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("cmd", "mock_path"),
+    [
+        ("full-run", "openqabot.args.OpenQABot"),
+        ("submissions-run", "openqabot.args.OpenQABot"),
+        ("updates-run", "openqabot.args.OpenQABot"),
+        ("smelt-sync", "openqabot.args.SMELTSync"),
+        ("gitea-sync", "openqabot.args.GiteaSync"),
+        ("gitea-trigger", "openqabot.args.GiteaTrigger"),
+        ("sub-approve", "openqabot.args.Approver"),
+        ("sub-comment", "openqabot.args.Commenter"),
+        ("sub-sync-results", "openqabot.args.SubResultsSync"),
+        ("aggr-sync-results", "openqabot.args.AggregateResultsSync"),
+        ("increment-approve", "openqabot.args.IncrementApprover"),
+        ("repo-diff", "openqabot.args.RepoDiff"),
+        ("amqp", "openqabot.args.AMQP"),
+    ],
+)
+def test_command_failure_exits(mocker: MockerFixture, tmp_path: Path, cmd: str, mock_path: str) -> None:
+    """Test that each command correctly exits with 1 when it fails."""
+    if cmd == "sub-comment":
+        mocker.patch("openqabot.args.get_submissions", return_value=[])
+
+    config_file = tmp_path / "trigger.yml"
+    config_file.write_text("trigger_config: []")
+
+    mock_obj = mocker.patch(mock_path)
+    mock_obj.return_value.return_value = 1
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), cmd])
+    assert result.exit_code == 1
+    mock_obj.assert_called_once()
+
+
+def test_command_chaining_success(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test executing multiple commands sequentially when they all succeed."""
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    syncer = mocker.patch("openqabot.args.SMELTSync")
+    syncer.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run", "smelt-sync"])
+    assert result.exit_code == 0
+    bot.assert_called_once()
+    syncer.assert_called_once()
+
+
+def test_command_chaining_fail_fast(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test executing multiple commands sequentially halts on first failure."""
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 1
+    syncer = mocker.patch("openqabot.args.SMELTSync")
+    syncer.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run", "smelt-sync"])
+    assert result.exit_code == 1
+    bot.assert_called_once()
+    syncer.assert_not_called()
