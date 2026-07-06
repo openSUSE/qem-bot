@@ -107,36 +107,36 @@ class Settings(BaseSettings):
 
     @property
     def smelt_graphql(self) -> str:
-        """Return the SMELT GraphQL API URL."""
+        """The SMELT GraphQL API URL."""
         return self.smelt_url + "/graphql"
 
     @property
     def obs_web_url(self) -> str:
-        """Return the OBS web UI URL."""
+        """The OBS web UI URL."""
         return self.obs_url.replace("api.", "build.")
 
     @property
     def download_maintenance(self) -> str:
-        """Return the maintenance download URL."""
+        """The maintenance download URL."""
         if self.download_maintenance_base_url:
             return self.download_maintenance_base_url
         return self.download_base_url + "/SUSE:/Maintenance:/"
 
     @property
     def git_review_bot_user(self) -> str | None:
-        """Return the git review bot username."""
+        """The git review bot username."""
         if self.git_review_bot is not None:
             return self.git_review_bot
         return self.obs_group + "-review"
 
     @property
     def obs_products_set(self) -> set[str]:
-        """Return the set of OBS products to consider."""
+        """The set of OBS products to consider."""
         return set(self.obs_products.split(","))
 
     @property
     def dashboard_token_dict(self) -> dict[str, str]:
-        """Return QAM Dashboard token dict needed for HTTP header."""
+        """The QAM Dashboard token dict needed for HTTP header."""
         return {"Authorization": f"Token {self.token}"}
 
 

@@ -113,7 +113,7 @@ class IncrementConfig:
 
     @property
     def group_key(self) -> GroupKey:
-        """Return a unique key for grouping configs."""
+        """A unique key for grouping configs."""
         return GroupKey(
             build_project=self.build_project(),
             build_listing_sub_path=self.build_listing_sub_path,
