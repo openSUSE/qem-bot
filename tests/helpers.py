@@ -252,13 +252,13 @@ def prepare_approver(
         patch("openqabot.config.settings.obs_url", "https://api.suse.de"),
     ):
         approver = IncrementApprover(args)
-        approver.client.get_single_job = MagicMock(  # ty: ignore[invalid-assignment]
+        approver.client.get_single_job = MagicMock(
             side_effect=lambda job_id: {"id": job_id, "group": "Production", "group_id": 1}
         )
-        approver.client.get_jobs_by_ids = MagicMock(  # ty: ignore[invalid-assignment]
+        approver.client.get_jobs_by_ids = MagicMock(
             side_effect=lambda ids: [{"id": jid, "group": "Production", "group_id": 1} for jid in ids]
         )
-        approver.client.is_devel_group = MagicMock(return_value=False)  # ty: ignore[invalid-assignment]
+        approver.client.is_devel_group = MagicMock(return_value=False)
         return approver
 
 
