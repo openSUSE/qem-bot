@@ -247,20 +247,7 @@ def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     log.debug("Resolving aggregate ID for data: %s", pformat(data))
 
     # use last three schedule
-    return [
-        Data(
-            0,
-            "aggregate",
-            s["id"],
-            data.flavor,
-            data.arch,
-            data.distri,
-            data.version,
-            s["build"],
-            data.product,
-        )
-        for s in settings[:3]
-    ]
+    return [data._replace(settings_id=s["id"], build=s["build"]) for s in settings[:3]]
 
 
 def get_aggregate_results(sub: int, submission_type: str | None = None) -> list[dict[str, Any]]:
