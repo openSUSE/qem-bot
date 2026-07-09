@@ -14,6 +14,7 @@ import typer
 from typer.testing import CliRunner
 
 from openqabot.args import app, main
+from openqabot.config import settings
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -345,3 +346,40 @@ def test_main_fake_data(mocker: MockerFixture, tmp_path: Path) -> None:
     result = runner.invoke(app, ["--fake-data", "--token", "foo", "--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 0
     setup_mock.assert_called_once()
+
+
+def test_config_yml_feeds_settings_and_context(mocker: MockerFixture, tmp_path: Path) -> None:
+    """config.yml values reach settings and the subcommand context; error handling covered in test_config."""
+    (tmp_path / "config.yml").write_text("OPENQA_INSTANCE: https://yaml.openqa.org\nQEM_BOT_RETRY: 7\n")
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "full-run"])
+    assert result.exit_code == 0
+    assert settings.openqa_instance == "https://yaml.openqa.org"
+    assert settings.retry == 7
+    assert bot.call_args[0][0].retry == 7
+
+
+def test_cli_options_override_config_yml(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Explicit CLI options take precedence over config.yml and update settings."""
+    (tmp_path / "config.yml").write_text("OPENQA_INSTANCE: https://yaml.openqa.org\n")
+    bot = mocker.patch("openqabot.args.OpenQABot")
+    bot.return_value.return_value = 0
+    result = runner.invoke(
+        app,
+        [
+            "--token",
+            "foo",
+            "--configs",
+            str(tmp_path),
+            "--insecure",
+            "--dry",
+            "-i",
+            "https://override.openqa",
+            "full-run",
+        ],
+    )
+    assert result.exit_code == 0
+    assert settings.insecure is True
+    assert settings.dry is True
+    assert settings.openqa_instance == "https://override.openqa"

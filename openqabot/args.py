@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Annotated
+from typing import Annotated, Any
 
 import responses
 import typer
@@ -101,6 +101,21 @@ max_detailed_comment_entries_option = Annotated[
 ]
 
 
+def _default(field: str) -> object:
+    """Return a Settings field default so CLI help mirrors config.py."""
+    return config_module.Settings.model_fields[field].get_default(call_default_factory=True)
+
+
+def _apply_cli_overrides(
+    settings: config_module.Settings,
+    overrides: dict[str, Any],
+) -> None:
+    """Override settings with CLI options that were explicitly provided."""
+    for name, value in overrides.items():
+        if value is not None and value is not False:
+            setattr(settings, name, value)
+
+
 def _apply_detailed_comment_options(
     args: SimpleNamespace,
     *,
@@ -184,33 +199,41 @@ def main(  # noqa: PLR0913
         typer.Option("-g", "--gitea-token", envvar="QEM_BOT_GITEA_TOKEN", help="Token for Gitea api"),
     ] = None,
     openqa_instance: Annotated[
-        str,
+        str | None,
         typer.Option(
             "-i",
             "--openqa-instance",
             envvar="OPENQA_INSTANCE",
             help="The openQA instance to use\n Other instances than OSD do not update dashboard database",
+            show_default=str(_default("openqa_instance")),
         ),
-    ] = "https://openqa.suse.de",
+    ] = None,
     singlearch: Annotated[
-        Path,
+        Path | None,
         typer.Option(
             "-s",
             "--singlearch",
             envvar="QEM_BOT_SINGLEARCH",
             help="Yaml config with list of singlearch packages for submissions run",
+            show_default=str(_default("singlearch")),
         ),
-    ] = Path("/etc/openqabot/singlearch.yml"),
-    retry: Annotated[int, typer.Option("-r", "--retry", envvar="QEM_BOT_RETRY", help="Number of retries")] = 2,
+    ] = None,
+    retry: Annotated[
+        int | None,
+        typer.Option(
+            "-r",
+            "--retry",
+            envvar="QEM_BOT_RETRY",
+            help="Number of retries",
+            show_default=str(_default("retry")),
+        ),
+    ] = None,
 ) -> None:
     """QEM-Dashboard, SMELT, Gitea and openQA connector."""
     # Configure logging
     log_obj = create_logger("bot")
     if debug:
         log_obj.setLevel(logging.DEBUG)
-
-    # Update global configuration
-    config_module.settings.insecure = insecure
 
     # Check if help is in the arguments
     if any(arg in sys.argv for arg in ctx.help_option_names):
@@ -219,6 +242,23 @@ def main(  # noqa: PLR0913
     if not configs.exists():
         log.error("Configuration error: %s does not exist", configs)
         sys.exit(1)
+
+    # Settings precedence: config.yml < explicit CLI options; env/.env already
+    # applied at Settings construction. settings stays the single source of truth.
+    settings = config_module.settings
+    settings.load_config_yml(configs if configs.is_dir() else configs.parent)
+    _apply_cli_overrides(
+        settings,
+        {
+            "dry": dry,
+            "insecure": insecure,
+            "openqa_instance": openqa_instance,
+            "token": token,
+            "gitea_token": gitea_token,
+            "singlearch": singlearch,
+            "retry": retry,
+        },
+    )
 
     if fake_data:
         setup_mock_responses()
@@ -229,23 +269,19 @@ def main(  # noqa: PLR0913
 
         ctx.call_on_close(teardown_mocks)
 
-    # Store global options in context
+    # Expose the resolved settings to subcommands via the context
     ctx.obj = SimpleNamespace(
         configs=configs,
-        dry=dry,
+        dry=settings.dry,
         fake_data=fake_data,
         dump_data=dump_data,
         debug=debug,
-        insecure=insecure,
-        token=token,
-        gitea_token=gitea_token,
-        singlearch=singlearch,
-        retry=retry,
+        insecure=settings.insecure,
+        token=settings.token,
+        gitea_token=settings.gitea_token,
+        singlearch=settings.singlearch,
+        retry=settings.retry,
     )
-
-    config_module.settings.openqa_instance = openqa_instance
-    config_module.settings.dry = dry
-    config_module.settings.token = token
 
 
 @app.command()

@@ -58,17 +58,17 @@ updates information about submissions and related openQA tests.
     │                                                  database                    │
     │                                                  [env var: OPENQA_INSTANCE]  │
     │                                                  [default:                   │
-    │                                                  https://openqa.suse.de]     │
+    │                                                  (https://openqa.suse.de)]   │
     │ --singlearch       -s                   PATH     Yaml config with list of    │
     │                                                  singlearch packages for     │
     │                                                  submissions run             │
     │                                                  [env var:                   │
     │                                                  QEM_BOT_SINGLEARCH]         │
     │                                                  [default:                   │
-    │                                                  /etc/openqabot/singlearch.… │
+    │                                                  (/etc/openqabot/singlearch… │
     │ --retry            -r                   INTEGER  Number of retries           │
     │                                                  [env var: QEM_BOT_RETRY]    │
-    │                                                  [default: 2]                │
+    │                                                  [default: (2)]              │
     │ --help                                           Show this message and exit. │
     ╰──────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────╮
