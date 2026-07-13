@@ -270,17 +270,6 @@ def test_reviewing_pr() -> None:
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
 
 
-@responses.activate
-def test_reviewing_pr_no_bot_user(mocker: MockerFixture) -> None:
-    # Patch the property on the class so it affects the existing 'settings' instance
-    mocker.patch("openqabot.config.Settings.git_review_bot_user", new_callable=mocker.PropertyMock, return_value=None)
-    url = "https://src.suse.de/api/v1/repos/orga/repo/pulls/42/reviews"
-    responses.post(url, json={"status": "ok"})
-    review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
-    assert len(responses.calls) > 0
-    assert responses.calls[0].request.url == url
-
-
 def test_computing_repo_url() -> None:
     repos = Repos("product", "1.2", "x86_64")
 

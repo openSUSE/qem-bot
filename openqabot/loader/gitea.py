@@ -259,37 +259,25 @@ def review_pr(  # noqa: PLR0913
 ) -> None:
     """Post a review or comment on a Gitea PR."""
     bot_user = config.settings.git_review_bot_user
-    if bot_user:
-        review_url = comments_url(repo_name, pr_number)
-        review_cmd, commit_str = _approval_identifiers(bot_user, commit_id, approve=approve)
-        review_data = {"body": f"{review_cmd}\n{msg}\n{commit_str}"}
-    else:
-        review_url = reviews_url(repo_name, pr_number)
-        review_data = {
-            "body": msg,
-            "comments": [],
-            "commit_id": commit_id,
-            "event": "APPROVED" if approve else "REQUEST_CHANGES",
-        }
+    if not bot_user:
+        error_msg = "git_review_bot_user is required to post a review or comment"
+        raise ValueError(error_msg)
+    review_url = comments_url(repo_name, pr_number)
+    review_cmd, commit_str = _approval_identifiers(bot_user, commit_id, approve=approve)
+    review_data = {"body": f"{review_cmd}\n{msg}\n{commit_str}"}
     post_json(review_url, token, review_data)
 
 
 def _is_already_approved(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str) -> bool:
     bot_user = config.settings.git_review_bot_user
+    if not bot_user:
+        error_msg = "git_review_bot_user is required to check Gitea approvals"
+        raise ValueError(error_msg)
 
-    if bot_user:
-        comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
-        if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
-            log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
-            return True
-    else:
-        reviews = iter_gitea_items(reviews_url(repo_name, pr_number), token)
-        if any(
-            (r.get("commit_id"), r.get("state")) == (commit_id, "APPROVED") and is_review_requested_by(r)
-            for r in reviews
-        ):
-            log.info("PR %s already approved for commit %s", pr_number, commit_id)
-            return True
+    comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
+    if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
+        log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
+        return True
 
     return False
 

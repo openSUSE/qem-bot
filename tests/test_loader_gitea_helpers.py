@@ -234,37 +234,28 @@ def mock_settings(mocker: MockerFixture) -> MagicMock:
 @pytest.mark.parametrize(
     ("bot_user", "api_response", "expected_log", "should_call_review"),
     [
-        # Case 1: Already approved via official review
-        (
-            None,
-            [{"commit_id": "sha123", "state": "APPROVED", "user": {"login": "openqa"}}],
-            "PR 123 already approved for commit sha123",
-            False,
-        ),
-        # Case 2: Not yet approved (no reviews)
-        (None, [], None, True),
-        # Case 3: Already approved via bot comment
+        # Case 1: Already approved via bot comment
         (
             "bot",
             [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "bot"}}],
             "PR 123 already approved via comment for commit sha123",
             False,
         ),
-        # Case 4: Comment matches but author is wrong (spoofing attempt)
+        # Case 2: Comment matches but author is wrong (spoofing attempt)
         (
             "bot",
             [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "imposter"}}],
             None,
             True,
         ),
-        # Case 5: Already approved via bot comment using obs_group name
+        # Case 3: Already approved via bot comment using obs_group name
         (
             "bot-review",
             [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "openqa"}}],
             "PR 123 already approved via comment for commit sha123",
             False,
         ),
-        # Case 6: No bot comments found
+        # Case 4: No bot comments found
         ("bot", [], None, True),
     ],
 )
@@ -355,3 +346,24 @@ def test_approve_pr_exception(
 
     assert res is False
     assert "Gitea API error: Failed to approve PR 123" in caplog.text
+
+
+def test_approve_pr_no_bot_user(
+    mock_settings: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    mock_settings.git_review_bot_user = None
+    caplog.set_level(logging.ERROR, logger="bot.loader.gitea")
+
+    res = gitea.approve_pr({}, "repo", 123, "sha123", "msg")
+
+    assert res is False
+    assert "Gitea API error: Failed to approve PR 123" in caplog.text
+
+
+def test_review_pr_no_bot_user(
+    mock_settings: MagicMock,
+) -> None:
+    mock_settings.git_review_bot_user = None
+    with pytest.raises(ValueError, match="git_review_bot_user is required to post a review or comment"):
+        gitea.review_pr({}, "repo", 123, "msg", "sha123")

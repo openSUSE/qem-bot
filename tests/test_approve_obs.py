@@ -10,10 +10,8 @@ from urllib.error import HTTPError
 import pytest
 import responses
 from pytest_mock import MockerFixture
-from responses import matchers
 
 from openqabot.approver import Approver
-from openqabot.config import settings
 
 from .helpers import (
     args,
@@ -50,35 +48,11 @@ def f_osconf(mocker: MockerFixture) -> Any:
     return mocker.patch("osc.conf.get_config")
 
 
-@pytest.fixture
-def fake_responses_for_creating_pr_review() -> None:
-    responses.add(
-        responses.GET,
-        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
-        json=[],
-    )
-    responses.add(
-        responses.POST,
-        "https://src.suse.de/api/v1/repos/products/SLFO/pulls/5/reviews",
-        json={},
-        match=[
-            matchers.json_params_matcher(
-                {
-                    "body": f"Request accepted for 'qam-openqa' based on data in {settings.qem_dashboard_url}",
-                    "commit_id": "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
-                    "comments": [],
-                    "event": "APPROVED",
-                },
-            ),
-        ],
-    )
-
-
 @responses.activate
 @with_fake_qem("NoResultsError isn't raised")
-@pytest.mark.usefixtures("fake_two_passed_jobs", "fake_responses_for_creating_pr_review", "f_osconf")
+@pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_403_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.config.settings.git_review_bot", "")
+    mocker.patch("openqabot.approver.approve_pr", return_value=True)
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ObsHTTPError(403, "Not allowed", "sd", None))
     assert Approver(args)() == 0
@@ -89,6 +63,7 @@ def test_403_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_404_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.approve_pr", return_value=True)
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch(
         "osc.core.change_review_state", side_effect=ObsHTTPError(404, "Not Found", None, io.BytesIO(b"review state"))
@@ -101,6 +76,7 @@ def test_404_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_500_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.approve_pr", return_value=True)
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ObsHTTPError(500, "Not allowed", "sd", None))
     assert Approver(args)() == 1
@@ -111,6 +87,7 @@ def test_500_response(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.approve_pr", return_value=True)
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     mocker.patch("osc.core.change_review_state", side_effect=ArbitraryObsError)
     assert Approver(args)() == 1
@@ -121,12 +98,11 @@ def test_osc_unknown_exception(caplog: pytest.LogCaptureFixture, mocker: MockerF
 @with_fake_qem("NoResultsError isn't raised")
 @pytest.mark.usefixtures("fake_two_passed_jobs", "f_osconf")
 def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.config.settings.git_review_bot", "")
     caplog.set_level(logging.DEBUG, logger="bot.approver")
 
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=[{"job_id": 100000, "status": "passed"}])
     mocker.patch("osc.core.change_review_state")
-    mock_review_pr = mocker.patch("openqabot.approver.approve_pr")
+    mock_review_pr = mocker.patch("openqabot.approver.approve_pr", return_value=True)
 
     assert Approver(args)() == 0
     expected = [
