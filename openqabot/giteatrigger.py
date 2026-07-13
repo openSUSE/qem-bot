@@ -3,6 +3,7 @@
 """Trigger testing for PR(s) with certain label."""
 
 from argparse import Namespace
+from dataclasses import dataclass
 from logging import getLogger
 from typing import Any, cast
 
@@ -35,6 +36,14 @@ ISO_REGEX = (
     r"(?P<product>SLES)-(?P<version>[\d\.]+)-Online-"
     r"(?P<arch>x86_64)-Build(?P<build>[0-9\.]+)\.install.iso$"
 )
+
+
+@dataclass
+class EvaluationResult:
+    """Result of evaluating a pull request config."""
+
+    triggered: bool
+    data: Data | None = None
 
 
 class GiteaTrigger:
@@ -105,14 +114,14 @@ class GiteaTrigger:
 
     def _get_matched_iso(
         self, pullrequest: PullRequest, trigger_config: TriggerConfig, repo_url: str
-    ) -> tuple[IsoMatch | None, str | None]:
+    ) -> tuple[IsoMatch, str | None]:
         """Extract version and build info into an IsoMatch and its raw filename."""
         if self.is_maintenance:
             try:
                 staged_update_name = self.repodiff.get_staged_update_name(repo_url)
-            except NoResultsError:
-                log.warning("No staged update name found for PR %s in %s", pullrequest.number, repo_url)
-                return None, None
+            except NoResultsError as e:
+                err_msg = f"No staged update name found for PR {pullrequest.number} in {repo_url}"
+                raise NoResultsError(err_msg) from e
             matched_iso = IsoMatch(
                 trigger_config.project,
                 trigger_config.get_branch_version(),
@@ -124,7 +133,9 @@ class GiteaTrigger:
             repo_url, ISO_REGEX
         ):
             return IsoMatch.from_regex_match(matched_iso_regex, pullrequest.number), matched_iso_regex.group(0)
-        return None, None
+
+        err_msg = f"No ISO found for PR {pullrequest.number} in {repo_url}"
+        raise NoResultsError(err_msg)
 
     def _build_openqa_settings(
         self,
@@ -157,8 +168,8 @@ class GiteaTrigger:
 
         return settings
 
-    def check_pullrequest(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> None:
-        """Evaluate a pull request and triggers openQA tests if new artifacts are available.
+    def check_pullrequest(self, pullrequest: PullRequest) -> None:
+        """Evaluate a pull request and trigger openQA tests if new artifacts are available.
 
         The method constructs the repository URL, extracts the build version from
         the available ISO artifacts using regex, and checks if this specific
@@ -167,30 +178,52 @@ class GiteaTrigger:
 
         Args:
             pullrequest (PullRequest): The pull request object to validate and test.
-            trigger_config (TriggerConfig): The triggering configuration.
 
         """
-        if self._should_skip_pr(pullrequest, trigger_config):
+        applicable_configs = [
+            tc
+            for tc in self.config_list
+            if tc.project == pullrequest.project and not self._should_skip_pr(pullrequest, tc)
+        ]
+        if not applicable_configs:
+            log.debug("No applicable configs found for PR %s in project %s", pullrequest.number, pullrequest.project)
             return
 
-        log.info("Evaluating PR %s for openQA triggering with config: %s", pullrequest.number, trigger_config)
+        log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
+
+        outcomes = [res for tc in applicable_configs if (res := self._evaluate_config(pullrequest, tc)) is not None]
+
+        any_triggered = any(outcome.triggered for outcome in outcomes)
+        covered_data = [outcome.data for outcome in outcomes if outcome.data is not None]
+
+        if self.comment and covered_data and not any_triggered:
+            self.comment_on_pr(pullrequest, covered_data)
+
+    def _evaluate_config(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> EvaluationResult | None:
+        """Trigger openQA for one config, or return its coverage Data."""
         repo_url = trigger_config.generate_obs_repo_url(
             pullrequest.number, config.settings.obs_download_url, is_maintenance=self.is_maintenance
         )
-
-        matched_iso, iso_name = self._get_matched_iso(pullrequest, trigger_config, repo_url)
-        if not matched_iso:
-            return
+        try:
+            matched_iso, iso_name = self._get_matched_iso(pullrequest, trigger_config, repo_url)
+        except NoResultsError as e:
+            log.warning(str(e))
+            return None
 
         if self.is_openqa_triggering_needed(matched_iso, trigger_config):
             openqa_settings = self._build_openqa_settings(pullrequest, trigger_config, matched_iso, repo_url, iso_name)
             self.openqa.post_job(openqa_settings)
             log.info("Triggered openQA tests for PR %s on %s", pullrequest.number, matched_iso.arch)
-        else:
-            log.info("openQA tests for PR %s (build %s) are already covered", pullrequest.number, matched_iso.build)
-            if self.comment:
-                data = Data.from_trigger_config_and_matched_iso(trigger_config, matched_iso, pullrequest.number)
-                self.comment_on_pr(pullrequest, data)
+            return EvaluationResult(triggered=True)
+
+        log.info(
+            "openQA tests for PR %s (build %s, flavor %s) are already covered",
+            pullrequest.number,
+            matched_iso.build,
+            trigger_config.flavor,
+        )
+        data = Data.from_trigger_config_and_matched_iso(trigger_config, matched_iso, pullrequest.number)
+        return EvaluationResult(triggered=False, data=data)
 
     @staticmethod
     def generate_medium_vars(
@@ -218,17 +251,16 @@ class GiteaTrigger:
         # No image_regex configured, use ISO parameters
         return {"ISO_1_URL": f"{repo_url}/{iso_name}", "ISO_1": iso_name}
 
-    def comment_on_pr(self, pullrequest: PullRequest, data: Data) -> None:
+    def comment_on_pr(self, pullrequest: PullRequest, data_list: list[Data]) -> None:
         """Comment on PR if openQA results are available."""
         try:
-            jobs = self.openqa.get_jobs(data)
-            for j in jobs:
-                j.setdefault("build", data.build)
+            # build first so an existing job "build" overrides it (setdefault semantics)
+            all_jobs = [{"build": data.build, **job} for data in data_list for job in self.openqa.get_jobs(data)]
         except (requests.exceptions.RequestException, RequestError):
-            log.exception("Failed to fetch jobs for PR %s", pullrequest.number)
+            log.exception("Failed to fetch jobs for PR %s; aborting approval", pullrequest.number)
             return
 
-        if res := self.commenter.generate_comment(pullrequest, jobs):
+        if res := self.commenter.generate_comment(pullrequest, all_jobs):
             self.commenter.gitea_comment(pullrequest, *res)
             if res[1] == "passed":
                 if self.dry:
@@ -313,7 +345,10 @@ class GiteaTrigger:
         """
         for trigger_config in self.config_list:
             self.load_prs_for_project(trigger_config.project)
-            for pr in self.prs[trigger_config.project]:
-                self.check_pullrequest(pr, trigger_config)
+        distinct_prs = list(
+            {(pr.project, pr.number): pr for tc in self.config_list for pr in self.prs.get(tc.project, [])}.values()
+        )
+        for pr in distinct_prs:
+            self.check_pullrequest(pr)
 
         return 0

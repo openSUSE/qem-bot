@@ -15,6 +15,7 @@ from openqa_client.exceptions import RequestError
 from pytest_mock import MockerFixture
 
 from openqabot import config
+from openqabot.commenter import Commenter
 from openqabot.errors import NoResultsError
 from openqabot.giteatrigger import GiteaTrigger
 from openqabot.loader.triggerconfig import TriggerConfig
@@ -88,8 +89,9 @@ def test_check_pullrequest_triggers_job(
     mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
     mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
     mock_pr = MagicMock(number=123)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = mock_trigger_config.branch
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
 
     cast("MagicMock", trigger.openqa.post_job).assert_called_once()
     args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
@@ -136,9 +138,11 @@ def test_check_pullrequest_with_image_regex(trigger: GiteaTrigger, mocker: Mocke
         "openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/product/iso"
     )
     mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
+    trigger.config_list = [trigger_config_with_image]
     mock_pr = MagicMock(number=456)
+    mock_pr.project = trigger_config_with_image.project
     mock_pr.branch = trigger_config_with_image.branch
-    trigger.check_pullrequest(mock_pr, trigger_config_with_image)
+    trigger.check_pullrequest(mock_pr)
 
     cast("MagicMock", trigger.openqa.post_job).assert_called_once()
     args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
@@ -188,9 +192,11 @@ def test_check_pullrequest_with_image_regex_not_found(
         "openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/product/iso"
     )
     mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
+    trigger.config_list = [trigger_config_with_image]
     mock_pr = MagicMock(number=789)
+    mock_pr.project = trigger_config_with_image.project
     mock_pr.branch = trigger_config_with_image.branch
-    trigger.check_pullrequest(mock_pr, trigger_config_with_image)
+    trigger.check_pullrequest(mock_pr)
 
     # Verify warning was logged
     assert "No image found matching regex" in caplog.text
@@ -224,7 +230,10 @@ def test_is_openqatriggering_needed_false(
 
     mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
     mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=False)
-    trigger.check_pullrequest(MagicMock(number=123), mock_trigger_config)
+    mock_pr = MagicMock(number=123)
+    mock_pr.project = mock_trigger_config.project
+    mock_pr.branch = mock_trigger_config.branch
+    trigger.check_pullrequest(mock_pr)
 
     cast("MagicMock", trigger.openqa.post_job).assert_not_called()
 
@@ -285,8 +294,9 @@ def test_check_pullrequest_dry_run(
     mock_crawler.return_value.get_regex_match_from_url.return_value = mock_match
     mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
     mock_pr = MagicMock(number=456)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = mock_trigger_config.branch
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
     cast("MagicMock", trigger.openqa.openqa.openqa_request).assert_not_called()
 
 
@@ -299,8 +309,9 @@ def test_check_pullrequest_no_iso_found(
     mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
 
     mock_pr = MagicMock(number=789)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = mock_trigger_config.branch
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
 
     cast("MagicMock", trigger.openqa.post_job).assert_not_called()
 
@@ -328,7 +339,46 @@ def test_trigger_call_execution(
     result = trigger()
     assert result == 0
     mock_load.assert_called_once_with(mock_trigger_config.project)
-    mock_check.assert_called_once_with(mock_pr, mock_trigger_config)
+    mock_check.assert_called_once_with(mock_pr)
+
+
+def test_trigger_call_execution_duplicate_prs(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
+    """Cover __call__ duplicate PR filtering logic."""
+    mocker.patch.object(trigger, "load_prs_for_project")
+    mock_check = mocker.patch.object(trigger, "check_pullrequest")
+    mock_pr = MagicMock()
+    mock_pr.number = 123
+
+    config1 = TriggerConfig(distri="sle", flavor="Online-Staging")
+    config2 = TriggerConfig(distri="sle", flavor="Other-Staging")
+    config1.project = "SLFO"
+    config2.project = "SLFO"
+    trigger.prs = {"SLFO": [mock_pr]}
+    trigger.config_list = [config1, config2]
+
+    result = trigger()
+    assert result == 0
+    mock_check.assert_called_once_with(mock_pr)
+
+
+def test_check_pullrequest_mixed_trigger_and_covered_skips_comment(
+    trigger: GiteaTrigger, mocker: MockerFixture
+) -> None:
+    """When any flavor is (re)triggered, no approval/comment happens even if others are covered."""
+    trigger.comment = True
+    config_trigger = TriggerConfig(distri="sle", flavor="A")
+    config_covered = TriggerConfig(distri="sle", flavor="B")
+    config_trigger.project = config_covered.project = "SLFO"
+    trigger.config_list = [config_trigger, config_covered]
+    mock_iso = MagicMock(arch="x86_64", build="b", flavor="A")
+    mocker.patch.object(trigger, "_should_skip_pr", return_value=False)
+    mocker.patch.object(trigger, "_get_matched_iso", return_value=(mock_iso, "iso"))
+    mocker.patch.object(trigger, "is_openqa_triggering_needed", side_effect=[True, False])
+    mock_comment = mocker.patch.object(trigger, "comment_on_pr")
+    mock_pr = MagicMock(number=1)
+    mock_pr.project = "SLFO"
+    trigger.check_pullrequest(mock_pr)
+    mock_comment.assert_not_called()
 
 
 @pytest.mark.usefixtures("_fake_get_configs_from_path")
@@ -382,8 +432,9 @@ def test_check_pullrequest_comments_when_no_trigger_needed(
     mock_comment_on_pr = mocker.patch.object(trigger, "comment_on_pr")
 
     mock_pr = MagicMock(number=123)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = mock_trigger_config.branch
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
 
     mock_comment_on_pr.assert_called_once()
 
@@ -404,11 +455,35 @@ def test_comment_on_pr_build_injection(
     mock_iso.arch = "arch"
     mock_iso.build = "PR-BUILD"
     data = Data.from_trigger_config_and_matched_iso(mock_trigger_config, mock_iso, mock_pr.number)
-    trigger.comment_on_pr(mock_pr, data)
+    trigger.comment_on_pr(mock_pr, [data])
 
-    assert mock_jobs[0]["build"] == "PR-BUILD"
-    cast("MagicMock", trigger.commenter.generate_comment).assert_called_once_with(mock_pr, mock_jobs)
+    passed_jobs = cast("MagicMock", trigger.commenter.generate_comment).call_args[0][1]
+    assert passed_jobs[0]["build"] == "PR-BUILD"
     mock_approve_pr.assert_called_once_with(trigger.gitea_token, "fake_repo", 123, "sha123", mocker.ANY)
+
+
+def test_comment_on_pr_one_flavor_fails_blocks_approval(
+    trigger: GiteaTrigger, mocker: MockerFixture, mock_args: Namespace
+) -> None:
+    """A failing flavor must block approval even when another flavor passes."""
+    mocker.patch("openqabot.config.settings.enable_detailed_comments", new=False)
+    mock_approve_pr = mocker.patch("openqabot.giteatrigger.approve_pr")
+    commenter = Commenter(mock_args, submissions=[])
+    commenter.client.openqa.baseurl = "https://openqa"
+    mock_gitea_comment = mocker.patch.object(commenter, "gitea_comment")
+    trigger.commenter = commenter
+
+    jobs_by_flavor = {
+        "A": [{"id": 1, "state": "done", "result": "passed", "build": "b"}],
+        "B": [{"id": 2, "state": "done", "result": "failed", "build": "b"}],
+    }
+    cast("MagicMock", trigger.openqa.get_jobs).side_effect = lambda data: jobs_by_flavor[data.flavor]
+
+    data_list = [Data(1, "git", 0, flavor, "x86_64", "sle", "15", "b", "product") for flavor in jobs_by_flavor]
+    trigger.comment_on_pr(MagicMock(number=1, url="http://host/o/r/pulls/1"), data_list)
+
+    assert mock_gitea_comment.call_args[0][2] == "failed"
+    mock_approve_pr.assert_not_called()
 
 
 def test_comment_on_pr_dry_run_approves(
@@ -432,7 +507,7 @@ def test_comment_on_pr_dry_run_approves(
     mock_iso.arch = "arch"
     mock_iso.build = "PR-BUILD"
     data = Data.from_trigger_config_and_matched_iso(mock_trigger_config, mock_iso, mock_pr.number)
-    trigger.comment_on_pr(mock_pr, data)
+    trigger.comment_on_pr(mock_pr, [data])
 
     mock_approve_pr.assert_not_called()
     assert "Dry run: Would approve PR 123" in caplog.text
@@ -446,7 +521,7 @@ def test_comment_on_pr_no_jobs(trigger: GiteaTrigger, mock_trigger_config: Trigg
     mock_pr = MagicMock(number=123)
     mock_iso = MagicMock()
     data = Data.from_trigger_config_and_matched_iso(mock_trigger_config, mock_iso, mock_pr.number)
-    trigger.comment_on_pr(mock_pr, data)
+    trigger.comment_on_pr(mock_pr, [data])
 
     cast("MagicMock", trigger.commenter.gitea_comment).assert_not_called()
 
@@ -459,8 +534,9 @@ def test_check_pullrequest_no_matched_iso(
     mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
 
     mock_pr = MagicMock(number=123)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = mock_trigger_config.branch
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
     # Should log warning but not crash
 
 
@@ -476,7 +552,7 @@ def test_comment_on_pr_data_creation(trigger: GiteaTrigger, mock_trigger_config:
     mock_iso.arch = "arch"
     mock_iso.build = "build"
     data = Data.from_trigger_config_and_matched_iso(mock_trigger_config, mock_iso, mock_pr.number)
-    trigger.comment_on_pr(mock_pr, data)
+    trigger.comment_on_pr(mock_pr, [data])
 
     mock_get_jobs.assert_called_once()
     data = mock_get_jobs.call_args[0][0]
@@ -525,7 +601,7 @@ def test_check_pullrequest_opensuse_success(
     """Tests the full opensuse PR check, trigger and approval path."""
     trigger.is_maintenance = True
     mock_trigger_config.branch = "openSUSE-Leap-15.5"
-    mock_trigger_config.project = "openSUSE/Leap/15.5"
+    mock_trigger_config.project = "openSUSE_Leap_15.5"
     mock_trigger_config.repo_template = "{repo_prefix}/"
     mock_trigger_config.settings = {"OS_TEST_TEMPLATE": "test-template"}
 
@@ -542,7 +618,7 @@ def test_check_pullrequest_opensuse_success(
     mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
     mock_approve = mocker.patch("openqabot.giteatrigger.gitea.approve_pr")
 
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
 
     # Verify openQA post_job was called
     cast("MagicMock", trigger.openqa.post_job).assert_called_once()
@@ -568,6 +644,7 @@ def test_check_pullrequest_opensuse_no_staged_update(
     mock_trigger_config.repo_template = "{repo_prefix}/"
 
     mock_pr = MagicMock(spec=PullRequest)
+    mock_pr.project = mock_trigger_config.project
     mock_pr.branch = "openSUSE-Leap-15.5"
     mock_pr.number = 123
 
@@ -575,10 +652,10 @@ def test_check_pullrequest_opensuse_no_staged_update(
     mocker.patch.object(trigger.repodiff, "get_staged_update_name", side_effect=NoResultsError("error"))
     mock_log = mocker.patch("openqabot.giteatrigger.log.warning")
 
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
 
     # Verify warning log and early exit
-    mock_log.assert_called_once_with("No staged update name found for PR %s in %s", 123, "http://download.suse.de/ibs/")
+    mock_log.assert_called_once_with("No staged update name found for PR 123 in http://download.suse.de/ibs/")
     cast("MagicMock", trigger.openqa.post_job).assert_not_called()
 
 
@@ -597,10 +674,11 @@ def test_check_pullrequest_skipped(
 ) -> None:
     """Tests that check_pullrequest returns early if PR can be skipped."""
     mock_pr = MagicMock(spec=PullRequest)
+    mock_pr.project = mock_trigger_config.project
     mocker.patch.object(trigger, "_should_skip_pr", return_value=True)
     mock_log = mocker.patch("openqabot.giteatrigger.log.info")
 
-    trigger.check_pullrequest(mock_pr, mock_trigger_config)
+    trigger.check_pullrequest(mock_pr)
     mock_log.assert_not_called()
 
 
@@ -661,7 +739,7 @@ def test_comment_on_pr_exception(trigger: GiteaTrigger) -> None:
     mock_pr = MagicMock(number=123)
     # Should not raise exception
     data = Data(123, "git", 0, "flavor", "arch", "distri", "version", "build", "product")
-    trigger.comment_on_pr(mock_pr, data)
+    trigger.comment_on_pr(mock_pr, [data])
 
 
 def test_trigger_init_maintenance(
