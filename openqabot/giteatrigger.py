@@ -4,6 +4,7 @@
 
 from argparse import Namespace
 from dataclasses import dataclass
+from itertools import chain
 from logging import getLogger
 from typing import Any, cast
 
@@ -345,10 +346,7 @@ class GiteaTrigger:
         """
         for trigger_config in self.config_list:
             self.load_prs_for_project(trigger_config.project)
-        distinct_prs = list(
-            {(pr.project, pr.number): pr for tc in self.config_list for pr in self.prs.get(tc.project, [])}.values()
-        )
-        for pr in distinct_prs:
+        for pr in chain.from_iterable(self.prs.values()):
             self.check_pullrequest(pr)
 
         return 0
