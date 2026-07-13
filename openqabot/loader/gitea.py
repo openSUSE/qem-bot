@@ -668,29 +668,6 @@ def _fetch_details(
     )
 
 
-def _init_submission_dict(pr: PullRequest) -> dict[str, Any]:
-    """Initialize a submission dictionary with default values from a PR."""
-    return {
-        "number": pr.number,
-        "project": pr.project,
-        # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
-        # see openqabot/types/incidents.py#L227
-        "emu": False,
-        "isActive": pr.is_active(),
-        "inReviewQAM": False,
-        "inReview": False,
-        "approved": False,
-        # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
-        "embargoed": False,
-        "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
-        "rr_number": None,
-        "packages": [],
-        "channels": [],
-        "url": pr.url,
-        "type": "git",
-    }
-
-
 def _validate_submission(
     submission: dict[str, Any],
     number: int,
@@ -716,7 +693,7 @@ def _build_submission_record(
     only_requested_prs: bool,
     dry: bool,
 ) -> dict[str, Any] | None:
-    submission = _init_submission_dict(pr)
+    submission = pr.to_submission()
     reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
 
     if add_reviews(submission, reviews) < 1 and only_requested_prs:

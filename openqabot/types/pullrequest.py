@@ -121,3 +121,25 @@ class PullRequest:
             return None
         else:
             return instance
+
+    def to_submission(self) -> dict[str, Any]:
+        """Initialize a submission dictionary with default values from a PR."""
+        return {
+            "number": self.number,
+            "project": self.project,
+            # "Emergency Maintenance Update", a flag used to raise a priority in scheduler
+            # see openqabot/types/incidents.py#L227
+            "emu": False,
+            "isActive": self.is_active(),
+            "inReviewQAM": False,
+            "inReview": False,
+            "approved": False,
+            # `_patchinfo` should contain something like <embargo_date>2025-05-01</embargo_date> if embargo applies
+            "embargoed": False,
+            "priority": 0,  # only used for display purposes on the dashboard, maybe read from a label at some point
+            "rr_number": None,
+            "packages": [],
+            "channels": [],
+            "url": self.url,
+            "type": "git",
+        }
