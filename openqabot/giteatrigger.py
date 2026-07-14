@@ -196,9 +196,13 @@ class GiteaTrigger:
 
         any_triggered = any(outcome.triggered for outcome in outcomes)
         covered_data = [outcome.data for outcome in outcomes if outcome.data is not None]
+        approve = len(outcomes) == len(applicable_configs)
+
+        if not approve:
+            log.info("Approval blocked for PR %s: unevaluated configs", pullrequest.number)
 
         if self.comment and covered_data and not any_triggered:
-            self.comment_on_pr(pullrequest, covered_data)
+            self.comment_on_pr(pullrequest, covered_data, approve=approve)
 
     def _evaluate_config(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> EvaluationResult | None:
         """Trigger openQA for one config, or return its coverage Data."""
@@ -252,7 +256,7 @@ class GiteaTrigger:
         # No image_regex configured, use ISO parameters
         return {"ISO_1_URL": f"{repo_url}/{iso_name}", "ISO_1": iso_name}
 
-    def comment_on_pr(self, pullrequest: PullRequest, data_list: list[Data]) -> None:
+    def comment_on_pr(self, pullrequest: PullRequest, data_list: list[Data], *, approve: bool = True) -> None:
         """Comment on PR if openQA results are available."""
         try:
             # build first so an existing job "build" overrides it (setdefault semantics)
@@ -263,7 +267,7 @@ class GiteaTrigger:
 
         if res := self.commenter.generate_comment(pullrequest, all_jobs):
             self.commenter.gitea_comment(pullrequest, *res)
-            if res[1] == "passed":
+            if res[1] == "passed" and approve:
                 if self.dry:
                     log.info("Dry run: Would approve PR %s", pullrequest.number)
                 else:
