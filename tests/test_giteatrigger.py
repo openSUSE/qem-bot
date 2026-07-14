@@ -17,7 +17,7 @@ from pytest_mock import MockerFixture
 from openqabot import config
 from openqabot.commenter import Commenter
 from openqabot.errors import NoResultsError
-from openqabot.giteatrigger import GiteaTrigger
+from openqabot.giteatrigger import EvaluationResult, EvaluationSummary, GiteaTrigger
 from openqabot.loader.triggerconfig import TriggerConfig
 from openqabot.types.pullrequest import PullRequest
 from openqabot.types.types import Data
@@ -780,3 +780,31 @@ def test_is_build_finished_request_exception(
     )
     mock_pr = MagicMock(number=123)
     assert trigger.is_build_finished(mock_pr, mock_trigger_config) is False
+
+
+_data = Data(1, "git", 0, "f", "a", "d", "v", "b", "p")
+
+
+@pytest.mark.parametrize(
+    ("outcomes", "total_configs", "expected_any_triggered", "expected_covered_data_len", "expected_approve"),
+    [
+        ([], 0, False, 0, True),
+        ([EvaluationResult(triggered=True)], 1, True, 0, True),
+        ([EvaluationResult(triggered=False, data=_data)], 1, False, 1, True),
+        ([EvaluationResult(triggered=True), EvaluationResult(triggered=False, data=_data)], 2, True, 1, True),
+        ([EvaluationResult(triggered=True)], 2, True, 0, False),
+    ],
+)
+def test_evaluation_summary(
+    outcomes: list[EvaluationResult],
+    total_configs: int,
+    *,
+    expected_any_triggered: bool,
+    expected_covered_data_len: int,
+    expected_approve: bool,
+) -> None:
+    """Verifies all properties of EvaluationSummary with different inputs."""
+    summary = EvaluationSummary(outcomes, total_configs)
+    assert summary.any_triggered == expected_any_triggered
+    assert len(summary.covered_data) == expected_covered_data_len
+    assert summary.approve == expected_approve

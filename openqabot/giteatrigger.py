@@ -47,6 +47,29 @@ class EvaluationResult:
     data: Data | None = None
 
 
+@dataclass
+class EvaluationSummary:
+    """Summary of evaluating all applicable configs for a pull request."""
+
+    outcomes: list[EvaluationResult]
+    total_configs: int
+
+    @property
+    def any_triggered(self) -> bool:
+        """Check if any configuration triggered a new openQA job."""
+        return any(outcome.triggered for outcome in self.outcomes)
+
+    @property
+    def covered_data(self) -> list[Data]:
+        """Collect all existing/covered test results."""
+        return [outcome.data for outcome in self.outcomes if outcome.data is not None]
+
+    @property
+    def approve(self) -> bool:
+        """Check if all applicable configurations were successfully processed."""
+        return len(self.outcomes) == self.total_configs
+
+
 class GiteaTrigger:
     """Trigger testing for PR(s) with certain label."""
 
@@ -193,16 +216,13 @@ class GiteaTrigger:
         log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
 
         outcomes = [res for tc in applicable_configs if (res := self._evaluate_config(pullrequest, tc)) is not None]
+        summary = EvaluationSummary(outcomes, len(applicable_configs))
 
-        any_triggered = any(outcome.triggered for outcome in outcomes)
-        covered_data = [outcome.data for outcome in outcomes if outcome.data is not None]
-        approve = len(outcomes) == len(applicable_configs)
-
-        if not approve:
+        if not summary.approve:
             log.info("Approval blocked for PR %s: unevaluated configs", pullrequest.number)
 
-        if self.comment and covered_data and not any_triggered:
-            self.comment_on_pr(pullrequest, covered_data, approve=approve)
+        if self.comment and summary.covered_data and not summary.any_triggered:
+            self.comment_on_pr(pullrequest, summary.covered_data, approve=summary.approve)
 
     def _evaluate_config(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> EvaluationResult | None:
         """Trigger openQA for one config, or return its coverage Data."""
