@@ -132,7 +132,8 @@ def _auto_clear_cache() -> None:
 def _session_settings() -> dict[str, Any]:
     """Capture default settings once per session to speed up test reset."""
     with patch.dict(os.environ, {}, clear=True), patch("osc.conf.get_config", side_effect=RuntimeError):
-        defaults = Settings()
+        # _env_file=None ignores any developer-local .env so defaults stay deterministic
+        defaults = Settings(_env_file=None)
         return {key: getattr(defaults, key) for key in Settings.model_fields}
 
 
