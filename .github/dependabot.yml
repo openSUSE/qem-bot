@@ -2,39 +2,29 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 5
-    labels:
-      - "waiting"
-      - "dependencies"
-    commit-message:
-      prefix: "chore"
-      include: scope
+    <<: &common
+      directory: "/"
+      schedule:
+        interval: "weekly"
+        day: "monday"
+      cooldown:
+        default-days: 7
+      open-pull-requests-limit: 5
+      labels:
+        - "waiting"
+        - "dependencies"
+      commit-message:
+        prefix: "chore"
+        include: scope
     groups:
       all-dependencies:
         patterns:
           - "*"
         update-types:
           - "major"
+
   - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    cooldown:
-      default-days: 7
-    open-pull-requests-limit: 5
-    labels:
-      - "waiting"
-      - "dependencies"
-    commit-message:
-      prefix: "chore"
-      include: scope
+    <<: *common
     groups:
       all-actions:
         patterns:
