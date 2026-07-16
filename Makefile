@@ -58,11 +58,15 @@ check-types-ty: ## Run ty type checker
 .PHONY: check-types
 check-types: check-types-ty
 
+.PHONY: check-lock
+check-lock: ## Verify uv.lock is in sync with pyproject.toml
+	uv lock --check
+
 # aggregate targets
 
 .PHONY: checkstyle
 checkstyle: ## Run fast style and static analysis checks
-	@$(MAKE) -j check-ruff check-conventions check-types
+	@$(MAKE) -j check-ruff check-conventions check-types check-lock
 
 .PHONY: checkstyle-all
 checkstyle-all: ## Run all style and static analysis checks
