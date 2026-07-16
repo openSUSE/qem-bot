@@ -12,7 +12,7 @@ import responses
 from pytest_mock import MockerFixture
 from responses import matchers
 
-from openqabot.config import QEM_DASHBOARD, SMELT
+from openqabot.config import SMELT, settings
 from openqabot.smeltsync import SMELTSync
 
 
@@ -79,7 +79,7 @@ def fake_dashboard_replyback() -> None:
 
     responses.add_callback(
         responses.PATCH,
-        re.compile(f"{QEM_DASHBOARD}api/incidents"),
+        re.compile(f"{settings.qem_dashboard_url}api/incidents"),
         callback=reply_callback,
         match=[matchers.query_param_matcher({})],
     )

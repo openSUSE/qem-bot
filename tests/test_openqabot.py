@@ -17,7 +17,7 @@ from typer.testing import CliRunner
 
 from openqabot.args import app
 from openqabot.args import main as args_main
-from openqabot.config import QEM_DASHBOARD
+from openqabot.config import settings
 from openqabot.errors import PostOpenQAError
 from openqabot.main import main
 from openqabot.openqa import OpenQAInterface
@@ -193,7 +193,7 @@ def mock_runtime(mocker: MockerFixture) -> None:
 def test_passed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
-    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar", json={"id": 234})
+    responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar", json={"id": 234})
     bot()
 
     assert len(caplog.messages) == 7
@@ -206,7 +206,7 @@ def test_passed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) 
 def test_passed_non_osd(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
-    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
+    responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar")
     bot()
 
     assert len(caplog.messages) == 7
@@ -220,7 +220,7 @@ def test_passed_non_osd(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureF
 def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
-    responses.add(responses.PUT, f"{QEM_DASHBOARD}bar")
+    responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar")
     bot()
 
     assert len(caplog.messages) == 7
@@ -238,7 +238,7 @@ def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -
     test_data = {"status": "passed", "job_id": 999}
     responses.add(
         responses.PUT,
-        f"{QEM_DASHBOARD}{test_api}",
+        f"{settings.qem_dashboard_url}{test_api}",
         json={"id": 12345},
         status=200,
     )
@@ -246,7 +246,7 @@ def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -
     bot.post_qem(test_data, test_api)
 
     assert len(responses.calls) == 1
-    assert responses.calls[0].request.url == f"{QEM_DASHBOARD}{test_api}"
+    assert responses.calls[0].request.url == f"{settings.qem_dashboard_url}{test_api}"
 
 
 @responses.activate

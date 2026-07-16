@@ -10,7 +10,7 @@ import pytest
 import responses
 from pytest_mock import MockerFixture
 
-from openqabot.config import QEM_DASHBOARD
+from openqabot.config import settings
 from openqabot.subsyncres import SubResultsSync
 
 openqa_url = (
@@ -35,7 +35,7 @@ def mock_dashboard_settings() -> None:
             "version": "13.3",
         },
     ]
-    responses.add(method="GET", url=f"{QEM_DASHBOARD}api/incident_settings/100", json=data)
+    responses.add(method="GET", url=f"{settings.qem_dashboard_url}api/incident_settings/100", json=data)
 
 
 @pytest.fixture
