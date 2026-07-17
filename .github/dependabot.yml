@@ -16,7 +16,7 @@ updates:
       prefix: "chore"
       include: scope
     groups:
-      dev-dependencies:
+      all-dependencies:
         patterns:
           - "*"
         update-types:
