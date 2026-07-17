@@ -193,10 +193,27 @@ def test_aggregate_call_pc_pint_fail(
     assert "No PINT image found for query" in caplog.text
 
 
-def test_get_buildnr_same_build() -> None:
-    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+@pytest.mark.parametrize(
+    "old_build_days_ago",
+    [0, 2],
+    ids=["same-day", "prior-day-unchanged-repo"],
+)
+def test_get_buildnr_same_repohash_skips(old_build_days_ago: int) -> None:
+    old_date = datetime.datetime.now(tz=UTC).date() - datetime.timedelta(days=old_build_days_ago)
+    old_build = old_date.strftime("%Y%m%d") + "-1"
     with pytest.raises(SameBuildExistsError):
-        Aggregate.get_buildnr("hash", "hash", today + "-1")
+        Aggregate.get_buildnr("hash", "hash", old_build)
+
+
+def test_get_buildnr_new_repohash_increments_same_day() -> None:
+    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    assert Aggregate.get_buildnr("new", "old", today + "-1") == today + "-2"
+
+
+def test_get_buildnr_new_repohash_resets_on_new_day() -> None:
+    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    old_build = (datetime.datetime.now(tz=UTC).date() - datetime.timedelta(days=2)).strftime("%Y%m%d") + "-5"
+    assert Aggregate.get_buildnr("new", "old", old_build) == today + "-1"
 
 
 def test_filter_submissions_embargoed(

@@ -64,11 +64,10 @@ class Aggregate(BaseConf):
     @staticmethod
     def get_buildnr(repohash: str, old_repohash: str, build: str) -> str:
         """Determine the next build number based on current date and repohash."""
-        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-
-        if build.startswith(today) and repohash == old_repohash:
+        if repohash == old_repohash:
             raise SameBuildExistsError
 
+        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
