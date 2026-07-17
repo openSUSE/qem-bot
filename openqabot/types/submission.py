@@ -22,6 +22,55 @@ version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
 EXPECTED_PART_LENGTH_WITH_ARCH = 3
 EXPECTED_PART_LENGTH_NO_ARCH = 2
 
+# Structural, package-agnostic suffixes marking arch-specific builds or
+# subpackages/flavors. Packages matching these are demoted when picking a
+# representative name so meaningful sources (e.g. "kernel-default") win over
+# arch/flavor variants (e.g. "dtb-aarch64", "kernel-syms").
+_DEMOTED_SUFFIXES = (
+    "-aarch64",
+    "-armv7l",
+    "-armv6l",
+    "-x86_64",
+    "-i586",
+    "-i686",
+    "-ppc64le",
+    "-ppc64",
+    "-s390x",
+    "-riscv64",
+    "-64kb",
+    "-lpae",
+    "-devel",
+    "-debuginfo",
+    "-debugsource",
+    "-doc",
+    "-docs",
+    "-lang",
+    "-static",
+    "-32bit",
+    "-base",
+    "-source",
+    "-syms",
+    "-obs-build",
+    "-obs-qa",
+    "-kvmsmall",
+    "-zfcpdump",
+    "-debug",
+)
+_DEMOTED_SUBSTRINGS = ("-livepatch-",)
+
+
+def _package_sort_key(name: str) -> tuple[bool, int, str]:
+    demoted = name.endswith(_DEMOTED_SUFFIXES) or any(s in name for s in _DEMOTED_SUBSTRINGS)
+    return (demoted, len(name), name)
+
+
+def sort_packages(names: list[str]) -> list[str]:
+    """Order packages so the most representative one comes first.
+
+    Non arch/flavor packages rank first, then shorter, then alphabetical.
+    """
+    return sorted(names, key=_package_sort_key)
+
 
 class Submission:
     """Information about a submission."""
@@ -71,7 +120,7 @@ class Submission:
 
     def _initialize_packages(self, raw_packages: list[str]) -> None:
         """Initialize packages from raw package data."""
-        self.packages: list[str] = sorted(raw_packages, key=len)
+        self.packages: list[str] = sort_packages(raw_packages)
         if not self.packages:
             raise EmptyPackagesError(self.project)
 
