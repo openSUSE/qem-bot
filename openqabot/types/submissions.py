@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 import requests
 
 from openqabot.config import OBSOLETE_PARAMS, settings
+from openqabot.errors import DashboardError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
@@ -78,23 +79,31 @@ class Submissions(BaseConf):
 
     @staticmethod
     def _get_scheduled_jobs(sub_id: int, submission_type: str | None = None) -> list[dict[str, Any]]:
-        """Fetch scheduled jobs from the dashboard."""
+        """Fetch scheduled jobs from the dashboard, raising DashboardError on failure."""
         try:
             url = settings.dashboard_url("api", "incident_settings", sub_id)
             params = {"type": submission_type} if submission_type else {}
             res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
-            return res if isinstance(res, list) else []
-        except (requests.exceptions.RequestException, json.JSONDecodeError):
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
             log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub_id)
-            return []
+            raise DashboardError from e
+        return res if isinstance(res, list) else []
 
     @staticmethod
     def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
-        """Check if a job is already scheduled in the dashboard."""
+        """Check if a job is already scheduled in the dashboard.
+
+        On dashboard API failure assume the job is scheduled (fail closed) to
+        avoid unnecessary retriggers on transient errors.
+        """
         if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
             return False
 
-        jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
+        try:
+            jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
+        except DashboardError:
+            return True
+
         return any(
             job["flavor"] == ctx.flavor
             and job["arch"] == ctx.arch

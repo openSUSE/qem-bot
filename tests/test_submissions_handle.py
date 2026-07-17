@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
+import requests
 
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
@@ -133,10 +135,33 @@ def test_handle_submission_with_ci_url(mocker: MockerFixture) -> None:
     assert result["openqa"]["__CI_JOB_URL"] == "http://my-ci.com/123"
 
 
-def test_is_scheduled_job_error(mocker: MockerFixture) -> None:
-    sub = MockSubmission()
+def test_is_scheduled_job_non_list_response(mocker: MockerFixture) -> None:
+    sub = MockSubmission(rev_fallback_value=42)
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job(ctx, "ver")
+
+
+@pytest.mark.parametrize("failure", ["json", "request"])
+def test_is_scheduled_job_api_error_fails_closed(mocker: MockerFixture, failure: str) -> None:
+    sub = MockSubmission(rev_fallback_value=42)
+    sub.id = 1
+    get = mocker.patch("openqabot.types.submissions.retried_requests.get")
+    if failure == "json":
+        get.return_value.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
+    else:
+        get.side_effect = requests.exceptions.RequestException("boom")
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert Submissions.is_scheduled_job(ctx, "ver")
+
+
+def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
+    # A dashboard error fails closed but leaves no state, so once the dashboard
+    # recovers with no scheduled jobs the bot schedules the missing job again.
+    sub = MockSubmission(rev_fallback_value=42)
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
     assert not Submissions.is_scheduled_job(ctx, "ver")
 
