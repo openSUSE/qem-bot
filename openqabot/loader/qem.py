@@ -17,7 +17,7 @@ import requests
 import openqabot.config as config_module
 from openqabot import config, dashboard
 from openqabot.errors import NoResultsError
-from openqabot.types.submission import Submission
+from openqabot.types.submission import Submission, sort_packages
 from openqabot.types.types import Data
 
 if TYPE_CHECKING:
@@ -271,6 +271,9 @@ def update_submissions(data: list[dict[str, Any]], **kwargs: Any) -> int:  # noq
     """Synchronize submission records with the dashboard."""
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})
+    for record in data:
+        if packages := record.get("packages"):
+            record["packages"] = sort_packages(packages)
     while retry >= 0:
         retry -= 1
         try:

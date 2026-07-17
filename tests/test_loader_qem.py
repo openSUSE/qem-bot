@@ -360,6 +360,13 @@ def test_update_submissions_success(mock_patch: MagicMock, caplog: pytest.LogCap
     assert "QEM Dashboard submissions updated successfully" in caplog.records[0].message
 
 
+def test_update_submissions_reorders_packages(mock_patch: MagicMock) -> None:
+    mock_patch.return_value.status_code = 200
+    data = [{"packages": ["dtb-aarch64", "kernel-default", "kernel-syms"]}]
+    update_submissions(data)
+    assert mock_patch.call_args.kwargs["json"][0]["packages"][0] == "kernel-default"
+
+
 def test_update_submissions_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.side_effect = requests.exceptions.RequestException
