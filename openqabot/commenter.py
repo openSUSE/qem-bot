@@ -212,6 +212,7 @@ class Commenter:
         """Generate markdown for openQA badges."""
         base_url = self.client.openqa.baseurl
         badge_msg = ""
+        separator = "\n" if sub.is_gitea else "\n\n"
         for b in sorted(builds):
             params = b.get_base_badge_params()
             label = f"Build {b.build}"
@@ -219,7 +220,7 @@ class Commenter:
             query = urlencode(params, safe="*")
             badge_url = f"{base_url}/tests/overview/badge?{query}"
             link_url = f"{base_url}/tests/overview?{query}"
-            badge_msg += sub.format_link(f"{label} Results", link_url, badge_url) + "\n"
+            badge_msg += sub.format_link(f"{label} Results", link_url, badge_url) + separator
         return badge_msg.strip()
 
     def _generate_detail_section(
