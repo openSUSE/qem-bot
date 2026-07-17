@@ -4,6 +4,7 @@
 
 import responses
 
+from openqabot.config import settings as global_settings
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import ArchVer, Repos
@@ -60,6 +61,9 @@ def test_gitea_submissions() -> None:
     issues = {"BASE_TEST_ISSUES": "SLFO:1.1.99#15.99"}
     flavor = "AAA"
     test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues, "versioned_by_submission": True}}}
+
+    # no jobs scheduled yet on the dashboard
+    responses.add(responses.GET, f"{global_settings.qem_dashboard_url}api/incident_settings/42", json=[])
 
     # create a Git-based submission
     sub = MockSubmission(type="git")
