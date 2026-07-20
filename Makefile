@@ -17,6 +17,9 @@ all: help
 # Detect if pytest-xdist is installed for parallel testing
 PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
+# Override to use uv, e.g. PYTHON_RUN="uv run"
+PYTHON_RUN ?=
+
 .PHONY: test-unit
 test-unit: ## Run dynamic tests with coverage report
 	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) --cov --cov-report=xml --cov-report=term-missing
@@ -30,13 +33,13 @@ only-test-with-coverage: test-unit  ## Alias for "test-unit"
 
 .PHONY: check-ruff
 check-ruff: ## Run ruff linting and formatting checks
-	ruff check
-	ruff format --check
+	$(PYTHON_RUN) ruff check
+	$(PYTHON_RUN) ruff format --check
 
 .PHONY: tidy
 tidy: ## Format code and fix linting issues
-	ruff format
-	ruff check --fix
+	$(PYTHON_RUN) ruff format
+	$(PYTHON_RUN) ruff check --fix
 
 .PHONY: check-conventions
 check-conventions: ## Check for banned coding patterns
@@ -53,7 +56,7 @@ check-code-health: ## Find dead code (vulture)
 
 .PHONY: check-types-ty
 check-types-ty: ## Run ty type checker
-	ty check
+	$(PYTHON_RUN) ty check
 
 .PHONY: check-types
 check-types: check-types-ty
@@ -101,11 +104,11 @@ test-all-commands-unstable: ## Test all bot commands with fake data
 
 .PHONY: env-dashboard-start
 env-dashboard-start: ## Start a local qem-dashboard and database using podman for integration testing
-	python3 ./scripts/manage_dashboard.py start
+	$(PYTHON_RUN) python3 ./scripts/manage_dashboard.py start
 
 .PHONY: env-dashboard-stop
 env-dashboard-stop: ## Stop the local qem-dashboard and database environment
-	python3 ./scripts/manage_dashboard.py stop
+	$(PYTHON_RUN) python3 ./scripts/manage_dashboard.py stop
 
 .PHONY: env-dashboard-local
 env-dashboard-local:  ## Run a qem-dashboard instance for testing from ../qem-dashboard (Needs to be checked out manually)
@@ -135,4 +138,4 @@ setup-hooks: ## Install pre-commit git hooks
 
 .PHONY: update-readme
 update-readme: ## Update CLI usage section in Readme.md
-	python3 scripts/update_readme.py
+	$(PYTHON_RUN) python3 scripts/update_readme.py
