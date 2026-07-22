@@ -118,7 +118,8 @@ extend-select =[
     "PERF",
     "PGH",
     "ARG",
-    "RUF",
+    "RUF0",
+    "RUF100",
     "ANN",
     "S", # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "FBT", # https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt
