@@ -25,6 +25,7 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import PullRequest
 from openqabot.utils import retry10 as retried_requests
 
@@ -740,6 +741,8 @@ def _build_submission_record(
     if not submission["packages"]:
         log.info("PR git:%s skipped: No packages found", pr.number)
         return None
+
+    submission["priority"], submission["emu"] = get_gitea_update_data(pr.project, pr.number)
 
     return submission
 
