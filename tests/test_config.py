@@ -105,3 +105,34 @@ def test_insecure_setting() -> None:
 
     settings = Settings(QEM_BOT_INSECURE=False)
     assert settings.insecure is False
+
+
+def test_load_config_yml_applies_aliases_and_names(tmp_path: Path) -> None:
+    """config.yml overrides settings via aliases and field names with type coercion."""
+    (tmp_path / "config.yml").write_text(
+        "openqa_instance: https://custom.openqa\nOBS_URL: https://custom.obs\nQEM_BOT_RETRY: '5'\nUNKNOWN: x\n"
+    )
+    settings = Settings()
+    settings.load_config_yml(tmp_path)
+    assert settings.openqa_instance == "https://custom.openqa"
+    assert settings.obs_url == "https://custom.obs"
+    assert settings.retry == 5
+
+
+def test_load_config_yml_missing_file_is_noop(tmp_path: Path) -> None:
+    """A missing config.yml leaves defaults untouched."""
+    settings = Settings()
+    settings.load_config_yml(tmp_path)
+    assert settings.retry == Settings().retry
+
+
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [("- a\n- b\n", "non-dict"), ("bad: [unclosed", "invalid syntax")],
+)
+def test_load_config_yml_malformed_is_ignored(tmp_path: Path, content: str, reason: str) -> None:
+    """Malformed config.yml is logged and ignored, keeping defaults."""
+    (tmp_path / "config.yml").write_text(content)
+    settings = Settings()
+    settings.load_config_yml(tmp_path)
+    assert settings.retry == Settings().retry, reason

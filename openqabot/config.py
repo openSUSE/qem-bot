@@ -8,13 +8,17 @@ Most of these constants can be overridden by environment variables.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
 import osc.conf
+import yaml
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, YamlConfigSettingsSource
+
+_log = logging.getLogger("bot")
 
 
 def get_default_obs_url() -> str:
@@ -37,6 +41,26 @@ class Settings(BaseSettings):
         This explicit constructor helps type checkers like 'ty' recognize valid parameters.
         """
         super().__init__(*args, **kwargs)
+
+    def load_config_yml(self, configs_dir: Path) -> None:
+        """Apply overrides from config.yml in configs_dir onto this instance.
+
+        Uses pydantic-settings' native YAML source so parsing, aliasing and type
+        coercion match the rest of the settings; missing or malformed files are
+        logged and ignored.
+        """
+        config_yml = configs_dir / "config.yml"
+        if not config_yml.is_file():
+            return
+        try:
+            data = YamlConfigSettingsSource(self.__class__, yaml_file=config_yml)()
+        except (OSError, ValueError, yaml.YAMLError):
+            _log.exception("Failed to load %s", config_yml)
+            return
+        by_alias = {f.alias: n for n, f in self.__class__.model_fields.items() if f.alias}
+        for key, value in data.items():
+            if name := by_alias.get(key, key if key in self.__class__.model_fields else None):
+                setattr(self, name, value)
 
     # Global options
     configs: Path = Field(default=Path("/etc/openqabot"), alias="QEM_BOT_CONFIGS")
