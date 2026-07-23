@@ -19,7 +19,7 @@ from openqabot.args import app
 from openqabot.args import main as args_main
 from openqabot.config import settings
 from openqabot.errors import PostOpenQAError
-from openqabot.main import main
+from openqabot.main import errorcnt, main
 from openqabot.openqa import OpenQAInterface
 from openqabot.openqabot import OpenQABot
 
@@ -261,3 +261,69 @@ def test_post_qem_dry(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> No
     bot.post_qem(test_data, test_api)
 
     assert len(responses.calls) == 0
+
+
+class MainTestError(Exception):
+    """Custom exception class for main tests to satisfy ruff rules."""
+
+
+def test_main_success(mocker: MockerFixture) -> None:
+    mock_app = mocker.patch("openqabot.main.app")
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
+    mocker.patch("openqabot.main.load_dotenv")
+
+    main()
+
+    mock_app.assert_called_once()
+
+
+def test_main_retry_success(mocker: MockerFixture) -> None:
+    mocker.patch.object(settings, "app_max_retries", 3)
+    mocker.patch.object(settings, "app_backoff_factor", 1)
+    mock_sleep = mocker.patch("openqabot.main.time.sleep")
+
+    call_count = 0
+
+    def side_effect() -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            msg = "Test error"
+            raise MainTestError(msg)
+
+    mocker.patch("openqabot.main.app", side_effect=side_effect)
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
+    mocker.patch("openqabot.main.load_dotenv")
+
+    errorcnt.clear()
+
+    main()
+
+    assert call_count == 2
+    mock_sleep.assert_called_once_with(0)
+
+
+def test_main_exception_limit_reraise(mocker: MockerFixture) -> None:
+    mocker.patch.object(settings, "app_max_retries", 15)
+    mocker.patch.object(settings, "app_backoff_factor", 0)
+    mocker.patch("openqabot.main.time.sleep")
+
+    def side_effect() -> None:
+        msg = "Persistent error"
+        raise MainTestError(msg)
+
+    mocker.patch("openqabot.main.app", side_effect=side_effect)
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
+    mocker.patch("openqabot.main.load_dotenv")
+
+    errorcnt.clear()
+
+    with pytest.raises(MainTestError, match="Persistent error"):
+        main()
+
+    assert len(errorcnt) == 1
+    key = next(iter(errorcnt))
+    assert errorcnt[key] == 11

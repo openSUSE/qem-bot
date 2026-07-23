@@ -62,6 +62,11 @@ class Settings(BaseSettings):
             if name := by_alias.get(key, key if key in self.__class__.model_fields else None):
                 setattr(self, name, value)
 
+    # Error tolerance settings
+    app_max_retries: int = Field(default=1, alias="APP_MAX_RETRIES")
+    app_backoff_factor: int = Field(default=60, alias="APP_BACKOFF_FACTOR")
+    app_same_error_limit: int = Field(default=2, alias="APP_SAME_ERROR_LIMIT")
+    app_error_similarity: int = Field(default=90, alias="APP_ERROR_SIMILARITY")
     # Global options
     configs: Path = Field(default=Path("/etc/openqabot"), alias="QEM_BOT_CONFIGS")
     dry: bool = Field(default=False, alias="QEM_BOT_DRY")
