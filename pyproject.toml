@@ -43,10 +43,10 @@ dev = [
     "pyupgrade==3.21.2",
     "coverage==7.14.1",
     "responses==0.26.2",
-    "ruff==0.15.17",
+    "ruff==0.15.21",
     "pytest-mock==3.15.1",
     "vulture==2.16",
-    "ty==0.0.56",
+    "ty==0.0.59",
     "pre-commit==4.6.0",
     "gitlint==0.19.1",
 ]
@@ -118,7 +118,8 @@ extend-select =[
     "PERF",
     "PGH",
     "ARG",
-    "RUF",
+    "RUF0",
+    "RUF100",
     "ANN",
     "S", # https://docs.astral.sh/ruff/rules/#flake8-bandit-s
     "FBT", # https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt

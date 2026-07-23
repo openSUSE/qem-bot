@@ -33,7 +33,7 @@ class MockRequest(requests.PreparedRequest):
         self.url = url
 
 
-@pytest.fixture(autouse=True)  # noqa: RUF076
+@pytest.fixture(autouse=True)
 def reset_mock_state() -> Any:
     """Reset mock state before each test.
 
