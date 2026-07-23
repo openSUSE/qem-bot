@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: MIT
 """Test loader SMELT."""
 
+import re
 from unittest.mock import patch
 
 import pytest
+import requests
+import responses
 from jsonschema import ValidationError, validate
 from pytest_mock import MockerFixture
 
@@ -12,6 +15,7 @@ from openqabot.loader.smelt import (
     ACTIVE_INC_SCHEMA,
     INCIDENT_SCHEMA,
     get_active_submission_ids,
+    get_gitea_update_data,
     get_submission_from_smelt,
 )
 
@@ -161,3 +165,24 @@ def test_incident_schema_validation() -> None:
     }
     # Should not raise
     validate(instance=valid_data, schema=INCIDENT_SCHEMA)
+
+
+@responses.activate
+def test_get_gitea_update_data_success() -> None:
+    """Test get_gitea_update_data with a successful API response."""
+    responses.add(
+        responses.GET,
+        re.compile(r".*/api/experimental/v2/updates/.*"),
+        json={"status": "success", "data": {"priority": 366, "is_emergency": True}},
+    )
+    assert get_gitea_update_data("host", "project", 123) == (366, True)
+
+
+def test_get_gitea_update_data_failure(caplog: pytest.LogCaptureFixture) -> None:
+    """Test get_gitea_update_data with a failing API response."""
+    with patch(
+        "openqabot.loader.smelt.retried_requests.get", side_effect=requests.exceptions.RequestException("API error")
+    ):
+        res = get_gitea_update_data("host", "project", 123)
+    assert res == (0, False)
+    assert "Could not get SMELT v2 update data" in caplog.text

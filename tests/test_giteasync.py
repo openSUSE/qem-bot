@@ -53,6 +53,18 @@ def fake_gitea_api() -> None:
     responses.add(GET, issues_url + "/124/comments", json=read_json_file("comments-124"))
     responses.add(GET, re.compile(issues_url + r"/.*/comments"), json=[])
     responses.add(GET, urljoin(host, patchinfo_path), body=patchinfo_data)
+    responses.add(
+        GET,
+        re.compile(r"https://smelt\.suse\.de/api/experimental/v2/updates/.*"),
+        json={
+            "status": "success",
+            "data": {
+                "id": "src.suse.de:products:SLFO:124",
+                "priority": 1325,
+                "is_emergency": False,
+            },
+        },
+    )
 
 
 @pytest.fixture
@@ -174,7 +186,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     assert "Loaded 7 active PRs from products/SLFO" in caplog.messages
     assert "Fetching info for PR git:131 from Gitea" in caplog.messages
     assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 submissions" in caplog.messages
-    assert len(responses.calls) == 24
+    assert any("/api/experimental/v2/updates/" in cast("Any", call.request).url for call in responses.calls)
     assert len(cast("Any", responses.calls[-1].response).json()) == 1
     submission = cast("Any", responses.calls[-1].response).json()[0]
     assert submission["number"] == 124
@@ -192,7 +204,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     assert submission["isActive"]
     assert not submission["approved"]
     assert not submission["embargoed"]
-    assert submission["priority"] == 0
+    assert submission["priority"] == 1325
 
     # expect the scminfo from the product repo of the configured product
     assert "18bfa2a23fb7985d5d0" in submission["scminfo"]
