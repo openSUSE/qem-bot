@@ -7,6 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
+from openqabot.errors import AmbiguousBuildsError
 from openqabot.types.increment import BuildInfo
 from openqabot.utils import get_obs_filter_params
 from openqabot.utils import retry10 as retried_requests
@@ -33,6 +34,7 @@ def load_build_info(
     params = get_obs_filter_params(build_regex)
     log.debug("Checking for '%s' files on %s with params %s", build_regex, url, params)
     rows = retried_requests.get(url, params=params).json().get("data", [])
+    loaded_build_info_set = {}
 
     def get_build_info_from_row(row: dict[str, Any]) -> BuildInfo | None:
         name = row.get("name", "")
@@ -54,4 +56,12 @@ def load_build_info(
 
         return BuildInfo(distri, product, version, flavor, arch, build)
 
-    return {build_info for row in rows if (build_info := get_build_info_from_row(row))}
+    loaded_build_info_set = {build_info for row in rows if (build_info := get_build_info_from_row(row))}
+
+    # we expecting that all BuildInfo obects corresponds to same build
+    # if it is not like that we can not proceed further
+    if len({build_info.build for build_info in loaded_build_info_set}) > 1:
+        error_text = f"{loaded_build_info_set} contains several builds in {url} collected with {config}"
+        raise AmbiguousBuildsError(error_text)
+
+    return loaded_build_info_set
