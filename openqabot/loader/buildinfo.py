@@ -54,4 +54,17 @@ def load_build_info(
 
         return BuildInfo(distri, product, version, flavor, arch, build)
 
-    return {build_info for row in rows if (build_info := get_build_info_from_row(row))}
+    loaded_build_info_set = {build_info for row in rows if (build_info := get_build_info_from_row(row))}
+
+    # we expect that all BuildInfo objects correspond to same build
+    # if it is not like that we can not proceed further
+    if len({build_info.build for build_info in loaded_build_info_set}) > 1:
+        log.warning(
+            "%s contains several builds in %s collected with %s. Skipping whole set as ambiguous",
+            loaded_build_info_set,
+            url,
+            config,
+        )
+        return set()
+
+    return loaded_build_info_set
