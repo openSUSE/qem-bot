@@ -134,7 +134,7 @@ def test_accepts_build_info_regex() -> None:
         distri="sle",
         version="any",
         flavor="Online-Increments",
-        arch="x86_64",
+        archs={"x86_64"},
         product_regex="^SLES",
         version_regex="^15.5",
     )
@@ -147,3 +147,52 @@ def test_accepts_build_info_regex() -> None:
 
     # Mismatch version
     assert not config.accepts_build_info(BuildInfo("sle", "SLES", "15.4", "Online-Increments", "x86_64", "1"))
+
+
+def test_config_parsing_with_arch() -> None:
+    entry = {
+        "distri": "sle",
+        "project_base": "BASE",
+        "build_project_suffix": "BUILD",
+        "diff_project_suffix": "DIFF",
+        "build_listing_sub_path": "path",
+        "build_regex": "regex",
+        "product_regex": "pregex",
+        "arch": "s390x",
+    }
+    config = IncrementConfig.from_config_entry(entry)
+    assert config.archs == {"s390x"}
+
+
+def test_config_parsing_with_arch_and_archs() -> None:
+    entry = {
+        "distri": "sle",
+        "project_base": "BASE",
+        "build_project_suffix": "BUILD",
+        "diff_project_suffix": "DIFF",
+        "build_listing_sub_path": "path",
+        "build_regex": "regex",
+        "product_regex": "pregex",
+        "archs": ["x86_64"],
+        "arch": "s390x",
+    }
+    config = IncrementConfig.from_config_entry(entry)
+    assert config.archs == {"x86_64", "s390x"}
+
+
+def test_config_parsing_from_args_with_arch_override() -> None:
+    path = Path("tests/fixtures/config-increment-approver")
+    configs = IncrementConfig.from_args(
+        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
+    )
+    assert len(configs) == 2
+    assert configs[0].archs == {"s390x"}
+    assert configs[1].archs == {"s390x"}
+
+
+def test_config_parsing_from_args_direct_with_arch() -> None:
+    config = IncrementConfig.from_args(
+        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
+    )
+    assert len(config) == 1
+    assert config[0].archs == {"s390x"}
