@@ -43,7 +43,6 @@ class IncrementConfig:
     distri: str
     version: str
     flavor: str
-    arch: str = "any"
     flavor_suffix: str = DEFAULT_FLAVOR_SUFFIX
     project_base: str = ""
     build_project_suffix: str = ""
@@ -125,9 +124,7 @@ class IncrementConfig:
 
     def accepts_build_info(self, build_info: BuildInfo) -> bool:
         """Return True if the build information matches this configuration."""
-        if not all(
-            getattr(self, k) in {"any", getattr(build_info, k)} for k in ("distri", "flavor", "version", "arch")
-        ):
+        if not all(getattr(self, k) in {"any", getattr(build_info, k)} for k in ("distri", "flavor", "version")):
             return False
         if self.archs and build_info.arch not in self.archs:
             return False
@@ -143,11 +140,14 @@ class IncrementConfig:
     @classmethod
     def from_config_entry(cls, entry: dict[str, Any]) -> IncrementConfig:
         """Create an IncrementConfig from a dictionary entry."""
+        archs = set(entry.get("archs", []))
+        # Fold the singular "arch" key into "archs" so architecture filtering has a single source of truth.
+        if (arch := entry.get("arch", "any")) != "any":
+            archs.add(arch)
         return cls(
             distri=entry["distri"],
             version=entry.get("version", "any"),
             flavor=entry.get("flavor", "any"),
-            arch=entry.get("arch", "any"),
             flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
             project_base=entry["project_base"],
             build_project_suffix=entry["build_project_suffix"],
@@ -157,7 +157,7 @@ class IncrementConfig:
             product_regex=entry["product_regex"],
             version_regex=entry.get("version_regex", DEFAULT_VERSION_REGEX),
             packages=entry.get("packages", []),
-            archs=set(entry.get("archs", [])),
+            archs=archs,
             settings=entry.get("settings", {}),
             additional_builds=entry.get("additional_builds", []),
             reference_repos=entry.get("reference_repos", {}),
@@ -187,12 +187,16 @@ class IncrementConfig:
         Only override when CLI args differ from expected defaults (not dataclass defaults).
         This allows configs to specify their own values while still supporting CLI overrides.
         """
-        cli_defaults = {"distri": "sle", "version": "any", "flavor": "any", "arch": "any"}
+        cli_defaults = {"distri": "sle", "version": "any", "flavor": "any"}
         overrides = {}
 
         for field_name, default_value in cli_defaults.items():
             if hasattr(args, field_name) and (arg_value := getattr(args, field_name)) != default_value:
                 overrides[field_name] = arg_value
+
+        # A CLI "--arch" replaces the config's "archs" set outright, so the CLI intent always wins.
+        if (arch := getattr(args, "arch", "any")) != "any":
+            overrides["archs"] = {arch}
 
         return [replace(config, **overrides) if overrides else config for config in configs]
 
@@ -201,4 +205,7 @@ class IncrementConfig:
         """Create a single IncrementConfig from CLI arguments."""
         all_fields = {f.name for f in fields(IncrementConfig)}
         config_args = {field_name: getattr(args, field_name) for field_name in all_fields if hasattr(args, field_name)}
+        # There is no "archs" CLI option, so fold the singular "--arch" into the "archs" set.
+        if (arch := getattr(args, "arch", "any")) != "any":
+            config_args["archs"] = {arch}
         return IncrementConfig(**config_args)
