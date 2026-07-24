@@ -33,7 +33,7 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert configs[1].distri == "bar"
     assert configs[1].version == "42"
     assert configs[1].flavor == "Test-Increments"
-    assert configs[1].project_base == ""  # noqa: PLC1901
+    assert configs[1].project_base == ""  # ruff: ignore[compare-to-empty-string]
     assert configs[1].build_project() == "ToTest"
     assert configs[1].diff_project_url() == "http://download.suse.de/ibs/none"
 
@@ -108,7 +108,7 @@ def test_concat_project() -> None:
     )
     assert config.build_project() == "BASE"
     config.project_base = ""
-    assert config.build_project() == ""  # noqa: PLC1901
+    assert config.build_project() == ""  # ruff: ignore[compare-to-empty-string]
     config.project_base = "BASE"
     config.build_project_suffix = "SUFFIX"
     assert config.build_project() == "BASE:SUFFIX"

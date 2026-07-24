@@ -6,7 +6,7 @@
 import logging
 import os
 import re
-import subprocess  # noqa: S404
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import sys
 from pathlib import Path
 
@@ -25,7 +25,7 @@ def get_help_output() -> str:
     env["COLUMNS"] = "80"
     env["NO_COLOR"] = "1"
     env["TERM"] = "dumb"
-    process = subprocess.run(  # noqa: S603, RUF100
+    process = subprocess.run(
         [sys.executable, "qem-bot.py", "--help"],
         capture_output=True,
         text=True,
@@ -56,7 +56,7 @@ def update_readme() -> None:
     if not match:
         log.error("Could not find Usage section in Readme.md")
         sys.exit(1)
-    assert match  # noqa: S101
+    assert match  # ruff: ignore[assert]
     current_content = match.group(2)
     if current_content == new_section_content:
         log.info("Readme.md is already up to date.")

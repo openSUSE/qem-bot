@@ -15,7 +15,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import create_logger
 
 
-def _process_config_file(p: Path, loader: YAML, log: Any) -> None:  # noqa: ANN401
+def _process_config_file(p: Path, loader: YAML, log: Any) -> None:  # ruff: ignore[any-type]
     try:
         data = loader.load(p)
     except (YAMLError, FileNotFoundError):

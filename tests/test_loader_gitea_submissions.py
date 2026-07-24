@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Test loader Gitea submissions."""
 
-# ruff: noqa: ARG001
+# ruff: file-ignore[unused-function-argument]
 import logging
 from typing import Any
 
@@ -148,14 +148,14 @@ def test_add_reviews_coverage(mocker: MockerFixture) -> None:
 def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
     submission = {"number": 123}
     res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "")  # noqa: SLF001
+    gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[private-member-access]
     assert submission["scminfo"] == "new"
     assert "Inconsistent SCM info" in caplog.text
 
     caplog.clear()
     submission = {"number": 123, "scminfo_prod": "old"}
     res = etree.fromstring("<root><scminfo>new</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "prod")  # noqa: SLF001
+    gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[private-member-access]
     assert submission["scminfo_prod"] == "old"
     assert "Inconsistent SCM info" in caplog.text
 

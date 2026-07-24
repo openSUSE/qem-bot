@@ -520,7 +520,7 @@ def test_approval_if_failing_jobs_are_in_development_group(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
     fake_openqa_url_job_stat: str,
-    schedule: bool,  # noqa: FBT001
+    schedule: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
 ) -> None:
     responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"failed": {"job_ids": [123], "group_id": 9}}})
     increment_approver = prepare_approver(caplog, schedule=schedule)

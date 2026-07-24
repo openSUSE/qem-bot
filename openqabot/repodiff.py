@@ -66,11 +66,11 @@ class RepoDiff:
         """Initialize the RepoDiff class."""
         self.args = args
 
-    def make_repodata_url(self, url: str) -> str:  # noqa: PLR6301
+    def make_repodata_url(self, url: str) -> str:  # ruff: ignore[no-self-use]
         """Construct the URL for repository metadata."""
         return f"{url.rstrip('/')}/repodata/"
 
-    def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # noqa: PLR6301
+    def find_primary_repodata(self, rows: list[dict[str, Any]]) -> str | None:  # ruff: ignore[no-self-use]
         """Find the primary XML metadata file in a list of repository files."""
         return next((r["name"] for r in rows if primary_re.search(r.get("name", ""))), None)
 

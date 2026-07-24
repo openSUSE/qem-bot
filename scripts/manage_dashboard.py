@@ -4,7 +4,7 @@
 """Manage local qem-dashboard environment for integration testing."""
 
 import os
-import subprocess  # noqa: S404
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import sys
 import time
 from pathlib import Path
@@ -21,10 +21,10 @@ except ImportError:
 app = typer.Typer(help="Manage local qem-dashboard environment for integration testing")
 
 
-def run_command(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:  # noqa: ANN003
+def run_command(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:  # ruff: ignore[missing-type-kwargs]
     """Run a subprocess command and return the result."""
     check_result = kwargs.pop("check", True)
-    return subprocess.run(cmd, check=check_result, **kwargs)  # noqa: S603
+    return subprocess.run(cmd, check=check_result, **kwargs)  # ruff: ignore[subprocess-without-shell-equals-true]
 
 
 @app.command()

@@ -233,7 +233,7 @@ class Approver:
                 e,
             )
 
-    @lru_cache(maxsize=512)  # noqa: B019
+    @lru_cache(maxsize=512)  # ruff: ignore[cached-instance-method]
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
         """Check if a job is marked as acceptable for a submission."""
         regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
@@ -261,7 +261,7 @@ class Approver:
             return False
         return True
 
-    @lru_cache(maxsize=16384)  # noqa: B019
+    @lru_cache(maxsize=16384)  # ruff: ignore[cached-instance-method]
     def job_contains_submission(self, job_id: int, sub: int) -> bool:
         """Check if a job settings contain the submission under test."""
         job_settings = self.client.get_single_job(job_id)
@@ -320,7 +320,7 @@ class Approver:
         log.info("Ignoring not-ok aggregate %s and using instead %s for aggregate %s", not_ok_job_id, job["id"], sub)
         return OlderJobResult.OK
 
-    @lru_cache(maxsize=512)  # noqa: B019
+    @lru_cache(maxsize=512)  # ruff: ignore[cached-instance-method]
     def was_ok_before(self, not_ok_job_id: int, sub: int) -> bool:
         """Check if a similar job was successful before."""
         # We need a considerable amount of older jobs, since there could be many failed manual restarts from same day
@@ -351,7 +351,7 @@ class Approver:
         )
         return False
 
-    def is_job_passing(self, job_result: dict) -> bool:  # noqa: PLR6301
+    def is_job_passing(self, job_result: dict) -> bool:  # ruff: ignore[no-self-use]
         """Check if a job result status is passed."""
         return job_result["status"] == "passed"
 
@@ -399,7 +399,7 @@ class Approver:
         log.info("Found not-ok, not-ignored job %s for submission %s:%s", url, s_type, sub)
         return False
 
-    @lru_cache(maxsize=128)  # noqa: B019
+    @lru_cache(maxsize=128)  # ruff: ignore[cached-instance-method]
     def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobResult:
         """Retrieve jobs for a specific aggregate or incident setting.
 

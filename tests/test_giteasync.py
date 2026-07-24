@@ -14,7 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 import pytest
 import responses
-from lxml import etree  # noqa: TC002  # ty: ignore[unresolved-import]
+from lxml import etree  # ruff: ignore[typing-only-third-party-import]  # ty: ignore[unresolved-import]
 from responses import GET, matchers
 
 from openqabot.config import settings
@@ -41,8 +41,8 @@ def fake_gitea_api() -> None:
     host = "https://src.suse.de"
     pulls_url = urljoin(host, "api/v1/repos/products/SLFO/pulls")
     issues_url = urljoin(host, "api/v1/repos/products/SLFO/issues")
-    # ruff: noqa: E501 line-too-long
-    patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"
+
+    patchinfo_path = "products/SLFO/raw/commit/2cf58b3a9c32d139470a5f32d5aa64efbd0fa90dda0144b09421709252fcb0ea/patchinfo.23193048203482931/_patchinfo"  # ruff: ignore[line-too-long]
     patchinfo_data = Path("tests/fixtures/responses/patch-info.xml").read_bytes()
     responses.add(GET, pulls_url + "?state=open", json=read_json_file("pulls"))
     responses.add(GET, re.compile(pulls_url + r"\?state=open&page=.*"), json=[])
@@ -326,17 +326,17 @@ def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.
         "pull_request": {"id": 42, "number": 123, "base": {"repo": {"full_name": "products/SLFO"}}},
     }
     # check successful code path
-    sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # noqa: SLF001
+    sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # ruff: ignore[private-member-access]
     mock_update.assert_called_once_with([mock_subm], params={"type": "git"}, retry=args.retry)
     mock_update.reset_mock()
 
     # check dry run
     args.dry = True
     sync = GiteaSync(args)
-    sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # noqa: SLF001
+    sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # ruff: ignore[private-member-access]
 
     # check wrong PR does nothing
-    sync._on_amqp_message(  # noqa: SLF001
+    sync._on_amqp_message(  # ruff: ignore[private-member-access]
         {"action": "opened", "pull_request": {"id": 42, "number": 123, "base": {"repo": {"full_name": "wrong/repo"}}}},
         "suse.src.*.pull_request.opened",
     )

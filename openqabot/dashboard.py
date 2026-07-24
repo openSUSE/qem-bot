@@ -17,7 +17,7 @@ def clear_cache() -> None:
     _GET_CACHE.clear()
 
 
-def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
+def get_json(route: str, **kwargs: Any) -> Any:  # ruff: ignore[any-type]
     """Fetch JSON data from the dashboard with caching."""
     # Use simple key based on route and stringified kwargs
     cache_key = route + str(sorted(kwargs.items()))
@@ -29,11 +29,11 @@ def get_json(route: str, **kwargs: Any) -> Any:  # noqa: ANN401
     return data
 
 
-def patch(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
+def patch(route: str, **kwargs: Any) -> requests.Response:  # ruff: ignore[any-type]
     """Perform a PATCH request to the dashboard."""
     return retried_requests.patch(settings.dashboard_url(route), **kwargs)
 
 
-def put(route: str, **kwargs: Any) -> requests.Response:  # noqa: ANN401
+def put(route: str, **kwargs: Any) -> requests.Response:  # ruff: ignore[any-type]
     """Perform a PUT request to the dashboard."""
     return retried_requests.put(settings.dashboard_url(route), **kwargs)

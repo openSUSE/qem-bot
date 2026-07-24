@@ -95,7 +95,7 @@ class OpenQAInterface:
         }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
-    @lru_cache(maxsize=512)  # noqa: B019
+    @lru_cache(maxsize=512)  # ruff: ignore[cached-instance-method]
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         """Fetch comments for a specific job."""
         try:
@@ -110,7 +110,7 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching comments for job %s", job_id)
         return []
 
-    @lru_cache(maxsize=256)  # noqa: B019
+    @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]
     def is_devel_group(self, groupid: int) -> bool:
         """Check if a job group is a development group."""
         ret = self.openqa.openqa_request("GET", f"job_groups/{groupid}")
@@ -119,7 +119,7 @@ class OpenQAInterface:
             ret[0]["parent_id"] == config.settings.development_parent_group_id if ret else True
         )  # ID of Development Group
 
-    @lru_cache(maxsize=256)  # noqa: B019
+    @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]
     def get_single_job(self, job_id: int) -> dict[str, Any] | None:
         """Fetch details for a single job."""
         try:
@@ -155,7 +155,7 @@ class OpenQAInterface:
 
         return self.is_devel_group(group_id) if group_id else False
 
-    @lru_cache(maxsize=256)  # noqa: B019
+    @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]
     def get_older_jobs(self, job_id: int, limit: int) -> dict:
         """Fetch older jobs for a specific job."""
         try:
@@ -173,7 +173,7 @@ class OpenQAInterface:
         """Fetch scheduling statistics for a product."""
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)
 
-    @lru_cache(maxsize=256)  # noqa: B019
+    @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]
     def get_job_group_info(self, group_id: int) -> dict[str, Any] | None:
         """Fetch job group details including description."""
         try:

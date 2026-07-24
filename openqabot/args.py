@@ -149,7 +149,7 @@ def _require_token(args: SimpleNamespace) -> None:
 
 
 @app.callback()
-def main(  # noqa: PLR0913
+def main(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
     configs: Annotated[
@@ -351,7 +351,7 @@ def updates_run(
         typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
     ] = False,
 ) -> None:
-    """Aggregates only schedule for Maintenance Submissions in openQA."""  # noqa: D401
+    """Aggregates only schedule for Maintenance Submissions in openQA."""  # ruff: ignore[non-imperative-mood]
     args = ctx.obj
     _require_token(args)
     args.ignore_onetime = ignore_onetime
@@ -373,7 +373,7 @@ def smelt_sync(ctx: typer.Context) -> None:
 
 
 @app.command("gitea-sync")
-def gitea_sync(  # noqa: PLR0913
+def gitea_sync(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
     gitea_project: gitea_project_arg = "products/SLFO",
@@ -422,7 +422,7 @@ def gitea_sync(  # noqa: PLR0913
 
 
 @app.command("gitea-trigger")
-def gitea_trigger(  # noqa: PLR0913
+def gitea_trigger(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
     pr_label: Annotated[
@@ -463,7 +463,7 @@ def gitea_trigger(  # noqa: PLR0913
 
 
 @app.command("sub-approve")
-def sub_approve(  # noqa: PLR0913
+def sub_approve(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
     all_submissions: Annotated[
@@ -550,7 +550,7 @@ def aggr_sync_results(ctx: typer.Context) -> None:
 
 
 @app.command("increment-approve")
-def increment_approve(  # noqa: PLR0913
+def increment_approve(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
     project_base: Annotated[
@@ -560,7 +560,7 @@ def increment_approve(  # noqa: PLR0913
         str,
         typer.Option(
             "--build-project-suffix",
-            help="The project on OBS to monitor. Schedule jobs for (if --schedule is specified) and approve (if all tests passed)",  # noqa: E501
+            help="The project on OBS to monitor. Schedule jobs for (if --schedule is specified) and approve (if all tests passed)",  # ruff: ignore[line-too-long]
         ),
     ] = "TEST",
     diff_project_suffix: Annotated[
@@ -697,7 +697,7 @@ def repo_diff(
         str, typer.Option("--repo-b", help="The second repository")
     ] = "SUSE:SLFO:Products:SLES:16.0:PUBLISH/product",
 ) -> None:
-    """Computes the diff between two repositories."""  # noqa: D401
+    """Computes the diff between two repositories."""  # ruff: ignore[non-imperative-mood]
     args = ctx.obj
     args.repo_a = repo_a
     args.repo_b = repo_b

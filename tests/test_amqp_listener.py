@@ -38,7 +38,7 @@ def test_listener_full_workflow(mocker: MagicMock) -> None:
     mock_channel.queue_bind.assert_called_with(exchange="pubsub", queue="tmp-queue", routing_key="test.key")
     fake_body = json.dumps({"foo": "bar"}).encode("utf-8")
     fake_method = MagicMock(routing_key="test.key")
-    listener._on_message(None, fake_method, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
+    listener._on_message(None, fake_method, None, fake_body)  # ty: ignore[invalid-argument-type]  # ruff: ignore[private-member-access]
 
     assert received_data[0] == ({"foo": "bar"}, "test.key")
 
@@ -54,12 +54,12 @@ def test_on_message_routing_key_types() -> None:
 
     # Test routing_key as bytes
     fake_method_bytes = MagicMock(routing_key=b"bytes.key")
-    listener._on_message(None, fake_method_bytes, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
+    listener._on_message(None, fake_method_bytes, None, fake_body)  # ty: ignore[invalid-argument-type]  # ruff: ignore[private-member-access]
     assert received_data[0] == ({"foo": "bar"}, "bytes.key")
 
     # Test routing_key as None
     fake_method_none = MagicMock(routing_key=None)
-    listener._on_message(None, fake_method_none, None, fake_body)  # ty: ignore[invalid-argument-type]  # noqa: SLF001
+    listener._on_message(None, fake_method_none, None, fake_body)  # ty: ignore[invalid-argument-type]  # ruff: ignore[private-member-access]
     assert received_data[1] == ({"foo": "bar"}, "")
 
 

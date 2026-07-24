@@ -230,7 +230,7 @@ def _get_single_pr(token: dict[str, str], project: str, number: int) -> list[Pul
         if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{project}/pulls/{number}", token))):
             return [pr]
     except (requests.exceptions.RequestException, json.JSONDecodeError) as ex:
-        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # noqa: G201
+        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # ruff: ignore[logging-exc-info]
     return []
 
 
@@ -248,7 +248,7 @@ def _is_bot_approval_comment(comment: dict[str, Any], bot_user: str, commit_id: 
     return is_author and review_cmd in body and commit_str in body
 
 
-def review_pr(  # noqa: PLR0913
+def review_pr(  # ruff: ignore[too-many-arguments]
     token: dict[str, str],
     repo_name: str,
     pr_number: int,
@@ -642,7 +642,7 @@ def _fetch_details(
     project: str, number: int, token: dict[str, str], *, dry: bool
 ) -> tuple[list[Any], list[Any], list[Any]]:
     if dry:
-        if number == 124:  # noqa: PLR2004
+        if number == 124:  # ruff: ignore[magic-value-comparison]
             return (
                 read_json_file_list("reviews-124"),
                 read_json_file_list("comments-124"),

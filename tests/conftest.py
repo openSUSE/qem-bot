@@ -154,7 +154,7 @@ def _mock_load_dotenv(mocker: MockerFixture) -> None:
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
 
-    def f_sub_settins(sub: int, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # noqa: ARG001
+    def f_sub_settins(sub: int, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # ruff: ignore[unused-function-argument]
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -173,7 +173,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def f_aggr_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:  # noqa: ARG001
+    def f_aggr_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:  # ruff: ignore[unused-function-argument]
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)

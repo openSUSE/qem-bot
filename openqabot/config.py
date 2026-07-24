@@ -27,7 +27,7 @@ def get_default_obs_url() -> str:
         osc.conf.get_config()
         if apiurl := osc.conf.config.get("apiurl"):
             return apiurl
-    except Exception:  # noqa: BLE001, S110
+    except Exception:  # ruff: ignore[blind-except, try-except-pass]
         pass
     return "https://api.suse.de"
 
@@ -35,7 +35,7 @@ def get_default_obs_url() -> str:
 class Settings(BaseSettings):
     """Configuration settings managed by Pydantic."""
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # ruff: ignore[any-type]
         """Initialize settings with optional overrides.
 
         This explicit constructor helps type checkers like 'ty' recognize valid parameters.
@@ -173,7 +173,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def __getattr__(name: str) -> Any:  # noqa: ANN401
+def __getattr__(name: str) -> Any:  # ruff: ignore[any-type]
     """Map legacy module-level constants to settings object attributes."""
     mapping = {
         "QEM_DASHBOARD": "qem_dashboard_url",

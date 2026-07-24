@@ -123,7 +123,7 @@ def test_filter_results(caplog: pytest.LogCaptureFixture, mocker: MockerFixture)
         }
     ]
     expected = [{"passed": {"j1": {"job_ids": [1], "group_id": 1}}}]
-    assert approver._filter_results(results) == expected  # noqa: SLF001
+    assert approver._filter_results(results) == expected  # ruff: ignore[private-member-access]
 
 
 @responses.activate

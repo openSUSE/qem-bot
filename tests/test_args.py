@@ -95,7 +95,7 @@ def test_sub_approve(
     tmp_path: Path,
     extra_args: list[str],
     env: dict[str, str],
-    expected_comment: bool,  # noqa: FBT001
+    expected_comment: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
 ) -> None:
     approve = mocker.patch("openqabot.args.Approver")
     approve.return_value.return_value = 0

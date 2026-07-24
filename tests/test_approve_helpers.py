@@ -110,7 +110,7 @@ def test_reject_calls_update_incident_reason(mocker: MockerFixture) -> None:
     approver.dry = False
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
     sub = SubReq(1, 2)
-    assert approver._reject(sub, "Reason %s") is False  # noqa: SLF001
+    assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
     mock_update.assert_called_once_with(1, "Reason SUSE:Maintenance:1:2")
 
 
@@ -119,7 +119,7 @@ def test_reject_dry_run_skips_update_incident_reason(mocker: MockerFixture) -> N
     approver.dry = True
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
     sub = SubReq(1, 2)
-    assert approver._reject(sub, "Reason %s") is False  # noqa: SLF001
+    assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
     mock_update.assert_not_called()
 
 

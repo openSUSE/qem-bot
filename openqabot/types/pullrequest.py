@@ -45,11 +45,11 @@ class OBSCommentable:
         """Check if representing a Gitea pull request."""
         return False
 
-    def format_link(  # noqa: PLR6301 - Interface compatibility requires format_link to be a non-static method
+    def format_link(  # ruff: ignore[no-self-use] - Interface compatibility requires format_link to be a non-static method
         self,
         label: str,
         url: str,
-        image_url: str | None = None,  # noqa: ARG002  - Interface compatibility
+        image_url: str | None = None,  # ruff: ignore[unused-method-argument]  - Interface compatibility
     ) -> str:
         """Format a link with an optional image badge."""
         return f"[{label}]({url})"
@@ -79,7 +79,7 @@ class PullRequest:
         """Check if representing a Gitea pull request."""
         return True
 
-    def format_link(self, label: str, url: str, image_url: str | None = None) -> str:  # noqa: PLR6301 - Interface compatibility requires format_link to be a non-static method
+    def format_link(self, label: str, url: str, image_url: str | None = None) -> str:  # ruff: ignore[no-self-use] - Interface compatibility requires format_link to be a non-static method
         """Format a link with an optional image badge."""
         if image_url:
             return f"[![{label}]({image_url})]({url})"
