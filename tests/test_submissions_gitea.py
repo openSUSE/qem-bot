@@ -61,6 +61,9 @@ def test_gitea_submissions() -> None:
     flavor = "AAA"
     test_config = {"FLAVOR": {flavor: {"archs": archs, "issues": issues, "versioned_by_submission": True}}}
 
+    # no jobs scheduled yet on the dashboard
+    responses.add(responses.GET, "http://localhost:3000/api/incident_settings/42", json=[])
+
     # create a Git-based submission
     sub = MockSubmission(type="git")
     sub.id = 42

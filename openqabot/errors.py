@@ -53,3 +53,7 @@ class AmbiguousApprovalStatusError(Error):
 
 class PostOpenQAError(Error):
     """Raised when posting a job to openQA fails."""
+
+
+class DashboardError(Error):
+    """Raised when a dashboard API request fails or returns unusable data."""
