@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.error
+import urllib.parse
 from collections import Counter
 from concurrent import futures
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import PullRequest
 from openqabot.utils import retry10 as retried_requests
 
@@ -721,6 +723,10 @@ def _build_submission_record(
     if not submission["packages"]:
         log.info("PR git:%s skipped: No packages found", pr.number)
         return None
+
+    if not dry:
+        gitea_host = urllib.parse.urlparse(config.settings.gitea_url).netloc
+        submission["priority"], submission["emu"] = get_gitea_update_data(gitea_host, pr.project, pr.number)
 
     return submission
 

@@ -4,10 +4,12 @@
 
 from __future__ import annotations
 
+import urllib.parse
 from concurrent import futures
 from logging import getLogger
 from typing import Any, cast
 
+import requests
 from jsonschema import ValidationError, validate
 
 from openqabot import config
@@ -129,6 +131,28 @@ def get_json(query: str, host: str | None = None) -> dict[str, Any]:
     """Fetch JSON data from SMELT using a GraphQL query."""
     host = host or config.settings.smelt_graphql
     return retried_requests.get(host, params={"query": query}, verify=not config.settings.insecure).json()
+
+
+def _gitea_update_id(gitea_host: str, project: str, pr_number: int) -> str:
+    return f"{gitea_host}:{project.replace('/', ':')}:{pr_number}"
+
+
+def get_gitea_update_data(gitea_host: str, project: str, pr_number: int) -> tuple[int, bool]:
+    """Get priority and emu flag for a Gitea-based submission from SMELT API v2."""
+    update_id = _gitea_update_id(gitea_host, project, pr_number)
+    encoded_id = urllib.parse.quote(update_id)
+    url = f"{config.settings.smelt_url}/api/experimental/v2/updates/{encoded_id}"
+
+    try:
+        response = retried_requests.get(url, verify=not config.settings.insecure)
+        response.raise_for_status()
+        res = response.json()
+    except (requests.exceptions.RequestException, ValueError, TypeError) as e:
+        log.warning("Could not get SMELT v2 update data for %s: %s", update_id, e)
+        return 0, False
+
+    data = res.get("data", {})
+    return data.get("priority", 0), data.get("is_emergency", False)
 
 
 def get_active_submission_ids() -> set[int]:
