@@ -111,7 +111,8 @@ class Aggregate(BaseConf):
         base_url = f"{config.settings.download_maintenance}{sub.id}/SUSE_Updates_{product}_{version}"
         return f"{base_url}/" if get_channel_type(product) == ChannelType.OPENSUSE else f"{base_url}_{issues_arch}/"
 
-    def _add_incident_data(self, full_post: dict[str, Any], data: PostData) -> None:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def _add_incident_data(full_post: dict[str, Any], data: PostData) -> None:
         """Add incident-specific data to the dashboard post."""
         for template, issues in data.test_submissions.items():
             full_post["openqa"][template] = ",".join(str(x.id) for x in issues)

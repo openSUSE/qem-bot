@@ -113,7 +113,8 @@ class Submissions(BaseConf):
             else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
-    def get_matching_channels(self, sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def get_matching_channels(sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:
         """Find channels in a submission matching the given product and architecture."""
         if get_channel_type(channel.product) == ChannelType.SLFO:
             return [
@@ -198,7 +199,8 @@ class Submissions(BaseConf):
             **({"RRID": sub.rrid} if sub.rrid else {}),
         }
 
-    def get_priority(self, ctx: SubContext) -> int:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def get_priority(ctx: SubContext) -> int:
         """Calculate job priority for a submission."""
         sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
         if "override_priority" in data:
@@ -211,7 +213,8 @@ class Submissions(BaseConf):
                 delta_prio -= sub.priority // settings.priority_scale
         return settings.base_prio + delta_prio
 
-    def apply_params_expand(self, settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def apply_params_expand(settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:
         """Apply 'params_expand' settings from metadata."""
         if "params_expand" not in data:
             return True
@@ -222,7 +225,8 @@ class Submissions(BaseConf):
         settings.update(params)
         return True
 
-    def add_metadata_urls(self, settings_data: dict[str, Any], sub: Submission) -> None:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def add_metadata_urls(settings_data: dict[str, Any], sub: Submission) -> None:
         """Add source and dashboard URLs to settings."""
         url = (
             f"{settings.gitea_url}/products/{sub.project}/pulls/{sub.id}"
@@ -232,7 +236,8 @@ class Submissions(BaseConf):
         settings_data["__SOURCE_CHANGE_URL"] = url
         settings_data["__DASHBOARD_INCIDENT_URL"] = settings.dashboard_url("incident", sub.id)
 
-    def apply_pc_images(self, settings: dict[str, Any]) -> dict[str, Any] | None:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def apply_pc_images(settings: dict[str, Any]) -> dict[str, Any] | None:
         """Apply Public Cloud tools and PINT images to settings."""
         if "PUBLIC_CLOUD_TOOLS_IMAGE_QUERY" in settings:
             settings = apply_pc_tools_image(settings)

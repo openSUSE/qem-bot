@@ -351,7 +351,8 @@ class Approver:
         )
         return False
 
-    def is_job_passing(self, job_result: dict) -> bool:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def is_job_passing(job_result: dict) -> bool:
         """Check if a job result status is passed."""
         return job_result["status"] == "passed"
 

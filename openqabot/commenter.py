@@ -70,7 +70,8 @@ class Commenter:
             handlers = {config.settings.default_submission_type: self.osc_comment, "git": self.gitea_comment}
             handlers[sub.type](sub, *res)
 
-    def calculate_state(self, jobs: list[dict[str, Any]]) -> str:  # ruff: ignore[no-self-use]
+    @staticmethod
+    def calculate_state(jobs: list[dict[str, Any]]) -> str:
         """Calculate overall state of jobs."""
         return "passed" if all(j["status"] in {"passed", "softfailed"} for j in jobs) else "failed"
 
