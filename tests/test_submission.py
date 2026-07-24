@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
-from openqabot.types.submission import Submission
+from openqabot.types.submission import Submission, sort_packages
 from openqabot.types.types import ArchVer, Repos
 
 from .fixtures.submissions import MockSubmission
@@ -43,6 +43,40 @@ test_data = {
     "embargoed": True,
     "priority": 600,
 }
+
+
+@pytest.mark.parametrize(
+    ("packages", "expected_first"),
+    [
+        pytest.param(
+            [
+                "dtb-aarch64",
+                "dtb-armv7l",
+                "kernel-64kb",
+                "kernel-debug",
+                "kernel-default",
+                "kernel-default-base",
+                "kernel-docs",
+                "kernel-kvmsmall",
+                "kernel-livepatch-SLE15-SP6_Update_29",
+                "kernel-lpae",
+                "kernel-obs-build",
+                "kernel-obs-qa",
+                "kernel-source",
+                "kernel-syms",
+                "kernel-zfcpdump",
+            ],
+            "kernel-default",
+            id="kernel source wins over arch/flavor variants",
+        ),
+        pytest.param(["nginx"], "nginx", id="single package unchanged"),
+        pytest.param(["curl", "libcurl4", "libcurl-devel"], "curl", id="devel subpackage demoted"),
+        pytest.param(["foo-devel", "foo-debuginfo"], "foo-devel", id="all-demoted falls back to shortest"),
+        pytest.param(["bbb", "aaa"], "aaa", id="alphabetical tie-break for determinism"),
+    ],
+)
+def test_sort_packages_representative_first(packages: list[str], expected_first: str) -> None:
+    assert sort_packages(packages)[0] == expected_first
 
 
 @pytest.fixture
