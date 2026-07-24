@@ -30,7 +30,7 @@ jobs:
         with:
           enable-cache: true
       - name: Setup enviroment
-        run: uv sync
+        run: uv sync --locked
       - name: Run tests + cov report
         run: uv run make ISOLATE=0 test-with-coverage
       - name: Upload coverage to CodeCov
@@ -50,7 +50,7 @@ jobs:
         with:
           enable-cache: true
       - name: Setup enviroment
-        run: uv sync
+        run: uv sync --locked
       - name: Run Integration Tests
         run: |
           curl --retry 3 -sS -o /usr/local/bin/retry https://raw.githubusercontent.com/okurz/retry/refs/heads/main/retry
