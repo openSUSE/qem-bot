@@ -249,6 +249,9 @@ class RepoDiff:
             diff = packages_b - packages_a
             count += len(diff)
             diff_by_arch[arch] = diff
+            if diff:
+                pkg_list = ", ".join(f"{p.name}-{p.version}-{p.rel}" for p in sorted(diff, key=lambda x: x.name))
+                log.info("Repo diff for arch %s: %d new packages: %s", arch, len(diff), pkg_list)
         return (diff_by_arch, count)
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:

@@ -301,8 +301,8 @@ class IncrementApprover:
         return next(
             (
                 res
-                for additional_build in config_inc.additional_builds
-                if (res := self._match_additional_build(package, additional_build, build_info)) is not None
+                for b in config_inc.additional_builds
+                if (res := self._match_additional_build(package, b, build_info)) is not None
             ),
             None,
         )
@@ -314,7 +314,27 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> list[dict[str, str]]:
         """Determine extra builds for all additional builds in the configuration."""
-        return [b for p in package_diff if (b := self.extra_builds_for_package(p, config_inc, build_info)) is not None]
+
+        def get_first_match(p: Package) -> tuple[dict[str, str], dict[str, Any]] | None:
+            for b in config_inc.additional_builds:
+                res = self._match_additional_build(p, b, build_info)
+                if res is not None:
+                    return res, b
+            return None
+
+        valid_packages = [p for p in package_diff if not (p.is_placeholder or p.is_initial_version or p.is_debug_asset)]
+        matches = [m for p in valid_packages if (m := get_first_match(p)) is not None]
+        extra_builds = [res for res, _ in matches]
+        matched_ids = {id(b) for _, b in matches}
+
+        for b in config_inc.additional_builds:
+            if id(b) in matched_ids:
+                continue
+            suffix = b.get("build_suffix", "")
+            regex = b.get("package_name_regex") or b.get("regex", "")
+            info_message = "Additional build '%s' (regex: '%s') matched 0 packages in the repository diff."
+            log.info(info_message, suffix, regex)
+        return extra_builds
 
     @staticmethod
     def populate_params_from_env(params: dict[str, str], env_var: str) -> None:
