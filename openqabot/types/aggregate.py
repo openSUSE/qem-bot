@@ -28,6 +28,8 @@ log = getLogger("bot.types.aggregate")
 
 ALL_ISSUES_KEY = "TEST_ISSUES[]"
 
+VALID_AGGREGATE_KEYS = frozenset({"FLAVOR", "archs", "onetime", "packages", "excluded_packages", "test_issues"})
+
 
 class PostData(NamedTuple):
     """Data to be posted to dashboard."""
@@ -44,12 +46,18 @@ class Aggregate(BaseConf):
     def __init__(self, config: JobConfig) -> None:
         """Initialize the Aggregate class."""
         super().__init__(config)
+        self._warn_unknown_keys(config.config)
         self.flavor = config.config["FLAVOR"]
         self.archs = config.config["archs"]
         self.onetime = config.config.get("onetime", False)
         self.packages = config.config.get("packages")
         self.excluded_packages = config.config.get("excluded_packages")
         self.test_issues = self.normalize_repos(config.config)
+
+    def _warn_unknown_keys(self, config: dict[str, Any]) -> None:
+        """Warn about unrecognized aggregate keys to catch typos like a misspelled blocklist."""
+        for key in set(config) - VALID_AGGREGATE_KEYS:
+            log.warning("Aggregate (product %s): Ignoring unknown metadata key %r", self.product, key)
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, ProdVer]:

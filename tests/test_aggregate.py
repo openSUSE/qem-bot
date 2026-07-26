@@ -236,6 +236,26 @@ def test_filter_submissions_staging(aggregate_factory: Any, submission_mock: Any
 
 
 @pytest.mark.parametrize(
+    ("extra_config", "expected_warnings"),
+    [
+        pytest.param({"onetime": True, "packages": ["x"]}, [], id="all-known-keys"),
+        pytest.param({"excluded_package": ["x"]}, ["excluded_package"], id="typo-blocklist"),
+        pytest.param({"bogus": 1, "typo": 2}, ["bogus", "typo"], id="multiple-unknown"),
+    ],
+)
+def test_warn_unknown_aggregate_keys(
+    aggregate_factory: Any, caplog: pytest.LogCaptureFixture, extra_config: dict, expected_warnings: list[str]
+) -> None:
+    """Unknown aggregate keys are warned about so a misspelled blocklist is not silently ignored."""
+    with caplog.at_level("WARNING", logger="bot.types.aggregate"):
+        aggregate_factory("product", config={"FLAVOR": "None", "archs": [], "test_issues": {}, **extra_config})
+    warned = [r.message for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warned) == len(expected_warnings)
+    for key in expected_warnings:
+        assert any(repr(key) in msg for msg in warned)
+
+
+@pytest.mark.parametrize(
     ("extra_config", "contains", "expected_kept"),
     [
         pytest.param({}, False, True, id="no-filter-keeps"),

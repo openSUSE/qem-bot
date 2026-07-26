@@ -77,6 +77,8 @@ Example:
 * `packages` - optional, list of package names (or first part of pkg name). A submission must contain a package from this list to be included in the aggregate. Same semantics as the incidents `packages` key.
 * `excluded_packages` - optional, list of package names, opposite of `packages`. A submission containing a package in this list is excluded from the aggregate. Same semantics as the incidents `excluded_packages` key.
 
+Unrecognized aggregate keys are logged as a warning and ignored, so a misspelled key (e.g. `excluded_package` instead of `excluded_packages`) does not silently disable its intended effect.
+
 ## Incidents part of the configuration
 
 Used to schedule jobs per incident. Scheduled jobs will have the BUILD **:INCIDENT_NR:shortest_package_name**. All needed links to the scheduled incident repositories are in the `INCIDENT_REPO` variable.
