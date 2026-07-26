@@ -24,6 +24,20 @@ if TYPE_CHECKING:
 
 log = getLogger("bot.types.submissions")
 
+VALID_FLAVOR_KEYS = frozenset({
+    "archs",
+    "issues",
+    "required_issues",
+    "aggregate_job",
+    "aggregate_check_true",
+    "aggregate_check_false",
+    "override_priority",
+    "versioned_by_submission",
+    "packages",
+    "excluded_packages",
+    "params_expand",
+})
+
 
 class SubContext(NamedTuple):
     """Context for a submission."""
@@ -47,6 +61,7 @@ class Submissions(BaseConf):
     def __init__(self, config: JobConfig, extrasettings: set[str]) -> None:
         """Initialize the Submissions class."""
         super().__init__(config)
+        self._warn_unknown_flavor_keys(config.config["FLAVOR"])
         self.flavors = self.normalize_repos(config.config["FLAVOR"])
         self.singlearch = extrasettings
         self.valid_archs = {arch for data in self.flavors.values() for arch in data["archs"]}
@@ -54,6 +69,12 @@ class Submissions(BaseConf):
     def __repr__(self) -> str:
         """Return a string representation of the Submissions."""
         return f"<Submissions product: {self.product}>"
+
+    def _warn_unknown_flavor_keys(self, config: dict[str, Any]) -> None:
+        """Warn about unrecognized per-flavor keys to catch typos like a misspelled blocklist."""
+        for flavor, data in config.items():
+            for key in set(data) - VALID_FLAVOR_KEYS:
+                log.warning("Flavor %s (product %s): Ignoring unknown metadata key %r", flavor, self.product, key)
 
     @staticmethod
     def normalize_repos(config: dict[str, Any]) -> dict[str, Any]:

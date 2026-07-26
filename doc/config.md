@@ -132,7 +132,7 @@ incidents:
 * `excluded_packages` - optional, list of package names, opposite of `packages`. If the Incident contains a package in this list, it isn't scheduled.
 * `params_expand` - flavor specific settings. Merged with `settings` dictionary. `params_expand` values take precedence over `settings`. `DISTRI` and `VERSION` cannot be configured with `params_expand`.
 
-All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`.
+All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`. Unrecognized per-flavor keys are logged as a warning and ignored, so a misspelled key (e.g. `excluded_package` instead of `excluded_packages`) does not silently disable its intended effect.
 
 ## Advanced Configuration: Concatenating Lists with !concat
 

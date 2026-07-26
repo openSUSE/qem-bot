@@ -2,11 +2,20 @@
 # SPDX-License-Identifier: MIT
 """Test Submissions."""
 
+import pytest
+
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submissions import Submissions
 from openqabot.types.types import Repos
 
 from .fixtures.submissions import MockSubmission
+
+
+def _make_submissions(flavor_config: dict, product: str = "SLE") -> Submissions:
+    return Submissions(
+        JobConfig(product, None, None, {}, {"FLAVOR": flavor_config}),
+        extrasettings=set(),
+    )
 
 
 def test_submissions_constructor() -> None:
@@ -66,3 +75,26 @@ def test_making_repo_url() -> None:
     repo = subs.make_repo_url(sub, slfo_chan)
     exp_repo = "http://%REPO_MIRROR_HOST%/ibs/SUSE:/SLFO:/SUSE:/SLFO:/1.1.99:/PullRequest:/166:/SLES/product/repo/SLES-15.99-x86_64/"
     assert repo == exp_repo
+
+
+@pytest.mark.parametrize(
+    ("flavor_config", "expected_warnings"),
+    [
+        pytest.param({"AAA": {"archs": ["x86_64"], "excluded_packages": ["foo"]}}, [], id="all-known-keys"),
+        pytest.param(
+            {"AAA": {"archs": ["x86_64"], "excluded_package": ["foo"]}}, ["excluded_package"], id="typo-blocklist"
+        ),
+        pytest.param({"AAA": {"archs": ["x86_64"], "bogus": 1, "typo": 2}}, ["bogus", "typo"], id="multiple-unknown"),
+        pytest.param({}, [], id="no-flavors"),
+    ],
+)
+def test_warn_unknown_flavor_keys(
+    caplog: pytest.LogCaptureFixture, flavor_config: dict, expected_warnings: list[str]
+) -> None:
+    """Unknown per-flavor keys are warned about so a misspelled blocklist is not silently ignored."""
+    with caplog.at_level("WARNING", logger="bot.types.submissions"):
+        _make_submissions(flavor_config)
+    warned = [r.message for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warned) == len(expected_warnings)
+    for key in expected_warnings:
+        assert any(repr(key) in msg for msg in warned)
