@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -112,14 +113,17 @@ def _try_load(loader: YAML, path: Path) -> dict | None:
     return data
 
 
-def _load_one_metadata(
-    path: Path,
-    data: dict,
-    *,
-    disable_aggregate: bool,
-    disable_submissions: bool,
-    extrasettings: set[str],
-) -> Iterator[Aggregate | Submissions]:
+@dataclass
+class MetadataLoadOptions:
+    """Options controlling how metadata is turned into job configurations."""
+
+    disable_aggregate: bool
+    disable_submissions: bool
+    extrasettings: set[str]
+    global_excluded_packages: list[str] | None = None
+
+
+def _load_one_metadata(path: Path, data: dict, opts: MetadataLoadOptions) -> Iterator[Aggregate | Submissions]:
     """Parse a single metadata configuration dictionary.
 
     Yields:
@@ -139,14 +143,15 @@ def _load_one_metadata(
     product_repo = data.get("product_repo")
     product_version = data.get("product_version")
 
+    def _job_config(config: dict) -> JobConfig:
+        return JobConfig(product, product_repo, product_version, settings, config, opts.global_excluded_packages)
+
     for key in data:
-        if key == "incidents" and not disable_submissions:
-            yield Submissions(
-                JobConfig(product, product_repo, product_version, settings, data["incidents"]), extrasettings
-            )
-        elif key == "aggregate" and not disable_aggregate:
+        if key == "incidents" and not opts.disable_submissions:
+            yield Submissions(_job_config(data["incidents"]), opts.extrasettings)
+        elif key == "aggregate" and not opts.disable_aggregate:
             try:
-                yield Aggregate(JobConfig(product, product_repo, product_version, settings, data["aggregate"]))
+                yield Aggregate(_job_config(data["aggregate"]))
             except NoTestIssuesError:
                 log.info("Aggregate configuration skipped: Missing 'test_issues' for product %s", product)
 
@@ -202,6 +207,24 @@ def concat_constructor(constructor: SafeConstructor, node: SequenceNode) -> Iter
 ConcatSafeConstructor.add_constructor("!concat", concat_constructor)
 
 
+def _load_central_excluded_packages(loader: YAML, path: Path) -> list[str] | None:
+    """Read the central 'excluded_packages' blocklist from config.yml in the configs dir.
+
+    This cross-product blocklist keeps packages (e.g. kernel livepatch updates)
+    out of scheduling everywhere, avoiding per-flavor duplication across files.
+    """
+    config_yml = (path if path.is_dir() else path.parent) / "config.yml"
+    if not config_yml.is_file() or not (data := _try_load(loader, config_yml)):
+        return None
+    excluded = data.get("excluded_packages")
+    if excluded is None:
+        return None
+    if not isinstance(excluded, list):
+        log.warning("Central blocklist ignored: 'excluded_packages' in %s is not a list", config_yml)
+        return None
+    return excluded
+
+
 def load_metadata(
     path: Path,
     *,
@@ -214,13 +237,15 @@ def load_metadata(
     loader.Constructor = ConcatSafeConstructor
     log.debug("Loading metadata from %s: Submissions=%s, Aggregates=%s", path, not submissions, not aggregate)
 
+    opts = MetadataLoadOptions(
+        disable_aggregate=aggregate,
+        disable_submissions=submissions,
+        extrasettings=extrasettings,
+        global_excluded_packages=_load_central_excluded_packages(loader, path),
+    )
+
     return [
-        item
-        for p in get_yml_list(path)
-        if (data := _try_load(loader, p))
-        for item in _load_one_metadata(
-            p, data, disable_aggregate=aggregate, disable_submissions=submissions, extrasettings=extrasettings
-        )
+        item for p in get_yml_list(path) if (data := _try_load(loader, p)) for item in _load_one_metadata(p, data, opts)
     ]
 
 

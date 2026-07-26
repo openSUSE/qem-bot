@@ -85,6 +85,40 @@ def test_load_metadata_exclude_all() -> None:
     assert len(result) == 0
 
 
+def _write_product(tmp_path: Path) -> None:
+    (tmp_path / "prod.yml").write_text(
+        "product: P\nsettings:\n  DISTRI: sle\n  VERSION: '1'\n"
+        "incidents:\n  FLAVOR:\n    F:\n      archs:\n        - x86_64\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("config_yml", "expected", "warns"),
+    [
+        pytest.param("excluded_packages:\n  - foo\n  - bar\n", ["foo", "bar"], False, id="list"),
+        pytest.param("obs_url: https://api.example.com\n", None, False, id="key-absent"),
+        pytest.param("excluded_packages: not-a-list\n", None, True, id="not-a-list"),
+        pytest.param(None, None, False, id="missing-file"),
+    ],
+)
+def test_load_metadata_central_blocklist(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+    config_yml: str | None,
+    expected: list[str] | None,
+    *,
+    warns: bool,
+) -> None:
+    """The central blocklist from config.yml is threaded into every worker; non-list values warn."""
+    if config_yml is not None:
+        (tmp_path / "config.yml").write_text(config_yml)
+    _write_product(tmp_path)
+    with caplog.at_level(logging.WARNING, logger="bot.loader.config"):
+        workers = load_metadata(tmp_path, aggregate=True, submissions=False, extrasettings=set())
+    assert workers[0].global_excluded_packages == expected
+    assert ("Central blocklist ignored" in caplog.text) is warns
+
+
 def test_read_products(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
 

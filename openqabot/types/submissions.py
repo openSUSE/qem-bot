@@ -169,12 +169,13 @@ class Submissions(BaseConf):
             return True
         return sub.staging
 
-    @staticmethod
-    def _is_invalid_package_or_channel(ctx: SubContext, matches: dict[str, list[Repos]]) -> bool:
+    def _is_invalid_package_or_channel(self, ctx: SubContext, matches: dict[str, list[Repos]]) -> bool:
         sub, arch, flavor, data = ctx.sub, ctx.arch, ctx.flavor, ctx.data
         if data.get("packages") is not None and not sub.contains_package(data["packages"]):
             return True
         if data.get("excluded_packages") is not None and sub.contains_package(data["excluded_packages"]):
+            return True
+        if self.is_globally_excluded(sub):
             return True
         if not matches:
             log.debug("Submission %s skipped for %s on %s: No matching channels found in metadata", sub, flavor, arch)

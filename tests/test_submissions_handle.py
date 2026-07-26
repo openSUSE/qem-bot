@@ -252,6 +252,27 @@ def test_handle_submission_excluded_packages_skip() -> None:
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
 
+@pytest.mark.parametrize("blocked", [True, False])
+def test_should_skip_central_blocklist(*, blocked: bool) -> None:
+    """should_skip honors the central blocklist after per-flavor package/channel checks pass."""
+    sub = MockSubmission(id=1, ongoing=True, staging=False, contains_package_value=blocked)
+    submissions_obj = Submissions(
+        JobConfig(
+            product="SLES",
+            product_repo=None,
+            product_version=None,
+            settings={"VERSION": "15-SP3", "DISTRI": "SLES"},
+            config={"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}},
+            global_excluded_packages=["kernel-livepatch"] if blocked else None,
+        ),
+        extrasettings=set(),
+    )
+    ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data={})
+    cfg = SubConfig(ci_url=None, ignore_onetime=True)
+    matches = {"OS_TEST_ISSUES": [Repos("SLES", "15-SP3", "x86_64")]}
+    assert submissions_obj.should_skip(ctx, cfg, matches) is blocked
+
+
 def test_handle_submission_livepatch_kgraft(mocker: MockerFixture) -> None:
     sub = MockSubmission(
         id=1,

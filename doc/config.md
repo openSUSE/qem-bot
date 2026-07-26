@@ -24,6 +24,12 @@ Example of `singlearch.yml`:
 If an incident has a package from this list, a job is automatically marked as not requiring **aggregate**. That means the Incident can be approved without existing aggregate jobs.
 Other YAML files contain the definition of **product** and data for either or both **aggregate** and **submissions**
 
+## Central configuration: `config.yml`
+
+An optional `config.yml` in the same directory holds settings shared across all products.
+
+* `excluded_packages` - optional, list of package names (or first part of pkg name). A central blocklist applied to **every** product's incident and aggregate scheduling, in addition to any per-flavor or per-aggregate `excluded_packages`. Use this to keep a package (e.g. `kernel-livepatch-...`) out of scheduling everywhere without duplicating the key across files. A non-list value is logged as a warning and ignored.
+
 
 ## Structure of a product definition
 

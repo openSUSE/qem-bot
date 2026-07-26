@@ -21,6 +21,7 @@ class JobConfig:
     product_version: str | None
     settings: dict[str, Any]
     config: dict[str, Any]
+    global_excluded_packages: list[str] | None = None
 
 
 class BaseConf(ABC):
@@ -32,6 +33,11 @@ class BaseConf(ABC):
         self.product_repo = config.product_repo
         self.product_version = config.product_version
         self.settings = config.settings
+        self.global_excluded_packages = config.global_excluded_packages
+
+    def is_globally_excluded(self, submission: Submission) -> bool:
+        """Check if a submission matches the central (cross-product) blocklist."""
+        return bool(self.global_excluded_packages) and submission.contains_package(self.global_excluded_packages)
 
     @abstractmethod
     def __call__(

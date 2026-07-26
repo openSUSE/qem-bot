@@ -96,6 +96,9 @@ class Aggregate(BaseConf):
             if self.excluded_packages is not None and submission.contains_package(self.excluded_packages):
                 log.debug("Submission %s skipped: Package in aggregate 'excluded_packages' blocklist", submission)
                 return False
+            if self.is_globally_excluded(submission):
+                log.debug("Submission %s skipped: Package in central 'excluded_packages' blocklist", submission)
+                return False
             return True
 
         return [s for s in submissions if is_valid(s)]
