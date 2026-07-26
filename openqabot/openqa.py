@@ -68,7 +68,11 @@ class OpenQAInterface:
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
-            log.exception("openQA API error: %s", e.args[-1])
+            (_, _, status_code, text, *_) = e.args
+            if status_code == HTTPStatus.NOT_FOUND and "no templates found" in str(text):
+                log.info("Skipping job POST, no openQA templates for product (test-owner scope): %s", text)
+                return
+            log.exception("openQA API error: %s", text)
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
