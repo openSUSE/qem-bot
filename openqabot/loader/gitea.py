@@ -316,6 +316,19 @@ def is_review_requested_by(
     return any(user in user_specifications for user in users)
 
 
+def _effective_state(review: dict[str, Any]) -> str:
+    """Return a review's state, demoting a stale APPROVED to a pending re-review.
+
+    After a push the previous QAM approval is marked stale (not dismissed);
+    it must not count as approved so the submission is re-reviewed instead of
+    staying blocked (poo#202953).
+    """
+    state = review.get("state", "")
+    if state == "APPROVED" and review.get("stale"):
+        return "REQUEST_REVIEW"
+    return state
+
+
 def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
     """Process PR reviews and update submission status.
 
@@ -323,7 +336,7 @@ def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
     """
     pending_states = {"PENDING", "REQUEST_REVIEW"}
     open_reviews = [r for r in reviews if not r.get("dismissed", True)]
-    qam_states = [r.get("state", "") for r in open_reviews if is_review_requested_by(r)]
+    qam_states = [_effective_state(r) for r in open_reviews if is_review_requested_by(r)]
     has_other_pending = any(r.get("state", "") in pending_states for r in open_reviews if not is_review_requested_by(r))
 
     counts = Counter(qam_states)

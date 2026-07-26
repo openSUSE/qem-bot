@@ -145,6 +145,30 @@ def test_add_reviews_coverage(mocker: MockerFixture) -> None:
     assert submission["inReview"] is True
 
 
+@pytest.mark.parametrize(
+    ("state", "stale", "exp_approved", "exp_in_review_qam"),
+    [
+        pytest.param("APPROVED", False, True, False, id="fresh-approval-is-approved"),
+        pytest.param("APPROVED", True, False, True, id="stale-approval-needs-rereview"),
+        pytest.param("REQUEST_REVIEW", True, False, True, id="stale-request-still-pending"),
+    ],
+)
+def test_add_reviews_stale_reapproval(
+    mocker: MockerFixture,
+    state: str,
+    stale: bool,  # noqa: FBT001
+    exp_approved: bool,  # noqa: FBT001
+    exp_in_review_qam: bool,  # noqa: FBT001
+) -> None:
+    """A stale QAM approval (poo#202953) must trigger re-review, not stay approved."""
+    mocker.patch("openqabot.loader.gitea.is_review_requested_by", return_value=True)
+    submission: dict[str, Any] = {}
+    reviews = [{"dismissed": False, "stale": stale, "state": state}]
+    assert gitea.add_reviews(submission, reviews) == 1
+    assert submission["approved"] is exp_approved
+    assert submission["inReviewQAM"] is exp_in_review_qam
+
+
 def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
     submission = {"number": 123}
     res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
