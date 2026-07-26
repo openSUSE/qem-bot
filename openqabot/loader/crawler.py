@@ -31,12 +31,16 @@ class Crawler:
 
         """
         self.verify: bool = verify
-        retry_strategy = Retry(
+        # A 404 for an IBS repo folder means the content is absent and will
+        # not appear within the retry window, so abort immediately instead of
+        # retrying (poo#204114). Keep only transient codes that can succeed on
+        # retry.
+        self.retry_strategy = Retry(
             total=5,
-            status_forcelist=frozenset([401, 403, 404, 413, 429, 503]),
+            status_forcelist=frozenset([403, 413, 429, 503]),
             backoff_factor=1,
         )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
+        adapter = HTTPAdapter(max_retries=self.retry_strategy)
         self.retry_session = requests.Session()
         self.retry_session.mount("https://", adapter)
         self.retry_session.mount("http://", adapter)

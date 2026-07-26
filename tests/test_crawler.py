@@ -97,3 +97,10 @@ def test_crawler_init_settings(crawler: Crawler) -> None:
     assert crawler.verify is not settings.insecure
     assert "https://" in crawler.retry_session.adapters
     assert "http://" in crawler.retry_session.adapters
+
+
+def test_crawler_does_not_retry_on_404(crawler: Crawler) -> None:
+    """404 (absent IBS folder) must abort immediately, not retry (poo#204114)."""
+    forcelist = crawler.retry_strategy.status_forcelist
+    assert 404 not in forcelist
+    assert forcelist == frozenset([403, 413, 429, 503])
