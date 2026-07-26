@@ -549,6 +549,9 @@ def test_approval_if_failing_jobs_are_in_development_group(
 def test_approval_with_mixed_jobs_development_ignored(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
 ) -> None:
+    # poo#192355: openQA isos/job_stats resolves clones server-side and reports
+    # only the latest job's result, so a passing (retried) job drives approval
+    # here exactly like any other passing job; no clone-specific bot logic exists.
     responses.add(
         responses.GET,
         fake_openqa_url_job_stat,
