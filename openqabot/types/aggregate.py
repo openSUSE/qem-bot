@@ -47,6 +47,8 @@ class Aggregate(BaseConf):
         self.flavor = config.config["FLAVOR"]
         self.archs = config.config["archs"]
         self.onetime = config.config.get("onetime", False)
+        self.packages = config.config.get("packages")
+        self.excluded_packages = config.config.get("excluded_packages")
         self.test_issues = self.normalize_repos(config.config)
 
     @staticmethod
@@ -79,6 +81,12 @@ class Aggregate(BaseConf):
                 return False
             if self.filter_embargoed(self.flavor) and submission.embargoed:
                 log.debug("Submission %s skipped: Embargoed and embargo-filtering enabled", submission)
+                return False
+            if self.packages is not None and not submission.contains_package(self.packages):
+                log.debug("Submission %s skipped: No package in aggregate 'packages' allowlist", submission)
+                return False
+            if self.excluded_packages is not None and submission.contains_package(self.excluded_packages):
+                log.debug("Submission %s skipped: Package in aggregate 'excluded_packages' blocklist", submission)
                 return False
             return True
 

@@ -235,6 +235,26 @@ def test_filter_submissions_staging(aggregate_factory: Any, submission_mock: Any
     assert res == []
 
 
+@pytest.mark.parametrize(
+    ("extra_config", "contains", "expected_kept"),
+    [
+        pytest.param({}, False, True, id="no-filter-keeps"),
+        pytest.param({"packages": ["foo"]}, True, True, id="allowlist-match-keeps"),
+        pytest.param({"packages": ["foo"]}, False, False, id="allowlist-miss-drops"),
+        pytest.param({"excluded_packages": ["foo"]}, True, False, id="blocklist-match-drops"),
+        pytest.param({"excluded_packages": ["foo"]}, False, True, id="blocklist-miss-keeps"),
+    ],
+)
+def test_filter_submissions_package_lists(
+    aggregate_factory: Any, submission_mock: Any, extra_config: dict, *, contains: bool, expected_kept: bool
+) -> None:
+    """Aggregate applies 'packages' allowlist and 'excluded_packages' blocklist like incidents."""
+    acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": [], "test_issues": {}, **extra_config})
+    sub = submission_mock()
+    sub.contains_package.return_value = contains
+    assert acc.filter_submissions([sub]) == ([sub] if expected_kept else [])
+
+
 def test_get_test_submissions_repos_existing(aggregate_factory: Any, submission_mock: Any) -> None:
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"ISSUES_1": "P:V"}})
     sub = submission_mock(product="P", version="V", arch="A")

@@ -74,6 +74,8 @@ Example:
   * `OS_TEST_ISSUES` variable is implicit, always used by *os-autoinst-distri-opensuse*, contains identification of the base product.
   * All others contain modules, addons, and extensions used in this aggregate. First part of the key name must be the same (uppercase, os-autoinst-distri-opensuse will convert it to lowercase) as an addon, extension or module identification in `SCC_ADDONS` variable defined in the job template inside the openQA instance.
 * `onetime` - optional key, boolean. By default, qem-bot sets it to `False`. When set to `True`, it limits the bot from scheduling this aggregate to only once per day.
+* `packages` - optional, list of package names (or first part of pkg name). A submission must contain a package from this list to be included in the aggregate. Same semantics as the incidents `packages` key.
+* `excluded_packages` - optional, list of package names, opposite of `packages`. A submission containing a package in this list is excluded from the aggregate. Same semantics as the incidents `excluded_packages` key.
 
 ## Incidents part of the configuration
 
