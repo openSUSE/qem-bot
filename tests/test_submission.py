@@ -487,3 +487,22 @@ def test_mock_submission_contains_package_none() -> None:
     sub = MockSubmission(packages=["pkg1"])
     assert sub.contains_package(["pkg1"]) is True
     assert sub.contains_package(["other"]) is False
+
+
+@pytest.mark.parametrize(
+    ("packages", "requires", "expected"),
+    [
+        pytest.param(["kernel-default-devel"], ["kernel-default"], True, id="prefix-match-default"),
+        pytest.param(["kernel-default-devel"], ["=kernel-default"], False, id="exact-miss"),
+        pytest.param(["kernel-default"], ["=kernel-default"], True, id="exact-match"),
+        pytest.param(["kernel-default", "foo"], ["=foo", "=bar"], True, id="exact-any"),
+        pytest.param(["kernel-livepatch-tools"], ["kernel-livepatch"], False, id="prefix-tools-exception"),
+        pytest.param(["kernel-livepatch-tools"], ["=kernel-livepatch-tools"], False, id="exact-tools-exception"),
+        pytest.param(["pkg"], ["=exact", "pre"], False, id="mixed-no-match"),
+        pytest.param(["prefixed-pkg"], ["=exact", "pre"], True, id="mixed-prefix-match"),
+    ],
+)
+def test_contains_package_exact_and_prefix(packages: list[str], requires: list[str], *, expected: bool) -> None:
+    """'=' entries match exactly; others match by prefix; kernel-livepatch-tools stays excluded."""
+    sub = MockSubmission(packages=packages)
+    assert Submission.contains_package(sub, requires) is expected

@@ -144,6 +144,10 @@ incidents:
 
 All optional keys can be omitted. By default qem-bot schedules Incidents for any matching `issue`, for any package in Incident, with computed job priority and with `aggregate_job: true`. Unrecognized per-flavor keys are logged as a warning and ignored, so a misspelled key (e.g. `excluded_package` instead of `excluded_packages`) does not silently disable its intended effect.
 
+### Package matching (`packages`, `excluded_packages`)
+
+Every package-matching list (per-flavor `packages`/`excluded_packages`, the aggregate equivalents, and the central `excluded_packages`) uses the same rule: by default an entry matches a package by **prefix** (e.g. `kernel-livepatch` matches `kernel-livepatch-SLE16-RT_Update`). Prefix an entry with `=` to require an **exact** match instead (e.g. `=kernel-default` matches `kernel-default` but not `kernel-default-devel`). The package `kernel-livepatch-tools` never matches, so a broad `kernel-livepatch` entry does not catch the generic tooling package.
+
 ## Advanced Configuration: Concatenating Lists with !concat
 
 For complex configurations where several products or flavors share similar package lists or architectures, `qem-bot` supports a custom YAML tag `!concat`. This tag allows you to merge multiple lists (usually defined as anchors) into a single one.

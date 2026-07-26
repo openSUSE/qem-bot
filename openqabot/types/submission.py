@@ -294,5 +294,16 @@ class Submission:
         return any(p.startswith(("kgraft-patch-", "kernel-livepatch")) for p in packages)
 
     def contains_package(self, requires: list[str]) -> bool:
-        """Check if the submission contains any of the required packages."""
-        return any(p != "kernel-livepatch-tools" and p.startswith(tuple(requires)) for p in self.packages)
+        """Check if the submission contains any of the required packages.
+
+        An entry prefixed with ``=`` matches a package name exactly; any other
+        entry matches by prefix (the default). This lets configs opt into
+        precise matching, e.g. ``=kernel-default`` to avoid catching
+        ``kernel-default-devel``.
+        """
+        exact = {r[1:] for r in requires if r.startswith("=")}
+        prefixes = tuple(r for r in requires if not r.startswith("="))
+        return any(
+            p != "kernel-livepatch-tools" and (p in exact or (bool(prefixes) and p.startswith(prefixes)))
+            for p in self.packages
+        )
