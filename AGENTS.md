@@ -8,7 +8,7 @@ ruff.
 
 - `make tidy`: Format code with ruff.
 - `make checkstyle`: Run full linting (ruff + vulture).
-- `make typecheck-ty`: Type checking.
+- `make check-types`: Type checking.
 - `make test`: Run all tests with full coverage
 
 ## Coverage Verification
