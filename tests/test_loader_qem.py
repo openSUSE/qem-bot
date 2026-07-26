@@ -170,7 +170,12 @@ def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
 
 
 def test_get_single_submission(mock_get_json: MagicMock) -> None:
-    mock_get_json.return_value = {**_FULL_INCIDENT, "type": DEFAULT_SUBMISSION_TYPE}
+    mock_get_json.return_value = {
+        **_FULL_INCIDENT,
+        "type": DEFAULT_SUBMISSION_TYPE,
+        "url": "http://foo.bar",
+        "scm_info": "foo_commit",
+    }
 
     res = get_single_submission(1, submission_type=DEFAULT_SUBMISSION_TYPE)
 
@@ -178,6 +183,8 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
     assert res[0].sub == 1
     assert res[0].req == 123
     assert res[0].type == DEFAULT_SUBMISSION_TYPE
+    assert res[0].url == "http://foo.bar"
+    assert res[0].scm_info == "foo_commit"
     assert res[0].submission is not None
     mock_get_json.assert_called_once_with(
         "api/incidents/1", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
@@ -493,6 +500,8 @@ def test_get_single_submission_with_type(mock_get_json: MagicMock) -> None:
     res = get_single_submission(123, submission_type=DEFAULT_SUBMISSION_TYPE)
     assert len(res) == 1
     assert res[0].sub == 123
+    assert not res[0].url
+    assert not res[0].scm_info
     assert res[0].submission is not None
     mock_get_json.assert_called_once_with(
         "api/incidents/123", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
@@ -504,6 +513,8 @@ def test_get_single_submission_no_type(mock_get_json: MagicMock) -> None:
     res = get_single_submission(123)
     assert len(res) == 1
     assert res[0].sub == 123
+    assert not res[0].url
+    assert not res[0].scm_info
     assert res[0].submission is not None
     mock_get_json.assert_called_once_with("api/incidents/123", headers=settings.dashboard_token_dict, params={})
 

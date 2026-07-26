@@ -36,6 +36,18 @@ class SubReq(NamedTuple):
     scm_info: str | None = None
     submission: Submission | None = None
 
+    @classmethod
+    def from_dashboard(cls, d: dict) -> SubReq:
+        """Build a SubReq from a dashboard submission dict."""
+        return cls(
+            d["number"],
+            d["rr_number"],
+            d.get("type", ""),
+            d.get("url", ""),
+            d.get("scm_info", ""),
+            Submission.create(d),
+        )
+
 
 class JobAggr(NamedTuple):
     """Job and aggregate information."""
@@ -111,31 +123,13 @@ def get_active_submissions(submission_type: str | None = None) -> Sequence[int]:
 def get_submissions_approver() -> list[SubReq]:
     """Fetch submissions that are ready for QAM review."""
     submissions = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict)
-    return [
-        SubReq(
-            i["number"],
-            i["rr_number"],
-            i.get("type", ""),
-            i.get("url", ""),
-            i.get("scm_info", ""),
-            Submission.create(i),
-        )
-        for i in submissions
-        if i["inReviewQAM"]
-    ]
+    return [SubReq.from_dashboard(i) for i in submissions if i["inReviewQAM"]]
 
 
 def get_single_submission(submission_id: int, submission_type: str | None = None) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
     submission = _get_submission(submission_id, submission_type)
-    return [
-        SubReq(
-            submission["number"],
-            submission["rr_number"],
-            submission.get("type"),
-            submission=Submission.create(submission),
-        )
-    ]
+    return [SubReq.from_dashboard(submission)]
 
 
 def get_submission_settings(
