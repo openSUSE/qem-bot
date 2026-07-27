@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import gzip
+import io
 import json
 import re
 import sys
@@ -149,8 +150,8 @@ class RepoDiff:
             raise NoResultsError(error_msg)
         return min(packages, key=lambda p: p.name).name
 
-    def load_repodata(self, url: str) -> etree.Element | None:
-        """Load and parse repository primary metadata for a repository URL."""
+    def load_repodata(self, url: str) -> bytes | etree._Element | None:
+        """Load repository primary metadata for a repository URL."""
         repodata_url = self.make_repodata_url(url)
         repo_data_listing = self.request_and_dump(
             repodata_url,
@@ -169,30 +170,70 @@ class RepoDiff:
             return None
         repo_data_raw = self.request_and_dump(repodata_url + repo_data_file, repo_data_file)
         if not isinstance(repo_data_raw, bytes):
+            log.warning("Repository metadata could not be fetched from %s", repodata_url + repo_data_file)
             return None
-        repo_data = RepoDiff.decompress(repo_data_file, repo_data_raw)
-        log.debug("Parsing repository metadata file: %s", repo_data_file)
-        return etree.fromstring(repo_data)
+        log.debug("Decompressing repository metadata file: %s", repo_data_file)
+        return RepoDiff.decompress(repo_data_file, repo_data_raw)
+
+    @staticmethod
+    def _extract_package(elem: Any) -> Package | None:  # noqa: ANN401
+        """Extract a single rpm package from an XML element."""
+        if elem.get("type") != "rpm":
+            return None
+        name_el = elem.find(name_tag)
+        version_info = elem.find(version_tag)
+        arch_el = elem.find(arch_tag)
+        if name_el is not None and version_info is not None and arch_el is not None:
+            return Package(
+                name_el.text,
+                version_info.get("epoch", "0"),
+                version_info.get("ver", "0"),
+                version_info.get("rel", "0"),
+                arch_el.text,
+            )
+        return None
+
+    @staticmethod
+    def _parse_packages_from_stream(repo_data: bytes) -> defaultdict[str, set[Package]]:
+        packages_by_arch = defaultdict(set)
+        try:
+            context = etree.iterparse(io.BytesIO(repo_data), events=("end",), tag=package_tag)
+        except Exception:
+            log.exception("Failed to parse repo data stream")
+            return packages_by_arch
+
+        for _, elem in context:
+            pkg = RepoDiff._extract_package(elem)
+            if pkg:
+                packages_by_arch[pkg.arch].add(pkg)
+            elem.clear()
+            parent = elem.getparent()
+            if parent is not None:
+                while elem.getprevious() is not None:
+                    del parent[0]
+        return packages_by_arch
+
+    @staticmethod
+    def _parse_packages_from_element(
+        repo_data: Any,  # noqa: ANN401 - lxml _Element is dynamic and has no public standard type
+    ) -> defaultdict[str, set[Package]]:
+        packages_by_arch = defaultdict(set)
+        for package in repo_data.iterfind(package_tag):
+            pkg = RepoDiff._extract_package(package)
+            if pkg:
+                packages_by_arch[pkg.arch].add(pkg)
+        return packages_by_arch
 
     def load_packages(self, url: str) -> defaultdict[str, set[Package]]:
         """Load the list of packages from a repository URL."""
         repo_data = self.load_repodata(url)
-        packages_by_arch = defaultdict(set)
-        if repo_data is None or not hasattr(repo_data, "iterfind"):
-            log.error("Could not load repo data for URL %s", url)
-            return packages_by_arch
-        log.debug("Loading package list for repository %s", url)
-        for package in repo_data.iterfind(package_tag):
-            if package.get("type") != "rpm":
-                continue
-            name = package.find(name_tag).text
-            version_info = package.find(version_tag)
-            epoch = version_info.get("epoch", "0")
-            version = version_info.get("ver", "0")
-            rel = version_info.get("rel", "0")
-            arch = package.find(arch_tag).text
-            packages_by_arch[arch].add(Package(name, epoch, version, rel, arch))
-        return packages_by_arch
+        if repo_data is None:
+            return defaultdict(set)
+        if isinstance(repo_data, bytes):
+            log.debug("Loading package list for repository %s via stream-parser", url)
+            return self._parse_packages_from_stream(repo_data)
+        log.debug("Loading package list for repository %s via element fallback", url)
+        return self._parse_packages_from_element(repo_data)
 
     @staticmethod
     def compute_diff_for_packages(
