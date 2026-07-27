@@ -136,7 +136,7 @@ class IncrementApprover:
                 "product": p.get("PRODUCT"),
             })
 
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             stats = list(executor.map(fetch_stats, params))
 
         job_ids = [
