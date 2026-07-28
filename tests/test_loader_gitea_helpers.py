@@ -428,3 +428,18 @@ def test_review_pr_no_bot_user(
     mock_settings.git_review_bot_user = None
     with pytest.raises(ValueError, match="git_review_bot_user is required to post a review or comment"):
         gitea.review_pr({}, "repo", 123, "msg", "sha123")
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_check_response_unauthorized_forbidden(status_code: int) -> None:
+    mock_response = MagicMock(status_code=status_code)
+    with pytest.raises(SystemExit) as exc_info:
+        gitea.check_response(mock_response)
+    assert exc_info.value.code == 1
+
+
+@pytest.mark.parametrize("status_code", [200, 404, 500])
+def test_check_response_other_statuses(status_code: int) -> None:
+    mock_response = MagicMock(status_code=status_code)
+    # Should not raise SystemExit
+    gitea.check_response(mock_response)

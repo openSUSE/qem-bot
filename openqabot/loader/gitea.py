@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 import urllib.error
 from collections import Counter
 from concurrent import futures
 from dataclasses import dataclass, field
 from functools import lru_cache
+from http import HTTPStatus
 from io import BytesIO
 from logging import getLogger
 from pathlib import Path
@@ -27,7 +29,7 @@ from osc.core import MultibuildFlavorResolver
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import PullRequest
-from openqabot.utils import retry10 as retried_requests
+from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -66,6 +68,16 @@ def make_token_header(token: str) -> dict[str, str]:
     return {} if token is None else {"Authorization": "token " + token}
 
 
+def check_response(response: requests.Response) -> None:
+    """Abort execution if response indicates Gitea authorization failure."""
+    if response.status_code == HTTPStatus.UNAUTHORIZED:
+        log.error("Gitea API error: Missing or invalid Gitea token (status code 401)")
+        sys.exit(1)
+    if response.status_code == HTTPStatus.FORBIDDEN:
+        log.error("Gitea API error: Insufficient permissions for Gitea token (status code 403)")
+        sys.exit(1)
+
+
 def get_json(
     query: str,
     token: dict[str, str],
@@ -76,6 +88,7 @@ def get_json(
     host = host or config.settings.gitea_url
     url = f"{host}/api/v1/{query}"
     response = retried_requests.get(url, verify=not config.settings.insecure, headers=token, params=params)
+    check_response(response)
     response.raise_for_status()
     return response.json()
 
@@ -92,6 +105,7 @@ def iter_gitea_items(query: str, token: dict[str, str], host: str | None = None)
 
     while url:
         response = retried_requests.get(url, verify=not config.settings.insecure, headers=token)
+        check_response(response)
         response.raise_for_status()
         res = response.json()
 
@@ -110,6 +124,7 @@ def _request_json(method: str, query: str, token: dict[str, str], post_data: Jso
     res = getattr(retried_requests, method.lower())(
         url, verify=not config.settings.insecure, headers=token, json=post_data
     )
+    check_response(res)
     if not res.ok:
         log.error("Gitea API error: %s to %s failed: %s", method.upper(), url, res.text)
 
@@ -627,6 +642,7 @@ def add_packages_from_patchinfo(
     else:
         try:
             response = retried_requests.get(patch_info_url, verify=not config.settings.insecure, headers=token)
+            check_response(response)
             response.raise_for_status()
             patch_info = etree.fromstring(response.content)
         except (etree.ParseError, requests.RequestException) as e:

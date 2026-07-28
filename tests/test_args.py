@@ -66,7 +66,7 @@ def test_sync_smelt(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_sync_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.GiteaSync")
     syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-sync"])
+    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), "gitea-sync"])
     assert result.exit_code == 0
     syncer.assert_called_once()
 
@@ -76,7 +76,7 @@ def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer.return_value.return_value = 0
     config_file = tmp_path / "trigger.yml"
     config_file.write_text("trigger_config: []")
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-trigger"])
+    result = runner.invoke(app, ["--gitea-token", "bar", "--configs", str(tmp_path), "gitea-trigger"])
     assert result.exit_code == 0
     syncer.assert_called_once()
 
@@ -309,6 +309,24 @@ def test_main_no_token_exit(mocker: MockerFixture, tmp_path: Path) -> None:
     result = runner.invoke(app, ["--configs", str(tmp_path), "full-run"])
     assert result.exit_code == 1
     assert "Error: Missing option '--token' / '-t'." in result.output
+
+
+def test_main_no_gitea_token_exit_sync(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that gitea-sync exits with 1 when gitea_token is missing."""
+    mocker.patch.dict("os.environ", {}, clear=True)
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-sync"])
+    assert result.exit_code == 1
+    assert "Error: Missing option '--gitea-token' / '-g' or environment variable QEM_BOT_GITEA_TOKEN." in result.output
+
+
+def test_main_no_gitea_token_exit_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that gitea-trigger exits with 1 when gitea_token is missing."""
+    mocker.patch.dict("os.environ", {}, clear=True)
+    config_file = tmp_path / "trigger.yml"
+    config_file.write_text("trigger_config: []")
+    result = runner.invoke(app, ["--configs", str(tmp_path), "gitea-trigger"])
+    assert result.exit_code == 1
+    assert "Error: Missing option '--gitea-token' / '-g' or environment variable QEM_BOT_GITEA_TOKEN." in result.output
 
 
 def test_main_token_provided_no_help(mocker: MockerFixture, tmp_path: Path) -> None:

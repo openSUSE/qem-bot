@@ -133,13 +133,17 @@ def number_of_retries(fallback: int = 3) -> int:
     return int(os.environ.get("QEM_BOT_RETRIES", 0 if "PYTEST_VERSION" in os.environ else fallback))
 
 
-def make_retry_session(retries: int, backoff_factor: float) -> Session:
+def make_retry_session(
+    retries: int,
+    backoff_factor: float,
+    status_forcelist: frozenset[int] = frozenset({403, 413, 429, 503}),
+) -> Session:
     """Create a requests session with retry capabilities."""
     adapter = HTTPAdapter(
         max_retries=Retry(
             number_of_retries(retries),
             backoff_factor=backoff_factor,
-            status_forcelist=frozenset({403, 413, 429, 503}),
+            status_forcelist=status_forcelist,
         ),
     )
     http = Session()
@@ -152,6 +156,7 @@ def make_retry_session(retries: int, backoff_factor: float) -> Session:
 retry3 = make_retry_session(3, 2)
 retry5 = make_retry_session(5, 1)
 retry10 = make_retry_session(10, 0.1)
+retry10_gitea = make_retry_session(10, 0.1, status_forcelist=frozenset({413, 429, 503}))
 
 
 CONTACT_PATTERN = re.compile(

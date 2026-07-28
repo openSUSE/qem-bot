@@ -148,6 +148,18 @@ def _require_token(args: SimpleNamespace) -> None:
         raise typer.Exit(1)
 
 
+def _require_gitea_token(args: SimpleNamespace) -> None:
+    """Enforce that a Gitea token is present before entering a command.
+
+    Call this guard at the start of every command that does need Gitea.
+    """
+    if args.gitea_token is None or not args.gitea_token.strip():
+        typer.echo(
+            "Error: Missing option '--gitea-token' / '-g' or environment variable QEM_BOT_GITEA_TOKEN.", err=True
+        )
+        raise typer.Exit(1)
+
+
 @app.callback()
 def main(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
@@ -408,6 +420,7 @@ def gitea_sync(  # ruff: ignore[too-many-arguments]
     """Sync data from Gitea into QEM Dashboard."""
     args = ctx.obj
     _require_token(args)
+    _require_gitea_token(args)
     args.gitea_project = gitea_project
     args.allow_build_failures = allow_build_failures
     args.consider_unrequested_prs = consider_unrequested_prs
@@ -445,6 +458,7 @@ def gitea_trigger(  # ruff: ignore[too-many-arguments]
 ) -> None:
     """Trigger testing for PR(s) with certain label."""
     args = ctx.obj
+    _require_gitea_token(args)
     args.pr_number = pr_number
     args.pr_label = pr_label
     args.comment = comment
