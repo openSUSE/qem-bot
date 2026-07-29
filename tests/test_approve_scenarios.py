@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import logging
 import re
+from argparse import Namespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
 import responses
 
+from openqabot.approver import Approver
 from openqabot.config import settings
 from openqabot.loader.qem import JobAggr, SubReq
 
@@ -24,6 +26,21 @@ from .helpers import (
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
+
+@pytest.mark.parametrize(
+    ("raw", "exp_sub", "exp_type"),
+    [
+        pytest.param("git:6189", 6189, "git", id="type-colon-id-string"),
+        pytest.param(42, 42, None, id="plain-int"),
+        pytest.param(None, None, None, id="none"),
+    ],
+)
+def test_approver_single_submission_parsing(raw: str | int | None, exp_sub: int | None, exp_type: str | None) -> None:
+    args = Namespace(dry=True, token="123", all_submissions=False, incident=raw, gitea_token=None, comment=False)
+    inst = Approver(args)
+    assert inst.single_submission == exp_sub
+    assert inst.submission_type == exp_type
 
 
 @pytest.fixture

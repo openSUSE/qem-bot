@@ -129,9 +129,15 @@ class Approver:
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_submission is None:
-            self.single_submission = getattr(args, "submission", None) or getattr(args, "incident", None)
+            raw = getattr(args, "submission", None) or getattr(args, "incident", None)
+            if isinstance(raw, str) and ":" in raw:
+                s_type, s_id = raw.split(":", 1)
+                self.single_submission = int(s_id)
+                self.submission_type = s_type
+            else:
+                self.single_submission = int(raw) if raw is not None else None
+                self.submission_type = None
             self.all_submissions = args.all_submissions
-            self.submission_type = None
         else:
             self.single_submission = single_submission
             self.all_submissions = False
