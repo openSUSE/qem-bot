@@ -4,6 +4,7 @@
 
 import json
 import logging
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -232,31 +233,90 @@ def mock_settings(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.mark.parametrize(
-    ("bot_user", "api_response", "expected_log", "should_call_review"),
+    ("bot_user", "api_response_comments", "api_response_reviews", "should_call_review"),
     [
-        # Case 1: Already approved via bot comment
-        (
+        # Active APPROVED review for current commit -> no re-post
+        pytest.param(
             "bot",
             [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "bot"}}],
-            "PR 123 already approved via comment for commit sha123",
+            [{"dismissed": False, "state": "APPROVED", "user": {"login": "bot"}, "commit_id": "sha123"}],
             False,
+            id="active-approval-no-repost",
         ),
-        # Case 2: Comment matches but author is wrong (spoofing attempt)
-        (
+        # Comment author mismatch (spoofing) -> re-post
+        pytest.param(
             "bot",
             [{"body": "@bot: approved\nTested commit: sha123", "user": {"login": "imposter"}}],
-            None,
+            [],
             True,
+            id="spoofed-comment-repost",
         ),
-        # Case 3: Already approved via bot comment using obs_group name
-        (
+        # Active APPROVED review, team/obs_group authored comment -> no re-post
+        pytest.param(
             "bot-review",
             [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "openqa"}}],
-            "PR 123 already approved via comment for commit sha123",
+            [{"dismissed": False, "state": "APPROVED", "user": {"login": "bot-review"}, "commit_id": "sha123"}],
             False,
+            id="obs-group-comment-active-review-no-repost",
         ),
-        # Case 4: No bot comments found
-        ("bot", [], None, True),
+        # No bot comment at all -> re-post
+        pytest.param("bot", [], [], True, id="no-comment-repost"),
+        # Review dismissed -> re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [{"dismissed": True, "state": "APPROVED", "user": {"login": "bot-review"}, "commit_id": "sha123"}],
+            True,
+            id="dismissed-review-repost",
+        ),
+        # Review stale (post-push) -> re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [
+                {
+                    "dismissed": False,
+                    "stale": True,
+                    "state": "APPROVED",
+                    "user": {"login": "bot-review"},
+                    "commit_id": "sha123",
+                }
+            ],
+            True,
+            id="stale-review-repost",
+        ),
+        # Review in REQUEST_REVIEW state -> re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [{"dismissed": False, "state": "REQUEST_REVIEW", "user": {"login": "bot-review"}, "commit_id": "sha123"}],
+            True,
+            id="request-review-state-repost",
+        ),
+        # Comment exists, no reviews yet (qam-openqa-review hasn't acted) -> no re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [],
+            False,
+            id="comment-no-reviews-yet-no-repost",
+        ),
+        # APPROVED review for a different (older) commit -> re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [{"dismissed": False, "state": "APPROVED", "user": {"login": "bot-review"}, "commit_id": "old-sha"}],
+            True,
+            id="approval-for-older-commit-repost",
+        ),
+        # APPROVED review missing commit_id (fail closed) -> re-post
+        pytest.param(
+            "bot-review",
+            [{"body": "@bot-review: approved\nTested commit: sha123", "user": {"login": "bot-review"}}],
+            [{"dismissed": False, "state": "APPROVED", "user": {"login": "bot-review"}}],
+            True,
+            id="approval-missing-commit-id-repost",
+        ),
     ],
 )
 def test_approve_pr_scenarios(
@@ -264,23 +324,24 @@ def test_approve_pr_scenarios(
     mock_review_pr: MagicMock,
     mock_settings: MagicMock,
     mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
     bot_user: str | None,
-    api_response: list[dict],
-    expected_log: str | None,
+    api_response_comments: list[dict],
+    api_response_reviews: list[dict],
     should_call_review: bool,
 ) -> None:
-    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=api_response)
+    def mock_iter_items(url: str, _token: Any) -> list[dict]:
+        if "issues" in url:
+            return api_response_comments
+        if "reviews" in url:
+            return api_response_reviews
+        msg = f"unexpected iter_gitea_items url: {url}"
+        raise AssertionError(msg)
 
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", side_effect=mock_iter_items)
     mock_settings.obs_group = "openqa"
     mock_settings.git_review_bot_user = bot_user
 
-    res = gitea.approve_pr({}, "repo", 123, "sha123", "msg")
-
-    assert res is True
-    if expected_log:
-        assert expected_log in caplog.text
+    assert gitea.approve_pr({}, "repo", 123, "sha123", "msg") is True
     if should_call_review:
         mock_review_pr.assert_called_once_with({}, "repo", 123, "msg", "sha123", approve=True)
     else:

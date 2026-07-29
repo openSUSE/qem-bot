@@ -275,11 +275,17 @@ def _is_already_approved(token: dict[str, str], repo_name: str, pr_number: int, 
         raise ValueError(error_msg)
 
     comments = iter_gitea_items(comments_url(repo_name, pr_number), token)
-    if any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
-        log.info("PR %s already approved via comment for commit %s", pr_number, commit_id)
-        return True
+    if not any(_is_bot_approval_comment(c, bot_user, commit_id) for c in comments):
+        return False
 
-    return False
+    bot_reviews = [r for r in iter_gitea_items(reviews_url(repo_name, pr_number), token) if is_review_requested_by(r)]
+    has_active_approval = any(
+        not r.get("dismissed", True) and _effective_state(r) == "APPROVED" and r.get("commit_id") == commit_id
+        for r in bot_reviews
+    )
+    approved = not bot_reviews or has_active_approval
+    log.info("PR %s live-review approval for commit %s: %s", pr_number, commit_id, approved)
+    return approved
 
 
 def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str, msg: str) -> bool:
