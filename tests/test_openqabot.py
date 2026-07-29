@@ -15,6 +15,7 @@ import pytest
 import responses
 from typer.testing import CliRunner
 
+import openqabot.main as main_module
 from openqabot.args import app
 from openqabot.args import main as args_main
 from openqabot.config import settings
@@ -327,3 +328,20 @@ def test_main_exception_limit_reraise(mocker: MockerFixture) -> None:
     assert len(errorcnt) == 1
     key = next(iter(errorcnt))
     assert errorcnt[key] == 11
+
+
+def _raise_key_error() -> None:
+    key = "number"
+    raise KeyError(key)
+
+
+def test_handle_exception_debug_log_is_self_contained(mocker: MockerFixture) -> None:
+    mock_log = mocker.Mock()
+    errorcnt.clear()
+    try:
+        _raise_key_error()
+    except KeyError as e:
+        main_module._handle_exception(e, mock_log)  # ruff: ignore[private-member-access]
+
+    debug_calls = [str(c) for c in mock_log.debug.call_args_list]
+    assert any("KeyError" in c and "'number'" in c for c in debug_calls), debug_calls
