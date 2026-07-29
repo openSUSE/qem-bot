@@ -165,7 +165,10 @@ class Approver:
         for sub in submissions_to_approve:
             log.info("* %s", ms2str(sub))
 
-        if not self.dry:
+        if self.dry:
+            for sub in submissions_to_approve:
+                log.info("Dry run: Would approve %s", ms2str(sub))
+        else:
             osc.conf.get_config(override_apiurl=config.settings.obs_url)
             with ThreadPoolExecutor() as executor:
                 for result in executor.map(self.approve, submissions_to_approve):
