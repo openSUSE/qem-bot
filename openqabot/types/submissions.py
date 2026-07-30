@@ -231,6 +231,7 @@ class Submissions(BaseConf):
             else self.settings["VERSION"],
             "DISTRI": self.settings["DISTRI"],
             "INCIDENT_ID": sub.id,
+            "SUBMISSION_ID": f"{sub.type}:{sub.id}",
             "REPOHASH": revs,
             "BUILD": f":{sub.type}:{sub.id}:{sub.packages[0]}",
             **OBSOLETE_PARAMS,

@@ -38,6 +38,7 @@ def _assert_gitea_settings(
         "DISTRI": distri,
         "FLAVOR": flavor,
         "INCIDENT_ID": sub_id,
+        "SUBMISSION_ID": f"{sub_type}:{sub_id}",
         "INCIDENT_REPO": f"{expected_repo}-{arch}/",
         "REPOHASH": repo_hash,
         "VERSION": f"{product_ver}:git-{sub_id}",
