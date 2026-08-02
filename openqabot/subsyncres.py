@@ -34,14 +34,14 @@ class SubResultsSync(SyncRes):
             for future in futures.as_completed(future_result):
                 full[future_result[future]] = future.result()
 
-        total_jobs = sum(len(v) for v in full.values())
+        total_jobs = sum(len(job_results) for job_results in full.values())
         log.info("Fetched %s total jobs from openQA.", total_jobs)
 
         results = [
             r
-            for key, value in full.items()
-            for v in value
-            if self.filter_jobs(v) and (r := self.normalize_data_safe(key, v))
+            for submission, job_results in full.items()
+            for job in job_results
+            if self.filter_jobs(job) and (r := self.normalize_data_safe(submission, job))
         ]
         for r in results:
             self.post_result(r)
