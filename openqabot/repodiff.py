@@ -66,6 +66,8 @@ class RepoDiff:
     def __init__(self, args: Namespace | None) -> None:
         """Initialize the RepoDiff class."""
         self.args = args
+        self.fake_data = args is not None and getattr(self.args, "fake_data", False)
+        self.dump_data = args is not None and getattr(self.args, "dump_data", False)
 
     @staticmethod
     def make_repodata_url(url: str) -> str:
@@ -86,12 +88,9 @@ class RepoDiff:
             return pyzstd.decompress(repo_data_raw)
         return repo_data_raw
 
-    @staticmethod
-    def _fetch_or_read_bytes(
-        url: str, filepath: str, *, fake_data: bool, dump_data: bool, params: dict[str, Any] | None
-    ) -> bytes | None:
+    def _fetch_or_read_bytes(self, url: str, filepath: str, params: dict[str, Any] | None) -> bytes | None:
 
-        if fake_data:
+        if self.fake_data:
             return Path(filepath).read_bytes()
 
         resp = retried_requests.get(url, params=params)
@@ -99,7 +98,7 @@ class RepoDiff:
             log.info("Failed to fetch data from %s: %s %s", url, resp.status_code, resp.reason)
             return None
 
-        if dump_data:
+        if self.dump_data:
             Path(filepath).write_bytes(resp.content)
 
         return resp.content
@@ -116,12 +115,10 @@ class RepoDiff:
         log.debug("Fetching repository data from %s", url)
         filepath = "tests/fixtures/responses/" + name.replace("/", "_")
 
-        fake_data = self.args is not None and getattr(self.args, "fake_data", False)
-        dump_data = self.args is not None and getattr(self.args, "dump_data", False)
-        source = filepath if fake_data else url
+        source = filepath if self.fake_data else url
 
         try:
-            content = self._fetch_or_read_bytes(url, filepath, fake_data=fake_data, dump_data=dump_data, params=params)
+            content = self._fetch_or_read_bytes(url, filepath, params=params)
         except (FileNotFoundError, PermissionError):
             log.info("Failed to read %s: File not found", source)
             return None
