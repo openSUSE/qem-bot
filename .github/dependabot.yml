@@ -2,29 +2,39 @@
 version: 2
 updates:
   - package-ecosystem: "uv"
-    <<: &common
-      directory: "/"
-      schedule:
-        interval: "weekly"
-        day: "monday"
-      cooldown:
-        default-days: 7
-      open-pull-requests-limit: 5
-      labels:
-        - "waiting"
-        - "dependencies"
-      commit-message:
-        prefix: "chore"
-        include: scope
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "waiting"
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: scope
     groups:
       all-dependencies:
         patterns:
           - "*"
         update-types:
           - "major"
-
   - package-ecosystem: "github-actions"
-    <<: *common
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    labels:
+      - "waiting"
+      - "dependencies"
+    commit-message:
+      prefix: "chore"
+      include: scope
     groups:
       all-actions:
         patterns:
