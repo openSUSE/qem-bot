@@ -47,6 +47,12 @@ updates information about submissions and related openQA tests.
     │                                                  for all API calls           │
     │                                                  [env var: QEM_BOT_INSECURE] │
     │                                                  [default: no-insecure]      │
+    │ --strict-metadata                                Raise an error on           │
+    │                                                  unrecognized metadata keys  │
+    │                                                  instead of ignoring them    │
+    │                                                  with a warning              │
+    │                                                  [env var:                   │
+    │                                                  QEM_BOT_STRICT_METADATA]    │
     │ --token            -t                   TEXT     Token for qem dashboard api │
     │                                                  [env var: QEM_BOT_TOKEN]    │
     │ --gitea-token      -g                   TEXT     Token for Gitea api         │

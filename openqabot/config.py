@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     app_backoff_factor: int = Field(default=60, alias="APP_BACKOFF_FACTOR")
     app_same_error_limit: int = Field(default=2, alias="APP_SAME_ERROR_LIMIT")
     app_error_similarity: int = Field(default=90, alias="APP_ERROR_SIMILARITY")
+    strict_metadata: bool = Field(default=False, alias="QEM_BOT_STRICT_METADATA")
     # Global options
     configs: Path = Field(default=Path("/etc/openqabot"), alias="QEM_BOT_CONFIGS")
     dry: bool = Field(default=False, alias="QEM_BOT_DRY")

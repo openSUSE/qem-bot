@@ -70,10 +70,19 @@ class Submissions(BaseConf):
         """Return a string representation of the Submissions."""
         return f"<Submissions product: {self.product}>"
 
-    def _warn_unknown_flavor_keys(self, config: dict[str, Any]) -> None:
+    def _warn_unknown_flavor_keys(self, config_dict: dict[str, Any]) -> None:
         """Warn about unrecognized per-flavor keys to catch typos like a misspelled blocklist."""
-        for flavor, data in config.items():
-            for key in set(data) - VALID_FLAVOR_KEYS:
+        for flavor, data in config_dict.items():
+            unknown_keys = set(data) - VALID_FLAVOR_KEYS
+            if not unknown_keys:
+                continue
+            if settings.strict_metadata:
+                msg = (
+                    f"Flavor {flavor} (product {self.product}): "
+                    f"Unrecognized metadata keys {', '.join(sorted(unknown_keys))}"
+                )
+                raise ValueError(msg)
+            for key in unknown_keys:
                 log.warning("Flavor %s (product %s): Ignoring unknown metadata key %r", flavor, self.product, key)
 
     @staticmethod

@@ -98,3 +98,10 @@ def test_warn_unknown_flavor_keys(
     assert len(warned) == len(expected_warnings)
     for key in expected_warnings:
         assert any(repr(key) in msg for msg in warned)
+
+
+def test_strict_unknown_flavor_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unknown flavor keys raise a ValueError when strict_metadata is enabled."""
+    monkeypatch.setattr("openqabot.config.settings.strict_metadata", True)
+    with pytest.raises(ValueError, match=r"Unrecognized metadata keys .*bogus.*"):
+        _make_submissions({"AAA": {"archs": ["x86_64"], "bogus": 1}})

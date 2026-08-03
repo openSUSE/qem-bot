@@ -255,6 +255,13 @@ def test_warn_unknown_aggregate_keys(
         assert any(repr(key) in msg for msg in warned)
 
 
+def test_strict_unknown_aggregate_keys(aggregate_factory: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unknown aggregate keys raise a ValueError when strict_metadata is enabled."""
+    monkeypatch.setattr("openqabot.config.settings.strict_metadata", True)
+    with pytest.raises(ValueError, match=r"Unrecognized metadata keys .*bogus.*"):
+        aggregate_factory("product", config={"FLAVOR": "None", "archs": [], "test_issues": {}, "bogus": 1})
+
+
 @pytest.mark.parametrize(
     ("extra_config", "contains", "expected_kept"),
     [

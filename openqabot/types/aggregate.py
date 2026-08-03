@@ -54,9 +54,15 @@ class Aggregate(BaseConf):
         self.excluded_packages = config.config.get("excluded_packages")
         self.test_issues = self.normalize_repos(config.config)
 
-    def _warn_unknown_keys(self, config: dict[str, Any]) -> None:
+    def _warn_unknown_keys(self, config_dict: dict[str, Any]) -> None:
         """Warn about unrecognized aggregate keys to catch typos like a misspelled blocklist."""
-        for key in set(config) - VALID_AGGREGATE_KEYS:
+        unknown_keys = set(config_dict) - VALID_AGGREGATE_KEYS
+        if not unknown_keys:
+            return
+        if config.settings.strict_metadata:
+            msg = f"Aggregate (product {self.product}): Unrecognized metadata keys {', '.join(sorted(unknown_keys))}"
+            raise ValueError(msg)
+        for key in unknown_keys:
             log.warning("Aggregate (product %s): Ignoring unknown metadata key %r", self.product, key)
 
     @staticmethod

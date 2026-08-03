@@ -202,6 +202,14 @@ def main(  # ruff: ignore[too-many-arguments]
             help="Disable TLS verification for all API calls",
         ),
     ] = False,
+    strict_metadata: Annotated[
+        bool,
+        typer.Option(
+            "--strict-metadata",
+            envvar="QEM_BOT_STRICT_METADATA",
+            help="Raise an error on unrecognized metadata keys instead of ignoring them with a warning",
+        ),
+    ] = False,
     token: Annotated[
         str | None,
         typer.Option("-t", "--token", envvar="QEM_BOT_TOKEN", help="Token for qem dashboard api"),
@@ -269,6 +277,7 @@ def main(  # ruff: ignore[too-many-arguments]
             "gitea_token": gitea_token,
             "singlearch": singlearch,
             "retry": retry,
+            "strict_metadata": strict_metadata,
         },
     )
 
@@ -293,6 +302,7 @@ def main(  # ruff: ignore[too-many-arguments]
         gitea_token=settings.gitea_token,
         singlearch=settings.singlearch,
         retry=settings.retry,
+        strict_metadata=settings.strict_metadata,
     )
 
 
