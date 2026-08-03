@@ -6,7 +6,7 @@
 import logging
 import os
 import re
-import subprocess  # ruff: ignore[suspicious-subprocess-import]
+import subprocess
 import sys
 from pathlib import Path
 
@@ -56,7 +56,7 @@ def update_readme() -> None:
     if not match:
         log.error("Could not find Usage section in Readme.md")
         sys.exit(1)
-    assert match  # ruff: ignore[assert]
+    assert match  # ruff: ignore[S101]
     current_content = match.group(2)
     if current_content == new_section_content:
         log.info("Readme.md is already up to date.")

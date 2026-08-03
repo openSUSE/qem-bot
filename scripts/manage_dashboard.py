@@ -4,7 +4,7 @@
 """Manage local qem-dashboard environment for integration testing."""
 
 import os
-import subprocess  # ruff: ignore[suspicious-subprocess-import]
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -21,10 +21,10 @@ except ImportError:
 app = typer.Typer(help="Manage local qem-dashboard environment for integration testing")
 
 
-def run_command(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:  # ruff: ignore[missing-type-kwargs]
+def run_command(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:  # ruff: ignore[ANN003]
     """Run a subprocess command and return the result."""
     check_result = kwargs.pop("check", True)
-    return subprocess.run(cmd, check=check_result, **kwargs)  # ruff: ignore[subprocess-without-shell-equals-true]
+    return subprocess.run(cmd, check=check_result, **kwargs)  # ruff: ignore[S603]
 
 
 @app.command()
@@ -58,24 +58,26 @@ def start(
     run_command([podman_bin, "network", "create", "qem-net"])
 
     # Start DB
-    run_command([
-        podman_bin,
-        "run",
-        "-d",
-        "--name",
-        "qem-db",
-        "--network",
-        "qem-net",
-        "-e",
-        "POSTGRES_USER=postgres",
-        "-e",
-        "POSTGRES_PASSWORD=postgres",
-        "-e",
-        "POSTGRES_DB=postgres",
-        "-p",
-        "5432:5432",
-        postgres_image,
-    ])
+    run_command(
+        [
+            podman_bin,
+            "run",
+            "-d",
+            "--name",
+            "qem-db",
+            "--network",
+            "qem-net",
+            "-e",
+            "POSTGRES_USER=postgres",
+            "-e",
+            "POSTGRES_PASSWORD=postgres",
+            "-e",
+            "POSTGRES_DB=postgres",
+            "-p",
+            "5432:5432",
+            postgres_image,
+        ]
+    )
 
     typer.echo("Waiting for postgres to be ready...")
     # Wait for DB to be responsive
@@ -132,24 +134,26 @@ def start(
 
     # Start Dashboard
     typer.echo("Starting qem-dashboard...")
-    run_command([
-        podman_bin,
-        "run",
-        "-d",
-        "--name",
-        "qem-dashboard",
-        "--network",
-        "qem-net",
-        "-e",
-        'DASHBOARD_CONF_OVERRIDE={"pg":"postgresql://postgres:postgres@qem-db:5432/postgres"}',
-        "-p",
-        "3000:3000",
-        "qem-dashboard:latest",
-        "script/dashboard",
-        "daemon",
-        "-l",
-        "http://*:3000",
-    ])
+    run_command(
+        [
+            podman_bin,
+            "run",
+            "-d",
+            "--name",
+            "qem-dashboard",
+            "--network",
+            "qem-net",
+            "-e",
+            'DASHBOARD_CONF_OVERRIDE={"pg":"postgresql://postgres:postgres@qem-db:5432/postgres"}',
+            "-p",
+            "3000:3000",
+            "qem-dashboard:latest",
+            "script/dashboard",
+            "daemon",
+            "-l",
+            "http://*:3000",
+        ]
+    )
 
     typer.secho("Dashboard started on http://localhost:3000", fg=typer.colors.GREEN)
 

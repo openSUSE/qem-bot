@@ -64,19 +64,21 @@ def _make_smelt_subreq(sub: int) -> SubReq:
     return SubReq(
         sub,
         rr,
-        submission=Submission.create({
-            "number": sub,
-            "rr_number": rr,
-            "project": f"PRJ{sub}",
-            "inReview": True,
-            "isActive": True,
-            "approved": False,
-            "inReviewQAM": True,
-            "embargoed": False,
-            "channels": ["SUSE:Updates:SLE-Module-Development-Tools:15-SP4:x86_64"],
-            "packages": [f"pkg{sub}"],
-            "emu": False,
-        }),
+        submission=Submission.create(
+            {
+                "number": sub,
+                "rr_number": rr,
+                "project": f"PRJ{sub}",
+                "inReview": True,
+                "isActive": True,
+                "approved": False,
+                "inReviewQAM": True,
+                "embargoed": False,
+                "channels": ["SUSE:Updates:SLE-Module-Development-Tools:15-SP4:x86_64"],
+                "packages": [f"pkg{sub}"],
+                "emu": False,
+            }
+        ),
     )
 
 
@@ -89,22 +91,24 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
             "git",
             "https://src.suse.de/products/SLFO/pulls/124",
             "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
-            submission=Submission.create({
-                "number": 5,
-                "rr_number": 500,
-                "type": "git",
-                "url": "https://src.suse.de/products/SLFO/pulls/124",
-                "scm_info": "...",
-                "project": "products/SLFO",
-                "inReview": True,
-                "isActive": True,
-                "approved": False,
-                "inReviewQAM": True,
-                "embargoed": False,
-                "channels": ["SUSE:SLFO:Main:1.0:x86_64#products/SLFO"],
-                "packages": ["pkg5"],
-                "emu": False,
-            }),
+            submission=Submission.create(
+                {
+                    "number": 5,
+                    "rr_number": 500,
+                    "type": "git",
+                    "url": "https://src.suse.de/products/SLFO/pulls/124",
+                    "scm_info": "...",
+                    "project": "products/SLFO",
+                    "inReview": True,
+                    "isActive": True,
+                    "approved": False,
+                    "inReviewQAM": True,
+                    "embargoed": False,
+                    "channels": ["SUSE:SLFO:Main:1.0:x86_64#products/SLFO"],
+                    "packages": ["pkg5"],
+                    "emu": False,
+                }
+            ),
         ),
     ]
 
@@ -341,15 +345,17 @@ def fake_openqa_responses_with_param_matching(
     for flavor in ("Online-Increments", "Foo-Increments"):
         for arch, json in json_by_arch.items():
             list_of_params.append(({"arch": arch, "flavor": flavor}, json))
-    list_of_params.append((
-        {
-            "arch": "x86_64",
-            "flavor": "Additional-Foo-Increments",
-            "build": "PI-139.1-additional-build",
-            "product": "SLES",
-        },
-        additional_builds_json,
-    ))
+    list_of_params.append(
+        (
+            {
+                "arch": "x86_64",
+                "flavor": "Additional-Foo-Increments",
+                "build": "PI-139.1-additional-build",
+                "product": "SLES",
+            },
+            additional_builds_json,
+        )
+    )
     return [
         responses.add(
             responses.GET,

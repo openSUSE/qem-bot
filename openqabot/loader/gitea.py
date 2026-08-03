@@ -246,7 +246,7 @@ def _get_single_pr(token: dict[str, str], project: str, number: int) -> list[Pul
         if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{project}/pulls/{number}", token))):
             return [pr]
     except (requests.exceptions.RequestException, json.JSONDecodeError) as ex:
-        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # ruff: ignore[logging-exc-info]
+        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # ruff: ignore[G201]
     return []
 
 
@@ -264,7 +264,7 @@ def _is_bot_approval_comment(comment: dict[str, Any], bot_user: str, commit_id: 
     return is_author and review_cmd in body and commit_str in body
 
 
-def review_pr(  # ruff: ignore[too-many-arguments]
+def review_pr(  # ruff: ignore[PLR0913]
     token: dict[str, str],
     repo_name: str,
     pr_number: int,
@@ -589,10 +589,12 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: b
     if results.failed:
         log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results.failed))
 
-    submission.update({
-        "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),
-        "successful_packages": sorted(results.successful),
-    })
+    submission.update(
+        {
+            "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),
+            "successful_packages": sorted(results.successful),
+        }
+    )
 
     channels = submission.setdefault("channels", [])
     channels.extend(result for result in sorted(results.projects) if result not in channels)
@@ -678,7 +680,7 @@ def _fetch_details(
     project: str, number: int, token: dict[str, str], *, dry: bool
 ) -> tuple[list[Any], list[Any], list[Any]]:
     if dry:
-        if number == 124:  # ruff: ignore[magic-value-comparison]
+        if number == 124:  # ruff: ignore[PLR2004]
             return (
                 read_json_file_list("reviews-124"),
                 read_json_file_list("comments-124"),

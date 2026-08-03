@@ -172,14 +172,14 @@ def test_add_reviews_stale_reapproval(
 def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
     submission = {"number": 123}
     res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[private-member-access]
+    gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[SLF001]
     assert submission["scminfo"] == "new"
     assert "Inconsistent SCM info" in caplog.text
 
     caplog.clear()
     submission = {"number": 123, "scminfo_prod": "old"}
     res = etree.fromstring("<root><scminfo>new</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[private-member-access]
+    gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[SLF001]
     assert submission["scminfo_prod"] == "old"
     assert "Inconsistent SCM info" in caplog.text
 

@@ -261,7 +261,7 @@ def get_aggregate_results(sub: int, submission_type: str | None = None) -> list[
     return list(chain.from_iterable(all_data))
 
 
-def update_submissions(data: list[dict[str, Any]], **kwargs: Any) -> int:  # ruff: ignore[any-type]
+def update_submissions(data: list[dict[str, Any]], **kwargs: Any) -> int:  # ruff: ignore[ANN401]
     """Synchronize submission records with the dashboard."""
     retry = kwargs.get("retry", 0)
     query_params = kwargs.get("params", {})

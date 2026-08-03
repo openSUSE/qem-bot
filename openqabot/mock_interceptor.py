@@ -171,10 +171,12 @@ def gitea_staging_config_callback(_request: requests.PreparedRequest) -> tuple[i
     return (
         200,
         {},
-        json.dumps({
-            "StagingProject": "openQA:Staging:A",
-            "QA": [{"Name": "SLES", "Label": "label1"}, {"Name": "SLES", "Label": "label2"}],
-        }),
+        json.dumps(
+            {
+                "StagingProject": "openQA:Staging:A",
+                "QA": [{"Name": "SLES", "Label": "label1"}, {"Name": "SLES", "Label": "label2"}],
+            }
+        ),
     )
 
 
@@ -183,46 +185,48 @@ def smelt_graphql_callback(_request: requests.PreparedRequest) -> tuple[int, dic
     return (
         200,
         {},
-        json.dumps({
-            "data": {
-                "incidents": {
-                    "edges": [
-                        {
-                            "node": {
-                                "incidentId": 100,
-                                "emu": False,
-                                "project": "SUSE:Maintenance:100",
-                                "repositories": {"edges": [{"node": {"name": "SUSE:Updates:Mock:15-SP3"}}]},
-                                "requestSet": {
-                                    "edges": [
-                                        {
-                                            "node": {
-                                                "requestId": 1000,
-                                                "status": {"name": "review"},
-                                                "reviewSet": {
-                                                    "edges": [
-                                                        {
-                                                            "node": {
-                                                                "assignedByGroup": {"name": "qam-openqa"},
-                                                                "status": {"name": "new"},
+        json.dumps(
+            {
+                "data": {
+                    "incidents": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "incidentId": 100,
+                                    "emu": False,
+                                    "project": "SUSE:Maintenance:100",
+                                    "repositories": {"edges": [{"node": {"name": "SUSE:Updates:Mock:15-SP3"}}]},
+                                    "requestSet": {
+                                        "edges": [
+                                            {
+                                                "node": {
+                                                    "requestId": 1000,
+                                                    "status": {"name": "review"},
+                                                    "reviewSet": {
+                                                        "edges": [
+                                                            {
+                                                                "node": {
+                                                                    "assignedByGroup": {"name": "qam-openqa"},
+                                                                    "status": {"name": "new"},
+                                                                },
                                                             },
-                                                        },
-                                                    ],
+                                                        ],
+                                                    },
                                                 },
                                             },
-                                        },
-                                    ],
+                                        ],
+                                    },
+                                    "packages": {"edges": [{"node": {"name": "mock-package"}}]},
+                                    "crd": None,
+                                    "priority": 50,
                                 },
-                                "packages": {"edges": [{"node": {"name": "mock-package"}}]},
-                                "crd": None,
-                                "priority": 50,
                             },
-                        },
-                    ],
-                    "pageInfo": {"hasNextPage": False, "endCursor": ""},
+                        ],
+                        "pageInfo": {"hasNextPage": False, "endCursor": ""},
+                    }
                 }
             }
-        }),
+        ),
     )
 
 
@@ -231,25 +235,27 @@ def openqa_jobs_callback(_request: requests.PreparedRequest) -> tuple[int, dict[
     return (
         200,
         {},
-        json.dumps({
-            "jobs": [
-                {
-                    "id": 2,
-                    "status": "passed",
-                    "result": "passed",
-                    "name": "mock_job_git",
-                    "group": "Mock Group",
-                    "group_id": 1,
-                    "clone_id": None,
-                    "settings": {
-                        "BUILD": ":git:124:tree",
-                        "FLAVOR": "Mock-Flavor",
-                        "REPOHASH": "42",
-                        "VERSION": "15.99",
-                    },
-                }
-            ]
-        }),
+        json.dumps(
+            {
+                "jobs": [
+                    {
+                        "id": 2,
+                        "status": "passed",
+                        "result": "passed",
+                        "name": "mock_job_git",
+                        "group": "Mock Group",
+                        "group_id": 1,
+                        "clone_id": None,
+                        "settings": {
+                            "BUILD": ":git:124:tree",
+                            "FLAVOR": "Mock-Flavor",
+                            "REPOHASH": "42",
+                            "VERSION": "15.99",
+                        },
+                    }
+                ]
+            }
+        ),
     )
 
 

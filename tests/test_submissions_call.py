@@ -319,8 +319,8 @@ class LimitArchsSubmission(MockSubmission):
 
     def compute_revisions_for_product_repo(
         self,
-        product_repo: list[str] | str | None,  # ruff: ignore[unused-method-argument]
-        product_version: str | None,  # ruff: ignore[unused-method-argument]
+        product_repo: list[str] | str | None,
+        product_version: str | None,
         limit_archs: set[str] | None = None,
     ) -> bool:
         """Mock compute_revisions_for_product_repo."""

@@ -79,7 +79,7 @@ find = {}
 [tool.ruff]
 line-length = 120
 exclude = ['metadata']
-preview = true
+preview = false
 
 [tool.ruff.lint]
 # E, F: Standard pycodestyle and Pyflakes (default flake8)
@@ -88,7 +88,7 @@ preview = true
 # PL: Pylint
 extend-select =[
     "E", "F", "D", "Q", "PL",
-    "debugger", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
+    "T10", # https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
     "T2", # https://docs.astral.sh/ruff/rules/#flake8-print-t20
     "TD", # https://docs.astral.sh/ruff/rules/#flake8-todos-td
     "W",
@@ -97,7 +97,6 @@ extend-select =[
     "B",
     "SIM",
     "C4",
-    "T10",
     "FIX",
     "ISC",
     "ICN",
@@ -149,20 +148,17 @@ extend-select =[
 ]
 
 ignore = [
-    "incorrect-blank-line-before-class",
-    "len-test",  # use-implicit-booleaness-not-len (name is non-obvious)
-    "multi-line-summary-second-line",
-    "too-many-public-methods",
-    "docstring-missing-returns",
-    "docstring-missing-exception",
-    "missing-trailing-comma",
+    "D203",      # incorrect-blank-line-before-class
+    "PLC1802",   # len-test / use-implicit-booleaness-not-len (name is non-obvious)
+    "D213",      # multi-line-summary-second-line
+    "COM812",    # missing-trailing-comma
 ]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 9
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["magic-value-comparison", "any-type", "too-many-arguments", "assert", "hardcoded-password-string", "hardcoded-password-func-arg", "too-many-positional-arguments", "undocumented-public-function", "invalid-rule-code"]
+"tests/*" = ["PLR2004", "ANN401", "PLR0913", "S101", "S105", "S106", "PLR0917", "D103", "RUF102", "ARG"]
 
 [tool.ruff.format]
 # Enable reformatting of code snippets in docstrings.

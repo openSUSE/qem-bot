@@ -829,7 +829,7 @@ def test_summarize_message_detailed_comments(
     mock_args: Namespace,
     detailed_comment_mocks: dict[str, MagicMock],
     mocker: MockerFixture,
-    enabled: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
+    enabled: bool,  # ruff: ignore[FBT001]
     allow_devel: str | None,
     jobs: list[dict],
     group_info: dict | None,

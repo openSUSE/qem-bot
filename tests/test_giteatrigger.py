@@ -243,30 +243,36 @@ def test_load_prs_for_project(trigger: GiteaTrigger, mocker: MockerFixture, mock
     mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            PullRequest.from_json({
-                "number": 1,
-                "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
-                "html_url": "u",
-                "head": {"sha": "xyz"},
-                "state": "open",
-            }),
-            PullRequest.from_json({
-                "number": 2,
-                "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
-                "html_url": "u",
-                "head": {"sha": "xyz"},
-                "state": "open",
-            }),
-            PullRequest.from_json({
-                "number": 3,
-                "labels": [{"name": "needs-testing"}],
-                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
-                "html_url": "u",
-                "head": {"sha": "xyz"},
-                "state": "open",
-            }),
+            PullRequest.from_json(
+                {
+                    "number": 1,
+                    "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
+                    "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
+                    "html_url": "u",
+                    "head": {"sha": "xyz"},
+                    "state": "open",
+                }
+            ),
+            PullRequest.from_json(
+                {
+                    "number": 2,
+                    "labels": [{"name": "wrong-label"}, {"name": "qalabel1"}],
+                    "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
+                    "html_url": "u",
+                    "head": {"sha": "xyz"},
+                    "state": "open",
+                }
+            ),
+            PullRequest.from_json(
+                {
+                    "number": 3,
+                    "labels": [{"name": "needs-testing"}],
+                    "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
+                    "html_url": "u",
+                    "head": {"sha": "xyz"},
+                    "state": "open",
+                }
+            ),
         ],
     )
 
@@ -389,13 +395,15 @@ def test_get_prs_by_label_specific_number(
     mock_get_pr = mocker.patch(
         "openqabot.giteatrigger.get_open_prs",
         return_value=[
-            PullRequest.from_json({
-                "number": 1337,
-                "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
-                "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
-                "html_url": "u",
-                "head": {"sha": "xyz"},
-            })
+            PullRequest.from_json(
+                {
+                    "number": 1337,
+                    "labels": [{"name": "needs-testing"}, {"name": "qalabel1"}],
+                    "base": {"repo": {"name": "r", "full_name": "owner/r"}, "label": "l"},
+                    "html_url": "u",
+                    "head": {"sha": "xyz"},
+                }
+            )
         ],
     )
 
@@ -560,7 +568,7 @@ def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfi
     pr_ok = MagicMock(spec=PullRequest)
     pr_ok.branch = "slfo-main"
     pr_ok.has_all_labels.return_value = True
-    assert trigger._should_skip_pr(pr_ok, mock_trigger_config) is False  # ruff: ignore[private-member-access]
+    assert trigger._should_skip_pr(pr_ok, mock_trigger_config) is False  # ruff: ignore[SLF001]
 
     # Scenario 2: PR is missing required labels
     pr_skip = MagicMock(spec=PullRequest)
@@ -568,7 +576,7 @@ def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfi
     pr_skip.has_all_labels.return_value = False
     pr_skip.number = 123
     pr_skip.labels = {"label1"}
-    assert trigger._should_skip_pr(pr_skip, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert trigger._should_skip_pr(pr_skip, mock_trigger_config) is True  # ruff: ignore[SLF001]
 
     # Scenario 3: opensuse (o3) mode
     trigger.is_maintenance = True
@@ -577,13 +585,13 @@ def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfi
     pr_o3.branch = "master"
     pr_o3.number = 123
     mocker.patch.object(trigger, "is_build_finished", return_value=True)
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is False  # ruff: ignore[private-member-access]
+    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is False  # ruff: ignore[SLF001]
 
     mocker.patch.object(trigger, "is_build_finished", return_value=False)
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[SLF001]
 
     pr_o3.branch = "wrong-branch"
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[SLF001]
 
 
 def test_check_pullrequest_opensuse_success(
@@ -766,7 +774,7 @@ def test_build_openqa_settings_no_iso_name(trigger: GiteaTrigger, mock_trigger_c
     matched_iso.arch = "x86_64"
     matched_iso.build = "PR-123"
 
-    settings = trigger._build_openqa_settings(mock_pr, mock_trigger_config, matched_iso, "http://repo", None)  # ruff: ignore[private-member-access]
+    settings = trigger._build_openqa_settings(mock_pr, mock_trigger_config, matched_iso, "http://repo", None)  # ruff: ignore[SLF001]
     assert "ISO_1_URL" not in settings
     assert "HDD_1_URL" not in settings
 

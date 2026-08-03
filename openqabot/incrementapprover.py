@@ -127,14 +127,16 @@ class IncrementApprover:
         log.debug("Checking openQA job results for %s", info_str)
 
         def fetch_stats(p: dict[str, Any]) -> OpenQAResult:
-            return self.client.get_scheduled_product_stats({
-                "distri": p["DISTRI"],
-                "version": p["VERSION"],
-                "flavor": p["FLAVOR"],
-                "arch": p["ARCH"],
-                "build": p["BUILD"],
-                "product": p.get("PRODUCT"),
-            })
+            return self.client.get_scheduled_product_stats(
+                {
+                    "distri": p["DISTRI"],
+                    "version": p["VERSION"],
+                    "flavor": p["FLAVOR"],
+                    "arch": p["ARCH"],
+                    "build": p["BUILD"],
+                    "product": p.get("PRODUCT"),
+                }
+            )
 
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             stats = list(executor.map(fetch_stats, params))
