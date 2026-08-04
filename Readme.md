@@ -25,57 +25,55 @@ updates information about submissions and related openQA tests.
     QEM-Dashboard, SMELT, Gitea and openQA connector
 
     ╭─ Options ────────────────────────────────────────────────────────────────────╮
-    │ --configs          -c                   PATH     Directory or single file    │
-    │                                                  with openqabot              │
-    │                                                  configuration metadata      │
-    │                                                  [env var: QEM_BOT_CONFIGS]  │
-    │                                                  [default: /etc/openqabot]   │
-    │ --dry                                            Dry run, do not post any    │
-    │                                                  data                        │
-    │                                                  [env var: QEM_BOT_DRY]      │
-    │ --fake-data                                      Use fake data, do not query │
-    │                                                  data from real services     │
-    │                                                  [env var:                   │
-    │                                                  QEM_BOT_FAKE_DATA]          │
-    │ --dump-data                                      Dump requested data for     │
-    │                                                  later use via --fake-data   │
-    │                                                  [env var:                   │
-    │                                                  QEM_BOT_DUMP_DATA]          │
-    │ --debug            -d                            Enable debug output         │
-    │                                                  [env var: QEM_BOT_DEBUG]    │
-    │ --insecure             --no-insecure             Disable TLS verification    │
-    │                                                  for all API calls           │
-    │                                                  [env var: QEM_BOT_INSECURE] │
-    │                                                  [default: no-insecure]      │
-    │ --strict-metadata                                Raise an error on           │
-    │                                                  unrecognized metadata keys  │
-    │                                                  instead of ignoring them    │
-    │                                                  with a warning              │
-    │                                                  [env var:                   │
-    │                                                  QEM_BOT_STRICT_METADATA]    │
-    │ --token            -t                   TEXT     Token for qem dashboard api │
-    │                                                  [env var: QEM_BOT_TOKEN]    │
-    │ --gitea-token      -g                   TEXT     Token for Gitea api         │
-    │                                                  [env var:                   │
-    │                                                  QEM_BOT_GITEA_TOKEN]        │
-    │ --openqa-instance  -i                   TEXT     The openQA instance to use  │
-    │                                                  Other instances than OSD do │
-    │                                                  not update dashboard        │
-    │                                                  database                    │
-    │                                                  [env var: OPENQA_INSTANCE]  │
-    │                                                  [default:                   │
-    │                                                  (https://openqa.suse.de)]   │
-    │ --singlearch       -s                   PATH     Yaml config with list of    │
-    │                                                  singlearch packages for     │
-    │                                                  submissions run             │
-    │                                                  [env var:                   │
-    │                                                  QEM_BOT_SINGLEARCH]         │
-    │                                                  [default:                   │
-    │                                                  (/etc/openqabot/singlearch… │
-    │ --retry            -r                   INTEGER  Number of retries           │
-    │                                                  [env var: QEM_BOT_RETRY]    │
-    │                                                  [default: (2)]              │
-    │ --help                                           Show this message and exit. │
+    │ --configs          -c                   <path>  Directory or single file     │
+    │                                                 with openqabot configuration │
+    │                                                 metadata                     │
+    │                                                 [env var: QEM_BOT_CONFIGS]   │
+    │                                                 [default: /etc/openqabot]    │
+    │ --dry                                           Dry run, do not post any     │
+    │                                                 data                         │
+    │                                                 [env var: QEM_BOT_DRY]       │
+    │ --fake-data                                     Use fake data, do not query  │
+    │                                                 data from real services      │
+    │                                                 [env var: QEM_BOT_FAKE_DATA] │
+    │ --dump-data                                     Dump requested data for      │
+    │                                                 later use via --fake-data    │
+    │                                                 [env var: QEM_BOT_DUMP_DATA] │
+    │ --debug            -d                           Enable debug output          │
+    │                                                 [env var: QEM_BOT_DEBUG]     │
+    │ --insecure             --no-insecure            Disable TLS verification for │
+    │                                                 all API calls                │
+    │                                                 [env var: QEM_BOT_INSECURE]  │
+    │                                                 [default: no-insecure]       │
+    │ --strict-metadata                               Raise an error on            │
+    │                                                 unrecognized metadata keys   │
+    │                                                 instead of ignoring them     │
+    │                                                 with a warning               │
+    │                                                 [env var:                    │
+    │                                                 QEM_BOT_STRICT_METADATA]     │
+    │ --token            -t                   <str>   Token for qem dashboard api  │
+    │                                                 [env var: QEM_BOT_TOKEN]     │
+    │ --gitea-token      -g                   <str>   Token for Gitea api          │
+    │                                                 [env var:                    │
+    │                                                 QEM_BOT_GITEA_TOKEN]         │
+    │ --openqa-instance  -i                   <str>   The openQA instance to use   │
+    │                                                 Other instances than OSD do  │
+    │                                                 not update dashboard         │
+    │                                                 database                     │
+    │                                                 [env var: OPENQA_INSTANCE]   │
+    │                                                 [default:                    │
+    │                                                 (https://openqa.suse.de)]    │
+    │ --singlearch       -s                   <path>  Yaml config with list of     │
+    │                                                 singlearch packages for      │
+    │                                                 submissions run              │
+    │                                                 [env var:                    │
+    │                                                 QEM_BOT_SINGLEARCH]          │
+    │                                                 [default:                    │
+    │                                                 (/etc/openqabot/singlearch.… │
+    │ --retry            -r                   <int>   Number of retries            │
+    │                                                 [env var: QEM_BOT_RETRY]     │
+    │                                                 [default: (2)]               │
+    │ --help                                          Show this message and exit.  │
     ╰──────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────╮
     │ full-run           Full schedule for Maintenance Submissions in openQA.      │
