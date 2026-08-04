@@ -527,12 +527,12 @@ def test_approval_if_failing_jobs_are_in_development_group(
     # is_devel_group is called with group_id (int), unlike is_in_devel_group which takes a job dict
     increment_approver.client.get_jobs_by_ids = mocker.Mock(return_value=[_devel_job(123, result="failed")])
     increment_approver.client.is_devel_group = mocker.Mock(return_value=True)
-    mock_post_job = mocker.patch.object(increment_approver.client, "post_job")
+    mock_post_iso = mocker.patch.object(increment_approver.client, "post_iso")
     mock_change_review = mocker.patch("osc.core.change_review_state")
     increment_approver()
 
     # regardless of schedule flag, filtered-out jobs must never trigger post_job
-    mock_post_job.assert_not_called()
+    mock_post_iso.assert_not_called()
     # All jobs filtered, so approval should proceed (no blocking failures)
     mock_change_review.assert_called_once()
     assert mock_change_review.call_args[1]["newstate"] == "accepted"

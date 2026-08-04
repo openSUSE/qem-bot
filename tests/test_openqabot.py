@@ -146,7 +146,7 @@ def mock_openqa_passed(mocker: MockerFixture, fake_openqa_url: str) -> Any:
         def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
 
-        def post_job(self, *args: Any, **kwargs: Any) -> None:
+        def post_iso(self, *args: Any, **kwargs: Any) -> None:
             pass
 
     return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
@@ -158,7 +158,7 @@ def mock_openqa_exception(mocker: MockerFixture) -> Any:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
-        def post_job(self, *_args: Any, **_kwargs: Any) -> NoReturn:  # ruff: ignore[no-self-use]
+        def post_iso(self, *_args: Any, **_kwargs: Any) -> NoReturn:  # ruff: ignore[no-self-use]
             raise PostOpenQAError
 
     return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)

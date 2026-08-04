@@ -81,7 +81,7 @@ def trigger(
 def test_check_pullrequest_triggers_job(
     trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
-    """Verifies that post_job is called with correct parameters."""
+    """Verifies that post_iso is called with correct parameters."""
     mock_match = MagicMock()
     mock_match.group.side_effect = lambda x: {
         0: "SLES-15.5-Online-x86_64-Build1.1.install.iso",
@@ -99,8 +99,8 @@ def test_check_pullrequest_triggers_job(
     mock_pr = _make_pr(123, mock_trigger_config)
     trigger.check_pullrequest(mock_pr)
 
-    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
-    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    cast("MagicMock", trigger.openqa.post_iso).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_iso).call_args
     settings = args[0]
     assert settings["FLAVOR"] == "Online-Staging"
     assert settings["VERSION"] == "15.5:PR-123"
@@ -148,8 +148,8 @@ def test_check_pullrequest_with_image_regex(trigger: GiteaTrigger, mocker: Mocke
     mock_pr = _make_pr(456, trigger_config_with_image)
     trigger.check_pullrequest(mock_pr)
 
-    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
-    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    cast("MagicMock", trigger.openqa.post_iso).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_iso).call_args
     settings = args[0]
 
     # Verify HDD parameters are set
@@ -203,9 +203,9 @@ def test_check_pullrequest_with_image_regex_not_found(
     # Verify warning was logged
     assert "No image found matching regex" in caplog.text
 
-    # Verify post_job was still called (without HDD or ISO parameters)
-    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
-    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    # Verify post_iso was still called (without HDD or ISO parameters)
+    cast("MagicMock", trigger.openqa.post_iso).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_iso).call_args
     settings = args[0]
 
     # Verify HDD parameters are not set but ISO parameters are fallback
@@ -218,7 +218,7 @@ def test_check_pullrequest_with_image_regex_not_found(
 def test_is_openqatriggering_needed_false(
     trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
-    """Verifies that post_job is not called when openQA triggering is already satisfied."""
+    """Verifies that post_iso is not called when openQA triggering is already satisfied."""
     mock_match = MagicMock()
     mock_match.group.side_effect = lambda x: {
         0: "iso_name",
@@ -235,7 +235,7 @@ def test_is_openqatriggering_needed_false(
     mock_pr = _make_pr(123, mock_trigger_config)
     trigger.check_pullrequest(mock_pr)
 
-    cast("MagicMock", trigger.openqa.post_job).assert_not_called()
+    cast("MagicMock", trigger.openqa.post_iso).assert_not_called()
 
 
 def test_load_prs_for_project(trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig) -> None:
@@ -279,7 +279,7 @@ def test_load_prs_for_project(trigger: GiteaTrigger, mocker: MockerFixture, mock
 def test_check_pullrequest_dry_run(
     trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
-    """Verifies that post_job is NOT called during a dry run."""
+    """Verifies that post_iso is NOT called during a dry run."""
     trigger.dry = True
     mock_match = MagicMock()
     mock_match.group.side_effect = lambda x: {
@@ -309,7 +309,7 @@ def test_check_pullrequest_no_iso_found(
     mock_pr = _make_pr(789, mock_trigger_config)
     trigger.check_pullrequest(mock_pr)
 
-    cast("MagicMock", trigger.openqa.post_job).assert_not_called()
+    cast("MagicMock", trigger.openqa.post_iso).assert_not_called()
 
 
 def test_get_prs_by_label_api_exception(
@@ -606,9 +606,9 @@ def test_check_pullrequest_opensuse_success(
 
     trigger.check_pullrequest(mock_pr)
 
-    # Verify openQA post_job was called
-    cast("MagicMock", trigger.openqa.post_job).assert_called_once()
-    args, _ = cast("MagicMock", trigger.openqa.post_job).call_args
+    # Verify openQA post_iso was called
+    cast("MagicMock", trigger.openqa.post_iso).assert_called_once()
+    args, _ = cast("MagicMock", trigger.openqa.post_iso).call_args
     settings = args[0]
 
     # Verify opensuse-specific settings
@@ -639,7 +639,7 @@ def test_check_pullrequest_opensuse_no_staged_update(
 
     # Verify warning log and early exit
     mock_log.assert_called_once_with("No staged update name found for PR 123 in http://download.suse.de/ibs/")
-    cast("MagicMock", trigger.openqa.post_job).assert_not_called()
+    cast("MagicMock", trigger.openqa.post_iso).assert_not_called()
 
 
 def test_load_prs_for_project_already_loaded(

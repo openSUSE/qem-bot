@@ -410,7 +410,7 @@ class IncrementApprover:
                 "Scheduling jobs for %s%s", build_info.string_with_params(settings), f": {p}" if self.args.dry else ""
             )
             try:
-                self.client.post_job(settings)
+                self.client.post_iso(settings)
             except PostOpenQAError:
                 error_count += 1
         return error_count

@@ -62,7 +62,7 @@ class OpenQABot:
 
     def post_openqa(self, data: dict[str, Any]) -> None:
         """Post a job to openQA."""
-        self.openqa.post_job(data)
+        self.openqa.post_iso(data)
 
     def __call__(self) -> int:
         """Run the bot schedule."""

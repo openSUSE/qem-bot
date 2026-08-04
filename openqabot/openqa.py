@@ -55,7 +55,7 @@ class OpenQAInterface:
         """
         return self.url.netloc == config.settings.main_openqa_domain
 
-    def post_job(self, settings: dict[str, Any]) -> None:
+    def post_iso(self, settings: dict[str, Any]) -> None:
         """Post a job to openQA with the given settings."""
         log.info(
             "openqa-cli api --host %s -X post isos %s",

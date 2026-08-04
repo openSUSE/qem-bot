@@ -52,12 +52,12 @@ def test_post_job_failed(caplog: pytest.LogCaptureFixture, fake_openqa_url: str)
     client = oQAI()
     client.retries = 0
     with pytest.raises(PostOpenQAError):
-        client.post_job({"foo": "bar"})
+        client.post_iso({"foo": "bar"})
 
     assert f"openqa-cli api --host {fake_openqa_url} -X post isos foo=bar" in caplog.messages
     error = RequestError("POST", "no.where", 500, "no text")
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error), pytest.raises(PostOpenQAError):
-        client.post_job({"foo": "bar"})
+        client.post_iso({"foo": "bar"})
     assert any("openQA API error" in m for m in caplog.messages)
     assert any("Job POST failed for settings" in m for m in caplog.messages)
 
@@ -69,7 +69,7 @@ def test_post_job_no_templates_is_skipped(caplog: pytest.LogCaptureFixture) -> N
     text = '{"count":0,"error":"no templates found for product sle-16.0-x86_64"}'
     error = RequestError("POST", "no.where", 404, text)
     with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
-        client.post_job({"foo": "bar"})  # must not raise PostOpenQAError
+        client.post_iso({"foo": "bar"})  # must not raise PostOpenQAError
     assert any("no openQA templates for product" in m for m in caplog.messages)
     assert not any("Traceback" in m for m in caplog.messages)
 
@@ -79,7 +79,7 @@ def test_post_job_no_templates_is_skipped(caplog: pytest.LogCaptureFixture) -> N
 def test_post_job_passed(caplog: pytest.LogCaptureFixture, fake_openqa_url: str) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.openqa")
     client = oQAI()
-    client.post_job({"foo": "bar"})
+    client.post_iso({"foo": "bar"})
 
     assert f"openqa-cli api --host {fake_openqa_url} -X post isos foo=bar" in caplog.messages
     assert len(responses.calls) == 1

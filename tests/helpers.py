@@ -312,8 +312,8 @@ def run_approver(
     config: IncrementConfig | None = None,
     request_id: int | None = None,
 ) -> tuple[int, list]:
-    mock_post_job = MagicMock()
-    mocker.patch("openqabot.openqa.OpenQAInterface.post_job", new=mock_post_job)
+    mock_post_iso = MagicMock()
+    mocker.patch("openqabot.openqa.OpenQAInterface.post_iso", new=mock_post_iso)
     increment_approver = prepare_approver(
         caplog,
         schedule=schedule,
@@ -324,7 +324,7 @@ def run_approver(
         request_id=request_id,
     )
     errors = increment_approver()
-    jobs = [call_args.args[0] for call_args in mock_post_job.call_args_list]
+    jobs = [call_args.args[0] for call_args in mock_post_iso.call_args_list]
     return (errors, jobs)
 
 
