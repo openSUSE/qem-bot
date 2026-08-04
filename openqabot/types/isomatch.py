@@ -28,6 +28,5 @@ class IsoMatch:
         version = iso_match.group("version")
         arch = iso_match.group("arch")
         build_num = iso_match.group("build")
-        version_str = f"{version}:PR-{pr_number}"
         build_str = f"PR-{pr_number}-{build_num}:{product}-{version}"
-        return cls(product, version_str, build_str, arch)
+        return cls(product, version, build_str, arch)

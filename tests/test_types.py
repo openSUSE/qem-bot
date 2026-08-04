@@ -86,7 +86,7 @@ def test_isomatch_from_regex_match() -> None:
     assert match is not None
     isomatch = IsoMatch.from_regex_match(match, 123)
     assert isomatch.product == "SLES"
-    assert isomatch.version == "15.5:PR-123"
+    assert isomatch.version == "15.5"
     assert isomatch.arch == "x86_64"
     assert isomatch.build == "PR-123-1.1:SLES-15.5"
 

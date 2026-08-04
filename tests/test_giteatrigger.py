@@ -103,7 +103,8 @@ def test_check_pullrequest_triggers_job(
     args, _ = cast("MagicMock", trigger.openqa.post_iso).call_args
     settings = args[0]
     assert settings["FLAVOR"] == "Online-Staging"
-    assert settings["VERSION"] == "15.5:PR-123"
+    assert settings["VERSION"] == "15.5"
+    assert settings["SUBMISSION_ID"] == "git:123"
     assert settings["BUILD"] == "PR-123-1.1:SLES-15.5"
     assert settings["ISO_1_URL"] == "http://fake.url//SLES-15.5-Online-x86_64-Build1.1.install.iso"
     assert settings["ISO_1"] == "SLES-15.5-Online-x86_64-Build1.1.install.iso"
@@ -162,7 +163,8 @@ def test_check_pullrequest_with_image_regex(trigger: GiteaTrigger, mocker: Mocke
 
     # Verify common parameters are still set
     assert settings["FLAVOR"] == "Minimal-VM-Cloud-Staging-dev"
-    assert settings["VERSION"] == "16.1:PR-456"
+    assert settings["VERSION"] == "16.1"
+    assert settings["SUBMISSION_ID"] == "git:456"
     assert settings["BUILD"] == "PR-456-2.1:SLES-16.1"
 
 

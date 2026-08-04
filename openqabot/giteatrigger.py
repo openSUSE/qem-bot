@@ -177,6 +177,7 @@ class GiteaTrigger:
             "ARCH": matched_iso.arch,
             "FLAVOR": trigger_config.flavor,
             "_GITEA_PR": str(pullrequest.number),
+            "SUBMISSION_ID": f"git:{pullrequest.number}",
             "GITEA_SHA": pullrequest.commit_sha,
             "GITEA_PR_URL": pullrequest.url,
             "GITEA_REPO": pullrequest.project,
