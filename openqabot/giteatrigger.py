@@ -318,8 +318,12 @@ class GiteaTrigger:
             log.warning("No events found for %s", pr_name)
             return False
         bot_events = pr_events.get(cast("str", config.settings.git_review_bot_user))
-        if not bot_events:
-            log.warning("User %s has no events on %s", config.settings.git_review_bot_user, pr_name)
+        if not bot_events or "review" not in bot_events:
+            log.warning(
+                "User %s has no review event on %s, assuming build is not finished",
+                config.settings.git_review_bot_user,
+                pr_name,
+            )
             return False
 
         review = cast(
