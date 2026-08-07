@@ -33,6 +33,7 @@ name_tag = ns + "name"
 version_tag = ns + "version"
 arch_tag = ns + "arch"
 primary_re = re.compile(r".*-primary.xml(?:.(gz|zst))?$")
+MAX_PKG_LIST_LENGTH = 200
 
 
 class Package(NamedTuple):
@@ -251,7 +252,11 @@ class RepoDiff:
             diff_by_arch[arch] = diff
             if diff:
                 pkg_list = ", ".join(f"{p.name}-{p.version}-{p.rel}" for p in sorted(diff, key=lambda x: x.name))
-                log.info("Repo diff for arch %s: %d new packages: %s", arch, len(diff), pkg_list)
+                if len(pkg_list) > MAX_PKG_LIST_LENGTH:
+                    pkg_list = pkg_list[: MAX_PKG_LIST_LENGTH - 1] + "…"
+                msg = f"Repo diff for arch {arch}: {len(diff)} new packages: {pkg_list} "
+                msg += f"(run `qem-bot repo-diff --repo-a {repo_a} --repo-b {repo_b}` for full diff)"
+                log.debug(msg)
         return (diff_by_arch, count)
 
     def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
