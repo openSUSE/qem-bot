@@ -3,6 +3,7 @@
 """Test RepoDiff."""
 
 import json
+import logging
 from argparse import Namespace
 from collections import defaultdict
 
@@ -332,3 +333,20 @@ def test_load_packages_stream_exception(
     res = diff.load_packages("project")
     assert res == {}
     assert "Failed to parse repo data stream" in caplog.text
+
+
+def test_compute_diff_for_packages_long_list(caplog: pytest.LogCaptureFixture) -> None:
+    """Test compute_diff_for_packages with a long list to trigger truncation."""
+    packages_a = defaultdict(set)
+    packages_b = defaultdict(set)
+    for i in range(25):
+        # f"{p.name}-{p.version}-{p.rel}" -> pkg-X-1.0-1 which is 10+ chars.
+        # 25 packages will be > 200 chars.
+        packages_b["x86_64"].add(Package(f"pkg-{i:03d}", "0", "1.0", "1", "x86_64"))
+
+    caplog.set_level(logging.DEBUG, logger="bot.repo_diff")
+    _res, count = RepoDiff.compute_diff_for_packages("repo_a", packages_a, "repo_b", packages_b)
+
+    assert count == 25
+    assert "pkg-" in caplog.text
+    assert "…" in caplog.text
