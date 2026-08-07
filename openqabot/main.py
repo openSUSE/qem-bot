@@ -27,7 +27,7 @@ def _handle_exception(e: Exception, log: Logger) -> None:
     k = hashlib.sha256(signature.encode("utf-8")).hexdigest()
     errorcnt[k] += 1
     count = errorcnt[k]
-    log.debug("%s(%s) [hash=%s, count=%d]", type(e).__name__, e, k, count)
+    log.debug("%s(%s) [hash=%s, count=%d]", type(e).__name__, e, k, count, exc_info=e)
     if count > error_limit:
         log.error("error limit hit for exception %s, reraising", k)
         raise e
