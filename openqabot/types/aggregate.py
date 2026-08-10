@@ -177,6 +177,7 @@ class Aggregate(BaseConf):
         arch: str,
         data: PostData,
         ci_url: str | None,
+        settings_data: dict[str, Any],
     ) -> dict[str, Any] | None:
         """Create the full post data for the dashboard."""
         openqa_data: dict[str, Any] = {"REPOHASH": data.repohash, "BUILD": data.build}
@@ -187,10 +188,6 @@ class Aggregate(BaseConf):
         }
         if ci_url:
             full_post["openqa"]["__CI_JOB_URL"] = ci_url
-
-        settings_data = apply_public_cloud_settings(self.settings.copy())
-        if settings_data is None:
-            return None
 
         full_post["openqa"].update(settings_data)
         full_post["openqa"]["FLAVOR"] = self.flavor
@@ -214,6 +211,26 @@ class Aggregate(BaseConf):
         self._finalize_post(full_post, arch)
         return full_post
 
+    @staticmethod
+    def _compute_repohash(
+        test_submissions: defaultdict[str, list[Submission]],
+        settings_data: dict[str, Any],
+        issues_arch: str,
+        test_issues: dict[str, ProdVer],
+    ) -> str:
+        hashes = {
+            f"{sub.id}:{sub.revisions_with_fallback(issues_arch, test_issues[issue].version)}"
+            for issue, subs in test_submissions.items()
+            if issue != ALL_ISSUES_KEY
+            for sub in subs
+        } | {
+            str(settings_data[key])
+            for key in ("PUBLIC_CLOUD_IMAGE_ID", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE")
+            if settings_data.get(key)
+        }
+
+        return merge_repohash(sorted(hashes))
+
     def process_arch(
         self,
         arch: str,
@@ -228,9 +245,11 @@ class Aggregate(BaseConf):
 
         test_submissions, test_repos = self.get_test_submissions_and_repos(valid_submissions, issues_arch)
 
-        repohash = merge_repohash(
-            sorted({str(sub.id) for sub in chain.from_iterable(test_submissions.values())}),
-        )
+        settings_data = apply_public_cloud_settings(self.settings.copy())
+        if settings_data is None:
+            return None
+
+        repohash = self._compute_repohash(test_submissions, settings_data, issues_arch, self.test_issues)
 
         try:
             old_jobs = dashboard.get_json(
@@ -273,6 +292,7 @@ class Aggregate(BaseConf):
             arch,
             PostData(test_submissions, test_repos, repohash, build),
             ci_url,
+            settings_data,
         )
 
     def __call__(
@@ -284,6 +304,8 @@ class Aggregate(BaseConf):
     ) -> list[dict[str, Any]]:
         """Process all architectures and return a list of posts for the dashboard."""
         valid_submissions = self.filter_submissions(submissions)
+        for s in valid_submissions:
+            s.compute_revisions_for_product_repo(None, None)
 
         results = [
             self.process_arch(arch, valid_submissions, ci_url, ignore_onetime=ignore_onetime) for arch in self.archs

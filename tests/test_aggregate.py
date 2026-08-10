@@ -18,7 +18,7 @@ from openqabot.errors import SameBuildExistsError
 from openqabot.types.aggregate import Aggregate, PostData
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
-from openqabot.types.types import Repos
+from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock
@@ -44,13 +44,13 @@ def aggregate_factory() -> Any:
 @pytest.fixture
 def submission_mock(mocker: MockerFixture) -> Any:
     def _func(
+        sub_id: int = 123,
         product: str = "P",
         version: str = "V",
         arch: str = "A",
         *,
         embargoed: bool = False,
         staging: bool = False,
-        sub_id: int = 123,
     ) -> MagicMock:
         sub = mocker.MagicMock(spec=Submission)
         sub.id = sub_id
@@ -60,6 +60,7 @@ def submission_mock(mocker: MockerFixture) -> Any:
         sub.embargoed = embargoed
         sub.type = DEFAULT_SUBMISSION_TYPE
         sub.priority = None
+        sub.revisions_with_fallback.return_value = "rev_fallback"
         sub.__str__.return_value = str(sub.id)
         return sub
 
@@ -434,11 +435,52 @@ def test_aggregate_duplicate_submissions(aggregate_factory: Any, submission_mock
     test_repos["REPOS"] = ["repo"]
 
     post_data = PostData(test_submissions, test_repos, "hash", "build")
-    res = agg.create_full_post("x86_64", post_data, None)
+    res = agg.create_full_post("x86_64", post_data, None, {})
 
     assert res is not None
     assert len(res["qem"]["incidents"]) == 1
     assert res["qem"]["incidents"][0] == 123
+
+
+@pytest.mark.parametrize(
+    ("pc_image_id", "rev2_value", "is_different_from_baseline"),
+    [
+        pytest.param("ami-123", "rev2", False, id="identical_inputs_yield_identical_hash"),
+        pytest.param("ami-456", "rev2", True, id="changed_public_cloud_image_id_yields_different_hash"),
+        pytest.param("ami-123", "rev3", True, id="changed_submission_revision_yields_different_hash"),
+    ],
+)
+def test_aggregate_compute_repohash_changes_on_input_modification(
+    submission_mock: Any,
+    pc_image_id: str,
+    rev2_value: str,
+    *,
+    is_different_from_baseline: bool,
+) -> None:
+    sub1 = submission_mock(1)
+    sub1.revisions_with_fallback.return_value = "rev1"
+    sub2_baseline = submission_mock(2)
+    sub2_baseline.revisions_with_fallback.return_value = "rev2"
+    baseline_issues = {"issue1": ProdVer("product", "12"), "issue2": ProdVer("product", "12")}
+
+    baseline_hash = Aggregate._compute_repohash(  # noqa: SLF001
+        defaultdict(list, {"issue1": [sub1], "issue2": [sub2_baseline]}),
+        {"PUBLIC_CLOUD_IMAGE_ID": "ami-123"},
+        "x86_64",
+        baseline_issues,
+    )
+
+    sub2_test = submission_mock(2)
+    sub2_test.revisions_with_fallback.return_value = rev2_value
+
+    test_hash = Aggregate._compute_repohash(  # noqa: SLF001
+        defaultdict(list, {"issue1": [sub1], "issue2": [sub2_test]}),
+        {"PUBLIC_CLOUD_IMAGE_ID": pc_image_id},
+        "x86_64",
+        baseline_issues,
+    )
+
+    assert (baseline_hash != test_hash) is is_different_from_baseline
 
 
 def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> None:
@@ -470,7 +512,7 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     test_repos["REPOS"] = [repo_url]
     post_data = PostData(test_submissions, test_repos, "hash", "build")
 
-    res = agg.create_full_post("x86_64", post_data, None)
+    res = agg.create_full_post("x86_64", post_data, None, {})
 
     assert res is not None
     dashboard_url = res["openqa"]["__DASHBOARD_INCIDENTS_URL"]
