@@ -156,7 +156,7 @@ class Approver:
         )
 
         overall_result = True
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             approvable_flags = list(executor.map(self.approvable, subreqs))
 
         submissions_to_approve = [sub for sub, ok in zip(subreqs, approvable_flags, strict=True) if ok]
@@ -170,7 +170,7 @@ class Approver:
                 log.info("Dry run: Would approve %s", ms2str(sub))
         else:
             osc.conf.get_config(override_apiurl=config.settings.obs_url)
-            with ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
                 for result in executor.map(self.approve, submissions_to_approve):
                     overall_result &= result
 
