@@ -31,6 +31,10 @@ ALL_ISSUES_KEY = "TEST_ISSUES[]"
 VALID_AGGREGATE_KEYS = frozenset({"FLAVOR", "archs", "onetime", "packages", "excluded_packages", "test_issues"})
 
 
+def _submission_hash(submission: Submission, issues_arch: str, version: str) -> str:
+    return f"{submission.id}:{submission.revisions_with_fallback(issues_arch, version)}"
+
+
 class PostData(NamedTuple):
     """Data to be posted to dashboard."""
 
@@ -218,21 +222,15 @@ class Aggregate(BaseConf):
         issues_arch: str,
         test_issues: dict[str, ProdVer],
     ) -> str:
-        submission_hashes = set()
-        for issue, subs in test_submissions.items():
-            if issue == ALL_ISSUES_KEY:
-                continue
-            for sub in subs:
-                revision = sub.revisions_with_fallback(issues_arch, test_issues[issue].version)
-                submission_hashes.add(f"{sub.id}:{revision}")
-
-        setting_hashes = set()
-        for key in ("PUBLIC_CLOUD_IMAGE_ID", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE"):
-            if value := settings_data.get(key):
-                setting_hashes.add(str(value))
-
-        hashes = submission_hashes | setting_hashes
-        return merge_repohash(sorted(hashes))
+        submission_hashes: set[str] = {
+            _submission_hash(sub, issues_arch, test_issues[issue].version)
+            for issue, subs in test_submissions.items()
+            if issue != ALL_ISSUES_KEY
+            for sub in subs
+        }
+        setting_keys = ("PUBLIC_CLOUD_IMAGE_ID", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE")
+        setting_hashes: set[str] = {str(settings_data[key]) for key in setting_keys if settings_data.get(key)}
+        return merge_repohash(sorted(submission_hashes | setting_hashes))
 
     def process_arch(
         self,
