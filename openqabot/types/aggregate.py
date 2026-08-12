@@ -218,17 +218,20 @@ class Aggregate(BaseConf):
         issues_arch: str,
         test_issues: dict[str, ProdVer],
     ) -> str:
-        hashes = {
-            f"{sub.id}:{sub.revisions_with_fallback(issues_arch, test_issues[issue].version)}"
-            for issue, subs in test_submissions.items()
-            if issue != ALL_ISSUES_KEY
-            for sub in subs
-        } | {
-            str(settings_data[key])
-            for key in ("PUBLIC_CLOUD_IMAGE_ID", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE")
-            if settings_data.get(key)
-        }
+        submission_hashes = set()
+        for issue, subs in test_submissions.items():
+            if issue == ALL_ISSUES_KEY:
+                continue
+            for sub in subs:
+                revision = sub.revisions_with_fallback(issues_arch, test_issues[issue].version)
+                submission_hashes.add(f"{sub.id}:{revision}")
 
+        setting_hashes = set()
+        for key in ("PUBLIC_CLOUD_IMAGE_ID", "PUBLIC_CLOUD_TOOLS_IMAGE_BASE"):
+            if value := settings_data.get(key):
+                setting_hashes.add(str(value))
+
+        hashes = submission_hashes | setting_hashes
         return merge_repohash(sorted(hashes))
 
     def process_arch(
