@@ -248,6 +248,14 @@ def main(  # ruff: ignore[too-many-arguments]
             show_default=str(_default("retry")),
         ),
     ] = None,
+    max_workers: Annotated[
+        int | None,
+        typer.Option(
+            "--max-workers",
+            envvar="QEM_BOT_MAX_WORKERS",
+            help="Maximum number of workers for parallel processing",
+        ),
+    ] = None,
 ) -> None:
     """QEM-Dashboard, SMELT, Gitea and openQA connector."""
     # Configure logging
@@ -278,6 +286,7 @@ def main(  # ruff: ignore[too-many-arguments]
             "singlearch": singlearch,
             "retry": retry,
             "strict_metadata": strict_metadata,
+            "max_workers": max_workers,
         },
     )
 
@@ -303,6 +312,7 @@ def main(  # ruff: ignore[too-many-arguments]
         singlearch=settings.singlearch,
         retry=settings.retry,
         strict_metadata=settings.strict_metadata,
+        max_workers=settings.max_workers,
     )
 
 
