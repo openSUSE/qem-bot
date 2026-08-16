@@ -24,7 +24,7 @@ from .utils import get_obs_filter_params
 from .utils import retry10 as retried_requests
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
 log = getLogger("bot.repo_diff")
 ns = "{http://linux.duke.edu/metadata/common}"
@@ -64,7 +64,7 @@ class Package(NamedTuple):
 class RepoDiff:
     """Repository diff computation."""
 
-    def __init__(self, args: Namespace | None) -> None:
+    def __init__(self, args: SimpleNamespace | None) -> None:
         """Initialize the RepoDiff class."""
         self.args = args
         self.fake_data = args is not None and getattr(self.args, "fake_data", False)

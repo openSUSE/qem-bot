@@ -7,9 +7,9 @@ from __future__ import annotations
 import logging
 import os
 import re
-from argparse import Namespace
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, NamedTuple
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
@@ -109,7 +109,7 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
     ]
 
 
-args = Namespace(
+args = SimpleNamespace(
     dry=False,
     token="123",
     all_submissions=False,
@@ -222,7 +222,7 @@ def prepare_approver(
     caplog.set_level(logging.DEBUG, logger="bot.requests")
     caplog.set_level(logging.DEBUG, logger="bot.loader.buildinfo")
 
-    args = Namespace(
+    args = SimpleNamespace(
         dry=False,
         token="not-secret",
         gitea_token=None,
@@ -361,7 +361,7 @@ def fake_openqa_responses_with_param_matching(
     ]
 
 
-def make_approver_args(**kwargs: Any) -> Namespace:
+def make_approver_args(**kwargs: Any) -> SimpleNamespace:
     defaults = {
         "gitea_token": None,
         "token": "dummy_token",
@@ -369,4 +369,4 @@ def make_approver_args(**kwargs: Any) -> Namespace:
         "all_submissions": False,
     }
     defaults.update(kwargs)
-    return Namespace(**defaults)
+    return SimpleNamespace(**defaults)

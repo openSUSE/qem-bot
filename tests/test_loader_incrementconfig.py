@@ -3,8 +3,8 @@
 """Test loader increment config."""
 
 import logging
-from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -52,7 +52,7 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_config_parsing_from_args() -> None:
     config = IncrementConfig.from_args(
-        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
+        SimpleNamespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(config) == 1
     assert config[0].distri == "sle"
@@ -67,7 +67,7 @@ def test_config_parsing_from_args() -> None:
 def test_config_parsing_from_args_with_path(config_index: int, expected_distri: str) -> None:
     path = Path("tests/fixtures/config-increment-approver")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
+        SimpleNamespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 2
     config = configs[config_index]
@@ -82,7 +82,7 @@ def test_config_parsing_from_args_with_path(config_index: int, expected_distri: 
 def test_config_parsing_from_args_with_auto_discovery() -> None:
     path = Path("tests/fixtures/config-increment-approver")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
+        SimpleNamespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 2
     assert configs[0].distri == "foo"
@@ -92,7 +92,7 @@ def test_config_parsing_from_args_with_auto_discovery() -> None:
 def test_config_parsing_from_args_fallback_to_cli() -> None:
     path = Path("tests/fixtures/config")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
+        SimpleNamespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 1
     assert configs[0].distri == "sle"

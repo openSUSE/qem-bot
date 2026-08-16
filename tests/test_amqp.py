@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from argparse import Namespace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -26,8 +26,8 @@ fake_job_done = "suse.openqa.job.done"
 
 
 @pytest.fixture
-def args() -> Namespace:
-    return Namespace(
+def args() -> SimpleNamespace:
+    return SimpleNamespace(
         dry=True,
         token="ToKeN",
         url="amqp://localhost",
@@ -36,11 +36,11 @@ def args() -> Namespace:
 
 
 @pytest.fixture
-def amqp(args: Namespace) -> AMQP:
+def amqp(args: SimpleNamespace) -> AMQP:
     return AMQP(args)
 
 
-def test_handling_aggregate_full_coverage(args: Namespace, mocker: MagicMock) -> None:
+def test_handling_aggregate_full_coverage(args: SimpleNamespace, mocker: MagicMock) -> None:
     mock_listener_class = mocker.patch("openqabot.amqp.AMQPListener")
     amqp = AMQP(args)
     result = amqp()

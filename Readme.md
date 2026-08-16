@@ -76,22 +76,22 @@ updates information about submissions and related openQA tests.
     │ --help                                          Show this message and exit.  │
     ╰──────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────╮
-    │ full-run           Full schedule for Maintenance Submissions in openQA.      │
-    │ submissions-run    Submissions only schedule for Maintenance Submissions in  │
-    │                    openQA.                                                   │
-    │ updates-run        Aggregates only schedule for Maintenance Submissions in   │
-    │                    openQA.                                                   │
-    │ smelt-sync         Sync data from SMELT into QEM Dashboard.                  │
-    │ gitea-sync         Sync data from Gitea into QEM Dashboard.                  │
-    │ gitea-trigger      Trigger testing for PR(s) with certain label.             │
-    │ sub-approve        Approve submissions which passed tests.                   │
-    │ sub-comment        Comment submissions in BuildService.                      │
-    │ sub-sync-results   Sync results of openQA submission jobs to Dashboard.      │
-    │ aggr-sync-results  Sync results of openQA aggregate jobs to Dashboard.       │
-    │ increment-approve  Approve the most recent product increment for an OBS      │
-    │                    project if tests passed.                                  │
-    │ repo-diff          Computes the diff between two repositories.               │
-    │ amqp               AMQP listener daemon.                                     │
+    │ full-run            Full schedule for Maintenance Submissions in openQA.     │
+    │ submissions-run     Submissions only schedule for Maintenance Submissions in │
+    │                     openQA.                                                  │
+    │ handle-submissions  Schedule tests, sync results, and approve Maintenance    │
+    │                     Submissions.                                             │
+    │ updates-run         Aggregates only schedule for Maintenance Submissions in  │
+    │                     openQA.                                                  │
+    │ sync                Sync data from both SMELT and Gitea into QEM Dashboard.  │
+    │ gitea-trigger       Trigger testing for PR(s) with certain label.            │
+    │ sub-approve         Approve submissions which passed tests.                  │
+    │ sub-sync-results    Sync results of openQA submission jobs to Dashboard.     │
+    │ aggr-sync-results   Sync results of openQA aggregate jobs to Dashboard.      │
+    │ increment-approve   Approve the most recent product increment for an OBS     │
+    │                     project if tests passed.                                 │
+    │ amqp                AMQP listener daemon.                                    │
+    │ advanced            Advanced commands, e.g. for debugging.                   │
     ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
@@ -107,7 +107,7 @@ details.
 ## Expected workflow
 
 * For every incident in SMELT or PR in Gitea an entry should show up in
-  qem-dashboard (`smelt-sync`, `gitea-sync`)
+  qem-dashboard (`sync`)
 * For every submission in qem-dashboard, submission and aggregate tests are
   triggered (`submissions-run`, `updates-run`)
 * Results from submission + aggregate tests show up on the dashboard

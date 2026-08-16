@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Main OpenQABot logic."""
 
-from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, wait
 from logging import getLogger
 from os import environ
+from types import SimpleNamespace
 from typing import Any
 
 import openqabot.config as config_module
@@ -22,7 +22,7 @@ log = getLogger("bot.openqabot")
 class OpenQABot:
     """Main OpenQABot logic."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the OpenQABot class."""
         log.info("Starting bot schedule")
         self.dry = args.dry

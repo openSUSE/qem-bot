@@ -22,8 +22,8 @@ from .types.increment import BuildIdentifier
 from .utils import extract_contact_from_description, normalize_results
 
 if TYPE_CHECKING:
-    from argparse import Namespace
     from collections.abc import Callable, Sequence
+    from types import SimpleNamespace
 
     from .types.pullrequest import CommentableProtocol
     from .types.submission import Submission
@@ -34,7 +34,7 @@ log = getLogger("bot.commenter")
 class Commenter:
     """Logic for commenting on submissions in OBS."""
 
-    def __init__(self, args: Namespace, submissions: Sequence[Submission]) -> None:
+    def __init__(self, args: SimpleNamespace, submissions: Sequence[Submission]) -> None:
         """Initialize the Commenter class."""
         self.dry = args.dry
         self.gitea_token = gitea.make_token_header(args.gitea_token)
