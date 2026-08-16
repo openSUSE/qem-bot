@@ -225,6 +225,45 @@ def _run_gitea_sync(args: SimpleNamespace, options: GiteaSyncOptions) -> int:
     return GiteaSync(args)()
 
 
+def _run_submissions_schedule(args: SimpleNamespace, *, ignore_onetime: bool, submission: str | None) -> int:
+    args.ignore_onetime = ignore_onetime
+    args.submission = submission
+    args.disable_submissions = False
+    args.disable_aggregates = True
+    return OpenQABot(args)()
+
+
+def _run_sub_sync_results(args: SimpleNamespace) -> int:
+    return SubResultsSync(args)()
+
+
+def _run_sub_approve(  # ruff: ignore[too-many-arguments]
+    args: SimpleNamespace,
+    *,
+    all_submissions: bool,
+    submission: str | None,
+    comment: bool,
+    enable_detailed_comments: bool | None,
+    fallback_contact: str | None,
+    generic_tool_issues_contact: str | None,
+    max_detailed_comment_entries: int | None,
+) -> int:
+    args.all_submissions = all_submissions
+    args.submission = submission
+    args.incident = submission
+    args.comment = comment
+
+    _apply_detailed_comment_options(
+        args,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
+
+    return Approver(args)()
+
+
 @app.callback()
 def main(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
@@ -420,13 +459,53 @@ def submissions_run(
     """Submissions only schedule for Maintenance Submissions in openQA."""
     args = ctx.obj
     _require_token(args)
-    args.ignore_onetime = ignore_onetime
-    args.submission = submission
-    args.disable_submissions = False
-    args.disable_aggregates = True
+    sys.exit(_run_submissions_schedule(args, ignore_onetime=ignore_onetime, submission=submission))
 
-    bot = OpenQABot(args)
-    sys.exit(bot())
+
+@app.command("handle-submissions")
+def handle_submissions(  # ruff: ignore[too-many-arguments]
+    ctx: typer.Context,
+    *,
+    ignore_onetime: Annotated[
+        bool,
+        typer.Option("-i", "--ignore-onetime", help="Ignore onetime and schedule those test runs"),
+    ] = False,
+    submission: Annotated[
+        str | None,
+        typer.Option(
+            "-I",
+            "--submission",
+            help="Submission ID (to process and approve only a single submission)",
+        ),
+    ] = None,
+    all_submissions: Annotated[
+        bool,
+        typer.Option("--all-submissions", help="use all submissions without care about rrid for approval"),
+    ] = False,
+    comment: comment_option = True,
+    enable_detailed_comments: enable_detailed_comments_option = None,
+    fallback_contact: fallback_contact_option = None,
+    generic_tool_issues_contact: generic_tool_issues_contact_option = None,
+    max_detailed_comment_entries: max_detailed_comment_entries_option = None,
+) -> None:
+    """Schedule tests, sync results, and approve Maintenance Submissions."""
+    args = ctx.obj
+    _require_token(args)
+
+    bot_ret = _run_submissions_schedule(args, ignore_onetime=ignore_onetime, submission=submission)
+    sync_ret = _run_sub_sync_results(args)
+    approve_ret = _run_sub_approve(
+        args,
+        all_submissions=all_submissions,
+        submission=submission,
+        comment=comment,
+        enable_detailed_comments=enable_detailed_comments,
+        fallback_contact=fallback_contact,
+        generic_tool_issues_contact=generic_tool_issues_contact,
+        max_detailed_comment_entries=max_detailed_comment_entries,
+    )
+
+    sys.exit(bot_ret or sync_ret or approve_ret)
 
 
 @app.command("updates-run")
@@ -582,21 +661,18 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
     """Approve submissions which passed tests."""
     args = ctx.obj
     _require_token(args)
-    args.all_submissions = all_submissions
-    args.submission = submission
-    args.incident = submission
-    args.comment = comment
-
-    _apply_detailed_comment_options(
-        args,
-        enable_detailed_comments=enable_detailed_comments,
-        fallback_contact=fallback_contact,
-        generic_tool_issues_contact=generic_tool_issues_contact,
-        max_detailed_comment_entries=max_detailed_comment_entries,
+    sys.exit(
+        _run_sub_approve(
+            args,
+            all_submissions=all_submissions,
+            submission=submission,
+            comment=comment,
+            enable_detailed_comments=enable_detailed_comments,
+            fallback_contact=fallback_contact,
+            generic_tool_issues_contact=generic_tool_issues_contact,
+            max_detailed_comment_entries=max_detailed_comment_entries,
+        )
     )
-
-    approve = Approver(args)
-    sys.exit(approve())
 
 
 @advanced_app.command("sub-comment")
@@ -631,8 +707,7 @@ def sub_sync_results(ctx: typer.Context) -> None:
     args = ctx.obj
     _require_token(args)
 
-    syncer = SubResultsSync(args)
-    sys.exit(syncer())
+    sys.exit(_run_sub_sync_results(args))
 
 
 @app.command("aggr-sync-results")

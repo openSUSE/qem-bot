@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import logging
 import re
-from argparse import Namespace
 from collections import defaultdict
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
@@ -337,7 +337,7 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
         mock_load.return_value = [BuildInfo("sle", "SLES", "16.0", "Online-Increments", "x86_64", "139.1")]
 
         approver = IncrementApprover(
-            Namespace(
+            SimpleNamespace(
                 dry=True,
                 token="token",
                 gitea_token=None,

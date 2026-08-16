@@ -13,7 +13,7 @@ import osc.core
 from openqabot import config
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
 log = getLogger("bot.requests")
 
@@ -72,7 +72,9 @@ def _find_request_on_obs_cached(
     return relevant_request
 
 
-def find_request_on_obs(args: Namespace, build_project: str, obs_url: str | None = None) -> osc.core.Request | None:
+def find_request_on_obs(
+    args: SimpleNamespace, build_project: str, obs_url: str | None = None
+) -> osc.core.Request | None:
     """Find a relevant product increment request on OBS."""
     resolved_url = obs_url or config.settings.obs_url
     return _find_request_on_obs_cached(

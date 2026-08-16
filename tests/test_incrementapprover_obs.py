@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from argparse import Namespace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 from urllib.parse import urlparse
@@ -116,7 +116,7 @@ def testfind_request_on_obs_caching(mocker: MockerFixture, caplog: pytest.LogCap
 
 def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     caplog.set_level(logging.INFO)
-    args = Namespace(
+    args = SimpleNamespace(
         dry=True,
         token="token",
         gitea_token=None,

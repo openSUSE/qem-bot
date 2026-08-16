@@ -15,7 +15,7 @@ from openqabot import config
 from .config import get_configs_from_path
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
     from openqabot.types.increment import BuildInfo
 
@@ -167,7 +167,7 @@ class IncrementConfig:
         )
 
     @staticmethod
-    def from_args(args: Namespace) -> list[IncrementConfig]:
+    def from_args(args: SimpleNamespace) -> list[IncrementConfig]:
         """Create increment configurations from command line arguments."""
         source = args.increment_config or (
             args.configs if getattr(args, "configs", None) and args.configs.exists() else None
@@ -181,7 +181,7 @@ class IncrementConfig:
         return [IncrementConfig._create_from_args(args)]
 
     @staticmethod
-    def _apply_cli_overrides(configs: list[IncrementConfig], args: Namespace) -> list[IncrementConfig]:
+    def _apply_cli_overrides(configs: list[IncrementConfig], args: SimpleNamespace) -> list[IncrementConfig]:
         """Apply CLI argument overrides to loaded configs.
 
         Only override when CLI args differ from expected defaults (not dataclass defaults).
@@ -197,7 +197,7 @@ class IncrementConfig:
         return [replace(config, **overrides) if overrides else config for config in configs]
 
     @staticmethod
-    def _create_from_args(args: Namespace) -> IncrementConfig:
+    def _create_from_args(args: SimpleNamespace) -> IncrementConfig:
         """Create a single IncrementConfig from CLI arguments."""
         all_fields = {f.name for f in fields(IncrementConfig)}
         config_args = {field_name: getattr(args, field_name) for field_name in all_fields if hasattr(args, field_name)}

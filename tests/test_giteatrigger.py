@@ -3,8 +3,8 @@
 """Tests GiteaTrigger class."""
 
 import logging
-from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock
 from urllib.parse import urlparse
@@ -30,9 +30,9 @@ def mock_trigger_config() -> TriggerConfig:
 
 
 @pytest.fixture
-def mock_args() -> Namespace:
+def mock_args() -> SimpleNamespace:
     """Provide a standard set of CLI arguments for initialization."""
-    return Namespace(
+    return SimpleNamespace(
         dry=False,
         gitea_token="fake_token",
         gitea_project="repo/name",
@@ -64,7 +64,7 @@ def _make_pr(number: int | None, trigger_config: TriggerConfig, **kwargs: Any) -
 
 @pytest.fixture
 def trigger(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mocker: MockerFixture,
     _fake_get_configs_from_path: None,
 ) -> GiteaTrigger:
@@ -380,7 +380,7 @@ def test_check_pullrequest_mixed_trigger_and_covered_skips_comment(
 
 @pytest.mark.usefixtures("_fake_get_configs_from_path")
 def test_get_prs_by_label_specific_number(
-    mock_args: Namespace, mocker: MockerFixture, mock_trigger_config: TriggerConfig
+    mock_args: SimpleNamespace, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
     """Cover user provides a specific PR number via CLI."""
     mock_args.pr_number = 1337
@@ -458,7 +458,7 @@ def test_comment_on_pr_build_injection(
 
 
 def test_comment_on_pr_one_flavor_fails_blocks_approval(
-    trigger: GiteaTrigger, mocker: MockerFixture, mock_args: Namespace
+    trigger: GiteaTrigger, mocker: MockerFixture, mock_args: SimpleNamespace
 ) -> None:
     """A failing flavor must block approval even when another flavor passes."""
     mocker.patch("openqabot.config.settings.enable_detailed_comments", new=False)
@@ -727,7 +727,7 @@ def test_comment_on_pr_exception(trigger: GiteaTrigger) -> None:
 
 
 def test_trigger_init_maintenance(
-    mock_args: Namespace, mocker: MockerFixture, mock_trigger_config: TriggerConfig
+    mock_args: SimpleNamespace, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
     """Cover the maintenance initialization path."""
     mock_args.maintenance = True
@@ -746,7 +746,7 @@ def test_is_openqa_triggering_needed_with_results(trigger: GiteaTrigger, mock_tr
     assert trigger.is_openqa_triggering_needed(mock_iso, mock_trigger_config) is False
 
 
-def test_trigger_init_no_configs(mock_args: Namespace, mocker: MockerFixture) -> None:
+def test_trigger_init_no_configs(mock_args: SimpleNamespace, mocker: MockerFixture) -> None:
     """Verify that ValueError is raised if no configs are found."""
     mocker.patch("openqabot.giteatrigger.get_configs_from_path", return_value=[])
     mocker.patch("openqabot.loader.gitea.make_token_header")

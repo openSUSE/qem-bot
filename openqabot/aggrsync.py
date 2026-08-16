@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Sync aggregate results."""
 
-from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
 from logging import getLogger
+from types import SimpleNamespace
 
 from . import config
 from .loader.config import read_products
@@ -20,7 +20,7 @@ class AggregateResultsSync(SyncRes):
 
     operation = "aggregate"
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the AggregateResultsSync class."""
         super().__init__(args)
         self.product = read_products(args.configs)

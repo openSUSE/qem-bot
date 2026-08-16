@@ -3,9 +3,9 @@
 """AMQP listener for openQA events."""
 
 import re
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from .approver import Approver
@@ -28,7 +28,7 @@ build_agg_regex = re.compile(r"\d{8}-\d+")
 class AMQP(SyncRes):
     """AMQP listener and message handler."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the AMQP class."""
         super().__init__(args)
         self.args = args
