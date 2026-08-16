@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import logging
 import os
-from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import ParseResult, urlparse
 
@@ -125,8 +125,8 @@ def test_main_missing_token_with_help_returns_early(mocker: MockerFixture) -> No
 
 
 @pytest.fixture
-def mocked_openqa_bot() -> Namespace:
-    return Namespace(
+def mocked_openqa_bot() -> SimpleNamespace:
+    return SimpleNamespace(
         dry=False,
         ignore_onetime=False,
         singlearch="single",
@@ -191,7 +191,7 @@ def mock_runtime(mocker: MockerFixture) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_passed(mocked_openqa_bot: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar", json={"id": 234})
@@ -204,7 +204,7 @@ def test_passed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) 
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_passed_non_osd(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_passed_non_osd(mocked_openqa_bot: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar")
@@ -218,7 +218,7 @@ def test_passed_non_osd(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureF
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_exception")
-def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_passed_post_osd_failed(mocked_openqa_bot: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG)
     bot = OpenQABot(mocked_openqa_bot)
     responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar")
@@ -232,7 +232,7 @@ def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.Log
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> None:
+def test_post_qem_success(mocked_openqa_bot: SimpleNamespace, mocker: MockerFixture) -> None:
     bot = OpenQABot(mocked_openqa_bot)
     bot.openqa = mocker.Mock(spec=OpenQAInterface)
     test_api = "api/jobs/incident/1"
@@ -252,7 +252,7 @@ def test_post_qem_success(mocked_openqa_bot: Namespace, mocker: MockerFixture) -
 
 @responses.activate
 @pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
-def test_post_qem_dry(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> None:
+def test_post_qem_dry(mocked_openqa_bot: SimpleNamespace, mocker: MockerFixture) -> None:
     bot = OpenQABot(mocked_openqa_bot)
     bot.dry = True
     bot.openqa = mocker.Mock(spec=OpenQAInterface)

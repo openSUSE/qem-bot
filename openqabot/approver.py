@@ -38,7 +38,7 @@ from .loader.qem import (
 )
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
 
 class JobResult(Enum):
@@ -121,7 +121,7 @@ class Approver:
 
     def __init__(
         self,
-        args: Namespace,
+        args: SimpleNamespace,
         single_submission: int | None = None,
         submission_type: str | None = None,
     ) -> None:

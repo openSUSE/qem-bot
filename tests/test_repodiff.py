@@ -4,8 +4,8 @@
 
 import json
 import logging
-from argparse import Namespace
 from collections import defaultdict
+from types import SimpleNamespace
 
 import pytest
 from lxml import etree  # ty: ignore[unresolved-import]
@@ -50,7 +50,7 @@ def test_repodiff_no_args(caplog: pytest.LogCaptureFixture) -> None:
 
 def test_repodiff(capsys: pytest.CaptureFixture[str]) -> None:
     RepoDiff(
-        Namespace(
+        SimpleNamespace(
             dry=True,
             fake_data=True,
             repo_a=f"{settings.obs_download_url}/OBS:/PROJECT:/PUBLISH_product",
@@ -63,7 +63,7 @@ def test_repodiff(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_repodiff_compression(capsys: pytest.CaptureFixture[str]) -> None:
     RepoDiff(
-        Namespace(
+        SimpleNamespace(
             dry=True,
             fake_data=True,
             repo_a=f"{settings.obs_download_url}/OBS:/PROJECT:/PUBLISH_product_zst",
@@ -152,7 +152,7 @@ def test_request_and_dump_no_dump(diff: RepoDiff, mocker: MockerFixture) -> None
 
 def test_repodiff_exit(mocker: MockerFixture) -> None:
     diff = RepoDiff(
-        Namespace(
+        SimpleNamespace(
             dry=True,
             fake_data=True,
             repo_a="NONEXISTENT",
