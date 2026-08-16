@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
+import openqabot.config as cfg
 from openqabot.config import Settings, get_default_obs_url
 
 
@@ -136,3 +137,11 @@ def test_load_config_yml_malformed_is_ignored(tmp_path: Path, content: str, reas
     settings = Settings()
     settings.load_config_yml(tmp_path)
     assert settings.retry == Settings().retry, reason
+
+
+def test_module_getattr_constants() -> None:
+    """Test legacy and module-level constants mapped through __getattr__."""
+    assert cfg.GITEA_PROJECT == "products/SLFO,products/SLFO_Kernel"
+    assert cfg.AMQP_URL == "amqps://suse:suse@rabbit.suse.de"
+    with pytest.raises(AttributeError, match="has no attribute non_existent_attr"):
+        _ = cfg.non_existent_attr

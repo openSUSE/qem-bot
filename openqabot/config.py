@@ -182,6 +182,7 @@ def __getattr__(name: str) -> Any:  # ruff: ignore[any-type]
         "SMELT_URL": "smelt_url",
         "SMELT": "smelt_graphql",
         "GITEA": "gitea_url",
+        "GITEA_PROJECT": "gitea_project",
         "OBS_URL": "obs_url",
         "OBS_WEB_URL": "obs_web_url",
         "OBS_DOWNLOAD_URL": "obs_download_url",

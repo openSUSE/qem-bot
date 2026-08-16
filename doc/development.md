@@ -135,7 +135,7 @@ following automated targets:
     ```bash
     make test-integration
     ```
-    This will verify `gitea-sync`, `smelt-sync`, and dry-runs of
+    This will verify `advanced gitea-sync`, `advanced smelt-sync`, and dry-runs of
     `submissions-run` and `sub-approve`.
 
 For manual setup, check out [qem-dashboard](https://github.com/openSUSE/qem-dashboard)
@@ -159,7 +159,7 @@ the following one to sync Gitea PRs into the dashboard:
 
 ```
 python3 ./qem-bot.py -g "$GITEA_TOKEN" -t s3cret --fake-data \
-    -c etc/openqabot gitea-sync --allow-build-failures \
+    -c etc/openqabot advanced gitea-sync --allow-build-failures \
     --consider-unrequested-prs
 ```
 

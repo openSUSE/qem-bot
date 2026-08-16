@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Annotated, Any
@@ -37,7 +38,22 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+advanced_app = typer.Typer(
+    name="advanced",
+    help="Advanced commands, e.g. for debugging.",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(advanced_app)
 log = logging.getLogger("bot")
+
+
+def _default(field: str) -> object:
+    """Return a Settings field default so CLI help mirrors config.py."""
+    return config_module.Settings.model_fields[field].get_default(call_default_factory=True)
+
+
+DEFAULT_GITEA_PROJECT = str(_default("gitea_project"))
 
 pr_number_arg = Annotated[
     int | None,
@@ -52,6 +68,32 @@ gitea_project_arg = Annotated[
         "--gitea-project",
         envvar="GITEA_PROJECT",
         help="Comma separated list of projects in Gitea to check for PRs. Project defined by {owner}/{repo}",
+    ),
+]
+allow_build_failures_option = Annotated[
+    bool,
+    typer.Option("--allow-build-failures", help="Sync data from PRs despite failing packages"),
+]
+consider_unrequested_prs_option = Annotated[
+    bool,
+    typer.Option(
+        "--consider-unrequested-prs",
+        help=f"Consider PRs where no review from team {config_module.settings.obs_group} was requested as well",
+    ),
+]
+amqp_option = Annotated[
+    bool,
+    typer.Option(
+        "--amqp",
+        help="After initial sync listen for new PRs via AMQP and submit them to QEM dashboard immediately",
+    ),
+]
+amqp_url_option = Annotated[str | None, typer.Option("--amqp-url", help="the URL of the AMQP server")]
+skip_initial_sync_option = Annotated[
+    bool,
+    typer.Option(
+        "--amqp-only",
+        help="Skip initial sync before handling AMQP events for new PRs",
     ),
 ]
 
@@ -104,11 +146,6 @@ max_detailed_comment_entries_option = Annotated[
 def _split_projects(projects: str) -> list[str]:
     """Split a comma separated list of Gitea projects into single projects."""
     return [project.strip() for project in projects.split(",") if project.strip()]
-
-
-def _default(field: str) -> object:
-    """Return a Settings field default so CLI help mirrors config.py."""
-    return config_module.Settings.model_fields[field].get_default(call_default_factory=True)
 
 
 def _apply_cli_overrides(
@@ -173,6 +210,35 @@ def _require_single_project(projects: list[str], pr_number: int | None) -> None:
             err=True,
         )
         raise typer.Exit(1)
+
+
+def _require_sync_tokens(args: SimpleNamespace) -> None:
+    """Enforce both tokens needed by any command syncing Gitea into the dashboard."""
+    _require_token(args)
+    _require_gitea_token(args)
+
+
+@dataclass(frozen=True)
+class GiteaSyncOptions:
+    """Options of a Gitea sync run, shared by the "sync" and "advanced gitea-sync" commands."""
+
+    gitea_project: str = DEFAULT_GITEA_PROJECT
+    allow_build_failures: bool = False
+    consider_unrequested_prs: bool = False
+    pr_number: int | None = None
+    amqp: bool = False
+    amqp_url: str = str(_default("amqp_url"))
+    skip_initial_sync: bool = False
+
+
+def _run_gitea_sync(args: SimpleNamespace, options: GiteaSyncOptions) -> int:
+    """Apply Gitea sync options onto the shared context and run the sync."""
+    projects = _split_projects(options.gitea_project)
+    _require_single_project(projects, options.pr_number)
+    for key, value in asdict(options).items():
+        setattr(args, key, value)
+    args.gitea_project = projects
+    return GiteaSync(args)()
 
 
 @app.callback()
@@ -399,7 +465,7 @@ def updates_run(
     sys.exit(bot())
 
 
-@app.command("smelt-sync")
+@advanced_app.command("smelt-sync")
 def smelt_sync(ctx: typer.Context) -> None:
     """Sync data from SMELT into QEM Dashboard."""
     args = ctx.obj
@@ -409,56 +475,61 @@ def smelt_sync(ctx: typer.Context) -> None:
     sys.exit(syncer())
 
 
-@app.command("gitea-sync")
+@app.command("sync")
+def sync(
+    ctx: typer.Context,
+    *,
+    gitea_project: gitea_project_arg = DEFAULT_GITEA_PROJECT,
+    allow_build_failures: allow_build_failures_option = False,
+    consider_unrequested_prs: consider_unrequested_prs_option = False,
+) -> None:
+    """Sync data from both SMELT and Gitea into QEM Dashboard."""
+    args = ctx.obj
+    # Guard before the SMELT sync so a missing Gitea token fails fast
+    _require_sync_tokens(args)
+
+    smelt_ret = SMELTSync(args)()
+    gitea_ret = _run_gitea_sync(
+        args,
+        GiteaSyncOptions(
+            gitea_project=gitea_project,
+            allow_build_failures=allow_build_failures,
+            consider_unrequested_prs=consider_unrequested_prs,
+            amqp_url=config_module.settings.amqp_url,
+        ),
+    )
+    sys.exit(smelt_ret or gitea_ret)
+
+
+@advanced_app.command("gitea-sync")
 def gitea_sync(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
-    gitea_project: gitea_project_arg = "products/SLFO,products/SLFO_Kernel",
-    allow_build_failures: Annotated[
-        bool,
-        typer.Option("--allow-build-failures", help="Sync data from PRs despite failing packages"),
-    ] = False,
-    consider_unrequested_prs: Annotated[
-        bool,
-        typer.Option(
-            "--consider-unrequested-prs",
-            help=f"Consider PRs where no review from team {config_module.settings.obs_group} was requested as well",
-        ),
-    ] = False,
+    gitea_project: gitea_project_arg = DEFAULT_GITEA_PROJECT,
+    allow_build_failures: allow_build_failures_option = False,
+    consider_unrequested_prs: consider_unrequested_prs_option = False,
     pr_number: pr_number_arg = None,
-    amqp: Annotated[
-        bool,
-        typer.Option(
-            "--amqp",
-            help="After initial sync listen for new PRs via AMQP and submit them to QEM dashboard immediately",
-        ),
-    ] = False,
-    amqp_url: Annotated[str | None, typer.Option("--amqp-url", help="the URL of the AMQP server")] = None,
-    skip_initial_sync: Annotated[
-        bool,
-        typer.Option(
-            "--amqp-only",
-            help="Skip initial sync before handling AMQP events for new PRs",
-        ),
-    ] = False,
+    amqp: amqp_option = False,
+    amqp_url: amqp_url_option = None,
+    skip_initial_sync: skip_initial_sync_option = False,
 ) -> None:
     """Sync data from Gitea into QEM Dashboard."""
     args = ctx.obj
-    _require_token(args)
-    _require_gitea_token(args)
-    projects = _split_projects(gitea_project)
-    _require_single_project(projects, pr_number)
-    args.gitea_project = projects
-    args.allow_build_failures = allow_build_failures
-    args.consider_unrequested_prs = consider_unrequested_prs
-    args.pr_number = pr_number
-    args.amqp = amqp
-    # Default from settings (which was already loaded in main callback)
-    args.amqp_url = amqp_url if amqp_url is not None else config_module.settings.amqp_url
-    args.skip_initial_sync = skip_initial_sync
-
-    syncer = GiteaSync(args)
-    sys.exit(syncer())
+    _require_sync_tokens(args)
+    sys.exit(
+        _run_gitea_sync(
+            args,
+            GiteaSyncOptions(
+                gitea_project=gitea_project,
+                allow_build_failures=allow_build_failures,
+                consider_unrequested_prs=consider_unrequested_prs,
+                pr_number=pr_number,
+                amqp=amqp,
+                amqp_url=amqp_url or config_module.settings.amqp_url,
+                skip_initial_sync=skip_initial_sync,
+            ),
+        )
+    )
 
 
 @app.command("gitea-trigger")
@@ -545,9 +616,10 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
     sys.exit(approve())
 
 
-@app.command("sub-comment")
+@advanced_app.command("sub-comment")
 def sub_comment(
     ctx: typer.Context,
+    *,
     enable_detailed_comments: enable_detailed_comments_option = None,
     fallback_contact: fallback_contact_option = None,
     generic_tool_issues_contact: generic_tool_issues_contact_option = None,
@@ -727,7 +799,7 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
     sys.exit(approve())
 
 
-@app.command("repo-diff")
+@advanced_app.command("repo-diff")
 def repo_diff(
     ctx: typer.Context,
     *,
