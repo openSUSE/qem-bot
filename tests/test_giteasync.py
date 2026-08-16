@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import logging
 import re
-from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
@@ -125,8 +125,8 @@ def fake_get_multibuild_data(obs_project: str) -> str:
 
 
 @pytest.fixture
-def args() -> Namespace:
-    return Namespace(
+def args() -> SimpleNamespace:
+    return SimpleNamespace(
         dry=False,
         fake_data=False,
         token="123",
@@ -154,7 +154,7 @@ def gitea_sync_mocks(mocker: MockerFixture) -> None:
 def run_gitea_sync(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
-    args: Namespace,
+    args: SimpleNamespace,
     *,
     no_build_results: bool = False,
 ) -> None:
@@ -169,7 +169,7 @@ def run_gitea_sync(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
-def test_gitea_sync_on_dry_run_does_not_sync(args: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_gitea_sync_on_dry_run_does_not_sync(args: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     args.dry = True
     assert GiteaSync(args)() == 0
@@ -178,7 +178,7 @@ def test_gitea_sync_on_dry_run_does_not_sync(args: Namespace, caplog: pytest.Log
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
-def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
     run_gitea_sync(mocker, caplog, args)
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
@@ -215,7 +215,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
 @pytest.mark.usefixtures("fake_gitea_api", "fake_repo", "fake_dashboard_replyback", "gitea_sync_mocks")
 def test_sync_with_product_version_from_repo_listing(
     mocker: MockerFixture,
-    args: Namespace,
+    args: SimpleNamespace,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     mocker.patch("openqabot.config.settings.obs_repo_type", "standard")  # has no scmsync so repo listing is used
@@ -235,7 +235,9 @@ def test_sync_with_product_version_from_repo_listing(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
-def test_sync_with_codestream_repo(mocker: MockerFixture, args: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_sync_with_codestream_repo(
+    mocker: MockerFixture, args: SimpleNamespace, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     mocker.patch("openqabot.config.settings.obs_repo_type", "standard")
     mocker.patch("openqabot.config.settings.obs_products", "")
@@ -246,7 +248,7 @@ def test_sync_with_codestream_repo(mocker: MockerFixture, args: Namespace, caplo
 
 @responses.activate
 @pytest.mark.usefixtures("fake_gitea_api", "fake_dashboard_replyback", "gitea_sync_mocks")
-def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     args.allow_build_failures = False
     run_gitea_sync(mocker, caplog, args, no_build_results=True)
     m = "Skipping PR git:124: No packages have been built/published (there are 0 failed/unpublished packages)"
@@ -317,13 +319,13 @@ def test_adding_packages_from_files() -> None:
 
 
 def test_gitea_sync_skips_initial_on_request(
-    args: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+    args: SimpleNamespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
     args.skip_initial_sync = True
     run_gitea_sync(mocker, caplog, args)
 
 
-def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+def test_gitea_sync_amqp(args: SimpleNamespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     args.skip_initial_sync = True
     args.amqp = True
     mocker.patch("openqabot.giteasync.AMQPListener")

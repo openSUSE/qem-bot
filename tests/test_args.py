@@ -58,17 +58,43 @@ def test_updates_run(mocker: MockerFixture, tmp_path: Path) -> None:
 def test_sync_smelt(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.SMELTSync")
     syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "smelt-sync"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "smelt-sync"])
     assert result.exit_code == 0
     syncer.assert_called_once()
 
 
-def test_sync_gitea(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_sync_gitea_passes_debug_options(mocker: MockerFixture, tmp_path: Path) -> None:
     syncer = mocker.patch("openqabot.args.GiteaSync")
     syncer.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), "gitea-sync"])
+    result = runner.invoke(
+        app,
+        [
+            *["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path)],
+            *["advanced", "gitea-sync", "--pr-number", "42", "--amqp-only"],
+            *["--amqp-url", "amqps://example.com"],
+        ],
+    )
     assert result.exit_code == 0
-    syncer.assert_called_once()
+    args = syncer.call_args[0][0]
+    assert args.pr_number == 42
+    assert args.skip_initial_sync
+    assert args.amqp_url == "amqps://example.com"
+
+
+def test_sync(mocker: MockerFixture, tmp_path: Path) -> None:
+    smelt = mocker.patch("openqabot.args.SMELTSync")
+    smelt.return_value.return_value = 0
+    gitea = mocker.patch("openqabot.args.GiteaSync")
+    gitea.return_value.return_value = 0
+    result = runner.invoke(app, ["--token", "foo", "--gitea-token", "bar", "--configs", str(tmp_path), "sync"])
+    assert result.exit_code == 0
+    smelt.assert_called_once()
+    gitea.assert_called_once()
+    args = gitea.call_args[0][0]
+    assert args.gitea_project == "products/SLFO"
+    assert args.pr_number is None
+    assert not args.amqp
+    assert not args.skip_initial_sync
 
 
 def test_gitea_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
@@ -109,7 +135,7 @@ def test_sub_comment(mocker: MockerFixture, tmp_path: Path) -> None:
     mocker.patch("openqabot.args.get_submissions", return_value=[])
     comment = mocker.patch("openqabot.args.Commenter")
     comment.return_value.return_value = 0
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-comment"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "sub-comment"])
     assert result.exit_code == 0
     comment.assert_called_once()
 
@@ -125,6 +151,7 @@ def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -
             "foo",
             "--configs",
             str(tmp_path),
+            "advanced",
             "sub-comment",
             "--enable-detailed-comments",
             "--fallback-contact",
@@ -197,7 +224,7 @@ def test_repo_diff(mocker: MockerFixture, tmp_path: Path) -> None:
     repo_diff = mocker.patch("openqabot.args.RepoDiff")
     repo_diff.return_value.return_value = 0
     # Provide a valid configs directory to avoid Configuration error in main callback
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "repo-diff"])
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "advanced", "repo-diff"])
     assert result.exit_code == 0
     repo_diff.assert_called_once()
 
@@ -311,12 +338,20 @@ def test_main_no_token_exit(mocker: MockerFixture, tmp_path: Path) -> None:
     assert "Error: Missing option '--token' / '-t'." in result.output
 
 
-def test_main_no_gitea_token_exit_sync(mocker: MockerFixture, tmp_path: Path) -> None:
-    """Test that gitea-sync exits with 1 when gitea_token is missing."""
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param(["advanced", "gitea-sync"], id="advanced gitea-sync rejects missing gitea token"),
+        pytest.param(["sync"], id="sync rejects missing gitea token before running the SMELT sync"),
+    ],
+)
+def test_main_no_gitea_token_exit_sync(mocker: MockerFixture, tmp_path: Path, command: list[str]) -> None:
     mocker.patch.dict("os.environ", {}, clear=True)
-    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "gitea-sync"])
+    smelt = mocker.patch("openqabot.args.SMELTSync")
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), *command])
     assert result.exit_code == 1
     assert "Error: Missing option '--gitea-token' / '-g' or environment variable QEM_BOT_GITEA_TOKEN." in result.output
+    smelt.assert_not_called()
 
 
 def test_main_no_gitea_token_exit_trigger(mocker: MockerFixture, tmp_path: Path) -> None:
