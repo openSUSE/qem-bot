@@ -710,6 +710,18 @@ def test_is_build_finished_no_bot_comment(
     assert trigger.is_build_finished(mock_pr, mock_trigger_config) is False
 
 
+def test_is_build_finished_bot_comment_no_review(
+    trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
+) -> None:
+    """Tests is_build_finished when bot user commented but has no review event."""
+    mocker.patch(
+        "openqabot.loader.gitea.get_events_by_timeline",
+        return_value={config.settings.git_review_bot_user: {"comment": {"id": 123}}},
+    )
+    mock_pr = MagicMock(number=123)
+    assert trigger.is_build_finished(mock_pr, mock_trigger_config) is False
+
+
 def test_is_build_finished_states(
     trigger: GiteaTrigger, mocker: MockerFixture, mock_trigger_config: TriggerConfig
 ) -> None:
