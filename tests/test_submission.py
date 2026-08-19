@@ -110,10 +110,12 @@ def test_sub_normal() -> None:
     assert sub.is_gitea is False
     assert sub.format_link("Label", "http://url", "http://img") == "[Label](http://url)"
     assert sub.format_link("Label", "http://url") == "[Label](http://url)"
+    assert sub.format_link("Label", "http://url?a=1&b=2") == "[Label](http://url?a=1&amp;b=2)"
     sub_git = Submission({**test_data, "type": "git"})
     assert sub_git.is_gitea is True
     assert sub_git.format_link("Label", "http://url", "http://img") == "[![Label](http://img)](http://url)"
     assert sub_git.format_link("Label", "http://url") == "[Label](http://url)"
+    assert sub_git.format_link("Label", "http://url?a=1&b=2") == "[Label](http://url?a=1&b=2)"
     assert sub.channels == [
         Repos(product="SLE-Module-Public-Cloud", version="15-SP4", arch="x86_64"),
         Repos(product="SLE-Module-Public-Cloud", version="15-SP4", arch="aarch64"),

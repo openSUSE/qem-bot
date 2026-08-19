@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Gitea Pullrequest type definition."""
 
+import html
 from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Any, Protocol, Self
@@ -52,7 +53,7 @@ class OBSCommentable:
         image_url: str | None = None,  # ruff: ignore[unused-method-argument]  - Interface compatibility
     ) -> str:
         """Format a link with an optional image badge."""
-        return f"[{label}]({url})"
+        return f"[{label}]({html.escape(url)})"
 
 
 @dataclass

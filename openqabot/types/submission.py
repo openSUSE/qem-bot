@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 from collections import defaultdict
 from logging import getLogger
@@ -105,9 +106,11 @@ class Submission:
 
     def format_link(self, label: str, url: str, image_url: str | None = None) -> str:
         """Format a link with an optional image badge."""
-        if self.is_gitea and image_url:
-            return f"[![{label}]({image_url})]({url})"
-        return f"[{label}]({url})"
+        if self.is_gitea:
+            if image_url:
+                return f"[![{label}]({image_url})]({url})"
+            return f"[{label}]({url})"
+        return f"[{label}]({html.escape(url)})"
 
     def _initialize_channels(self, raw_channels: list[str]) -> None:
         """Initialize channels and skipped products from raw channel data."""

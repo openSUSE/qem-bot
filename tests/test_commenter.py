@@ -373,17 +373,17 @@ def test_summarize_message(
 
     result_obs = c.summarize_message(OBSCommentable(124), set(builds), [])
     assert (
-        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1)"
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&amp;distri=sle&amp;version=15&amp;not_group_glob=*Devel*%2C*Test*&amp;label=Build+1.1)"
         in result_obs
     )
     assert (
-        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2)"
+        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&amp;not_group_glob=*Devel*%2C*Test*&amp;label=Build+1.2)"
         in result_obs
     )
     # OBS links are separated by double newlines for line breaks
     assert (
-        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=sle&version=15&not_group_glob=*Devel*%2C*Test*&label=Build+1.1)\n\n"
-        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&not_group_glob=*Devel*%2C*Test*&label=Build+1.2)"
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&amp;distri=sle&amp;version=15&amp;not_group_glob=*Devel*%2C*Test*&amp;label=Build+1.1)\n\n"
+        "[Build 1.2 Results](https://openqa.opensuse.org/tests/overview?build=1.2&amp;not_group_glob=*Devel*%2C*Test*&amp;label=Build+1.2)"
         in result_obs
     )
 
@@ -412,7 +412,7 @@ def test_summarize_message_allow_devel(
     result_obs = c.summarize_message(OBSCommentable(124), {builds[0]}, [])
     assert "not_group_glob" not in result_obs
     assert (
-        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&distri=opensuse&version=Tumbleweed&label=Build+1.1)"
+        "[Build 1.1 Results](https://openqa.opensuse.org/tests/overview?build=1.1&amp;distri=opensuse&amp;version=Tumbleweed&amp;label=Build+1.1)"
         in result_obs
     )
 

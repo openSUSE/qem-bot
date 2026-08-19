@@ -77,6 +77,7 @@ def test_obs_commentable() -> None:
     assert obs.is_gitea is False
     assert obs.format_link("Label", "http://url", "http://img") == "[Label](http://url)"
     assert obs.format_link("Label", "http://url") == "[Label](http://url)"
+    assert obs.format_link("Label", "http://url?a=1&b=2") == "[Label](http://url?a=1&amp;b=2)"
 
 
 def test_create_from_json_invalid_data(caplog: pytest.LogCaptureFixture) -> None:
