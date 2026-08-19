@@ -151,7 +151,9 @@ class OpenQAInterface:
         if config.settings.allow_development_groups:
             return False
 
-        group_name = job.get("group", "")
+        # enrich_job_info fills ENRICH_KEYS with None for jobs outside any job group, so an
+        # explicit None must read as "no group" rather than blow up the membership test
+        group_name = job.get("group") or ""
         group_id = job.get("group_id")
 
         if "Devel" in group_name or "Test" in group_name:

@@ -546,6 +546,36 @@ def test_approval_if_failing_jobs_are_in_development_group(
 
 @responses.activate
 @pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+@pytest.mark.parametrize(
+    ("job", "expected_evaluated_jobs"),
+    [
+        pytest.param({"id": 456, "result": "passed"}, 1, id="job_without_group_metadata_is_evaluated"),
+        pytest.param(_devel_job(456, result="passed"), 0, id="job_in_development_group_stays_filtered"),
+    ],
+)
+def test_group_filtering_of_jobs_without_group_metadata(
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    fake_openqa_url_job_stat: str,
+    job: dict[str, Any],
+    expected_evaluated_jobs: int,
+) -> None:
+    # enrich_job_info fills ENRICH_KEYS with None for jobs outside any job group, as
+    # produced by openqa-clone-job, so the devel filter must not choke on a null group
+    responses.add(responses.GET, fake_openqa_url_job_stat, json={"done": {"passed": {"job_ids": [456]}}})
+    mock_osc_approve = mocker.patch("osc.core.change_review_state")
+    increment_approver = prepare_approver(caplog)
+    increment_approver.client.get_jobs_by_ids = mocker.Mock(return_value=[job])
+    increment_approver()
+
+    mock_osc_approve.assert_called()
+    assert (
+        f"All {expected_evaluated_jobs} openQA jobs have passed/softfailed" in mock_osc_approve.call_args[1]["message"]
+    )
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
 def test_approval_with_mixed_jobs_development_ignored(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_openqa_url_job_stat: str
 ) -> None:
