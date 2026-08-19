@@ -33,6 +33,9 @@ log = logging.getLogger("bot.openqa")
 
 MAX_JOBS_PER_API_REQUEST = 200
 ENRICH_KEYS = ("group_id", "group", "build", "distri", "version", "flavor", "arch", "name")
+# Opt-in per call site: openQA attributes jobs cloned via openqa-clone-job to the groups of the
+# scheduled product, so clones are reported instead of the originals they superseded.
+CLONE_AWARE_STATS_PARAMS = {"infer_groups_from_scheduled_product": "1"}
 
 
 class OpenQAInterface:
@@ -151,7 +154,9 @@ class OpenQAInterface:
         if config.settings.allow_development_groups:
             return False
 
-        group_name = job.get("group", "")
+        # enrich_job_info fills ENRICH_KEYS with None for jobs outside any job group, so an
+        # explicit None must read as "no group" rather than blow up the membership test
+        group_name = job.get("group") or ""
         group_id = job.get("group_id")
 
         if "Devel" in group_name or "Test" in group_name:
