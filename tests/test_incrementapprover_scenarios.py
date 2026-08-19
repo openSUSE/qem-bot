@@ -11,6 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 import osc.core
 import pytest
@@ -542,6 +543,21 @@ def test_approval_if_failing_jobs_are_in_development_group(
     assert "development groups ignored" in caplog.text
     assert "No jobs left for evaluation (all were filtered)" not in caplog.text
     assert "Scheduling jobs for" not in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("fake_ok_jobs", "fake_product_repo", "mock_osc")
+def test_job_stats_queries_request_server_side_clone_resolution(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    run_approver(mocker, caplog)
+    queries = [
+        parse_qs(urlparse(url).query)
+        for url in (call.request.url or "" for call in responses.calls)
+        if "isos/job_stats" in url
+    ]
+    assert queries, "approver issued no isos/job_stats request"
+    assert all(q.get("infer_groups_from_scheduled_product") == ["1"] for q in queries)
 
 
 @responses.activate
