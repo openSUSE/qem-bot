@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 """Sync Gitea pull requests to dashboard."""
 
-from argparse import Namespace
 from logging import getLogger
 from pprint import pformat
+from types import SimpleNamespace
 from typing import Any
 
 from openqabot.types.pullrequest import PullRequest
@@ -19,7 +19,7 @@ log = getLogger("bot.giteasync")
 class GiteaSync:
     """Synchronization of Gitea PRs to dashboard."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the GiteaSync class."""
         self.dry: bool = args.dry
         self.fake_data: bool = args.fake_data
