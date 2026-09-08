@@ -51,6 +51,10 @@ class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 
 
+class AmbiguousBuildsError(Error):
+    """Raised when several builds are available simultenously in IBS."""
+
+
 class PostOpenQAError(Error):
     """Raised when posting a job to openQA fails."""
 
