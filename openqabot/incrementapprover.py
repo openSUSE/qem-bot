@@ -21,7 +21,7 @@ import osc.core
 
 from openqabot import config
 from openqabot.config import OBSOLETE_PARAMS
-from openqabot.openqa import ENRICH_KEYS, OpenQAInterface
+from openqabot.openqa import CLONE_AWARE_STATS_PARAMS, ENRICH_KEYS, OpenQAInterface
 from openqabot.pc_helper import apply_public_cloud_settings
 
 from .commenter import Commenter
@@ -134,6 +134,7 @@ class IncrementApprover:
                 "arch": p["ARCH"],
                 "build": p["BUILD"],
                 "product": p.get("PRODUCT"),
+                **CLONE_AWARE_STATS_PARAMS,
             })
 
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
