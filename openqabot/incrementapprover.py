@@ -74,6 +74,7 @@ class IncrementApprover:
         self.unique_jobid_request_pair = {}
         self.config = IncrementConfig.from_args(args)
         self.comment = getattr(args, "comment", False)
+        self.consider_standalone_jobs = getattr(args, "consider_standalone_jobs", False)
 
         self.commenter = Commenter(args, submissions=[])
         osc.conf.get_config(override_apiurl=config.settings.obs_url)
@@ -122,36 +123,54 @@ class IncrementApprover:
         """Remove jobs belonging to development groups from openQA results."""
         return [{s: f for s, j in res.items() if (f := self._filter_jobs(j))} for res in results]
 
+    @staticmethod
+    def _normalize_relevant_jobs(jobs: list[dict[str, Any]]) -> OpenQAResult:
+        """Group relevant openQA jobs into the {state: {result: info}} shape."""
+        stats: OpenQAResult = {}
+        for job in jobs:
+            entry = stats.setdefault(job.get("state", ""), {}).setdefault(job.get("result", ""), {"job_ids": []})
+            entry["job_ids"].append(job["id"])
+            for k in ENRICH_KEYS:
+                entry.setdefault(k, job.get(k))
+        return stats
+
+    def _fetch_stats(self, p: dict[str, Any]) -> OpenQAResult:
+        """Fetch the {state: {result: info}} stats for a single scenario."""
+        query = {
+            "distri": p["DISTRI"],
+            "version": p["VERSION"],
+            "flavor": p["FLAVOR"],
+            "arch": p["ARCH"],
+            "build": p["BUILD"],
+        }
+        # stand-alone jobs (e.g. created via openqa-clone-job) live outside the scheduled
+        # product, so discover them via relevant jobs (latest=1); otherwise the
+        # scheduled-product stats already suffice.
+        if self.consider_standalone_jobs:
+            return self._normalize_relevant_jobs(self.client.get_relevant_jobs(query))
+        return self.client.get_scheduled_product_stats({**query, "product": p.get("PRODUCT")})
+
     def request_openqa_job_results(self, params: ScheduleParams, info_str: str) -> OpenQAResults:
         """Fetch results from openQA for the specified scheduling parameters."""
         log.debug("Checking openQA job results for %s", info_str)
 
-        def fetch_stats(p: dict[str, Any]) -> OpenQAResult:
-            return self.client.get_scheduled_product_stats({
-                "distri": p["DISTRI"],
-                "version": p["VERSION"],
-                "flavor": p["FLAVOR"],
-                "arch": p["ARCH"],
-                "build": p["BUILD"],
-                "product": p.get("PRODUCT"),
-            })
-
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
-            stats = list(executor.map(fetch_stats, params))
+            stats = list(executor.map(self._fetch_stats, params))
 
-        job_ids = [
-            int(i)
-            for stat in stats
-            for jobs in stat.values()
-            for info in jobs.values()
-            for i in info.get("job_ids", [])
-        ]
-        job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
+        # The relevant-jobs path already carries per-job metadata; only job_stats needs enriching.
+        if not self.consider_standalone_jobs:
+            job_ids = [
+                int(i)
+                for stat in stats
+                for jobs in stat.values()
+                for info in jobs.values()
+                for i in info.get("job_ids", [])
+            ]
+            job_map = {job["id"]: job for job in self.client.get_jobs_by_ids(job_ids)}
+            stats = [self.client.enrich_stats(stat, job_map) for stat in stats]
 
-        res = [self.client.enrich_stats(stat, job_map) for stat in stats]
-
-        log.debug("Job statistics:\n%s", pformat(res))
-        return res
+        log.debug("Job statistics:\n%s", pformat(stats))
+        return stats
 
     @staticmethod
     def check_openqa_jobs(results: OpenQAResults, build_info: BuildInfo, params: ScheduleParams) -> JobState:

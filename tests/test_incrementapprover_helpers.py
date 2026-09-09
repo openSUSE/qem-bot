@@ -10,13 +10,35 @@ import pytest
 import responses
 
 from openqabot.errors import PostOpenQAError
-from openqabot.incrementapprover import BuildInfo
+from openqabot.incrementapprover import BuildInfo, IncrementApprover
 from openqabot.repodiff import Package
 
 from .helpers import prepare_approver
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
+
+def test_normalize_relevant_jobs() -> None:
+    jobs = [
+        {"id": 1, "state": "done", "result": "passed", "name": "a", "group_id": 1},
+        {"id": 2, "state": "done", "result": "passed", "name": "b", "group_id": 1},
+        {"id": 3, "state": "done", "result": "failed", "name": "c", "group_id": 9},
+        {"id": 4, "state": "running", "result": "none", "name": "d"},
+    ]
+    res = IncrementApprover._normalize_relevant_jobs(jobs)  # ruff: ignore[private-member-access]
+
+    assert res["done"]["passed"]["job_ids"] == [1, 2]
+    assert res["done"]["failed"]["job_ids"] == [3]
+    assert res["running"]["none"]["job_ids"] == [4]
+    # ENRICH_KEYS take the first job in each (state, result) group as representative
+    assert res["done"]["passed"]["name"] == "a"
+    assert res["done"]["passed"]["group_id"] == 1
+    assert res["done"]["failed"]["group_id"] == 9
+
+
+def test_normalize_relevant_jobs_empty() -> None:
+    assert IncrementApprover._normalize_relevant_jobs([]) == {}  # ruff: ignore[private-member-access]
 
 
 @responses.activate

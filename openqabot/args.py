@@ -636,6 +636,14 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
             help="Always schedule a new product (even if one already exists)",
         ),
     ] = False,
+    consider_standalone_jobs: Annotated[
+        bool,
+        typer.Option(
+            "--consider-standalone-jobs",
+            help="Also consider stand-alone jobs (e.g. created via openqa-clone-job) that match "
+            "the increment's BUILD/FLAVOR/etc., not only jobs of the scheduled product",
+        ),
+    ] = False,
     accepted: Annotated[
         bool,
         typer.Option("--accepted", help="Consider accepted product increment requests as well"),
@@ -690,6 +698,7 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
     args.arch = arch
     args.schedule = schedule
     args.reschedule = reschedule
+    args.consider_standalone_jobs = consider_standalone_jobs
     args.accepted = accepted
     args.request_id = request_id
     args.build_listing_sub_path = build_listing_sub_path

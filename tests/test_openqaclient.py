@@ -127,6 +127,45 @@ def test_get_jobs_by_ids(fake_openqa_url: str) -> None:
     assert client.get_jobs_by_ids([]) == []
 
 
+@responses.activate
+def test_get_relevant_jobs(fake_openqa_url: str) -> None:
+    client = oQAI()
+    mock_jobs = [{"id": 1, "state": "done", "result": "passed"}]
+    responses.add(
+        responses.GET,
+        f"{fake_openqa_url}/api/v1/jobs",
+        json={"jobs": mock_jobs},
+        status=200,
+        match=[
+            matchers.query_param_matcher({
+                "scope": "relevant",
+                "latest": "1",
+                "distri": "sle",
+                "version": "16.0",
+                "flavor": "Online-Increments",
+                "arch": "x86_64",
+                "build": "PI-1.1",
+            })
+        ],
+    )
+
+    params = {
+        "distri": "sle",
+        "version": "16.0",
+        "flavor": "Online-Increments",
+        "arch": "x86_64",
+        "build": "PI-1.1",
+    }
+    assert client.get_relevant_jobs(params) == mock_jobs
+
+
+@responses.activate
+def test_get_relevant_jobs_empty(fake_openqa_url: str) -> None:
+    client = oQAI()
+    responses.add(responses.GET, f"{fake_openqa_url}/api/v1/jobs", json={}, status=200)
+    assert client.get_relevant_jobs({"build": "PI-1.1"}) == []
+
+
 def test_get_job_comments_request_exception(caplog: pytest.LogCaptureFixture) -> None:
     client = oQAI()
     with patch(
