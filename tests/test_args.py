@@ -401,3 +401,25 @@ def test_cli_options_override_config_yml(mocker: MockerFixture, tmp_path: Path) 
     assert settings.insecure is True
     assert settings.dry is True
     assert settings.openqa_instance == "https://override.openqa"
+
+
+def test_gitea_sync_pr_number_with_multiple_projects(tmp_path: Path) -> None:
+    """Test that gitea-sync exits with 1 when multiple projects are provided with a PR number."""
+    result = runner.invoke(
+        app,
+        [
+            "--token",
+            "foo",
+            "--gitea-token",
+            "bar",
+            "--configs",
+            str(tmp_path),
+            "gitea-sync",
+            "--gitea-project",
+            "p1,p2",
+            "--pr-number",
+            "123",
+        ],
+    )
+    assert result.exit_code == 1
+    assert "Error: Option '--pr-number' requires a single project via '--gitea-project'." in result.output
