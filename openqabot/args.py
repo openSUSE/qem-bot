@@ -51,7 +51,7 @@ gitea_project_arg = Annotated[
     typer.Option(
         "--gitea-project",
         envvar="GITEA_PROJECT",
-        help="Project in Gitea to check for PRs. Project defined by {owner}/{repo}",
+        help="Comma separated list of projects in Gitea to check for PRs. Project defined by {owner}/{repo}",
     ),
 ]
 
@@ -99,6 +99,11 @@ max_detailed_comment_entries_option = Annotated[
         help="Max entries in job groups table",
     ),
 ]
+
+
+def _split_projects(projects: str) -> list[str]:
+    """Split a comma separated list of Gitea projects into single projects."""
+    return [project.strip() for project in projects.split(",") if project.strip()]
 
 
 def _default(field: str) -> object:
@@ -156,6 +161,16 @@ def _require_gitea_token(args: SimpleNamespace) -> None:
     if args.gitea_token is None or not args.gitea_token.strip():
         typer.echo(
             "Error: Missing option '--gitea-token' / '-g' or environment variable QEM_BOT_GITEA_TOKEN.", err=True
+        )
+        raise typer.Exit(1)
+
+
+def _require_single_project(projects: list[str], pr_number: int | None) -> None:
+    """Enforce that only one Gitea project is given when a single PR is requested."""
+    if pr_number is not None and len(projects) > 1:
+        typer.echo(
+            "Error: Option '--pr-number' requires a single project via '--gitea-project'.",
+            err=True,
         )
         raise typer.Exit(1)
 
@@ -398,7 +413,7 @@ def smelt_sync(ctx: typer.Context) -> None:
 def gitea_sync(  # ruff: ignore[too-many-arguments]
     ctx: typer.Context,
     *,
-    gitea_project: gitea_project_arg = "products/SLFO",
+    gitea_project: gitea_project_arg = "products/SLFO,products/SLFO_Kernel",
     allow_build_failures: Annotated[
         bool,
         typer.Option("--allow-build-failures", help="Sync data from PRs despite failing packages"),
@@ -431,7 +446,9 @@ def gitea_sync(  # ruff: ignore[too-many-arguments]
     args = ctx.obj
     _require_token(args)
     _require_gitea_token(args)
-    args.gitea_project = gitea_project
+    projects = _split_projects(gitea_project)
+    _require_single_project(projects, pr_number)
+    args.gitea_project = projects
     args.allow_build_failures = allow_build_failures
     args.consider_unrequested_prs = consider_unrequested_prs
     args.pr_number = pr_number
