@@ -353,3 +353,9 @@ def test_gitea_sync_amqp(args: Namespace, mocker: MockerFixture, caplog: pytest.
         "suse.src.*.pull_request.opened",
     )
     mock_update.assert_not_called()
+
+
+def test_gitea_sync_with_list_project(args: Namespace) -> None:
+    args.gitea_project = ["products/SLFO", "products/SLFO_Kernel"]
+    sync = GiteaSync(args)
+    assert sync.gitea_projects == ["products/SLFO", "products/SLFO_Kernel"]
