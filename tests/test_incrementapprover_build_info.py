@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 from responses import GET
 
 from openqabot.config import BUILD_REGEX
+from openqabot.errors import AmbiguousBuildsError
 from openqabot.loader.buildinfo import load_build_info
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.repodiff import Package
@@ -146,3 +147,24 @@ def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFi
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None
+
+
+def test_load_build_info_ambiguous_builds(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    config = IncrementConfig(
+        distri="sle",
+        version="16.0",
+        flavor="any",
+        project_base="BASE",
+        build_project_suffix="TEST",
+        build_regex=BUILD_REGEX,
+    )
+    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
+        "data": [
+            {"name": "SLES-16.0-Online-x86_64-Build1.1.spdx.json"},
+            {"name": "SLES-16.0-Online-x86_64-Build2.2.spdx.json"},
+        ]
+    }
+    with pytest.raises(AmbiguousBuildsError) as excinfo:
+        load_build_info(config, config.build_regex, approver.get_regex_match)
+    assert "contains several builds in" in str(excinfo.value)
