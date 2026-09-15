@@ -21,6 +21,7 @@ from openqabot.config import BUILD_REGEX, settings
 from openqabot.incrementapprover import IncrementApprover
 from openqabot.loader.incrementconfig import IncrementConfig
 from openqabot.loader.qem import SubReq
+from openqabot.openqa import CLONE_AWARE_STATS_PARAMS
 from openqabot.types.submission import Submission
 from openqabot.utils import get_obs_filter_params, merge_dicts
 
@@ -336,7 +337,13 @@ def fake_openqa_responses_with_param_matching(
     additional_builds_json: dict, fake_openqa_url_job_stat: str
 ) -> list[responses.BaseResponse]:
     list_of_params = []
-    base_params = {"distri": "sle", "version": "16.0", "build": "PI-139.1", "product": "SLES"}
+    base_params = {
+        "distri": "sle",
+        "version": "16.0",
+        "build": "PI-139.1",
+        "product": "SLES",
+        **CLONE_AWARE_STATS_PARAMS,
+    }
     json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
     for flavor in ("Online-Increments", "Foo-Increments"):
         for arch, json in json_by_arch.items():
