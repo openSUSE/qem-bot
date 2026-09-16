@@ -119,7 +119,7 @@ class GiteaTrigger:
             "distri": trigger_config.distri,
             "build": matched_iso.build,
         }
-        return not self.openqa.get_scheduled_product_stats(openqa_settings)
+        return not self.openqa.get_job_stats(openqa_settings)
 
     def _should_skip_pr(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> bool:
         """Determine if a pull request should be skipped based on branch or status/labels."""
