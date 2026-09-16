@@ -140,7 +140,7 @@ def test_request_openqa_job_results_enrichment_missing_data(
         }
     }
 
-    mocker.patch.object(approver.client, "get_scheduled_product_stats", return_value=mock_stats)
+    mocker.patch.object(approver.client, "get_job_stats", return_value=mock_stats)
     mocker.patch.object(approver.client, "get_jobs_by_ids", return_value=[])
 
     params: list[dict[str, str]] = [
