@@ -14,7 +14,7 @@ from openqabot.config import settings
 from openqabot.subsyncres import SubResultsSync
 
 openqa_url = (
-    "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123"
+    "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123&job_setting=SUBMISSION_ID=smelt:100"
     "&version=13.3&arch=arch"
 )
 
