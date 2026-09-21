@@ -408,7 +408,7 @@ def test_issue_194074_repro(
 
     with (
         patch("openqabot.incrementapprover.load_build_info") as mock_load,
-        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+        patch("openqabot.openqa.OpenQAInterface.get_latest_scheduled_product_jobs") as mock_stats,
     ):
         mock_load.side_effect = lambda config, *_: (
             {build_info_sl_micro} if "SL-Micro" in config.product_regex else {build_info_sles}
@@ -453,7 +453,7 @@ def test_issue_194074_specific_request(
 
     with (
         patch("openqabot.incrementapprover.load_build_info") as mock_load,
-        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+        patch("openqabot.openqa.OpenQAInterface.get_latest_scheduled_product_jobs") as mock_stats,
     ):
         mock_load.return_value = {build_info_sl_micro}
         mock_stats.return_value = {"done": {"passed": {"job_ids": [20724745]}}}
@@ -486,7 +486,7 @@ def test_issue_194074_specific_request_sles(
 
     with (
         patch("openqabot.incrementapprover.load_build_info") as mock_load,
-        patch("openqabot.openqa.OpenQAInterface.get_scheduled_product_stats") as mock_stats,
+        patch("openqabot.openqa.OpenQAInterface.get_latest_scheduled_product_jobs") as mock_stats,
     ):
         mock_load.return_value = {build_info_sles}
         mock_stats.return_value = {"done": {"passed": {"job_ids": [20753853]}}}

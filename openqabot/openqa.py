@@ -175,8 +175,8 @@ class OpenQAInterface:
             log.exception("openQA API error when fetching older jobs for job %s", job_id)
         return {"data": []}
 
-    def get_scheduled_product_stats(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Fetch scheduling statistics for a product."""
+    def get_latest_scheduled_product_jobs(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Fetch isos/job_stats based on DISTRI/FLAVOR/ARCH/VERSION/BUILD combination."""
         return self.openqa.openqa_request("GET", "isos/job_stats", params, retries=self.retries)
 
     @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]

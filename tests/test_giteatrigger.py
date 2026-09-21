@@ -779,7 +779,7 @@ def test_trigger_init_maintenance(
 
 def test_is_openqa_triggering_needed_with_results(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig) -> None:
     """Tests is_openqa_triggering_needed when results are found."""
-    cast("MagicMock", trigger.openqa.get_scheduled_product_stats).return_value = {"job": "done"}
+    cast("MagicMock", trigger.openqa.get_latest_scheduled_product_jobs).return_value = {"job": "done"}
     mock_iso = MagicMock()
     assert trigger.is_openqa_triggering_needed(mock_iso, mock_trigger_config) is False
 
