@@ -631,6 +631,26 @@ def test_approval_if_running_jobs_are_in_development_group(
     mock_osc_approve.assert_called()
 
 
+@responses.activate
+@pytest.mark.usefixtures("fake_product_repo", "mock_osc")
+def test_approval_considers_standalone_clone(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    # AC1: with --consider-standalone-jobs, a stand-alone openqa-clone-job job that matches the
+    # increment's BUILD/FLAVOR drives approval via the relevant-jobs query (scope=relevant,
+    # latest=1), instead of the scheduled-product-scoped isos/job_stats path.
+    mock_osc_approve = mocker.patch("osc.core.change_review_state")
+    increment_approver = prepare_approver(caplog, consider_standalone_jobs=True)
+    increment_approver.client.get_relevant_jobs = mocker.Mock(
+        return_value=[
+            {"id": 999, "state": "done", "result": "passed", "group": "Production", "group_id": 1, "name": "clone"}
+        ]
+    )
+    increment_approver()
+
+    mock_osc_approve.assert_called()
+    assert "All 1 openQA jobs have passed/softfailed" in caplog.text
+    increment_approver.client.get_relevant_jobs.assert_called()
+
+
 def test_handle_approval_with_comment_flag(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture, fake_osc_request: osc.core.Request
 ) -> None:

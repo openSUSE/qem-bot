@@ -194,6 +194,31 @@ def test_increment_approve_with_detailed_args(mocker: MockerFixture, tmp_path: P
     assert args.max_detailed_comment_entries == 5
 
 
+@pytest.mark.parametrize(
+    ("flag", "expected"),
+    [
+        (None, False),
+        ("--consider-standalone-jobs", True),
+        ("--no-consider-standalone-jobs", False),
+    ],
+)
+def test_increment_approve_consider_standalone_jobs(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    flag: str | None,
+    expected: bool,  # noqa: FBT001
+) -> None:
+    approve = mocker.patch("openqabot.args.IncrementApprover")
+    approve.return_value.return_value = 0
+    argv = ["--token", "foo", "--configs", str(tmp_path), "increment-approve"]
+    if flag is not None:
+        argv.append(flag)
+    result = runner.invoke(app, argv)
+    assert result.exit_code == 0
+    approve.assert_called_once()
+    assert approve.call_args[0][0].consider_standalone_jobs is expected
+
+
 def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
     amqp = mocker.patch("openqabot.args.AMQP")
     amqp.return_value.return_value = 0

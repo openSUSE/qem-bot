@@ -99,6 +99,11 @@ class OpenQAInterface:
         }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
+    def get_relevant_jobs(self, params: dict[str, Any]) -> list[dict[str, Any]]:
+        """Fetch the latest relevant openQA jobs matching the given scenario parameters."""
+        query = {"scope": "relevant", "latest": "1", **params}
+        return self.openqa.openqa_request("GET", "jobs", query, retries=self.retries).get("jobs", [])
+
     @lru_cache(maxsize=512)  # ruff: ignore[cached-instance-method]
     def get_job_comments(self, job_id: int) -> list[dict[str, str]]:
         """Fetch comments for a specific job."""
