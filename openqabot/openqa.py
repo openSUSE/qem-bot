@@ -208,6 +208,6 @@ class OpenQAInterface:
     def enrich_stats(self, stat: dict[str, Any], job_map: dict[int, dict[str, Any]]) -> dict[str, Any]:
         """Enrich all jobs in a scheduled product result with metadata."""
         return {
-            status: {name: self.enrich_job_info(info, job_map) for name, info in jobs.items()}
+            status: {result: self.enrich_job_info(info, job_map) for result, info in jobs.items()}
             for status, jobs in stat.items()
         }
