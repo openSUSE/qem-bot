@@ -124,7 +124,7 @@ def start(
     containerfile.write_text(
         f"FROM {dashboard_image}\n"
         "COPY . .\n"
-        f"RUN zypper in -y {' '.join(missing_pkgs)} && cpanm -n MCP::Server && zypper clean -a\n"
+        f"RUN retry -r 5 -s 10 -- zypper in -y {' '.join(missing_pkgs)} && cpanm -n MCP::Server && zypper clean -a\n"
     )
 
     typer.echo(f"Building qem-dashboard container image based on {dashboard_image}...")
