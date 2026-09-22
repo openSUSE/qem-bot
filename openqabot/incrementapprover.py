@@ -133,7 +133,6 @@ class IncrementApprover:
                 "flavor": p["FLAVOR"],
                 "arch": p["ARCH"],
                 "build": p["BUILD"],
-                "product": p.get("PRODUCT"),
             })
 
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:

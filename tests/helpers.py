@@ -336,7 +336,7 @@ def fake_openqa_responses_with_param_matching(
     additional_builds_json: dict, fake_openqa_url_job_stat: str
 ) -> list[responses.BaseResponse]:
     list_of_params = []
-    base_params = {"distri": "sle", "version": "16.0", "build": "PI-139.1", "product": "SLES"}
+    base_params = {"distri": "sle", "version": "16.0", "build": "PI-139.1"}
     json_by_arch = {"aarch64": {}, "x86_64": {}, "s390x": {}, "ppc64le": {}}
     for flavor in ("Online-Increments", "Foo-Increments"):
         for arch, json in json_by_arch.items():
@@ -346,7 +346,6 @@ def fake_openqa_responses_with_param_matching(
             "arch": "x86_64",
             "flavor": "Additional-Foo-Increments",
             "build": "PI-139.1-additional-build",
-            "product": "SLES",
         },
         additional_builds_json,
     ))

@@ -412,7 +412,7 @@ def test_issue_194074_repro(
             {build_info_sl_micro} if "SL-Micro" in config.product_regex else {build_info_sles}
         )
         mock_stats.side_effect = lambda p: {
-            "done": {"failed": {"job_ids": [20724745 if p["product"] == "SL-Micro" else 20753853]}}
+            "done": {"failed": {"job_ids": [20724745 if p["build"] == "PI-61.24" else 20753853]}}
         }
 
         increment_approver = prepare_approver(caplog)
