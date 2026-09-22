@@ -14,7 +14,7 @@ from itertools import chain, groupby
 from logging import getLogger
 from operator import itemgetter
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import osc.conf
 import osc.core
@@ -391,7 +391,9 @@ class IncrementApprover:
         self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(diff_url, build_url)[0]
         return self.package_diff[diff_key]
 
-    def make_scheduling_parameters(self, config_inc: IncrementConfig, build_info: BuildInfo) -> ScheduleParams:
+    def make_scheduling_parameters(
+        self, config_inc: IncrementConfig, build_info: BuildInfo, request_id: int
+    ) -> ScheduleParams:
         """Prepare scheduling parameters for a build."""
         repo_sub_path = "/product"
         base_params = {
@@ -402,6 +404,7 @@ class IncrementApprover:
             "BUILD": f"PI-{build_info.build}",
             "PRODUCT": build_info.product,
             "INCREMENT_REPO": config_inc.build_project_url(config.settings.download_base_url) + repo_sub_path,
+            "SUBMISSION_ID": f"increment:{request_id}",
             **OBSOLETE_PARAMS,
         }
         IncrementApprover.populate_params_from_env(base_params, "CI_JOB_URL")
@@ -477,7 +480,7 @@ class IncrementApprover:
         approval_status: ApprovalStatus,
     ) -> int:
         """Process a single build and update its approval status."""
-        params = self.make_scheduling_parameters(config_inc, build_info)
+        params = self.make_scheduling_parameters(config_inc, build_info, cast("int", request.reqid))
 
         if not params:
             log.info("Skipping %s for %s, filtered out via 'packages' or 'archs' setting", config_inc, build_info)
