@@ -89,10 +89,13 @@ class OscCommentsEmptyError(ValueError):
         super().__init__("Empty comment.")
 
 
+COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
+
+
 class CommentAPI:
     """Interface to OSC comments API."""
 
-    COMMENT_MARKER_REGEX = re.compile(r"<!-- (?P<bot>[^ ]+)(?P<info>(?: [^= ]+=[^ ]+)*) -->")
+    COMMENT_MARKER_REGEX = COMMENT_MARKER_REGEX
 
     def __init__(self, apiurl: str) -> None:
         """Initialize the CommentAPI class."""

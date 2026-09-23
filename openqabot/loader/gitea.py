@@ -28,11 +28,12 @@ from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
+from openqabot.osclib.comments import COMMENT_MARKER_REGEX
 from openqabot.types.pullrequest import PullRequest
 from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
     from openqabot.types.types import Repos
 
@@ -41,6 +42,24 @@ ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 JsonType = dict[str, Any] | list[Any]
 
 log = getLogger("bot.loader.gitea")
+
+
+@dataclass(frozen=True)
+class EvaluatedPR:
+    """The result of evaluating a Gitea Pull Request for dashboard submission."""
+
+    submission: dict[str, Any] | None
+    skipped_details: tuple[PullRequest, list[Any], str] | None = None
+
+
+INACTIVE_WARNING_REGEX = re.compile(
+    r"⚠️ \*\*This submission is inactive on the QEM Dashboard or has validation failures:\*\*\s*\n>\s*[^\n]*\s*\n?"
+)
+
+
+def comment_url(repo_name: str, comment_id: int) -> str:
+    """Construct the URL for a specific comment."""
+    return f"repos/{repo_name}/issues/comments/{comment_id}"
 
 
 @dataclass
@@ -732,6 +751,54 @@ def _validate_submission(
     return not (only_successful_builds and not is_build_acceptable_and_log_if_not(submission, number))
 
 
+def _add_or_update_inactive_warning(
+    pr: PullRequest,
+    token: dict[str, str],
+    comments: list[Any],
+    reason: str,
+    *,
+    dry: bool,
+) -> None:
+    """If an existing openQA comment is found, prepend or update a warning about inactivity."""
+    matches = (
+        (c, m)
+        for c in comments
+        if (m := COMMENT_MARKER_REGEX.match(c.get("body", ""))) and m.group("bot").lower() == "openqa"
+    )
+    if not (target := next(matches, None)):
+        return
+
+    comment, marker = target
+    body_marker = body = comment["body"]
+    warning = f"⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n> {reason}"
+    remainder = INACTIVE_WARNING_REGEX.sub("", body[marker.end() :]).strip()
+    new_body = (
+        f"{body_marker[: marker.end()]}\n\n{warning}\n\n{remainder}"
+        if remainder
+        else f"{body_marker[: marker.end()]}\n\n{warning}\n"
+    )
+    if new_body == body:
+        return
+
+    if dry:
+        log.info("Dry run: Would update Gitea comment %s on PR %s with inactivity warning", comment["id"], pr.number)
+        return
+
+    log.info("Updating Gitea comment %s on PR %s with inactivity warning: %s", comment["id"], pr.number, reason)
+    patch_json(comment_url(pr.project, comment["id"]), token, {"body": new_body})
+
+
+def notify_inactive_prs(
+    skipped: Sequence[tuple[PullRequest, list[Any], str]],
+    token: dict[str, str],
+    *,
+    dry: bool,
+) -> None:
+    """Update Gitea comments sequentially with inactivity warnings on the main thread."""
+    for pr, comments, reason in skipped:
+        _add_or_update_inactive_warning(pr, token, comments, reason, dry=dry)
+
+
 def _build_submission_record(
     pr: PullRequest,
     token: dict[str, str],
@@ -739,28 +806,33 @@ def _build_submission_record(
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> dict[str, Any] | None:
+) -> EvaluatedPR:
     submission = _init_submission_dict(pr)
     reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
 
     if add_reviews(submission, reviews) < 1 and only_requested_prs:
         log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
-        return None
+        return EvaluatedPR(None, None)
 
     add_comments_and_referenced_build_results(submission, comments, dry=dry)
 
     if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
-        return None
+        reason = (
+            "At least one build is not acceptable or failed."
+            if submission["channels"] and only_successful_builds
+            else "No openQA channels are configured for this project/branch."
+        )
+        return EvaluatedPR(None, (pr, comments, reason))
 
     add_packages_from_files(submission, token, files, dry=dry)
 
     if not submission["packages"]:
         log.info("PR git:%s skipped: No packages found", pr.number)
-        return None
+        return EvaluatedPR(None, (pr, comments, "No packages found in this Gitea pull request."))
 
     submission["priority"], submission["emu"] = get_gitea_update_data(pr.project, pr.number)
 
-    return submission
+    return EvaluatedPR(submission, None)
 
 
 def get_events_by_timeline(token: dict[str, str], repo: str, number: int) -> dict[str, dict[str, Any]]:
@@ -801,7 +873,7 @@ def make_submission_from_gitea_pr(
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> dict[str, Any] | None:
+) -> EvaluatedPR:
     """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.number)
     try:
@@ -810,7 +882,7 @@ def make_submission_from_gitea_pr(
         )
     except Exception:
         log.exception("Gitea API error: Unable to process PR git:%s", pr.number)
-        return None
+        return EvaluatedPR(None, None)
 
 
 def get_submissions_from_open_prs(
@@ -820,11 +892,14 @@ def get_submissions_from_open_prs(
     only_successful_builds: bool,
     only_requested_prs: bool,
     dry: bool,
-) -> list[dict[str, Any]]:
-    """Convert a list of open Gitea PRs into dashboard submissions."""
-    submissions = []
+) -> tuple[list[dict[str, Any]], list[tuple[PullRequest, list[Any], str]]]:
+    """Convert a list of open Gitea PRs into dashboard submissions.
 
-    # configure osc to be able to request build info from OBS
+    Returns:
+        tuple[list[dict[str, Any]], list[tuple[PullRequest, list[Any], str]]]:
+            A tuple containing valid submissions and a list of skipped PR details.
+
+    """
     osc.conf.get_config(override_apiurl=config.settings.obs_url)
 
     with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
@@ -839,5 +914,7 @@ def get_submissions_from_open_prs(
             )
             for pr in open_prs
         ]
-        submissions = (future.result() for future in futures.as_completed(future_sub))
-        return [sub for sub in submissions if sub]
+        results = [future.result() for future in futures.as_completed(future_sub)]
+        submissions = [res.submission for res in results if res.submission]
+        skipped_details = [res.skipped_details for res in results if res.skipped_details]
+        return submissions, skipped_details
