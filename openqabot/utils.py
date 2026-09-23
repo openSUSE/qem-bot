@@ -136,7 +136,7 @@ def number_of_retries(fallback: int = 3) -> int:
 def make_retry_session(
     retries: int,
     backoff_factor: float,
-    status_forcelist: frozenset[int] = frozenset({403, 413, 429, 503}),
+    status_forcelist: frozenset[int] = frozenset({413, 429, 503}),
 ) -> Session:
     """Create a requests session with retry capabilities."""
     adapter = HTTPAdapter(
