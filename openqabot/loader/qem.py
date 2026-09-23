@@ -138,6 +138,12 @@ def get_submissions_approver() -> list[SubReq]:
 def get_single_submission(submission_id: int, submission_type: str | None = None) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
     submission = _get_submission(submission_id, submission_type)
+    if isinstance(submission, dict) and "error" in submission:
+        s_type = submission_type or config_module.settings.default_submission_type
+        log.error("Submission %s:%s was not found on the QEM Dashboard or is invalid.", s_type, submission_id)
+        log.error("Dashboard error details: %s", submission.get("error"))
+        log.error("Please verify that the submission ID is correct and active on the dashboard.")
+        sys.exit(1)
     return [SubReq.from_dashboard(submission)]
 
 

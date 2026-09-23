@@ -555,8 +555,9 @@ def test_get_single_submission_fallback_malformed_spa(mock_get_json: MagicMock) 
         {"error": "Incident not found"},
         {"details": {}},
     ]
-    with pytest.raises(KeyError):
+    with pytest.raises(SystemExit) as excinfo:
         get_single_submission(123)
+    assert excinfo.value.code == 1
 
 
 def test_get_single_submission_fallback_type_mismatch(mock_get_json: MagicMock) -> None:
@@ -564,5 +565,16 @@ def test_get_single_submission_fallback_type_mismatch(mock_get_json: MagicMock) 
         {"error": "Incident not found"},
         {"details": {"incident": {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": "git"}}},
     ]
-    with pytest.raises(KeyError):
+    with pytest.raises(SystemExit) as excinfo:
         get_single_submission(123, submission_type="smelt")
+    assert excinfo.value.code == 1
+
+
+def test_get_single_submission_fallback_fail(mock_get_json: MagicMock) -> None:
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"error": "Not found in SPA either"},
+    ]
+    with pytest.raises(SystemExit) as excinfo:
+        get_single_submission(123)
+    assert excinfo.value.code == 1
