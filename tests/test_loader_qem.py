@@ -537,3 +537,32 @@ def test_dashboard_put(mocker: MagicMock) -> None:
 
     assert response.status_code == 200
     assert response == mock_response
+
+
+def test_get_single_submission_fallback_success(mock_get_json: MagicMock) -> None:
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {"incident": {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": "git"}}},
+    ]
+    res = get_single_submission(123, submission_type="git")
+    assert len(res) == 1
+    assert res[0].sub == 123
+    assert res[0].type == "git"
+
+
+def test_get_single_submission_fallback_malformed_spa(mock_get_json: MagicMock) -> None:
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {}},
+    ]
+    with pytest.raises(KeyError):
+        get_single_submission(123)
+
+
+def test_get_single_submission_fallback_type_mismatch(mock_get_json: MagicMock) -> None:
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {"incident": {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": "git"}}},
+    ]
+    with pytest.raises(KeyError):
+        get_single_submission(123, submission_type="smelt")

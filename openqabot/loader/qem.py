@@ -82,9 +82,18 @@ def _get_submission(submission_id: int, submission_type: str | None = None) -> d
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return dashboard.get_json(
+    res = dashboard.get_json(
         f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
     )
+    if isinstance(res, dict) and "error" in res:
+        spa_res = dashboard.get_json(
+            f"app/api/submission/{submission_id}", headers=config_module.settings.dashboard_token_dict
+        )
+        if isinstance(spa_res, dict) and "details" in spa_res and "incident" in spa_res["details"]:
+            incident = spa_res["details"]["incident"]
+            if isinstance(incident, dict) and (not submission_type or incident.get("type") == submission_type):
+                return incident
+    return res
 
 
 def get_submissions(submission: str | None = None) -> list[Submission]:
