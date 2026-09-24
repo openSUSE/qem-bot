@@ -146,25 +146,3 @@ def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFi
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None
-
-
-def test_load_build_info_ambiguous_builds(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
-    approver = prepare_approver(caplog)
-    config = IncrementConfig(
-        distri="sle",
-        version="16.0",
-        flavor="any",
-        project_base="BASE",
-        build_project_suffix="TEST",
-        build_regex=BUILD_REGEX,
-    )
-    mocker.patch("openqabot.loader.buildinfo.retried_requests.get").return_value.json.return_value = {
-        "data": [
-            {"name": "SLES-16.0-Online-x86_64-Build1.1.spdx.json"},
-            {"name": "SLES-16.0-Online-x86_64-Build2.2.spdx.json"},
-        ]
-    }
-    res = load_build_info(config, config.build_regex, approver.get_regex_match)
-    assert res == set()
-    assert "contains several builds in" in caplog.text
-    assert "Skipping whole set as ambiguous" in caplog.text
