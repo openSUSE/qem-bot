@@ -81,3 +81,28 @@ def find_request_on_obs(args: Namespace, build_project: str, obs_url: str | None
 
 
 find_request_on_obs.cache_clear = _find_request_on_obs_cached.cache_clear  # ty: ignore[unresolved-attribute]
+
+
+def approve_obs_request(obs_url: str, reqid: int | str, msg: str) -> None:
+    """Accept pending reviews for the configured OBS group on a request."""
+    try:
+        request = osc.core.Request.from_api(obs_url, int(reqid))
+        matching_reviews = [
+            r for r in request.reviews if r.by_group == config.settings.obs_group and r.state in {"new", "review"}
+        ]
+        count = len(matching_reviews)
+    except Exception:
+        log.warning("Failed to fetch request %s from API to count pending reviews", reqid, exc_info=True)
+        count = 1
+
+    # Workaround: OBS processes review state transitions individually per group.
+    # If duplicate review requests exist for our group, we must accept all of
+    # them individually to clear the pending badges and unblock release.
+    for _ in range(max(1, count)):
+        osc.core.change_review_state(
+            apiurl=obs_url,
+            reqid=str(reqid),
+            newstate="accepted",
+            by_group=config.settings.obs_group,
+            message=msg,
+        )

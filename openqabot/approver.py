@@ -17,13 +17,13 @@ from typing import TYPE_CHECKING
 from urllib.error import HTTPError
 
 import osc.conf
-import osc.core
 from openqa_client.exceptions import RequestError
 
 import openqabot.config as config_module
 from openqabot import config, dashboard
 from openqabot.errors import JobNotFoundError, NoResultsError
 from openqabot.openqa import OpenQAInterface
+from openqabot.requests import approve_obs_request
 
 from .commenter import Commenter
 from .loader.gitea import approve_pr, make_token_header
@@ -476,19 +476,12 @@ class Approver:
     def osc_approve(sub: SubReq, msg: str) -> bool:
         """Approve a submission in OBS."""
         try:
-            osc.core.change_review_state(
-                apiurl=config.settings.obs_url,
-                reqid=str(sub.req),
-                newstate="accepted",
-                by_group=config.settings.obs_group,
-                message=msg,
-            )
+            approve_obs_request(config.settings.obs_url, sub.req, msg)
         except HTTPError as e:
             return handle_http_error(e, sub)
         except Exception:
             log.exception("OBS API error: Failed to approve request %s", sub.req)
             return False
-
         return True
 
     def git_approve(self, sub: SubReq, msg: str) -> bool:
