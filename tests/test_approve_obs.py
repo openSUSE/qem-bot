@@ -12,11 +12,21 @@ import responses
 from pytest_mock import MockerFixture
 
 from openqabot.approver import Approver
+from openqabot.config import settings
+from openqabot.loader.qem import SubReq
 
 from .helpers import (
+    ReviewState,
     args,
     assert_log_messages,
 )
+
+
+@pytest.fixture(autouse=True)
+def mock_request_from_api_default(mocker: MockerFixture) -> Any:
+    req = mocker.Mock()
+    req.reviews = [ReviewState("review", settings.obs_group)]
+    return mocker.patch("osc.core.Request.from_api", return_value=req)
 
 
 def with_fake_qem(mode: str) -> Any:
@@ -121,3 +131,64 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
     ]
     assert_log_messages(caplog.messages, expected)
     mock_review_pr.assert_called_once_with(mocker.ANY, mocker.ANY, 5, mocker.ANY, mocker.ANY)
+
+
+@pytest.mark.parametrize(
+    ("reviews", "expected_calls"),
+    [
+        ([ReviewState("review", settings.obs_group)], 1),
+        (
+            [
+                ReviewState("review", settings.obs_group),
+                ReviewState("review", settings.obs_group),
+                ReviewState("new", settings.obs_group),
+            ],
+            3,
+        ),
+        ([], 1),
+        (
+            [
+                ReviewState("review", settings.obs_group),
+                ReviewState("review", "other-group"),
+                ReviewState("accepted", settings.obs_group),
+            ],
+            1,
+        ),
+    ],
+    ids=[
+        "one_pending_review",
+        "three_pending_reviews",
+        "no_pending_reviews_fallback_to_1",
+        "one_pending_matching_others_ignored",
+    ],
+)
+def test_osc_approve_duplicate_reviews(mocker: MockerFixture, reviews: list[ReviewState], expected_calls: int) -> None:
+    req = mocker.Mock()
+    req.reviews = reviews
+    mock_from_api = mocker.patch("osc.core.Request.from_api", return_value=req)
+    mock_change_state = mocker.patch("osc.core.change_review_state")
+    sub = SubReq(sub=123, req=100)
+
+    res = Approver.osc_approve(sub, "testmsg")
+
+    assert res is True
+    mock_from_api.assert_called_once_with(settings.obs_url, 100)
+    assert mock_change_state.call_count == expected_calls
+    for call in mock_change_state.call_args_list:
+        assert call.kwargs["reqid"] == "100"
+        assert call.kwargs["newstate"] == "accepted"
+        assert call.kwargs["by_group"] == settings.obs_group
+
+
+def test_osc_approve_exception_fallback(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    caplog.set_level(logging.DEBUG, logger="bot.requests")
+    mock_from_api = mocker.patch("osc.core.Request.from_api", side_effect=Exception("API failure"))
+    mock_change_state = mocker.patch("osc.core.change_review_state")
+    sub = SubReq(sub=123, req=100)
+
+    res = Approver.osc_approve(sub, "testmsg")
+
+    assert res is True
+    mock_from_api.assert_called_once_with(settings.obs_url, 100)
+    mock_change_state.assert_called_once()
+    assert "Failed to fetch request 100 from API to count pending reviews" in caplog.text

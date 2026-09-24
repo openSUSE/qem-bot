@@ -28,7 +28,16 @@ from .helpers import (
 )
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from pytest_mock import MockerFixture
+
+
+@pytest.fixture(autouse=True)
+def mock_request_from_api_default(mocker: MockerFixture) -> Any:
+    req = mocker.Mock()
+    req.reviews = [ReviewState("review", settings.obs_group)]
+    return mocker.patch("osc.core.Request.from_api", return_value=req)
 
 
 @responses.activate
@@ -175,9 +184,14 @@ def testapprove_on_obs_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixtu
 def testapprove_on_obs_uses_passed_obs_url(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
     """approve_on_obs must use the explicit obs_url, not the global default, e.g. for internal IBS projects."""
     approver = prepare_approver(caplog)
+    mock_from_api = mocker.patch(
+        "osc.core.Request.from_api",
+        return_value=mocker.Mock(reviews=[ReviewState("review", settings.obs_group)]),
+    )
     mock_osc_change = mocker.patch("osc.core.change_review_state")
     custom_url = "https://api.custom.obs"
     approver.approve_on_obs("123", "msg", custom_url)
+    mock_from_api.assert_called_once_with(custom_url, 123)
     assert mock_osc_change.call_args.kwargs["apiurl"] == custom_url
     assert custom_url != settings.obs_url
 
@@ -253,3 +267,72 @@ def test_process_request_for_config_stores_resolved_obs_url_in_approval_status(
     approver.process_request_for_config(req, approver.config[0], set(), obs_url=custom_url)
 
     assert approver.requests_to_approve["999"].obs_url == custom_url
+
+
+@pytest.mark.parametrize(
+    ("reviews", "expected_calls"),
+    [
+        ([ReviewState("review", settings.obs_group)], 1),
+        (
+            [
+                ReviewState("review", settings.obs_group),
+                ReviewState("review", settings.obs_group),
+                ReviewState("new", settings.obs_group),
+            ],
+            3,
+        ),
+        ([], 1),
+        (
+            [
+                ReviewState("review", settings.obs_group),
+                ReviewState("review", "other-group"),
+                ReviewState("accepted", settings.obs_group),
+            ],
+            1,
+        ),
+    ],
+    ids=[
+        "one_pending_review",
+        "three_pending_reviews",
+        "no_pending_reviews_fallback_to_1",
+        "one_pending_matching_others_ignored",
+    ],
+)
+def test_approve_on_obs_duplicate_reviews(
+    caplog: pytest.LogCaptureFixture,
+    mocker: MockerFixture,
+    reviews: list[ReviewState],
+    expected_calls: int,
+) -> None:
+    approver = prepare_approver(caplog)
+    approver.args.dry = False
+
+    req = mocker.Mock()
+    req.reviews = reviews
+    mock_from_api = mocker.patch("osc.core.Request.from_api", return_value=req)
+    mock_change_state = mocker.patch("osc.core.change_review_state")
+
+    approver.approve_on_obs("123", "msg", settings.obs_url)
+
+    mock_from_api.assert_called_once_with(settings.obs_url, 123)
+    assert mock_change_state.call_count == expected_calls
+    for call in mock_change_state.call_args_list:
+        assert call.kwargs["apiurl"] == settings.obs_url
+        assert call.kwargs["reqid"] == "123"
+        assert call.kwargs["newstate"] == "accepted"
+        assert call.kwargs["by_group"] == settings.obs_group
+        assert call.kwargs["message"] == "msg"
+
+
+def test_approve_on_obs_exception_fallback(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -> None:
+    approver = prepare_approver(caplog)
+    approver.args.dry = False
+
+    mock_from_api = mocker.patch("osc.core.Request.from_api", side_effect=Exception("API failure"))
+    mock_change_state = mocker.patch("osc.core.change_review_state")
+
+    approver.approve_on_obs("123", "msg", settings.obs_url)
+
+    mock_from_api.assert_called_once_with(settings.obs_url, 123)
+    mock_change_state.assert_called_once()
+    assert "Failed to fetch request 123 from API to count pending reviews" in caplog.text
