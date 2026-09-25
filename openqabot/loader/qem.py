@@ -82,9 +82,18 @@ def _get_submission(submission_id: int, submission_type: str | None = None) -> d
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return dashboard.get_json(
+    res = dashboard.get_json(
         f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
     )
+    if isinstance(res, dict) and "error" in res:
+        spa_res = dashboard.get_json(
+            f"app/api/submission/{submission_id}", headers=config_module.settings.dashboard_token_dict
+        )
+        if isinstance(spa_res, dict) and "details" in spa_res and "incident" in spa_res["details"]:
+            incident = spa_res["details"]["incident"]
+            if isinstance(incident, dict) and (not submission_type or incident.get("type") == submission_type):
+                return incident
+    return res
 
 
 def get_submissions(submission: str | None = None) -> list[Submission]:
@@ -129,6 +138,12 @@ def get_submissions_approver() -> list[SubReq]:
 def get_single_submission(submission_id: int, submission_type: str | None = None) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
     submission = _get_submission(submission_id, submission_type)
+    if isinstance(submission, dict) and "error" in submission:
+        s_type = submission_type or config_module.settings.default_submission_type
+        log.error("Submission %s:%s was not found on the QEM Dashboard or is invalid.", s_type, submission_id)
+        log.error("Dashboard error details: %s", submission.get("error"))
+        log.error("Please verify that the submission ID is correct and active on the dashboard.")
+        sys.exit(1)
     return [SubReq.from_dashboard(submission)]
 
 
