@@ -20,6 +20,7 @@ from responses import GET, matchers
 from openqabot.config import settings
 from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
+    EvaluatedPR,
     add_build_results,
     add_packages_from_files,
     compute_repo_url_for_job_setting,
@@ -30,6 +31,7 @@ from openqabot.loader.gitea import (
     read_xml,
     review_pr,
 )
+from openqabot.types.pullrequest import PullRequest
 from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
@@ -332,7 +334,7 @@ def test_gitea_sync_amqp(args: SimpleNamespace, mocker: MockerFixture, caplog: p
     run_gitea_sync(mocker, caplog, args)
 
     mock_subm = {"number": 42, "packages": ["foo"]}
-    mocker.patch("openqabot.giteasync.make_submission_from_gitea_pr", return_value=mock_subm)
+    mocker.patch("openqabot.giteasync.make_submission_from_gitea_pr", return_value=EvaluatedPR(mock_subm, None))
     mock_update = mocker.patch("openqabot.giteasync.update_submissions", return_value=0)
     sync = GiteaSync(args)
     message = {
@@ -348,6 +350,22 @@ def test_gitea_sync_amqp(args: SimpleNamespace, mocker: MockerFixture, caplog: p
     args.dry = True
     sync = GiteaSync(args)
     sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # ruff: ignore[private-member-access]
+
+    # check skipped_details notification path
+    dummy_pr = PullRequest.from_json({
+        "number": 123,
+        "state": "open",
+        "url": "https://src.suse.de/owner/repo/pulls/123",
+        "base": {"repo": {"full_name": "owner/repo", "name": "repo"}},
+    })
+    assert dummy_pr is not None
+    mocker.patch(
+        "openqabot.giteasync.make_submission_from_gitea_pr",
+        return_value=EvaluatedPR(None, (dummy_pr, [], "reason_obj")),
+    )
+    mock_notify = mocker.patch("openqabot.giteasync.notify_inactive_prs")
+    sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # ruff: ignore[private-member-access]
+    mock_notify.assert_called_once_with([(dummy_pr, [], "reason_obj")], sync.gitea_token, dry=sync.dry)
 
     # check wrong PR does nothing
     sync._on_amqp_message(  # ruff: ignore[private-member-access]

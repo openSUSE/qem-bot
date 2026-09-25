@@ -36,7 +36,7 @@ def test_make_submission_from_gitea_pr_dry(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_packages)
 
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
-    assert res is not None
+    assert res.submission is not None
 
 
 def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -53,7 +53,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
 
     # Skip due to no channels
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
-    assert res is None
+    assert res.submission is None
     assert "PR git:123 skipped: No channels found" in caplog.text
 
     # Skip due to build not acceptable
@@ -65,13 +65,13 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
 
     mocker.patch("openqabot.loader.gitea.add_comments_and_referenced_build_results", side_effect=mock_add_comments)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=True, only_requested_prs=False, dry=False)
-    assert res is None
+    assert res.submission is None
 
     # Skip due to no packages
     caplog.clear()
     mocker.patch("openqabot.loader.gitea.is_build_acceptable_and_log_if_not", return_value=True)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
-    assert res is None
+    assert res.submission is None
     assert "PR git:123 skipped: No packages found" in caplog.text
 
 
@@ -98,8 +98,8 @@ def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFix
     mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_pkg)
 
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=True)
-    assert res is not None
-    assert res["number"] == 999
+    assert res.submission is not None
+    assert res.submission["number"] == 999
 
 
 def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -115,7 +115,7 @@ def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog:
     mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
     mocker.patch("openqabot.loader.gitea.add_reviews", return_value=0)
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=True, dry=False)
-    assert res is None
+    assert res.submission is None
     assert "PR git:123 skipped: No reviews by" in caplog.text
 
 
@@ -172,14 +172,14 @@ def test_add_reviews_stale_reapproval(
 def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
     submission = {"number": 123}
     res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[private-member-access]
+    gitea._update_scminfo(submission, res, "project", "")
     assert submission["scminfo"] == "new"
     assert "Inconsistent SCM info" in caplog.text
 
     caplog.clear()
     submission = {"number": 123, "scminfo_prod": "old"}
     res = etree.fromstring("<root><scminfo>new</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[private-member-access]
+    gitea._update_scminfo(submission, res, "project", "prod")
     assert submission["scminfo_prod"] == "old"
     assert "Inconsistent SCM info" in caplog.text
 
@@ -205,7 +205,7 @@ def test_make_submission_from_gitea_pr_no_packages(mocker: MockerFixture, caplog
     # mock add_packages_from_files to do nothing (default)
 
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
-    assert res is None
+    assert res.submission is None
     assert "PR git:123 skipped: No packages found" in caplog.text
 
 
@@ -223,5 +223,121 @@ def test_make_submission_from_gitea_pr_exception(mocker: MockerFixture, caplog: 
     mocker.patch("openqabot.loader.gitea._fetch_details", side_effect=Exception("API failure"))
 
     res = gitea.make_submission_from_gitea_pr(pr, {}, only_successful_builds=False, only_requested_prs=False, dry=False)
-    assert res is None
+    assert res.submission is None
     assert "Gitea API error: Unable to process PR git:123" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("description", "comments", "dry", "expected_patch_called", "expected_body"),
+    [
+        (
+            "no_comment_found_on_pr_does_nothing",
+            [],
+            False,
+            False,
+            None,
+        ),
+        (
+            "comment_found_with_warning_already_present_does_nothing",
+            [
+                {
+                    "id": 1,
+                    "body": (
+                        "<!-- openqa state=passed -->\n\n"
+                        "⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n"
+                        "> Some reason\n"
+                    ),
+                    "user": {"username": "user"},
+                }
+            ],
+            False,
+            False,
+            None,
+        ),
+        (
+            "comment_found_warning_added_on_dry_run_does_nothing",
+            [{"id": 1, "body": "<!-- openqa state=passed -->\n\nSome comment", "user": {"username": "user"}}],
+            True,
+            False,
+            None,
+        ),
+        (
+            "comment_found_warning_prepended_to_existing_comment",
+            [{"id": 1, "body": "<!-- openqa state=passed -->\n\nSome comment", "user": {"username": "user"}}],
+            False,
+            True,
+            (
+                "<!-- openqa state=passed -->\n\n"
+                "⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n"
+                "> Some reason\n\n"
+                "Some comment"
+            ),
+        ),
+        (
+            "comment_found_without_marker_prepends_warning",
+            [{"id": 2, "body": "<!-- openqa -->\n\nNo marker here", "user": {"username": "user"}}],
+            False,
+            True,
+            (
+                "<!-- openqa -->\n\n"
+                "⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n"
+                "> Some reason\n\n"
+                "No marker here"
+            ),
+        ),
+        (
+            "different_warning_reason_is_stripped_and_replaced",
+            [
+                {
+                    "id": 1,
+                    "body": (
+                        "<!-- openqa state=passed -->\n\n"
+                        "⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n"
+                        "> Some old reason\n\n"
+                        "Some comment"
+                    ),
+                    "user": {"username": "user"},
+                }
+            ],
+            False,
+            True,
+            (
+                "<!-- openqa state=passed -->\n\n"
+                "⚠️ **This submission is inactive on the QEM Dashboard or has validation failures:**\n"
+                "> Some reason\n\n"
+                "Some comment"
+            ),
+        ),
+    ],
+)
+def test_add_or_update_inactive_warning(
+    mocker: MockerFixture,
+    description: str,
+    comments: list[dict],
+    *,
+    dry: bool,
+    expected_patch_called: bool,
+    expected_body: str | None,
+) -> None:
+    # ruff: noqa: SLF001
+    pr_dict = {
+        "number": 123,
+        "state": "open",
+        "url": "https://src.suse.de/owner/repo/pulls/123",
+        "base": {"repo": {"full_name": "owner/repo", "name": "repo"}},
+    }
+    pr = PullRequest.from_json(pr_dict)
+    assert isinstance(pr, PullRequest)
+
+    mock_patch = mocker.patch("openqabot.loader.gitea.patch_json")
+
+    gitea._add_or_update_inactive_warning(pr, {}, comments, "Some reason", dry=dry)
+
+    if expected_patch_called:
+        mock_patch.assert_called_once_with(
+            f"repos/owner/repo/issues/comments/{comments[0]['id']}",
+            {},
+            {"body": expected_body},
+        )
+    else:
+        mock_patch.assert_not_called()
