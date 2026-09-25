@@ -29,7 +29,7 @@ from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
 from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig
 from .repodiff import Package, RepoDiff
-from .requests import find_request_on_obs
+from .requests import approve_obs_request, find_request_on_obs
 from .types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
 from .types.pullrequest import OBSCommentable
 from .utils import merge_dicts, unique_dicts
@@ -207,15 +207,8 @@ class IncrementApprover:
 
     def approve_on_obs(self, reqid: str, msg: str, obs_url: str) -> None:
         """Change the review state of a request on OBS to accepted."""
-        if self.args.dry:
-            return
-        osc.core.change_review_state(
-            apiurl=obs_url,
-            reqid=reqid,
-            newstate="accepted",
-            by_group=config.settings.obs_group,
-            message=msg,
-        )
+        if not self.args.dry:
+            approve_obs_request(obs_url, reqid, msg)
 
     def handle_approval(self, approval_status: ApprovalStatus) -> int:
         """Process approval or disapproval based on job results."""
