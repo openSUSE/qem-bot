@@ -15,7 +15,6 @@ from functools import lru_cache
 from http import HTTPStatus
 from io import BytesIO
 from logging import getLogger
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import osc.conf
@@ -27,6 +26,8 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
+from openqabot.loader.fixtures import read_utf8
+from openqabot.loader.productcompose import ARCHS, get_productcompose_packages_per_arch, safe_fake_project
 from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import NO_QE_LABEL, PullRequest
 from openqabot.types.submission_key import SubmissionKey
@@ -36,8 +37,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from openqabot.types.types import Repos
-
-ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
 
 JsonType = dict[str, Any] | list[Any]
 
@@ -139,12 +138,6 @@ def post_json(query: str, token: dict[str, str], post_data: JsonType, host: str 
 def patch_json(query: str, token: dict[str, str], post_data: JsonType, host: str | None = None) -> None:
     """Patch JSON data in Gitea API."""
     _request_json("PATCH", query, token, post_data, host)
-
-
-@lru_cache(maxsize=128)
-def read_utf8(name: str) -> str:
-    """Read a UTF-8 encoded response file."""
-    return Path(f"tests/fixtures/responses/{name}").read_text(encoding="utf8")
 
 
 @lru_cache(maxsize=128)
@@ -493,8 +486,50 @@ def get_multibuild_data(obs_project: str) -> str:
     return cast("str", r.get_multibuild_data())
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data: bool) -> set[str] | None:
-    """Determine the relevant architectures of an OBS project from its multibuild flavors.
+def _filter_archs_by_packages(
+    relevant_archs: set[str],
+    packages: list[str],
+    packages_per_arch: dict[str, frozenset[str]],
+    obs_project: str,
+) -> set[str]:
+    known_pkgs = set().union(*packages_per_arch.values())
+    relevant_packages = frozenset(packages) & known_pkgs
+    supported = {arch for arch in relevant_archs if relevant_packages <= packages_per_arch.get(arch, frozenset())}
+    if not supported:
+        log.warning(
+            "No arch for %s supports all PR packages %s, keeping %s unfiltered",
+            obs_project,
+            sorted(relevant_packages),
+            sorted(relevant_archs),
+        )
+        return relevant_archs
+    if dropped := relevant_archs - supported:
+        log.info(
+            "Skipping archs %s for %s: packages %s are listed for other architectures",
+            sorted(dropped),
+            obs_project,
+            sorted(relevant_packages),
+        )
+    return supported
+
+
+def _load_multibuild_data(obs_project: str, *, fake_data: bool) -> str | None:
+    if not safe_fake_project(obs_project, fake_data=fake_data):
+        return None
+    try:
+        return read_utf8(f"_multibuild-124-{obs_project}.xml") if fake_data else get_multibuild_data(obs_project)
+    except OSError as e:
+        log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
+        return None
+
+
+def determine_relevant_archs(
+    obs_project: str,
+    *,
+    packages: list[str] | None = None,
+    fake_data: bool,
+) -> set[str] | None:
+    """Determine the relevant architectures of an OBS project from its multibuild flavors and productcompose.
 
     The `_multibuild` file of `000productcompose` is read and every architecture from `ARCHS` that
     a flavor name ends with is considered relevant.
@@ -503,20 +538,20 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data
     for them. Considering those would cause problems later on (e.g. when computing the repohash), so
     only the archs found in the flavors are kept.
 
+    When `packages` are given, an architecture is dropped if the productcompose lists one of them for
+    another architecture only. When no remaining architecture supports every package, e.g. because a
+    PR touches packages of different architectures, all architectures are kept instead of none.
+
     Returns:
         The set of relevant architectures, or None if the multibuild data could not be retrieved.
 
     """
-    if fake_data:
-        multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
-    else:
-        try:
-            multibuild_data = get_multibuild_data(obs_project)
-        except (urllib.error.HTTPError, urllib.error.URLError) as e:
-            log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
-            return None
+    if (multibuild_data := _load_multibuild_data(obs_project, fake_data=fake_data)) is None:
+        return None
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {arch for flavor in flavors for arch in ARCHS if flavor.endswith(arch)}
+    if packages and (packages_per_arch := get_productcompose_packages_per_arch(obs_project, fake_data=fake_data)):
+        relevant_archs = _filter_archs_by_packages(relevant_archs, packages, packages_per_arch, obs_project)
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
@@ -560,7 +595,7 @@ def _process_obs_url(
         return
     obs_project = project_match.group(1)
     log.debug("Checking OBS project %s", obs_project)
-    relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, fake_data=fake_data)
+    relevant_archs = determine_relevant_archs(obs_project, packages=submission["packages"], fake_data=fake_data)
 
     for res in _get_project_results(obs_project, fake_data=fake_data, results=results):
         if is_build_result_relevant(res, relevant_archs):
@@ -751,15 +786,15 @@ def _build_submission_record(
         log.info("PR %s skipped: No reviews by %s", pr.key, config.settings.obs_group)
         return None
 
-    add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
-
-    if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
-        return None
-
     add_packages_from_files(submission, token, files, fake_data=fake_data)
 
     if not submission["packages"]:
         log.info("PR %s skipped: No packages found", pr.key)
+        return None
+
+    add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
+
+    if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
         return None
 
     submission["priority"], submission["emu"] = get_gitea_update_data(pr.project, pr.number)

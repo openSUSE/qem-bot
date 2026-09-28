@@ -127,6 +127,11 @@ def fake_get_multibuild_data(obs_project: str) -> str:
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
 
+def fake_get_productcompose_contents(obs_project: str) -> list[str]:
+    assert obs_project == "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+    return [read_utf8("productcompose-124-" + obs_project + ".yaml")]
+
+
 @pytest.fixture
 def args() -> SimpleNamespace:
     return SimpleNamespace(
@@ -152,6 +157,9 @@ def gitea_sync_mocks(mocker: MockerFixture) -> None:
     mocker.patch("osc.util.xml.xml_parse", side_effect=fake_osc_xml_parse)
     mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
     mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_get_multibuild_data)
+    mocker.patch(
+        "openqabot.loader.productcompose.get_productcompose_contents", side_effect=fake_get_productcompose_contents
+    )
 
 
 def run_gitea_sync(
@@ -277,7 +285,7 @@ def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.L
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
     mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_urllib_http_error)
-    submission = {}
+    submission = {"packages": []}
     add_build_results(submission, ["https://foo/project/show/bar"], fake_data=False)
     assert submission["successful_packages"] == []
     assert submission["failed_or_unpublished_packages"] == ["bar"]
