@@ -1,0 +1,7 @@
+packagesets:
+  - name: sles_x86_64
+    packages:
+      - tree
+  - name: sles_aarch64
+    packages:
+      - tree
