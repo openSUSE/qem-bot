@@ -149,6 +149,7 @@ def gitea_sync_mocks(mocker: MockerFixture) -> None:
     mocker.patch("osc.util.xml.xml_parse", side_effect=fake_osc_xml_parse)
     mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
     mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_get_multibuild_data)
+    mocker.patch("openqabot.loader.gitea.get_productcompose_packages_per_arch", return_value=None)
 
 
 def run_gitea_sync(
