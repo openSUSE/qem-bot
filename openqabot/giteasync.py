@@ -10,7 +10,13 @@ from typing import Any
 from openqabot.types.pullrequest import PullRequest
 
 from .loader.amqp_listener import AMQPListener
-from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_submission_from_gitea_pr, make_token_header
+from .loader.gitea import (
+    get_open_prs,
+    get_submissions_from_open_prs,
+    make_submission_from_gitea_pr,
+    make_token_header,
+    notify_inactive_prs,
+)
 from .loader.qem import update_submissions
 
 log = getLogger("bot.giteasync")
@@ -65,13 +71,15 @@ class GiteaSync:
                 project,
             )
             open_prs.extend(prs)
-        submissions = get_submissions_from_open_prs(
+        submissions, skipped = get_submissions_from_open_prs(
             open_prs,
             self.gitea_token,
             only_successful_builds=not self.allow_build_failures,
             only_requested_prs=not self.consider_unrequested_prs,
             dry=self.fake_data,
         )
+
+        notify_inactive_prs(skipped, self.gitea_token, dry=self.dry)
 
         log.debug("Data for %d submissions: %s", len(submissions), pformat(submissions))
         if self.dry:
@@ -84,13 +92,17 @@ class GiteaSync:
         pr = PullRequest.from_json(message["pull_request"])
         if pr and pr.project in self.gitea_projects:
             log.info("PR #%s on %s %s", pr.number, pr.project, message["action"])
-            submission = make_submission_from_gitea_pr(
+            res = make_submission_from_gitea_pr(
                 pr,
                 self.gitea_token,
                 only_successful_builds=not self.allow_build_failures,
                 only_requested_prs=not self.consider_unrequested_prs,
                 dry=self.fake_data,
             )
+            if res.skipped_details:
+                notify_inactive_prs([res.skipped_details], self.gitea_token, dry=self.dry)
+
+            submission = res.submission
             log.debug("Submission: %s", submission)
             if submission and not self.dry:
                 log.info("Syncing Gitea PRs #%d to QEM Dashboard", submission["number"])
