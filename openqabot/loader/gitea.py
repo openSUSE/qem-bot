@@ -496,7 +496,7 @@ def get_multibuild_data(obs_project: str) -> str:
     return cast("str", r.get_multibuild_data())
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool) -> set[str] | None:
+def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data: bool) -> set[str] | None:
     """Determine which architectures are relevant for a product based on multibuild data."""
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
@@ -504,7 +504,7 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, dry: bool
         return None
     product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     prefix_len = len(product_prefix)
-    if dry:
+    if fake_data:
         multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
     else:
         try:
@@ -541,10 +541,10 @@ def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | Non
     return arch == "local" or relevant_archs is None or arch in relevant_archs
 
 
-def _get_project_results(obs_project: str, *, dry: bool, results: BuildResults) -> list[etree._Element]:
+def _get_project_results(obs_project: str, *, fake_data: bool, results: BuildResults) -> list[etree._Element]:
     """Fetch build results for an OBS project."""
     build_info_url = osc.core.makeurl(config.settings.obs_url, ["build", obs_project, "_result"])
-    if dry:
+    if fake_data:
         return read_xml("build-results-124-" + obs_project).getroot().findall("result")
     try:
         return osc.util.xml.xml_parse(http_GET(build_info_url)).getroot().findall("result")
@@ -558,7 +558,7 @@ def _process_obs_url(
     url: str,
     submission: dict[str, Any],
     *,
-    dry: bool,
+    fake_data: bool,
     results: BuildResults,
 ) -> None:
     """Process an OBS URL and update submission build results."""
@@ -566,19 +566,19 @@ def _process_obs_url(
         return
     obs_project = project_match.group(1)
     log.debug("Checking OBS project %s", obs_project)
-    relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, dry=dry)
+    relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, fake_data=fake_data)
 
-    for res in _get_project_results(obs_project, dry=dry, results=results):
+    for res in _get_project_results(obs_project, fake_data=fake_data, results=results):
         if is_build_result_relevant(res, relevant_archs):
             add_build_result(submission, res, results)
 
 
-def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, dry: bool) -> None:
+def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, fake_data: bool) -> None:
     """Aggregate build results from multiple OBS URLs into a submission."""
     results = BuildResults()
 
     for url in obs_urls:
-        _process_obs_url(url, submission, dry=dry, results=results)
+        _process_obs_url(url, submission, fake_data=fake_data, results=results)
 
     if results.unpublished:
         log.info(
@@ -608,7 +608,7 @@ def add_comments_and_referenced_build_results(
     submission: dict[str, Any],
     comments: list[Any],
     *,
-    dry: bool,
+    fake_data: bool,
 ) -> None:
     """Find and process build result URLs from bot comments on a PR."""
     bot_comments = [
@@ -620,7 +620,7 @@ def add_comments_and_referenced_build_results(
     obs_urls = {url for comment in bot_comments for url in URL_FINDALL_REGEX.findall(comment["body"])}
 
     if obs_urls:
-        add_build_results(submission, sorted(obs_urls), dry=dry)
+        add_build_results(submission, sorted(obs_urls), fake_data=fake_data)
     else:
         log.warning(
             "PR git:%s: No OBS URLs found in comments from %s",
@@ -634,10 +634,10 @@ def add_packages_from_patchinfo(
     token: dict[str, str],
     patch_info_url: str,
     *,
-    dry: bool,
+    fake_data: bool,
 ) -> None:
     """Extract package names from a _patchinfo file URL."""
-    if dry:
+    if fake_data:
         patch_info = read_xml("patch-info")
     else:
         try:
@@ -652,13 +652,15 @@ def add_packages_from_patchinfo(
     submission["packages"].extend(res.text for res in patch_info.findall("package"))
 
 
-def add_packages_from_files(submission: dict[str, Any], token: dict[str, str], files: list[Any], *, dry: bool) -> None:
+def add_packages_from_files(
+    submission: dict[str, Any], token: dict[str, str], files: list[Any], *, fake_data: bool
+) -> None:
     """Extract packages from all relevant files in a PR."""
     for file_info in files:
         file_name = file_info.get("filename", "").split("/")[-1]
         raw_url = file_info.get("raw_url")
         if file_name == "_patchinfo" and raw_url is not None:
-            add_packages_from_patchinfo(submission, token, raw_url, dry=dry)
+            add_packages_from_patchinfo(submission, token, raw_url, fake_data=fake_data)
 
 
 def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) -> bool:
@@ -675,9 +677,9 @@ def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) 
 
 
 def _fetch_details(
-    project: str, number: int, token: dict[str, str], *, dry: bool
+    project: str, number: int, token: dict[str, str], *, fake_data: bool
 ) -> tuple[list[Any], list[Any], list[Any]]:
-    if dry:
+    if fake_data:
         if number == 124:  # ruff: ignore[magic-value-comparison]
             return (
                 read_json_file_list("reviews-124"),
@@ -738,21 +740,21 @@ def _build_submission_record(
     *,
     only_successful_builds: bool,
     only_requested_prs: bool,
-    dry: bool,
+    fake_data: bool,
 ) -> dict[str, Any] | None:
     submission = _init_submission_dict(pr)
-    reviews, comments, files = _fetch_details(pr.project, pr.number, token, dry=dry)
+    reviews, comments, files = _fetch_details(pr.project, pr.number, token, fake_data=fake_data)
 
     if add_reviews(submission, reviews) < 1 and only_requested_prs:
         log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
         return None
 
-    add_comments_and_referenced_build_results(submission, comments, dry=dry)
+    add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
 
     if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
         return None
 
-    add_packages_from_files(submission, token, files, dry=dry)
+    add_packages_from_files(submission, token, files, fake_data=fake_data)
 
     if not submission["packages"]:
         log.info("PR git:%s skipped: No packages found", pr.number)
@@ -800,13 +802,17 @@ def make_submission_from_gitea_pr(
     *,
     only_successful_builds: bool,
     only_requested_prs: bool,
-    dry: bool,
+    fake_data: bool,
 ) -> dict[str, Any] | None:
     """Create a dashboard-compatible submission record from a Gitea PR."""
     log.debug("Fetching info for PR git:%s from Gitea", pr.number)
     try:
         return _build_submission_record(
-            pr, token, only_successful_builds=only_successful_builds, only_requested_prs=only_requested_prs, dry=dry
+            pr,
+            token,
+            only_successful_builds=only_successful_builds,
+            only_requested_prs=only_requested_prs,
+            fake_data=fake_data,
         )
     except Exception:
         log.exception("Gitea API error: Unable to process PR git:%s", pr.number)
@@ -819,7 +825,7 @@ def get_submissions_from_open_prs(
     *,
     only_successful_builds: bool,
     only_requested_prs: bool,
-    dry: bool,
+    fake_data: bool,
 ) -> list[dict[str, Any]]:
     """Convert a list of open Gitea PRs into dashboard submissions."""
     submissions = []
@@ -835,7 +841,7 @@ def get_submissions_from_open_prs(
                 token,
                 only_successful_builds=only_successful_builds,
                 only_requested_prs=only_requested_prs,
-                dry=dry,
+                fake_data=fake_data,
             )
             for pr in open_prs
         ]

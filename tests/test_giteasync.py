@@ -271,7 +271,7 @@ def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.L
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
     submission = {}
-    add_build_results(submission, ["https://foo/project/show/bar"], dry=False)
+    add_build_results(submission, ["https://foo/project/show/bar"], fake_data=False)
     assert submission["successful_packages"] == []
     assert submission["failed_or_unpublished_packages"] == ["bar"]
     assert "Build results for project bar unreadable, skipping:" in caplog.text
@@ -314,7 +314,7 @@ def test_adding_packages_from_files() -> None:
         {"filename": "bar/_patchinfo", "raw_url": "bar"},
         {"filename": "baz/_patchinfo", "raw_url": None},
     ]
-    add_packages_from_files(submission, {}, files, dry=True)
+    add_packages_from_files(submission, {}, files, fake_data=True)
     assert submission["packages"] == ["tree", "tree"], "package added twice (once for each patchinfo with raw_url)"
 
 

@@ -70,7 +70,7 @@ class GiteaSync:
             self.gitea_token,
             only_successful_builds=not self.allow_build_failures,
             only_requested_prs=not self.consider_unrequested_prs,
-            dry=self.fake_data,
+            fake_data=self.fake_data,
         )
 
         log.debug("Data for %d submissions: %s", len(submissions), pformat(submissions))
@@ -89,7 +89,7 @@ class GiteaSync:
                 self.gitea_token,
                 only_successful_builds=not self.allow_build_failures,
                 only_requested_prs=not self.consider_unrequested_prs,
-                dry=self.fake_data,
+                fake_data=self.fake_data,
             )
             log.debug("Submission: %s", submission)
             if submission and not self.dry:

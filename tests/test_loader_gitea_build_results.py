@@ -32,7 +32,7 @@ def test_is_build_result_relevant_repo_mismatch(mocker: MockerFixture) -> None:
 
 
 def test_add_build_results_url_mismatch_just_passes() -> None:
-    gitea.add_build_results({}, ["http://nomatch.com"], dry=True)
+    gitea.add_build_results({}, ["http://nomatch.com"], fake_data=True)
 
 
 def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -41,7 +41,7 @@ def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogC
     err = urllib.error.HTTPError("url", 404, "msg", cast("Any", {}), None)
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=err)
     incident = {"number": 123}
-    gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
+    gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=False)
     assert "Build results for project proj unreadable, skipping" in caplog.text
     assert "proj" in cast("list", incident["failed_or_unpublished_packages"])
 
@@ -93,7 +93,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
     incident = {"number": 123}
-    gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=False)
+    gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=False)
     assert "PR git:123: Some packages failed: pkg1" in caplog.text
     assert "pkg1" in cast("list", incident["failed_or_unpublished_packages"])
 
@@ -109,7 +109,7 @@ def test_add_build_results_dry_124(mocker: MockerFixture) -> None:
     mock_read_xml = mocker.patch("openqabot.loader.gitea.read_xml")
     mock_read_xml.return_value.getroot.return_value.findall.return_value = []
     incident = {"number": 124}
-    gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=True)
+    gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=True)
     mock_read_xml.assert_called_once_with("build-results-124-proj")
 
 
@@ -119,7 +119,7 @@ def test_add_build_results_scminfo(mocker: MockerFixture) -> None:
     mock_read_xml = mocker.patch("openqabot.loader.gitea.read_xml")
     mock_read_xml.return_value.getroot.return_value.findall.return_value = []
     incident = {"number": 124, "scminfo_SLES": "123"}
-    gitea.add_build_results(incident, ["http://obs/project/show/proj"], dry=True)
+    gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=True)
     assert incident["scminfo"] == "123"
 
 
@@ -144,7 +144,7 @@ def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
 
     submission = {"channels": ["chan"], "number": 123}
-    gitea.add_build_results(submission, ["http://obs/project/show/proj"], dry=False)
+    gitea.add_build_results(submission, ["http://obs/project/show/proj"], fake_data=False)
     assert submission["channels"] == ["chan"]
 
 
@@ -169,7 +169,7 @@ def test_add_comments_multiple_bot_comments(mocker: MockerFixture) -> None:
     # We want to check if add_build_results is called with BOTH URLs.
     mock_add_build_results = mocker.patch("openqabot.loader.gitea.add_build_results")
 
-    gitea.add_comments_and_referenced_build_results(submission, comments, dry=True)
+    gitea.add_comments_and_referenced_build_results(submission, comments, fake_data=True)
 
     mock_add_build_results.assert_called_once()
     args, _ = mock_add_build_results.call_args
@@ -202,7 +202,7 @@ def test_add_comments_no_bot_comments(mocker: MockerFixture) -> None:
     submission = {"number": 123, "channels": [], "packages": []}
     comments = [{"user": {"username": "someone_else"}, "body": "hello"}]
     mock_add_build_results = mocker.patch("openqabot.loader.gitea.add_build_results")
-    gitea.add_comments_and_referenced_build_results(submission, comments, dry=True)
+    gitea.add_comments_and_referenced_build_results(submission, comments, fake_data=True)
     mock_add_build_results.assert_not_called()
 
 
@@ -212,6 +212,6 @@ def test_add_comments_bot_comments_no_urls(mocker: MockerFixture, caplog: pytest
     submission = {"number": 123, "channels": [], "packages": []}
     comments = [{"user": {"username": "autogits_obs_staging_bot"}, "body": "No URLs here"}]
     mock_add_build_results = mocker.patch("openqabot.loader.gitea.add_build_results")
-    gitea.add_comments_and_referenced_build_results(submission, comments, dry=True)
+    gitea.add_comments_and_referenced_build_results(submission, comments, fake_data=True)
     mock_add_build_results.assert_not_called()
     assert "PR git:123: No OBS URLs found in comments from autogits_obs_staging_bot" in caplog.text
