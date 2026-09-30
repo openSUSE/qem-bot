@@ -54,6 +54,7 @@ def submission_mock(mocker: MockerFixture) -> Any:
     ) -> MagicMock:
         sub = mocker.MagicMock(spec=Submission)
         sub.id = sub_id
+        sub.project = f"SUSE:Maintenance:{sub_id}"
         sub.livepatch = None
         sub.staging = staging
         sub.channels = [Repos(product=product, version=version, arch=arch)]
@@ -439,7 +440,7 @@ def test_aggregate_duplicate_submissions(aggregate_factory: Any, submission_mock
 
     assert res is not None
     assert len(res["qem"]["incidents"]) == 1
-    assert res["qem"]["incidents"][0] == 123
+    assert res["qem"]["incidents"][0]["number"] == 123
 
 
 @pytest.mark.parametrize(
@@ -492,6 +493,7 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     )
     sub = mocker.MagicMock(spec=Submission)
     sub.id = 42
+    sub.project = "SUSE:Maintenance:42"
     sub.type = "smelt"
     sub.livepatch = False
     sub.staging = False
@@ -516,6 +518,7 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
 
     assert res is not None
     dashboard_url = res["openqa"]["__DASHBOARD_INCIDENTS_URL"]
-    assert "?type=" not in dashboard_url
     assert "/incident/42" in dashboard_url
-    assert "smelt" not in dashboard_url  # Should be clean of type if it's the default
+    # The dashboard URL must disambiguate same-numbered incidents by project and type.
+    assert "project=SUSE%3AMaintenance%3A42" in dashboard_url
+    assert "type=smelt" in dashboard_url

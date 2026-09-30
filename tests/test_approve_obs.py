@@ -118,14 +118,14 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
     expected = [
         "Submissions to approve:",
         "Submission approval process finished",
-        "* SUSE:Maintenance:1:100",
-        "Approving SUSE:Maintenance:1:100",
-        "* SUSE:Maintenance:2:200",
-        "Approving SUSE:Maintenance:2:200",
-        "* SUSE:Maintenance:3:300",
-        "Approving SUSE:Maintenance:3:300",
-        "* SUSE:Maintenance:4:400",
-        "Approving SUSE:Maintenance:4:400",
+        "* smelt:1",
+        "Approving smelt:1",
+        "* smelt:2",
+        "Approving smelt:2",
+        "* smelt:3",
+        "Approving smelt:3",
+        "* smelt:4",
+        "Approving smelt:4",
         "* git:5",
         "Approving git:5",
     ]
@@ -167,7 +167,7 @@ def test_osc_approve_duplicate_reviews(mocker: MockerFixture, reviews: list[Revi
     req.reviews = reviews
     mock_from_api = mocker.patch("osc.core.Request.from_api", return_value=req)
     mock_change_state = mocker.patch("osc.core.change_review_state")
-    sub = SubReq(sub=123, req=100)
+    sub = SubReq(sub=123, req=100, type="smelt", project="SUSE:Maintenance:123")
 
     res = Approver.osc_approve(sub, "testmsg")
 
@@ -184,7 +184,7 @@ def test_osc_approve_exception_fallback(caplog: pytest.LogCaptureFixture, mocker
     caplog.set_level(logging.DEBUG, logger="bot.requests")
     mock_from_api = mocker.patch("osc.core.Request.from_api", side_effect=Exception("API failure"))
     mock_change_state = mocker.patch("osc.core.change_review_state")
-    sub = SubReq(sub=123, req=100)
+    sub = SubReq(sub=123, req=100, type="smelt", project="SUSE:Maintenance:123")
 
     res = Approver.osc_approve(sub, "testmsg")
 

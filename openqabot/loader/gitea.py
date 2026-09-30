@@ -582,12 +582,12 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, fake_d
 
     if results.unpublished:
         log.info(
-            "PR git:%i: Some repos not published yet: %s",
+            "PR git:%s: Some repos not published yet: %s",
             submission["number"],
             ", ".join(results.unpublished),
         )
     if results.failed:
-        log.info("PR git:%i: Some packages failed: %s", submission["number"], ", ".join(results.failed))
+        log.info("PR git:%s: Some packages failed: %s", submission["number"], ", ".join(results.failed))
 
     submission.update({
         "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),

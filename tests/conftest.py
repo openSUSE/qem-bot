@@ -107,14 +107,22 @@ def fake_openqa_comment_api() -> None:
     )
 
 
-def make_approver(submission: int = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
+def make_approver(submission: int | str = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
     if mocker:
         mocker.patch("openqabot.approver.Commenter", autospec=True)
+    # The CLI now expects a single "<type>:<id>:<project>" string. Translate the
+    # helper's plain smelt submission number into that form; 0/None still means
+    # "all submissions".
+    incident = (
+        f"smelt:{submission}:SUSE:Maintenance:{submission}"
+        if isinstance(submission, int) and submission
+        else submission
+    )
     args = Namespace(
         dry=True,
         token="123",
         all_submissions=False,
-        incident=submission,
+        incident=incident,
         gitea_token=None,
         comment=comment,
     )
@@ -154,7 +162,7 @@ def _mock_load_dotenv(mocker: MockerFixture) -> None:
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
 
-    def f_sub_settins(sub: int, submission_type: str | None = None, **_kwargs: Any) -> list[JobAggr]:  # ruff: ignore[unused-function-argument]
+    def f_sub_settins(sub: int, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -173,7 +181,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
         }
         return results.get(sub, [])
 
-    def f_aggr_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:  # ruff: ignore[unused-function-argument]
+    def f_aggr_settings(sub: int, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -188,7 +196,7 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        side_effect=lambda i, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
+        side_effect=lambda i, *_args, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
     )
     mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)

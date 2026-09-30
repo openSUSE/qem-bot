@@ -341,7 +341,9 @@ def test_gitea_sync_amqp(args: SimpleNamespace, mocker: MockerFixture, caplog: p
     }
     # check successful code path
     sync._on_amqp_message(message, "suse.src.*.pull_request.opened")  # ruff: ignore[private-member-access]
-    mock_update.assert_called_once_with([mock_subm], params={"type": "git"}, retry=args.retry)
+    mock_update.assert_called_once_with(
+        [mock_subm], params={"type": "git", "project": "products/SLFO"}, retry=args.retry
+    )
     mock_update.reset_mock()
 
     # check dry run
