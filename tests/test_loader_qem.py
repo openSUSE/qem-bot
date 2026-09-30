@@ -537,3 +537,55 @@ def test_dashboard_put(mocker: MagicMock) -> None:
 
     assert response.status_code == 200
     assert response == mock_response
+
+
+def test_get_single_submission_fallback_success(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {"incident": {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": "git"}}},
+    ]
+    res = get_single_submission(123, submission_type="git")
+    assert len(res) == 1
+    assert res[0].sub == 123
+    assert res[0].type == "git"
+    assert "Incident 123 not found in active incidents API, falling back to SPA API" in caplog.text
+    assert "Fallback to SPA API successful for incident 123" in caplog.text
+
+
+def test_get_single_submission_fallback_malformed_spa(
+    mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {}},
+    ]
+    with pytest.raises(KeyError):
+        get_single_submission(123)
+    assert "Incident 123 not found in active incidents API, falling back to SPA API" in caplog.text
+    assert "SPA API did not return incident details for submission 123" in caplog.text
+
+
+def test_get_single_submission_fallback_type_mismatch(
+    mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_get_json.side_effect = [
+        {"error": "Incident not found"},
+        {"details": {"incident": {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": "git"}}},
+    ]
+    with pytest.raises(KeyError):
+        get_single_submission(123, submission_type="smelt")
+    assert "Incident 123 not found in active incidents API, falling back to SPA API" in caplog.text
+    assert "SPA API incident 123 type mismatch or invalid: expected type smelt, got git" in caplog.text
+
+
+def test_get_single_submission_fallback_other_error(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    mock_get_json.side_effect = [
+        {"error": "Some other error"},
+    ]
+    with pytest.raises(KeyError):
+        get_single_submission(123)
+    assert "falling back to SPA API" not in caplog.text
