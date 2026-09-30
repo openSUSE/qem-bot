@@ -21,7 +21,7 @@ openqa_url = (
 
 @pytest.fixture
 def get_a_s(mocker: MockerFixture) -> Generator[None]:
-    return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[100])
+    return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[(100, None, None)])
 
 
 @pytest.fixture

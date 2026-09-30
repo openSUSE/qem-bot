@@ -7,7 +7,7 @@ from __future__ import annotations
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
 
 import osc.conf
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from argparse import Namespace
     from collections.abc import Callable, Sequence
 
-    from .types.pullrequest import CommentableProtocol
+    from .types.pullrequest import CommentableProtocol, GiteaCommentable
     from .types.submission import Submission
 
 log = getLogger("bot.commenter")
@@ -57,9 +57,9 @@ class Commenter:
             log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
             return
 
-        def get_jobs(func: Callable[[int, str | None], list[dict[str, Any]]]) -> list[dict[str, Any]]:
+        def get_jobs(func: Callable[[int, str | None, str | None], list[dict[str, Any]]]) -> list[dict[str, Any]]:
             try:
-                return func(sub.id, sub.type)
+                return func(sub.id, sub.project, sub.type)
             except (ValueError, NoResultsError) as e:
                 log.debug(e)
                 return []
@@ -155,24 +155,20 @@ class Commenter:
         revisions = {f"revision_{k.version}_{k.arch}": v for k, v in sub.revisions.items()} if sub.revisions else None
         self.osc_comment_on_request(str(sub.rr), msg, state, revisions=revisions)
 
-    def gitea_comment(self, sub: CommentableProtocol, msg: str, state: str) -> None:
+    def gitea_comment(self, sub: GiteaCommentable, msg: str, state: str) -> None:
         """Comment a submission in Gitea."""
         if not self.gitea_token:
             log.warning("Gitea token missing, skipping comment for %s", sub)
             return
 
-        if not sub.url:
-            log.warning("Submission %s has no URL, skipping Gitea comment", sub)
+        if not sub.project:
+            log.warning("Submission %s has no project, skipping Gitea comment", sub)
             return
-
-        # Derive owner/repo from the PR URL (e.g. https://host/owner/repo/pulls/N)
-        # sub.project holds the OBS project name, not the Gitea owner/repo path.
-        repo = "/".join(urlparse(sub.url).path.strip("/").split("/")[:2])
 
         # Add a marker so we can find our own comments later
         msg = add_marker(msg, "openqa", {"state": state})
 
-        comments = gitea.iter_gitea_items(gitea.comments_url(repo, sub.id), self.gitea_token)
+        comments = gitea.iter_gitea_items(gitea.comments_url(sub.project, sub.id), self.gitea_token)
         formatted = {str(c["id"]): {"id": c["id"], "comment": c["body"]} for c in comments}
         comment, info = self.commentapi.comment_find(formatted, "openqa")
 
@@ -190,9 +186,9 @@ class Commenter:
         # Unlike OBS (delete + add), Gitea supports PATCH to update in-place,
         # avoiding notification noise from a delete event followed by a new comment.
         if comment is None:
-            gitea.post_json(gitea.comments_url(repo, sub.id), self.gitea_token, {"body": msg})
+            gitea.post_json(gitea.comments_url(sub.project, sub.id), self.gitea_token, {"body": msg})
         else:
-            gitea.patch_json(f"repos/{repo}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
+            gitea.patch_json(f"repos/{sub.project}/issues/comments/{comment['id']}", self.gitea_token, {"body": msg})
 
     def summarize_message(
         self, sub: CommentableProtocol, builds: set[BuildIdentifier], jobs: list[dict[str, Any]]

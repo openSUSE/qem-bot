@@ -70,6 +70,7 @@ def mock_smelt_sub() -> MagicMock:
     sub = MagicMock(spec=Submission)
     sub.id = 1
     sub.type = "smelt"
+    sub.project = "SUSE:Maintenance:1"
     sub.rr = 274060
     sub.revisions = None
     sub.__str__ = MagicMock(return_value="smelt:1")
@@ -81,6 +82,7 @@ def mock_git_sub() -> MagicMock:
     sub = MagicMock(spec=Submission)
     sub.id = 123
     sub.type = "git"
+    sub.project = "owner/repo"
     sub.url = "https://src.suse.de/owner/repo/pulls/123"
     sub.__str__ = MagicMock(return_value="git:123")
     return sub
@@ -526,16 +528,16 @@ def test_comment_on_submission_empty_msg_git(
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_gitea_comment_no_url(
+def test_gitea_comment_no_project(
     mock_args: Namespace,
     mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     caplog.set_level(logging.WARNING, logger="bot.commenter")
-    mock_git_sub.url = None
+    mock_git_sub.project = None
     c = Commenter(mock_args, submissions=[])
     c.gitea_comment(mock_git_sub, "Test message", "passed")
-    assert "has no URL, skipping Gitea comment" in caplog.text
+    assert "has no project, skipping Gitea comment" in caplog.text
 
 
 @pytest.mark.usefixtures("commenter_setup")

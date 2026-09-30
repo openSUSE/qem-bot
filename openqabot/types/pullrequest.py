@@ -15,7 +15,7 @@ class CommentableProtocol(Protocol):
 
     @property
     def id(self) -> int:
-        """The identifier of the pull request."""
+        """Identifier of the commentable entity."""
         ...
 
     @property
@@ -30,6 +30,20 @@ class CommentableProtocol(Protocol):
 
     def format_link(self, label: str, url: str, image_url: str | None = None) -> str:
         """Format a link with an optional image badge."""
+        ...
+
+
+class GiteaCommentable(CommentableProtocol, Protocol):
+    """A commentable entity that lives in a Gitea repository.
+
+    Exposes the repository path so callers do not have to re-derive it from
+    the entity's URL. Both ``Submission`` (``type == "git"``) and
+    ``PullRequest`` satisfy this protocol.
+    """
+
+    @property
+    def project(self) -> str:
+        """Gitea repository path (``owner/repo``), i.e. ``base.repo.full_name``."""
         ...
 
 
