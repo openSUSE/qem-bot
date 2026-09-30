@@ -16,7 +16,7 @@ import requests
 
 import openqabot.config as config_module
 from openqabot import config, dashboard
-from openqabot.errors import NoResultsError
+from openqabot.errors import NoResultsError, SubmissionArgError
 from openqabot.types.submission import Submission, sort_packages
 from openqabot.types.types import Data
 
@@ -24,6 +24,24 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 log = getLogger("bot.loader.qem")
+
+
+_SUBMISSION_ARG_PARTS = 3
+
+
+def parse_submission_arg(raw: str) -> tuple[str, int, str]:
+    """Parse a ``<type>:<id>:<project>`` submission argument.
+
+    The project may itself contain colons (OBS/SMELT projects do), so only the
+    first two colons are used as separators.
+    """
+    parts = raw.split(":", 2)
+    if len(parts) != _SUBMISSION_ARG_PARTS or not all(parts):
+        raise SubmissionArgError(raw)
+    s_type, s_id, s_project = parts
+    if not s_id.isdigit():
+        raise SubmissionArgError(raw, numeric=True)
+    return s_type, int(s_id), s_project
 
 
 class SubReq(NamedTuple):
@@ -35,6 +53,7 @@ class SubReq(NamedTuple):
     url: str | None = None
     scm_info: str | None = None
     submission: Submission | None = None
+    project: str | None = None
 
     @classmethod
     def from_dashboard(cls, d: dict) -> SubReq:
@@ -46,6 +65,7 @@ class SubReq(NamedTuple):
             d.get("url", ""),
             d.get("scm_info", ""),
             Submission.create(d),
+            project=d.get("project"),
         )
 
 
@@ -77,11 +97,13 @@ class NoAggregateResultsError(NoResultsError):
         super().__init__(f"No aggregate test results found for {sub}")
 
 
-def _get_submission(submission_id: int, submission_type: str | None = None) -> dict:
+def _get_submission(submission_id: int, project: str | None = None, submission_type: str | None = None) -> dict:
     """Fetch a single submission's raw data from the dashboard."""
     params = {}
     if submission_type:
         params["type"] = submission_type
+    if project:
+        params["project"] = project
     return dashboard.get_json(
         f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
     )
@@ -90,8 +112,11 @@ def _get_submission(submission_id: int, submission_type: str | None = None) -> d
 def get_submissions(submission: str | None = None) -> list[Submission]:
     """Fetch all or a specific submission from the dashboard and wrap them in Submission objects."""
     if submission:
-        s_type, s_id = submission.split(":")
-        res = _get_submission(int(s_id), s_type)
+        try:
+            s_type, s_id, s_project = parse_submission_arg(submission)
+        except SubmissionArgError as e:
+            raise SystemExit(str(e)) from e
+        res = _get_submission(s_id, s_project, s_type)
         if isinstance(res, dict) and "error" in res:
             log.error("Submission %s:%s was not found on the QEM Dashboard or is invalid.", s_type, s_id)
             log.error("Dashboard error details: %s", res.get("error"))
@@ -111,13 +136,13 @@ def get_submissions(submission: str | None = None) -> list[Submission]:
     return [sub for s in submissions if (sub := Submission.create(s))]
 
 
-def get_active_submissions(submission_type: str | None = None) -> Sequence[int]:
-    """Fetch IDs of all active submissions from the dashboard."""
+def get_active_submissions(submission_type: str | None = None) -> Sequence[tuple[int, str | None, str | None]]:
+    """Fetch (number, project, type) of all active submissions from the dashboard."""
     params = {}
     if submission_type:
         params["type"] = submission_type
     data = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict, params=params)
-    return list({i["number"] for i in data})
+    return list({(i["number"], i.get("project"), i.get("type")) for i in data})
 
 
 def get_submissions_approver() -> list[SubReq]:
@@ -126,19 +151,23 @@ def get_submissions_approver() -> list[SubReq]:
     return [SubReq.from_dashboard(i) for i in submissions if i["inReviewQAM"]]
 
 
-def get_single_submission(submission_id: int, submission_type: str | None = None) -> list[SubReq]:
+def get_single_submission(
+    submission_id: int, project: str | None = None, submission_type: str | None = None
+) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects."""
-    submission = _get_submission(submission_id, submission_type)
+    submission = _get_submission(submission_id, project, submission_type)
     return [SubReq.from_dashboard(submission)]
 
 
 def get_submission_settings(
-    sub: int, *, all_submissions: bool = False, submission_type: str | None = None
+    sub: int, project: str | None = None, *, all_submissions: bool = False, submission_type: str | None = None
 ) -> list[JobAggr]:
     """Fetch job settings associated with a submission."""
     params = {}
     if submission_type:
         params["type"] = submission_type
+    if project:
+        params["project"] = project
     settings = dashboard.get_json(
         f"api/incident_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
     )
@@ -155,7 +184,9 @@ def get_submission_settings(
     return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
-def get_submission_settings_data(number: int, submission_type: str | None = None) -> Sequence[Data]:
+def get_submission_settings_data(
+    number: int, project: str | None = None, submission_type: str | None = None
+) -> Sequence[Data]:
     """Fetch job settings data for a submission and wrap them in Data objects."""
     log.debug(
         "Fetching settings for submission %s:%s", submission_type or config.settings.default_submission_type, number
@@ -163,6 +194,8 @@ def get_submission_settings_data(number: int, submission_type: str | None = None
     params = {}
     if submission_type:
         params["type"] = submission_type
+    if project:
+        params["project"] = project
     data = dashboard.get_json(
         "api/incident_settings/" + f"{number}", headers=config_module.settings.dashboard_token_dict, params=params
     )
@@ -191,9 +224,11 @@ def get_submission_settings_data(number: int, submission_type: str | None = None
     ]
 
 
-def get_submission_results(sub: int, submission_type: str | None = None) -> list[dict[str, Any]]:
+def get_submission_results(
+    sub: int, project: str | None = None, submission_type: str | None = None
+) -> list[dict[str, Any]]:
     """Fetch all test results associated with a submission."""
-    settings = get_submission_settings(sub, all_submissions=False, submission_type=submission_type)
+    settings = get_submission_settings(sub, project, all_submissions=False, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific settings ID."""
@@ -208,11 +243,13 @@ def get_submission_results(sub: int, submission_type: str | None = None) -> list
     return list(chain.from_iterable(all_data))
 
 
-def get_aggregate_settings(sub: int, submission_type: str | None = None) -> list[JobAggr]:
+def get_aggregate_settings(sub: int, project: str | None = None, submission_type: str | None = None) -> list[JobAggr]:
     """Fetch aggregate job settings associated with a submission."""
     params = {}
     if submission_type:
         params["type"] = submission_type
+    if project:
+        params["project"] = project
     settings = dashboard.get_json(
         f"api/update_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
     )
@@ -244,9 +281,11 @@ def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     return [data._replace(settings_id=s["id"], build=s["build"]) for s in settings[:3]]
 
 
-def get_aggregate_results(sub: int, submission_type: str | None = None) -> list[dict[str, Any]]:
+def get_aggregate_results(
+    sub: int, project: str | None = None, submission_type: str | None = None
+) -> list[dict[str, Any]]:
     """Fetch all aggregate test results associated with a submission."""
-    settings = get_aggregate_settings(sub, submission_type=submission_type)
+    settings = get_aggregate_settings(sub, project, submission_type=submission_type)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific aggregate settings ID."""
@@ -311,12 +350,14 @@ def update_job(job_id: int, data: dict[str, Any]) -> None:
         log.exception("QEM Dashboard API request failed")
 
 
-def update_incident_reason(incident_number: int, reason: str | None) -> None:
+def update_incident_reason(incident_number: int, project: str | None = None, reason: str | None = None) -> None:
     """Update the rejection reason for a submission on the dashboard."""
+    params = {"project": project} if project else {}
     try:
         result = dashboard.patch(
             f"api/incidents/{incident_number}/rejection_reason",
             headers=config_module.settings.dashboard_token_dict,
+            params=params,
             json={"rejection_reason": reason},
         )
         if result.status_code != HTTPStatus.OK:

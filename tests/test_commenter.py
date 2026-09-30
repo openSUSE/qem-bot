@@ -70,6 +70,7 @@ def mock_smelt_sub() -> MagicMock:
     sub = MagicMock(spec=Submission)
     sub.id = 1
     sub.type = "smelt"
+    sub.project = "SUSE:Maintenance:1"
     sub.rr = 274060
     sub.revisions = None
     sub.__str__ = MagicMock(return_value="smelt:1")
@@ -81,6 +82,7 @@ def mock_git_sub() -> MagicMock:
     sub = MagicMock(spec=Submission)
     sub.id = 123
     sub.type = "git"
+    sub.project = "owner/repo"
     sub.url = "https://src.suse.de/owner/repo/pulls/123"
     sub.__str__ = MagicMock(return_value="git:123")
     return sub

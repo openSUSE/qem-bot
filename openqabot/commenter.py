@@ -57,9 +57,9 @@ class Commenter:
             log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
             return
 
-        def get_jobs(func: Callable[[int, str | None], list[dict[str, Any]]]) -> list[dict[str, Any]]:
+        def get_jobs(func: Callable[[int, str | None, str | None], list[dict[str, Any]]]) -> list[dict[str, Any]]:
             try:
-                return func(sub.id, sub.type)
+                return func(sub.id, sub.project, sub.type)
             except (ValueError, NoResultsError) as e:
                 log.debug(e)
                 return []
@@ -165,8 +165,8 @@ class Commenter:
             log.warning("Submission %s has no URL, skipping Gitea comment", sub)
             return
 
-        # Derive owner/repo from the PR URL (e.g. https://host/owner/repo/pulls/N)
-        # sub.project holds the OBS project name, not the Gitea owner/repo path.
+        # Derive owner/repo from the PR URL (e.g. https://host/owner/repo/pulls/N).
+        # The protocol has no project field, and the PR URL is authoritative.
         repo = "/".join(urlparse(sub.url).path.strip("/").split("/")[:2])
 
         # Add a marker so we can find our own comments later

@@ -109,9 +109,9 @@ def test_reject_calls_update_incident_reason(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     approver.dry = False
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, project="SUSE:Maintenance:1")
     assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
-    mock_update.assert_called_once_with(1, "Reason SUSE:Maintenance:1:2")
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", "Reason SUSE:Maintenance:1:2")
 
 
 def test_reject_dry_run_skips_update_incident_reason(mocker: MockerFixture) -> None:
@@ -131,9 +131,9 @@ def test_approvable_clears_reason(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_aggregate_settings", return_value=[])
     mocker.patch.object(approver, "get_submission_result", return_value=JobResult.PASSED)
 
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, project="SUSE:Maintenance:1")
     assert approver.approvable(sub) is True
-    mock_update.assert_called_once_with(1, None)
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", None)
     approver_instance = Approver(args)
     assert approver_instance.get_submission_result([], "api/", 1) is JobResult.NO_JOBS
 
