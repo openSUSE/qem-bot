@@ -120,8 +120,11 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
     ]
     assert_log_messages(caplog.messages, expected)
 
-    expected_url = "api/jobs/100002/remarks?text=acceptable_for&incident_number=2"
-    mock_patch.assert_any_call(expected_url, headers=mocker.ANY)
+    mock_patch.assert_any_call(
+        "api/jobs/100002/remarks",
+        headers=mocker.ANY,
+        params={"text": "acceptable_for", "incident_number": 2},
+    )
 
 
 @responses.activate
@@ -178,8 +181,12 @@ def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
     # The submission should be blocked because job 100003 is NOT marked as acceptable.
     assert "* SUSE:Maintenance:2:200" not in caplog.messages, "submission not approved due to one unacceptable failure"
 
-    mock_patch.assert_any_call("api/jobs/100002/remarks?text=acceptable_for&incident_number=2", headers=mocker.ANY)
-    mock_patch.assert_any_call("api/jobs/100004/remarks?text=acceptable_for&incident_number=2", headers=mocker.ANY)
+    mock_patch.assert_any_call(
+        "api/jobs/100002/remarks", headers=mocker.ANY, params={"text": "acceptable_for", "incident_number": 2}
+    )
+    mock_patch.assert_any_call(
+        "api/jobs/100004/remarks", headers=mocker.ANY, params={"text": "acceptable_for", "incident_number": 2}
+    )
 
     for call in mock_patch.call_args_list:
         assert "100003" not in call[0][0]
@@ -372,5 +379,8 @@ def test_approval_unblocked_with_various_comment_formats(
         in caplog.messages
     )
 
-    expected_url = "api/jobs/100002/remarks?text=acceptable_for&incident_number=2"
-    mock_patch.assert_called_once_with(expected_url, headers=mocker.ANY)
+    mock_patch.assert_called_once_with(
+        "api/jobs/100002/remarks",
+        headers=mocker.ANY,
+        params={"text": "acceptable_for", "incident_number": 2},
+    )

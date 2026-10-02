@@ -15,7 +15,7 @@ class CommentableProtocol(Protocol):
 
     @property
     def id(self) -> int:
-        """The identifier of the pull request."""
+        """Identifier of the commentable entity."""
         ...
 
     @property

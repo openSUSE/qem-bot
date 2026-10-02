@@ -82,8 +82,8 @@ def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
 
 def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:
     get_sub_mock = mocker.patch("openqabot.loader.qem._get_submission")
-    get_submissions("git:42")
-    get_sub_mock.assert_called_once_with(42, "git")
+    get_submissions("git:42:myproject")
+    get_sub_mock.assert_called_once_with(42, "myproject", "git")
 
 
 def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> None:
@@ -91,9 +91,9 @@ def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> Non
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
     mock_log = mocker.patch("openqabot.loader.qem.log.error")
     with pytest.raises(SystemExit):
-        get_submissions("git:42")
+        get_submissions("git:42:myproject")
     mock_exit.assert_called_once_with(1)
-    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", "42")
+    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", 42)
 
 
 def test_get_submissions_error(mock_get_json: MagicMock) -> None:
@@ -131,7 +131,7 @@ def test_get_active_submissions(mock_get_json: MagicMock) -> None:
     res = get_active_submissions(submission_type="git")
 
     assert len(res) == 2
-    assert res == [1, 2]
+    assert set(res) == {(1, None, None), (2, None, None)}
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": "git"}
     )
@@ -281,7 +281,7 @@ def test_get_submission_results(mock_get_json: MagicMock, mocker: MockerFixture)
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, all_submissions=False, submission_type=None)
+    mock_settings.assert_called_once_with(1, None, all_submissions=False, submission_type=None)
     mock_get_json.assert_called_once_with("api/jobs/incident/1", headers=settings.dashboard_token_dict)
 
 
@@ -335,7 +335,7 @@ def test_get_aggregate_results(mock_get_json: MagicMock, mocker: MockerFixture) 
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, submission_type=None)
+    mock_settings.assert_called_once_with(1, None, submission_type=None)
     mock_get_json.assert_called_once_with("api/jobs/update/1", headers=settings.dashboard_token_dict)
 
 
@@ -459,7 +459,7 @@ def test_update_incident_reason_success(mock_patch: MagicMock, caplog: pytest.Lo
     caplog.set_level(logging.ERROR)
     mock_patch.return_value.status_code = 200
 
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "error" not in caplog.text
 
 
@@ -468,21 +468,21 @@ def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pyte
     mock_patch.return_value.text = "Error message"
     caplog.set_level(logging.ERROR)
 
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "Error message" in caplog.text
 
 
 def test_update_incident_reason_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.side_effect = requests.exceptions.RequestException
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "QEM Dashboard API request failed" in caplog.text
 
 
 def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions(submission_type=DEFAULT_SUBMISSION_TYPE)
-    assert res == [123]
+    assert res == [(123, None, None)]
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
     )
@@ -491,7 +491,7 @@ def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
 def test_get_active_submissions_no_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions()
-    assert res == [123]
+    assert res == [(123, None, None)]
     mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, params={})
 
 

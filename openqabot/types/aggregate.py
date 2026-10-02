@@ -32,7 +32,8 @@ VALID_AGGREGATE_KEYS = frozenset({"FLAVOR", "archs", "onetime", "packages", "exc
 
 
 def _submission_hash(submission: Submission, issues_arch: str, version: str) -> str:
-    return f"{submission.id}:{submission.revisions_with_fallback(issues_arch, version)}"
+    revisions = submission.revisions_with_fallback(issues_arch, version)
+    return f"{submission.type}:{submission.project}:{submission.id}:{revisions}"
 
 
 class PostData(NamedTuple):
@@ -149,12 +150,15 @@ class Aggregate(BaseConf):
         for template, issues in data.test_repos.items():
             full_post["openqa"][template] = ",".join(issues)
 
-        # Remove duplicates while preserving Submission objects
+        # Remove duplicates while preserving Submission objects. An incident is
+        # identified by its number together with project and type, so numeric
+        # ids that collide across projects must not be collapsed.
         seen = set()
         unique_incidents = []
         for sub in full_post["qem"]["incidents"]:
-            if sub.id not in seen:
-                seen.add(sub.id)
+            key = (sub.id, sub.project, sub.type)
+            if key not in seen:
+                seen.add(key)
                 unique_incidents.append(sub)
         full_post["qem"]["incidents"] = unique_incidents
 
@@ -174,7 +178,9 @@ class Aggregate(BaseConf):
         full_post["qem"]["build"] = full_post["openqa"]["BUILD"]
         full_post["qem"]["arch"] = arch
         full_post["qem"]["product"] = self.product
-        full_post["qem"]["incidents"] = [sub.id for sub in full_post["qem"]["incidents"]]
+        full_post["qem"]["incidents"] = [
+            {"number": sub.id, "project": sub.project, "type": sub.type} for sub in full_post["qem"]["incidents"]
+        ]
 
     def create_full_post(
         self,

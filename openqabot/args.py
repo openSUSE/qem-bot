@@ -403,7 +403,7 @@ def full_run(
         typer.Option(
             "-I",
             "--submission",
-            help="Submission ID (to process only a single submission)",
+            help="Submission ID as '<type>:<id>:<project>' (to process only a single submission)",
         ),
     ] = None,
 ) -> None:
@@ -433,7 +433,7 @@ def submissions_run(
         typer.Option(
             "-I",
             "--submission",
-            help="Submission ID (to process only a single submission)",
+            help="Submission ID as '<type>:<id>:<project>' (to process only a single submission)",
         ),
     ] = None,
 ) -> None:
@@ -597,7 +597,7 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
         typer.Option(
             "-I",
             "--submission",
-            help="Submission ID (to approve only a single submission)",
+            help="Submission ID as '<type>:<id>:<project>' (to approve only a single submission)",
         ),
     ] = None,
     comment: comment_option = True,
