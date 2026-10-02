@@ -53,6 +53,11 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     assert pr is not None
     mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
 
+    def fake_add_packages(submission: dict[str, Any], *args: Any, **kwargs: Any) -> None:
+        submission["packages"] = ["some-package"]
+
+    mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=fake_add_packages)
+
     # Skip due to no channels
     res = gitea.make_submission_from_gitea_pr(
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
@@ -76,6 +81,11 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     # Skip due to no packages
     caplog.clear()
     mocker.patch("openqabot.loader.gitea.is_build_acceptable_and_log_if_not", return_value=True)
+
+    def fake_add_no_packages(submission: dict[str, Any], *args: Any, **kwargs: Any) -> None:
+        submission["packages"] = []
+
+    mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=fake_add_no_packages)
     res = gitea.make_submission_from_gitea_pr(
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
