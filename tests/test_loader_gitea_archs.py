@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 """Test loader Gitea archs."""
 
+from concurrent import futures
+from functools import partial
 from urllib.error import URLError
 
 import pytest
@@ -175,3 +177,14 @@ def test_determine_relevant_archs_filtering_none_pc_map(mocker: MockerFixture) -
     mocker.patch("openqabot.loader.gitea.get_productcompose_packages_per_arch", return_value=None)
     res = gitea.determine_relevant_archs_from_multibuild_info("proj", packages=["systemd"], fake_data=True)
     assert res == {"x86_64"}
+
+
+def test_get_productcompose_packages_per_arch_concurrent(mocker: MockerFixture) -> None:
+    def fake_productcompose(project: str) -> str:
+        return f"packagesets:\n  - name: sles_{project}_x86_64\n    packages: [pkg-{project}]\n"
+
+    mocker.patch("openqabot.loader.gitea.get_productcompose_data", side_effect=fake_productcompose)
+    projects = [f"pr{i}" for i in range(32)]
+    with futures.ThreadPoolExecutor(max_workers=16) as executor:
+        results = list(executor.map(partial(gitea.get_productcompose_packages_per_arch, fake_data=False), projects))
+    assert results == [{"x86_64": frozenset({f"pkg-{project}"})} for project in projects]
