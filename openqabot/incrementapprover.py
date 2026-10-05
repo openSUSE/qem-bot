@@ -72,6 +72,7 @@ class IncrementApprover:
         self.requests_to_approve = {}
         # safeguard us from using same job ID for 2 requests
         self.unique_jobid_request_pair = {}
+        self.empty_requests: set[int] = set()
         self.config = IncrementConfig.from_args(args)
         self.comment = getattr(args, "comment", False)
 
@@ -223,6 +224,11 @@ class IncrementApprover:
         # (e.g. development groups) and approval should proceed if there are no other blockers.
         if not all_reasons and not approval_status.ok_jobs and not approval_status.processed_jobs:
             all_reasons.append("No openQA jobs were found/checked for this request.")
+
+        # No-op: Empty package diff, no jobs to approve
+        if not all_reasons and not approval_status.ok_jobs and reqid in self.empty_requests:
+            log.info("Nothing to approve for %s: repository diff is empty, no tests were expected", id_msg)
+            return 0
 
         if self.comment and approval_status.builds:
             state = "passed" if not all_reasons else "failed"
@@ -510,6 +516,19 @@ class IncrementApprover:
             ok_jobs, jobs = self.evaluate_list_of_openqa_job_results(filtered_results, request)
             builds = {BuildIdentifier.from_params(p) for p in params if "BUILD" in p}
             approval_status.add(ok_jobs, [], builds, jobs)
+            return 0
+
+        # When additional builds are configured but the repository diff is empty,
+        # missing openQA jobs are not a blocking condition.
+        if (
+            bool(config_inc.additional_builds)
+            and config_inc.diff_project_suffix != "none"
+            and not any(self.get_package_diff_from_repo(config_inc, "/product", build_info).values())
+        ):
+            self.empty_requests.add(cast("int", request.reqid))
+            approval_status.reasons_to_disapprove[:] = [
+                r for r in approval_status.reasons_to_disapprove if not r.startswith("No jobs scheduled for ")
+            ]
             return 0
 
         return self._handle_not_ready_jobs(

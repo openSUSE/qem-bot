@@ -262,6 +262,12 @@ def fakeget_package_diff(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.incrementapprover.IncrementApprover.get_package_diff_from_repo", return_value=package_diff)
 
 
+@pytest.fixture
+def fakeget_no_package_diff(mocker: MockerFixture) -> None:
+    package_diff = defaultdict(set)
+    mocker.patch("openqabot.incrementapprover.IncrementApprover.get_package_diff_from_repo", return_value=package_diff)
+
+
 @pytest.fixture(autouse=True)
 def mock_osc(mocker: MockerFixture) -> None:
     # Clear caches to ensure isolation between tests

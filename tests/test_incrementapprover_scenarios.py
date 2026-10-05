@@ -125,6 +125,26 @@ def test_skipping_with_only_jobs_of_additional_builds_present(
 
 
 @responses.activate
+@pytest.mark.usefixtures(
+    "fake_product_repo", "fakeget_no_package_diff", "fake_only_jobs_of_additional_builds_with_param_matching"
+)
+def test_skipping_with_additional_builds_and_empty_diff(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    increment_approver = prepare_approver_with_additional_config(caplog)
+    increment_approver()
+
+    assert re.search(r"Additional build.*matched 0 packages in the repository diff", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@x86_64.*Online-Increments", caplog.text)
+    assert re.search(r"Skipping approval.*no relevant jobs.*SLESv16.0.*PI-139.1@ppc64le.*Foo-Increments", caplog.text)
+    assert re.search(r"repository diff is empty, no tests were expected", caplog.text)
+    assert (
+        "Not approving OBS request https://build.suse.de/request/show/42 for the following reasons:"
+        not in caplog.messages[-1]
+    )
+
+
+@responses.activate
 @pytest.mark.usefixtures("fake_no_jobs", "fake_product_repo")
 def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     ci_job_url = "https://some/ci/job/url"
