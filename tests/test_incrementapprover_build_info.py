@@ -134,6 +134,24 @@ def testload_build_info_filter_no_match(caplog: pytest.LogCaptureFixture, mocker
     assert next(iter(res)).version == "16.0"
 
 
+def test_extra_builds_additional_builds_no_match_logs_info(caplog: pytest.LogCaptureFixture) -> None:
+    approver = prepare_approver(caplog)
+    config = IncrementConfig(
+        distri="sle",
+        version="any",
+        flavor="any",
+        additional_builds=[{"package_name_regex": "nevermatch", "build_suffix": "suffix"}],
+    )
+    build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
+    res = approver.extra_builds_for_additional_builds({Package("otherpkg", "1", "2", "3", "arch")}, config, build_info)
+    assert res == []
+    assert (
+        "No additional jobs scheduled: additional build 'suffix' (regex: 'nevermatch')"
+        " matched 0 packages in the repo diff" in caplog.text
+    )
+    assert any(r.levelname == "INFO" and "No additional jobs scheduled" in r.message for r in caplog.records)
+
+
 def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFixture) -> None:
     approver = prepare_approver(caplog)
     package = Package("foo", "1", "2", "3", "arch")

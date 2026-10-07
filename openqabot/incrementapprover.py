@@ -324,8 +324,11 @@ class IncrementApprover:
                 continue
             suffix = b.get("build_suffix", "")
             regex = b.get("package_name_regex") or b.get("regex", "")
-            info_message = "Additional build '%s' (regex: '%s') matched 0 packages in the repository diff."
-            log.info(info_message, suffix, regex)
+            log.info(
+                "No additional jobs scheduled: additional build '%s' (regex: '%s') matched 0 packages in the repo diff",
+                suffix,
+                regex,
+            )
         return extra_builds
 
     @staticmethod
