@@ -130,6 +130,10 @@ class Data(NamedTuple):
             matched_iso.product,
         )
 
+    def format_submission_id(self) -> str:
+        """Generate the SUBMISSION_ID setting for the assigned submission info."""
+        return f"{self.submission_type}:{self.submission}"
+
 
 class ArchVer(NamedTuple):
     """Architecture and version details."""
