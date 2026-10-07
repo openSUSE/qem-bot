@@ -29,18 +29,21 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.parametrize(
-    ("raw", "exp_sub", "exp_type"),
+    ("raw", "exp_sub", "exp_type", "exp_project"),
     [
-        pytest.param("git:6189", 6189, "git", id="type-colon-id-string"),
-        pytest.param(42, 42, None, id="plain-int"),
-        pytest.param(None, None, None, id="none"),
+        pytest.param("git:6189:SLFO", 6189, "git", "SLFO", id="type-colon-id-colon-project"),
+        pytest.param("smelt:42:SUSE:Maintenance:42", 42, "smelt", "SUSE:Maintenance:42", id="project-with-colons"),
+        pytest.param(None, None, None, None, id="none"),
     ],
 )
-def test_approver_single_submission_parsing(raw: str | int | None, exp_sub: int | None, exp_type: str | None) -> None:
+def test_approver_single_submission_parsing(
+    raw: str | None, exp_sub: int | None, exp_type: str | None, exp_project: str | None
+) -> None:
     args = Namespace(dry=True, token="123", all_submissions=False, incident=raw, gitea_token=None, comment=False)
     inst = Approver(args)
     assert inst.single_submission == exp_sub
     assert inst.submission_type == exp_type
+    assert inst.single_submission_project == exp_project
 
 
 @pytest.fixture

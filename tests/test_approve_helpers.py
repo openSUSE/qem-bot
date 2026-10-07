@@ -43,6 +43,32 @@ def test_mark_job_as_acceptable_for_submission_request_error(
     assert "Unable to mark job 1 as acceptable for submission smelt:1" in caplog.text
 
 
+def test_mark_job_as_acceptable_for_submission_with_project(mocker: MockerFixture) -> None:
+    approver_instance = Approver(args)
+    mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
+
+    approver_instance.mark_job_as_acceptable_for_submission(1, 2, "SUSE:Maintenance:2")
+
+    assert mock_patch.call_args.kwargs["params"] == {
+        "text": "acceptable_for",
+        "incident_number": 2,
+        "project": "SUSE:Maintenance:2",
+    }
+
+
+def test_approver_invalid_submission_arg_exits() -> None:
+    with pytest.raises(SystemExit):
+        Approver(make_approver_args(submission="not-a-valid-submission"))
+
+
+def test_approver_single_submission_not_found(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.get_single_submission", return_value=[])
+
+    approver_instance = Approver(make_approver_args(submission="smelt:1:SUSE:Maintenance:1"))
+
+    assert approver_instance() == 1
+
+
 @pytest.mark.parametrize(
     "json_data", [pytest.param(None, id="no_qam_data"), pytest.param({"status": "failed"}, id="status_not_passed")]
 )
@@ -109,9 +135,9 @@ def test_reject_calls_update_incident_reason(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     approver.dry = False
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, project="SUSE:Maintenance:1")
     assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
-    mock_update.assert_called_once_with(1, "Reason SUSE:Maintenance:1:2")
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", "Reason SUSE:Maintenance:1:2")
 
 
 def test_reject_dry_run_skips_update_incident_reason(mocker: MockerFixture) -> None:
@@ -131,9 +157,9 @@ def test_approvable_clears_reason(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_aggregate_settings", return_value=[])
     mocker.patch.object(approver, "get_submission_result", return_value=JobResult.PASSED)
 
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, project="SUSE:Maintenance:1")
     assert approver.approvable(sub) is True
-    mock_update.assert_called_once_with(1, None)
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", None)
     approver_instance = Approver(args)
     assert approver_instance.get_submission_result([], "api/", 1) is JobResult.NO_JOBS
 

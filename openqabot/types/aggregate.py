@@ -10,6 +10,7 @@ from datetime import UTC
 from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
+from urllib.parse import urlencode
 
 import requests
 
@@ -32,7 +33,8 @@ VALID_AGGREGATE_KEYS = frozenset({"FLAVOR", "archs", "onetime", "packages", "exc
 
 
 def _submission_hash(submission: Submission, issues_arch: str, version: str) -> str:
-    return f"{submission.id}:{submission.revisions_with_fallback(issues_arch, version)}"
+    revisions = submission.revisions_with_fallback(issues_arch, version)
+    return f"{submission.type}:{submission.project}:{submission.id}:{revisions}"
 
 
 class PostData(NamedTuple):
@@ -149,19 +151,24 @@ class Aggregate(BaseConf):
         for template, issues in data.test_repos.items():
             full_post["openqa"][template] = ",".join(issues)
 
-        # Remove duplicates while preserving Submission objects
+        # Remove duplicates while preserving Submission objects. An incident is
+        # identified by its number together with project and type, so numeric
+        # ids that collide across projects must not be collapsed.
         seen = set()
         unique_incidents = []
         for sub in full_post["qem"]["incidents"]:
-            if sub.id not in seen:
-                seen.add(sub.id)
+            key = (sub.id, sub.project, sub.type)
+            if key not in seen:
+                seen.add(key)
                 unique_incidents.append(sub)
         full_post["qem"]["incidents"] = unique_incidents
 
     def _finalize_post(self, full_post: dict[str, Any], arch: str) -> None:
         """Finalize the dashboard post with metadata and summary information."""
+        incident_url = config.settings.dashboard_url
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            config.settings.dashboard_url("incident", sub.id) for sub in full_post["qem"]["incidents"]
+            f"{incident_url('incident', sub.id)}?{urlencode({'project': sub.project, 'type': sub.type})}"
+            for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(
             f"{config.settings.smelt_url}/incident/{sub.id}"
@@ -174,7 +181,9 @@ class Aggregate(BaseConf):
         full_post["qem"]["build"] = full_post["openqa"]["BUILD"]
         full_post["qem"]["arch"] = arch
         full_post["qem"]["product"] = self.product
-        full_post["qem"]["incidents"] = [sub.id for sub in full_post["qem"]["incidents"]]
+        full_post["qem"]["incidents"] = [
+            {"number": sub.id, "project": sub.project, "type": sub.type} for sub in full_post["qem"]["incidents"]
+        ]
 
     def create_full_post(
         self,

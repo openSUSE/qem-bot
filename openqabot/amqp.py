@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
 
 log = getLogger("bot.amqp")
+# Submission BUILD settings are generated as ``:{type}:{id}:{package}`` (see
+# Submissions.get_base_settings).  The id is numeric; the project that the
+# submission belongs to is carried separately (QEM_DASHBOARD_PROJECT openQA variable), so it is
+# not part of the regex.
 build_sub_regex = re.compile(r":(?:(?P<type>[^:]+):)?(?P<id>\d+)(?::.*)?")
 build_agg_regex = re.compile(r"\d{8}-\d+")
 
@@ -45,15 +49,30 @@ class AMQP(SyncRes):
             return None
         if match := build_sub_regex.match(message["BUILD"]):
             sub_type = match.group("type") or settings.default_submission_type
-            sub_nr = match.group("id")
+            sub_nr = int(match.group("id"))
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Submission %s:%s: openQA job finished", sub_type, sub_nr)
-            return self.handle_submission(int(sub_nr), sub_type, message)
+            return self.handle_submission(sub_nr, sub_type, message)
         if match := build_agg_regex.match(message["BUILD"]):
             build_nr = match.group(0)
             log.debug("Processing AMQP message: %s", pformat(message))
             log.info("Aggregate %s: openQA build finished", build_nr)
         return None
+
+    def _project_from_job(self, message: dict[str, Any]) -> str | None:
+        """Read the QEM dashboard project of the job that just finished.
+
+        The AMQP job.done payload does not carry custom job settings, so the
+        project is read back from openQA where ``QEM_DASHBOARD_PROJECT`` was set
+        by ``Submissions.get_base_settings``.
+        """
+        job_id = message.get("id")
+        if job_id is None:
+            return None
+        job = self.client.get_single_job(job_id)
+        if not job:
+            return None
+        return (job.get("settings") or {}).get("QEM_DASHBOARD_PROJECT")
 
     def fetch_openqa_results(self, sub: Data, message: dict[str, Any]) -> None:
         """Fetch results from openQA for a specific submission."""
@@ -64,9 +83,22 @@ class AMQP(SyncRes):
 
     def handle_submission(self, sub_nr: int, sub_type: str, message: dict[str, Any]) -> None:
         """Handle results for a specific submission and trigger approval."""
+        project = self._project_from_job(message)
+        if project is None:
+            # The dashboard requires a project for api/incident_settings and
+            # api/incidents.  Jobs scheduled before QEM_DASHBOARD_PROJECT was
+            # introduced have no project, and openQA lookups may also fail.
+            # Skip processing so a single project-less job cannot kill the daemon.
+            log.warning(
+                "Submission %s:%s: no QEM_DASHBOARD_PROJECT found for job %s, skipping",
+                sub_type,
+                sub_nr,
+                message.get("id"),
+            )
+            return
         # Load Data about current submission from dashboard database
         try:
-            settings: Sequence[Data] = get_submission_settings_data(sub_nr, submission_type=sub_type)
+            settings: Sequence[Data] = get_submission_settings_data(sub_nr, project, submission_type=sub_type)
         except ValueError:
             return
 
@@ -77,5 +109,7 @@ class AMQP(SyncRes):
             self.fetch_openqa_results(sub, message)
 
         # Try to approve submission
-        approve = Approver(self.args, single_submission=sub_nr, submission_type=sub_type)
+        approve = Approver(
+            self.args, single_submission=sub_nr, submission_type=sub_type, single_submission_project=project
+        )
         approve()

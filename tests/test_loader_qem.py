@@ -13,6 +13,7 @@ import requests
 
 from openqabot import dashboard
 from openqabot.config import DEFAULT_SUBMISSION_TYPE, settings
+from openqabot.errors import SubmissionArgError
 from openqabot.loader.qem import (
     LoaderQemError,
     NoAggregateResultsError,
@@ -27,6 +28,7 @@ from openqabot.loader.qem import (
     get_submission_settings_data,
     get_submissions,
     get_submissions_approver,
+    parse_submission_arg,
     post_job,
     update_incident_reason,
     update_job,
@@ -82,8 +84,8 @@ def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
 
 def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:
     get_sub_mock = mocker.patch("openqabot.loader.qem._get_submission")
-    get_submissions("git:42")
-    get_sub_mock.assert_called_once_with(42, "git")
+    get_submissions("git:42:myproject")
+    get_sub_mock.assert_called_once_with(42, "myproject", "git")
 
 
 def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> None:
@@ -91,9 +93,40 @@ def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> Non
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
     mock_log = mocker.patch("openqabot.loader.qem.log.error")
     with pytest.raises(SystemExit):
-        get_submissions("git:42")
+        get_submissions("git:42:myproject")
     mock_exit.assert_called_once_with(1)
-    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", "42")
+    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", 42)
+
+
+def test_get_submissions_passes_project_to_dashboard(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = {**_FULL_INCIDENT, "number": 42}
+
+    res = get_submissions("git:42:myproject")
+
+    assert len(res) == 1
+    mock_get_json.assert_called_once_with(
+        "api/incidents/42",
+        headers=settings.dashboard_token_dict,
+        params={"type": "git", "project": "myproject"},
+    )
+
+
+def test_get_submissions_invalid_submission_arg_exits() -> None:
+    with pytest.raises(SystemExit):
+        get_submissions("not-a-valid-submission")
+
+
+@pytest.mark.parametrize(
+    ("raw", "message"),
+    [
+        ("smelt:1", "Expected format"),
+        ("smelt::SUSE:Maintenance:1", "Expected format"),
+        ("smelt:abc:SUSE:Maintenance:1", "must be numeric"),
+    ],
+)
+def test_parse_submission_arg_invalid(raw: str, message: str) -> None:
+    with pytest.raises(SubmissionArgError, match=message):
+        parse_submission_arg(raw)
 
 
 def test_get_submissions_error(mock_get_json: MagicMock) -> None:
@@ -131,7 +164,7 @@ def test_get_active_submissions(mock_get_json: MagicMock) -> None:
     res = get_active_submissions(submission_type="git")
 
     assert len(res) == 2
-    assert res == [1, 2]
+    assert set(res) == {(1, None, None), (2, None, None)}
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": "git"}
     )
@@ -191,6 +224,21 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
     )
 
 
+def test_get_single_submission_not_found(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.qem")
+    mock_get_json.return_value = {"error": "Incident not found"}
+
+    res = get_single_submission(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+
+    assert res == []
+    assert "not found on the dashboard" in caplog.text
+    mock_get_json.assert_called_once_with(
+        "api/incidents/1",
+        headers=settings.dashboard_token_dict,
+        params={"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"},
+    )
+
+
 def test_get_submission_settings_no_settings(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = []
 
@@ -239,6 +287,18 @@ def test_get_submission_settings_no_rrids(mock_get_json: MagicMock) -> None:
     assert len(res) == 2
 
 
+def test_get_submission_settings_with_project(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [{"id": 1, "settings": {"RRID": 1}, "withAggregate": False}]
+
+    get_submission_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+
+    mock_get_json.assert_called_once_with(
+        "api/incident_settings/1",
+        headers=settings.dashboard_token_dict,
+        params={"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"},
+    )
+
+
 def test_get_submission_settings_data(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [
         {
@@ -265,6 +325,27 @@ def test_get_submission_settings_data(mock_get_json: MagicMock) -> None:
     )
 
 
+def test_get_submission_settings_data_with_project(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [
+        {
+            "id": 1,
+            "flavor": "flavor",
+            "arch": "arch",
+            "settings": {"DISTRI": "distri", "BUILD": "build"},
+            "version": "version",
+        }
+    ]
+
+    res = get_submission_settings_data(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+
+    assert len(res) == 1
+    mock_get_json.assert_called_once_with(
+        "api/incident_settings/1",
+        headers=settings.dashboard_token_dict,
+        params={"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"},
+    )
+
+
 def test_get_submission_settings_data_error(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = {"error": "foo"}
 
@@ -281,7 +362,7 @@ def test_get_submission_results(mock_get_json: MagicMock, mocker: MockerFixture)
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, all_submissions=False, submission_type=None)
+    mock_settings.assert_called_once_with(1, None, all_submissions=False, submission_type=None)
     mock_get_json.assert_called_once_with("api/jobs/incident/1", headers=settings.dashboard_token_dict)
 
 
@@ -313,6 +394,18 @@ def test_get_aggregate_settings(mock_get_json: MagicMock) -> None:
     assert res[0].aggregate
 
 
+def test_get_aggregate_settings_with_project(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [{"id": 1, "build": "20220101-1"}]
+
+    get_aggregate_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+
+    mock_get_json.assert_called_once_with(
+        "api/update_settings/1",
+        headers=settings.dashboard_token_dict,
+        params={"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"},
+    )
+
+
 def test_get_aggregate_settings_data(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"id": 1, "build": "build"}]
     data = Data(0, "aggregate", 0, "flavor", "arch", "distri", "version", "build", "product")
@@ -335,7 +428,7 @@ def test_get_aggregate_results(mock_get_json: MagicMock, mocker: MockerFixture) 
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, submission_type=None)
+    mock_settings.assert_called_once_with(1, None, submission_type=None)
     mock_get_json.assert_called_once_with("api/jobs/update/1", headers=settings.dashboard_token_dict)
 
 
@@ -459,7 +552,7 @@ def test_update_incident_reason_success(mock_patch: MagicMock, caplog: pytest.Lo
     caplog.set_level(logging.ERROR)
     mock_patch.return_value.status_code = 200
 
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "error" not in caplog.text
 
 
@@ -468,21 +561,21 @@ def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pyte
     mock_patch.return_value.text = "Error message"
     caplog.set_level(logging.ERROR)
 
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "Error message" in caplog.text
 
 
 def test_update_incident_reason_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.side_effect = requests.exceptions.RequestException
-    update_incident_reason(1, "reason")
+    update_incident_reason(1, "project", "reason")
     assert "QEM Dashboard API request failed" in caplog.text
 
 
 def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions(submission_type=DEFAULT_SUBMISSION_TYPE)
-    assert res == [123]
+    assert res == [(123, None, None)]
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
     )
@@ -491,7 +584,7 @@ def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
 def test_get_active_submissions_no_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123}]
     res = get_active_submissions()
-    assert res == [123]
+    assert res == [(123, None, None)]
     mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, params={})
 
 

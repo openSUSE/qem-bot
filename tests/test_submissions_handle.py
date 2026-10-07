@@ -178,6 +178,16 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     assert not Submissions.is_scheduled_job(ctx, "ver")
 
 
+def test_is_scheduled_job_passes_project(mocker: MockerFixture) -> None:
+    sub = MockSubmission(rev_fallback_value=42, project="SUSE:Maintenance:1")
+    sub.id = 1
+    get = mocker.patch("openqabot.types.submissions.retried_requests.get")
+    get.return_value.json.return_value = []
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert get.call_args.kwargs["params"] == {"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"}
+
+
 def test_handle_submission_embargoed_skip() -> None:
     sub = MockSubmission()
     test_config = {"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {}}}}

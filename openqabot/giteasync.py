@@ -93,6 +93,6 @@ class GiteaSync:
             )
             log.debug("Submission: %s", submission)
             if submission and not self.dry:
-                log.info("Syncing Gitea PRs #%d to QEM Dashboard", submission["number"])
+                log.info("Syncing Gitea PRs #%s to QEM Dashboard", submission["number"])
                 ret = update_submissions([submission], params={"type": "git"}, retry=self.retry)
                 log.debug("update_submissions returned %d", ret)
