@@ -25,6 +25,8 @@ import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
@@ -37,6 +39,7 @@ if TYPE_CHECKING:
     from openqabot.types.types import Repos
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
+ARCH_PATTERNS = {arch: re.compile(rf"(^|_){arch}(_|$)") for arch in ARCHS}
 
 JsonType = dict[str, Any] | list[Any]
 
@@ -496,22 +499,84 @@ def get_multibuild_data(obs_project: str) -> str:
     return cast("str", r.get_multibuild_data())
 
 
-def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data: bool) -> set[str] | None:
+def get_productcompose_data(obs_project: str) -> str:
+    """Fetch productcompose configuration file for an OBS project."""
+    file_list = osc.core.meta_get_filelist(config.settings.obs_url, obs_project, "000productcompose")
+    pc_file = next((f for f in file_list if f.endswith(".productcompose")), None)
+    if not pc_file:
+        msg = f"No .productcompose file found in 000productcompose for {obs_project}"
+        raise FileNotFoundError(msg)
+    url = osc.core.makeurl(config.settings.obs_url, ["source", obs_project, "000productcompose", pc_file])
+    return http_GET(url).read().decode("utf-8")
+
+
+def _fetch_multibuild_data(obs_project: str, *, fake_data: bool) -> str | None:
+    if fake_data:
+        return read_utf8(f"_multibuild-124-{obs_project}.xml")
+    try:
+        return get_multibuild_data(obs_project)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
+        return None
+
+
+def _group_archs(name: str) -> set[str]:
+    return {arch for arch, rx in ARCH_PATTERNS.items() if rx.search(name)}
+
+
+def _parse_productcompose_groups(groups: list[Any]) -> dict[str, frozenset[str]]:
+    res: dict[str, set[str]] = {}
+    for group in groups:
+        if (
+            isinstance(group, dict)
+            and isinstance(name := group.get("name"), str)
+            and isinstance(packages := group.get("packages"), list)
+        ):
+            pkgs = {pkg for pkg in packages if isinstance(pkg, str)}
+            for arch in _group_archs(name):
+                res.setdefault(arch, set()).update(pkgs)
+    return {arch: frozenset(pkgs) for arch, pkgs in res.items()}
+
+
+@lru_cache(maxsize=128)
+def get_productcompose_packages_per_arch(obs_project: str, *, fake_data: bool) -> dict[str, frozenset[str]] | None:
+    """Fetch and parse the productcompose YAML mapping architectures to sets of supported packages."""
+    try:
+        content = (
+            read_utf8(f"productcompose-124-{obs_project}.yaml") if fake_data else get_productcompose_data(obs_project)
+        )
+    except (OSError, urllib.error.HTTPError, urllib.error.URLError) as e:
+        log.warning("Could not fetch productcompose for %s: %s", obs_project, e)
+        return None
+
+    try:
+        data = YAML(typ="safe").load(content)
+    except YAMLError as e:
+        log.warning("Could not parse productcompose YAML for %s: %s", obs_project, e)
+        return None
+
+    groups = data if isinstance(data, list) else (data.get("packagesets", []) if isinstance(data, dict) else [])
+
+    res = _parse_productcompose_groups(groups)
+    if not res:
+        log.warning("No valid architectures found in productcompose for %s", obs_project)
+        return None
+    return res
+
+
+def determine_relevant_archs_from_multibuild_info(
+    obs_project: str,
+    *,
+    packages: list[str] | None = None,
+    fake_data: bool,
+) -> set[str] | None:
     """Determine which architectures are relevant for a product based on multibuild data."""
     # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
     product_name = get_product_name(obs_project)
-    if not product_name:
+    if not product_name or not (multibuild_data := _fetch_multibuild_data(obs_project, fake_data=fake_data)):
         return None
     product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
     prefix_len = len(product_prefix)
-    if fake_data:
-        multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
-    else:
-        try:
-            multibuild_data = get_multibuild_data(obs_project)
-        except (urllib.error.HTTPError, urllib.error.URLError) as e:
-            log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
-            return None
 
     # determine from the flavors we got what architectures are actually expected to be present
 
@@ -523,6 +588,10 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data
     relevant_archs = {
         flavor[prefix_len:] for flavor in flavors if flavor.startswith(product_prefix) and flavor[prefix_len:] in ARCHS
     }
+    if packages and (pc_map := get_productcompose_packages_per_arch(obs_project, fake_data=fake_data)) is not None:
+        pkg_set = frozenset(packages)
+        relevant_archs = {arch for arch in relevant_archs if pkg_set <= pc_map.get(arch, frozenset())}
+
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
@@ -566,7 +635,9 @@ def _process_obs_url(
         return
     obs_project = project_match.group(1)
     log.debug("Checking OBS project %s", obs_project)
-    relevant_archs = determine_relevant_archs_from_multibuild_info(obs_project, fake_data=fake_data)
+    relevant_archs = determine_relevant_archs_from_multibuild_info(
+        obs_project, packages=submission.get("packages", []), fake_data=fake_data
+    )
 
     for res in _get_project_results(obs_project, fake_data=fake_data, results=results):
         if is_build_result_relevant(res, relevant_archs):
@@ -749,15 +820,15 @@ def _build_submission_record(
         log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
         return None
 
-    add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
-
-    if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
-        return None
-
     add_packages_from_files(submission, token, files, fake_data=fake_data)
 
     if not submission["packages"]:
         log.info("PR git:%s skipped: No packages found", pr.number)
+        return None
+
+    add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
+
+    if not _validate_submission(submission, pr.number, only_successful_builds=only_successful_builds):
         return None
 
     submission["priority"], submission["emu"] = get_gitea_update_data(pr.project, pr.number)
