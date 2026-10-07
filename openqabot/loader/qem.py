@@ -82,9 +82,31 @@ def _get_submission(submission_id: int, submission_type: str | None = None) -> d
     params = {}
     if submission_type:
         params["type"] = submission_type
-    return dashboard.get_json(
+    res = dashboard.get_json(
         f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
     )
+    if isinstance(res, dict) and res.get("error") == "Incident not found":
+        log.info(
+            "Incident %s not found in active incidents API, falling back to SPA API",
+            submission_id,
+        )
+        spa_res = dashboard.get_json(
+            f"app/api/submission/{submission_id}", headers=config_module.settings.dashboard_token_dict
+        )
+        if isinstance(spa_res, dict) and "details" in spa_res and "incident" in spa_res["details"]:
+            incident = spa_res["details"]["incident"]
+            if isinstance(incident, dict) and (not submission_type or incident.get("type") == submission_type):
+                log.debug("Fallback to SPA API successful for incident %s", submission_id)
+                return incident
+            log.debug(
+                "SPA API incident %s type mismatch or invalid: expected type %s, got %s",
+                submission_id,
+                submission_type,
+                incident.get("type") if isinstance(incident, dict) else None,
+            )
+        else:
+            log.debug("SPA API did not return incident details for submission %s", submission_id)
+    return res
 
 
 def get_submissions(submission: str | None = None) -> list[Submission]:
