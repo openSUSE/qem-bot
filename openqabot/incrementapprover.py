@@ -383,8 +383,13 @@ class IncrementApprover:
         if diff_key in self.package_diff:
             return self.package_diff[diff_key]
 
-        log.debug("Computing repo diff to project %s", diff_url)
-        self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(diff_url, build_url)[0]
+        log.debug("Computing repo diff between reference %s and build %s", diff_url, build_url)
+        self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(
+            diff_url,
+            build_url,
+            repo_label_a="reference repository",
+            repo_label_b="build repository",
+        )[0]
         return self.package_diff[diff_key]
 
     def make_scheduling_parameters(

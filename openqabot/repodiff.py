@@ -141,14 +141,14 @@ class RepoDiff:
 
     def get_staged_update_name(self, repo_url: str) -> str:
         """Get the name of the staged update package from a repository URL."""
-        packages_by_arch = self.load_packages(repo_url)
+        packages_by_arch = self.load_packages(repo_url, repo_label="staged repository")
         packages = set().union(*packages_by_arch.values())
         if len(packages) == 0:
             error_msg = "No packages detected"
             raise NoResultsError(error_msg)
         return min(packages, key=lambda p: p.name).name
 
-    def load_repodata(self, url: str) -> bytes | etree._Element | None:
+    def load_repodata(self, url: str, *, repo_label: str) -> bytes | etree._Element | None:
         """Load repository primary metadata for a repository URL."""
         repodata_url = self.make_repodata_url(url)
         repo_data_listing = self.request_and_dump(
@@ -158,17 +158,21 @@ class RepoDiff:
             params=get_obs_filter_params(r".*-primary\.xml.*"),
         )
         if not repo_data_listing or not isinstance(repo_data_listing, dict):
-            log.error("Could not load repo data for URL %s", url)
+            log.error("Could not load repo data for %s: %s", repo_label, url)
             return None
 
         rows = repo_data_listing.get("data", [])
         repo_data_file = self.find_primary_repodata(rows)
         if repo_data_file is None:
-            log.warning("Repository metadata not found: Primary repodata missing in %s", repodata_url)
+            log.warning(
+                "Repository metadata not found: Primary repodata missing in %s for %s", repodata_url, repo_label
+            )
             return None
         repo_data_raw = self.request_and_dump(repodata_url + repo_data_file, repo_data_file)
         if not isinstance(repo_data_raw, bytes):
-            log.warning("Repository metadata could not be fetched from %s", repodata_url + repo_data_file)
+            log.warning(
+                "Repository metadata could not be fetched from %s for %s", repodata_url + repo_data_file, repo_label
+            )
             return None
         log.debug("Decompressing repository metadata file: %s", repo_data_file)
         return RepoDiff.decompress(repo_data_file, repo_data_raw)
@@ -222,15 +226,15 @@ class RepoDiff:
                 packages_by_arch[pkg.arch].add(pkg)
         return packages_by_arch
 
-    def load_packages(self, url: str) -> defaultdict[str, set[Package]]:
+    def load_packages(self, url: str, *, repo_label: str) -> defaultdict[str, set[Package]]:
         """Load the list of packages from a repository URL."""
-        repo_data = self.load_repodata(url)
+        repo_data = self.load_repodata(url, repo_label=repo_label)
         if repo_data is None:
             return defaultdict(set)
         if isinstance(repo_data, bytes):
-            log.debug("Loading package list for repository %s via stream-parser", url)
+            log.debug("Loading package list for %s %s via stream-parser", repo_label, url)
             return self._parse_packages_from_stream(repo_data)
-        log.debug("Loading package list for repository %s via element fallback", url)
+        log.debug("Loading package list for %s %s via element fallback", repo_label, url)
         return self._parse_packages_from_element(repo_data)
 
     @staticmethod
@@ -259,11 +263,18 @@ class RepoDiff:
                 log.debug(msg)
         return (diff_by_arch, count)
 
-    def compute_diff(self, repo_a: str, repo_b: str) -> tuple[defaultdict[str, set[Package]], int]:
+    def compute_diff(
+        self,
+        repo_a: str,
+        repo_b: str,
+        *,
+        repo_label_a: str,
+        repo_label_b: str,
+    ) -> tuple[defaultdict[str, set[Package]], int]:
         """Compute the package diff between two repositories."""
         try:
-            packages_by_arch_a = self.load_packages(repo_a)
-            packages_by_arch_b = self.load_packages(repo_b)
+            packages_by_arch_a = self.load_packages(repo_a, repo_label=repo_label_a)
+            packages_by_arch_b = self.load_packages(repo_b, repo_label=repo_label_b)
             return RepoDiff.compute_diff_for_packages(repo_a, packages_by_arch_a, repo_b, packages_by_arch_b)
         except Exception:
             log.exception("Repo diff computation failed for repositories %s and %s", repo_a, repo_b)
@@ -276,7 +287,7 @@ class RepoDiff:
             log.error("RepoDiff called without arguments")
             return 1
         try:
-            diff, count = self.compute_diff(args.repo_a, args.repo_b)
+            diff, count = self.compute_diff(args.repo_a, args.repo_b, repo_label_a="repo-a", repo_label_b="repo-b")
         except FileNotFoundError as e:
             log.critical("Failed to load fake data: %s (use --dump-data to generate it)", e)
             raise SystemExit from None

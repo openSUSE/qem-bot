@@ -60,11 +60,17 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     # flavor SLES-Increments should use REF_REPO_SLES with augmentation
     build_info_sles = BuildInfo("sle", "SLES", "16.0", "SLES-Increments", "x86_64", "123")
     res = approver.get_package_diff_from_repo(config, "/product", build_info_sles)
-    # Expected augmented paths for build_project and diff_project
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/DIFF/x86_64",
         f"{settings.obs_download_url}/BASE:/BUILD/product/SLES/x86_64",
+        repo_label_a="reference repository",
+        repo_label_b="build repository",
     )
+    expected_log = (
+        f"Computing repo diff between reference https://ref.repo/SLES/16.0/DIFF/x86_64 "
+        f"and build {settings.obs_download_url}/BASE:/BUILD/product/SLES/x86_64"
+    )
+    assert expected_log in caplog.text
     assert res == {"x86_64": {"pkg"}, "noarch": {"npkg"}}
 
     # flavor SLES-Increments with templates
@@ -74,6 +80,8 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/x86_64/DIFF",
         f"{settings.obs_download_url}/BASE:/BUILD/repo/SLES-16.0-x86_64",
+        repo_label_a="reference repository",
+        repo_label_b="build repository",
     )
 
     # flavor OTHER should use default DIFF_PROJECT without augmentation (because not in reference_repos)
@@ -82,7 +90,10 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     build_info_other = BuildInfo("sle", "SLES", "16.0", "OTHER", "x86_64", "123")
     approver.get_package_diff_from_repo(config, "/product", build_info_other)
     mock_diff.return_value.compute_diff.assert_called_with(
-        f"{settings.obs_download_url}/BASE:/DIFF", f"{settings.obs_download_url}/BASE:/BUILD/product"
+        f"{settings.obs_download_url}/BASE:/DIFF",
+        f"{settings.obs_download_url}/BASE:/BUILD/product",
+        repo_label_a="reference repository",
+        repo_label_b="build repository",
     )
 
     # checking via product instead of flavor
@@ -92,6 +103,8 @@ def test_package_diff_reference_repos(caplog: pytest.LogCaptureFixture, mocker: 
     mock_diff.return_value.compute_diff.assert_called_with(
         "https://ref.repo/SLES/16.0/x86_64/DIFF",
         f"{settings.obs_download_url}/BASE:/BUILD/repo/SLES-16.0-x86_64",
+        repo_label_a="reference repository",
+        repo_label_b="build repository",
     )
 
 
