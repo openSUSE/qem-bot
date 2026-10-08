@@ -226,6 +226,8 @@ monitor for new increment requests. The fields `archs` and `packages` allow
 filtering similar to what is possible for incidents.
 
 * `reference_repos` - optional mapping of code stream names (derived from the openQA `FLAVOR` parameter) to OBS project/repository paths. When specified, the bot will use these repositories as the base for computing the package diff for that code stream instead of the default `project_base : diff_project_suffix`. For product increments following a directory-based structure (like SLFO), the bot automatically augments both the build and reference paths with the channel name (original flavor), version, repository suffix, and architecture. This is particularly useful for cases where the base might differ per code stream.
+* `build_repo_template` - optional URL template to construct the build repository URL passed to `RepoDiff` for computing package diffs (used for `additional_builds` such as livepatches). Available template variables: `base`, `project`, `version`, `arch`, `channel`, `suffix`, `product`. NOTE: This setting is exclusively used for repository diffing and does not affect where the bot searches for `.spdx.json` files or how `BUILD` numbers are detected (which is governed by `build_listing_sub_path` and `build_regex`).
+* `diff_repo_template` - optional URL template to construct the reference repository URL passed to `RepoDiff` for computing package diffs against `reference_repos`. Available template variables: `base`, `project`, `version`, `arch`, `channel`, `suffix`, `product`.
 
 ### Filtering logic for product increments
 When computing package diffs and determining additional builds, the following packages are automatically skipped:
@@ -242,13 +244,16 @@ the example configuration above:
 2. The `product` subdirectory (as specified via `build_listing_sub_path`) of the
    download repository is checked for files matching `build_regex` to determine
    the available `FLAVOR` and `ARCH` values and the `BUILD` number.
+    * `build_listing_sub_path` and `build_regex` govern build/ISO discovery;
+      repository diff templates do not affect this step.
     * The `DISTRI` variable is taken as-is from the config, e.g. here `DISTRI`
       will always be `opensuse` or `sle`.
     * The product name is also deduced via `build_regex` and then matched
       against `product_regex`. The increment definition is only considered when
       the `product_regex` matches.
 3. A diff between the download repository under `openSUSE:Factory:PUBLISH/product`
-   and `openSUSE:Factory:ToTest/product` is computed. If this is not wanted
+   and `openSUSE:Factory:ToTest/product` (or repositories resolved via `reference_repos`
+   and `build_repo_template`/`diff_repo_template`) is computed. If this is not wanted
    `diff_project_suffix` can be set to `none` to skip this step.
     * The regexes specified under `additional_builds` are matched against
       packages which have changed in the product increment. For each match, an
