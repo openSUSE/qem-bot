@@ -97,16 +97,31 @@ def test_request_and_dump_fake_data_errors(
     assert expected_msg in caplog.text
 
 
-def test_load_repodata_error(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.parametrize(
+    ("repo_label", "url", "expected"),
+    [
+        ("repository", "project", "Could not load repo data for repository: project"),
+        ("reference repository", "http://ref", "Could not load repo data for reference repository: http://ref"),
+        ("build repository", "http://build", "Could not load repo data for build repository: http://build"),
+    ],
+)
+def test_load_repodata_error(
+    diff: RepoDiff,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+    repo_label: str,
+    url: str,
+    expected: str,
+) -> None:
     mocker.patch.object(diff, "request_and_dump", return_value=None)
-    res = diff.load_repodata("project")
+    res = diff.load_repodata(url, repo_label=repo_label)
     assert res is None
-    assert "Could not load repo data for URL project" in caplog.text
+    assert expected in caplog.text
 
 
 def test_load_packages_empty(diff: RepoDiff, mocker: MockerFixture) -> None:
     mocker.patch.object(diff, "load_repodata", return_value=None)
-    res = diff.load_packages("project")
+    res = diff.load_packages("project", repo_label="repository")
     assert res == {}
 
 
@@ -119,9 +134,23 @@ def test_request_and_dump_exception(diff: RepoDiff, mocker: MockerFixture, caplo
 
 def test_compute_diff_exception(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     mocker.patch.object(diff, "load_packages", side_effect=Exception("foo"))
-    res = diff.compute_diff("repo_a", "repo_b")
+    res = diff.compute_diff("repo_a", "repo_b", repo_label_a="repo-a", repo_label_b="repo-b")
     assert res == (defaultdict(set), 0)
     assert "Repo diff computation failed for repositories repo_a and repo_b" in caplog.text
+
+
+def test_compute_diff_repo_labels_in_logs(
+    diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch.object(diff, "request_and_dump", return_value=None)
+    diff.compute_diff(
+        "http://ref-url",
+        "http://build-url",
+        repo_label_a="reference repository",
+        repo_label_b="build repository",
+    )
+    assert "Could not load repo data for reference repository: http://ref-url" in caplog.text
+    assert "Could not load repo data for build repository: http://build-url" in caplog.text
 
 
 def test_request_and_dump_dump_data(mocker: MockerFixture) -> None:
@@ -193,7 +222,7 @@ def test_request_and_dump_not_ok(
 def test_find_primary_repodata_none(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     # no primary repodata in rows
     mocker.patch.object(diff, "request_and_dump", return_value={"data": [{"name": "other.xml"}]})
-    res = diff.load_repodata("project")
+    res = diff.load_repodata("project", repo_label="repository")
     assert res is None
     assert "Repository metadata not found" in caplog.text
 
@@ -201,7 +230,7 @@ def test_find_primary_repodata_none(diff: RepoDiff, mocker: MockerFixture, caplo
 def test_load_repodata_request_failed(diff: RepoDiff, mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     # repo_data_listing found, but subsequent request fails
     mocker.patch.object(diff, "request_and_dump", side_effect=[{"data": [{"name": "foo-primary.xml"}]}, None])
-    res = diff.load_repodata("project")
+    res = diff.load_repodata("project", repo_label="repository")
     assert res is None
     assert "Repository metadata could not be fetched" in caplog.text
 
@@ -213,7 +242,7 @@ def test_load_packages_not_rpm(diff: RepoDiff, mocker: MockerFixture) -> None:
         '<package type="other"><name>n</name></package></metadata>'
     )
     mocker.patch.object(diff, "load_repodata", return_value=xml)
-    res = diff.load_packages("project")
+    res = diff.load_packages("project", repo_label="repository")
     assert res == {}
 
 
@@ -223,15 +252,17 @@ def test_get_staged_update_name_success(diff: RepoDiff, mocker: MockerFixture) -
     pkg1.name = "pkg-b"
     pkg2 = mocker.Mock()
     pkg2.name = "pkg-a"
-    mocker.patch.object(diff, "load_packages", return_value={"x86_64": {pkg1, pkg2}})
+    mock_load = mocker.patch.object(diff, "load_packages", return_value={"x86_64": {pkg1, pkg2}})
     assert diff.get_staged_update_name("http://repo") == "pkg-a"
+    mock_load.assert_called_once_with("http://repo", repo_label="staged repository")
 
 
 def test_get_staged_update_name_empty(diff: RepoDiff, mocker: MockerFixture) -> None:
     """Test get_staged_update_name raises NoResultsError when no packages are found."""
-    mocker.patch.object(diff, "load_packages", return_value={"x86_64": set()})
+    mock_load = mocker.patch.object(diff, "load_packages", return_value={"x86_64": set()})
     with pytest.raises(NoResultsError, match="No packages detected"):
         diff.get_staged_update_name("http://repo")
+    mock_load.assert_called_once_with("http://repo", repo_label="staged repository")
 
 
 @pytest.mark.parametrize(
@@ -320,7 +351,7 @@ def test_load_packages_parameterized(
 ) -> None:
     """Test load_packages parsing logic across various data types and layouts."""
     mocker.patch.object(diff, "load_repodata", return_value=repo_data)
-    res = diff.load_packages("project")
+    res = diff.load_packages("project", repo_label="repository")
     assert res == expected_pkgs
 
 
@@ -330,7 +361,7 @@ def test_load_packages_stream_exception(
     """Test stream parser exceptions handling."""
     mocker.patch("openqabot.repodiff.etree.iterparse", side_effect=ValueError("corrupted XML"))
     mocker.patch.object(diff, "load_repodata", return_value=b"corrupted bytes")
-    res = diff.load_packages("project")
+    res = diff.load_packages("project", repo_label="repository")
     assert res == {}
     assert "Failed to parse repo data stream" in caplog.text
 
