@@ -32,6 +32,10 @@ class AggregateResultsSync(SyncRes):
 
         job_results = {}
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
+            # FIXME: This will break when taking `SUBMISSION_ID` into account as `get_aggregate_settings_data(data)` will
+            #        return the `SUBMISSION_ID` we put in as input `data` which will always be 0 (see read_products -> _parse_product).
+            #        For aggregates we probably shouldn't filter for `SUBMISSION_ID` at all as these scheduled products don't use it (as
+            #        they are not about a particular submission).
             future_j = {executor.submit(self.client.get_jobs, f): f for f in update_setting}
             for future in as_completed(future_j):
                 job_results[future_j[future]] = future.result()
