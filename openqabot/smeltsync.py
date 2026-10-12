@@ -14,7 +14,7 @@ from .loader.qem import update_submissions
 from .loader.smelt import get_active_submission_ids, get_submissions
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
 log = getLogger("bot.smeltsync")
 
@@ -22,7 +22,7 @@ log = getLogger("bot.smeltsync")
 class SMELTSync:
     """Synchronization of SMELT incidents to dashboard."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the SMELTSync class."""
         self.dry: bool = args.dry
         self.submissions = get_submissions(get_active_submission_ids())

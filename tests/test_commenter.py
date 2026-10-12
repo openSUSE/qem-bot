@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from argparse import Namespace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
@@ -61,8 +61,8 @@ def make_comment_api() -> Callable[..., MagicMock]:
 
 
 @pytest.fixture
-def mock_args() -> Namespace:
-    return Namespace(dry=True, gitea_token="gitea_token")
+def mock_args() -> SimpleNamespace:
+    return SimpleNamespace(dry=True, gitea_token="gitea_token")
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def commenter_setup(mocker: MockerFixture) -> dict[str, MagicMock]:
     }
 
 
-def test_commenter_init(commenter_setup: dict[str, MagicMock], mock_args: Namespace) -> None:
+def test_commenter_init(commenter_setup: dict[str, MagicMock], mock_args: SimpleNamespace) -> None:
     subs = [MagicMock(spec=Submission)]
     c = Commenter(mock_args, submissions=subs)
     assert c.dry == mock_args.dry
@@ -119,7 +119,7 @@ def test_commenter_init(commenter_setup: dict[str, MagicMock], mock_args: Namesp
     assert c.submissions == subs
 
 
-def test_commenter_init_with_submissions(mock_args: Namespace) -> None:
+def test_commenter_init_with_submissions(mock_args: SimpleNamespace) -> None:
     subs = [MagicMock(spec="openqabot.types.submission.Submission")]
     c = Commenter(mock_args, submissions=subs)
     assert c.submissions == subs
@@ -128,7 +128,7 @@ def test_commenter_init_with_submissions(mock_args: Namespace) -> None:
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_failed_jobs(
     mocker: MockerFixture,
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_job: Callable,
@@ -150,7 +150,7 @@ def test_commenter_call_failed_jobs(
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_passed_jobs(
     mocker: MockerFixture,
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
 ) -> None:
     mocker.patch(
@@ -167,7 +167,7 @@ def test_commenter_call_passed_jobs(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_no_request(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -180,7 +180,7 @@ def test_osc_comment_no_request(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_comment_on_submission_empty_msg(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     mocker: MockerFixture,
 ) -> None:
@@ -193,7 +193,7 @@ def test_comment_on_submission_empty_msg(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_dry_run(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
@@ -211,7 +211,7 @@ def test_osc_comment_dry_run(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_on_request_uses_custom_obs_url(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
@@ -228,7 +228,7 @@ def test_osc_comment_on_request_uses_custom_obs_url(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_with_revision(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
@@ -247,7 +247,7 @@ def test_osc_comment_with_revision(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_no_comment(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
@@ -264,7 +264,7 @@ def test_osc_comment_no_comment(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_similar_exists(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
@@ -284,7 +284,7 @@ def test_osc_comment_similar_exists(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_delete_existing_not_similar_not_dry(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
@@ -302,7 +302,7 @@ def test_osc_comment_delete_existing_not_similar_not_dry(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_replace_not_dry(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     make_comment_api: Callable,
     commenter_setup: dict[str, MagicMock],
@@ -322,7 +322,7 @@ def test_osc_comment_replace_not_dry(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_osc_comment_replace_dry_run(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     make_comment_api: Callable,
@@ -347,7 +347,7 @@ def test_osc_comment_replace_dry_run(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_summarize_message(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     commenter_setup: dict[str, MagicMock],
     mocker: MockerFixture,
 ) -> None:
@@ -390,7 +390,7 @@ def test_summarize_message(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_summarize_message_allow_devel(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     commenter_setup: dict[str, MagicMock],
     mocker: MockerFixture,
 ) -> None:
@@ -419,7 +419,7 @@ def test_summarize_message_allow_devel(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_dry_run(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
@@ -440,7 +440,7 @@ def test_gitea_comment_dry_run(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_post_new(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
@@ -459,7 +459,7 @@ def test_gitea_comment_post_new(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_patch_existing(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     commenter_setup: dict[str, MagicMock],
 ) -> None:
@@ -479,7 +479,7 @@ def test_gitea_comment_patch_existing(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_git(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     mocker: MockerFixture,
     make_job: Callable,
@@ -498,7 +498,7 @@ def test_commenter_call_git(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_no_token(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
@@ -514,7 +514,7 @@ def test_gitea_comment_no_token(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_comment_on_submission_empty_msg_git(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     mocker: MockerFixture,
 ) -> None:
@@ -527,7 +527,7 @@ def test_comment_on_submission_empty_msg_git(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_no_url(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -540,7 +540,7 @@ def test_gitea_comment_no_url(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_gitea_comment_similar_exists(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_git_sub: MagicMock,
     caplog: pytest.LogCaptureFixture,
     commenter_setup: dict[str, MagicMock],
@@ -562,7 +562,7 @@ def test_gitea_comment_similar_exists(
 @pytest.mark.usefixtures("commenter_setup")
 def test_commenter_call_empty_msg(
     mocker: MockerFixture,
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     mock_smelt_sub: MagicMock,
 ) -> None:
     mocker.patch("openqabot.commenter.get_submission_results", return_value=[{"status": "passed"}])
@@ -574,7 +574,7 @@ def test_commenter_call_empty_msg(
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_comment_on_submission_unsupported_type(mock_args: Namespace, caplog: pytest.LogCaptureFixture) -> None:
+def test_comment_on_submission_unsupported_type(mock_args: SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     """Test skipping unsupported submission types."""
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
     c = Commenter(mock_args, submissions=[])
@@ -599,7 +599,7 @@ def test_comment_on_submission_unsupported_type(mock_args: Namespace, caplog: py
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_comment_on_submission_no_results_error(
-    mock_args: Namespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+    mock_args: SimpleNamespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     """Test handling of NoResultsError and ValueError during result fetching."""
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
@@ -630,7 +630,7 @@ def test_comment_on_submission_no_results_error(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_comment_on_submission_running_jobs(
-    mock_args: Namespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+    mock_args: SimpleNamespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     """Test postponing comments when jobs are still running."""
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
@@ -659,7 +659,7 @@ def test_comment_on_submission_running_jobs(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_comment_on_submission_no_jobs(
-    mock_args: Namespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
+    mock_args: SimpleNamespace, caplog: pytest.LogCaptureFixture, mocker: MockerFixture
 ) -> None:
     """Test behavior when no jobs are found for a submission."""
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
@@ -687,7 +687,7 @@ def test_comment_on_submission_no_jobs(
 
 
 @pytest.mark.usefixtures("commenter_setup")
-def test_generate_comment_raw_openqa_jobs(mock_args: Namespace) -> None:
+def test_generate_comment_raw_openqa_jobs(mock_args: SimpleNamespace) -> None:
     """Test generating comment from raw openQA jobs lacking status key."""
     c = Commenter(mock_args, submissions=[])
     raw_jobs = [
@@ -826,7 +826,7 @@ def detailed_comment_mocks(
 )
 @pytest.mark.usefixtures("commenter_setup")
 def test_summarize_message_detailed_comments(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     detailed_comment_mocks: dict[str, MagicMock],
     mocker: MockerFixture,
     enabled: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
@@ -852,7 +852,7 @@ def test_summarize_message_detailed_comments(
 
 @pytest.mark.usefixtures("commenter_setup")
 def test_summarize_message_detailed_comments_duplicate_group(
-    mock_args: Namespace,
+    mock_args: SimpleNamespace,
     detailed_comment_mocks: dict[str, MagicMock],
 ) -> None:
     """Test summarize_message when multiple jobs have the same group_id."""

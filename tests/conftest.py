@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import os
 import re
-from argparse import Namespace
 from collections import defaultdict
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 
@@ -110,7 +110,7 @@ def fake_openqa_comment_api() -> None:
 def make_approver(submission: int = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
     if mocker:
         mocker.patch("openqabot.approver.Commenter", autospec=True)
-    args = Namespace(
+    args = SimpleNamespace(
         dry=True,
         token="123",
         all_submissions=False,

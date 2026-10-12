@@ -14,7 +14,7 @@ from .openqa import OpenQAInterface
 from .utils import normalize_results
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
     from .types.types import Data
 
@@ -26,7 +26,7 @@ class SyncRes:
 
     operation = "null"
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the SyncRes class."""
         self.dry: bool = args.dry
         self.client = OpenQAInterface()

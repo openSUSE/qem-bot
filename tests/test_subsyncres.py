@@ -3,8 +3,8 @@
 """Test SubResultsSync."""
 
 import logging
-from argparse import Namespace
 from collections.abc import Generator
+from types import SimpleNamespace
 
 import pytest
 import responses
@@ -39,18 +39,18 @@ def mock_dashboard_settings() -> None:
 
 
 @pytest.fixture
-def args() -> Namespace:
-    return Namespace(dry=False, token="ToKeN")
+def args() -> SimpleNamespace:
+    return SimpleNamespace(dry=False, token="ToKeN")
 
 
-def prepare_syncer(caplog: pytest.LogCaptureFixture, args: Namespace) -> SubResultsSync:
+def prepare_syncer(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> SubResultsSync:
     caplog.set_level(logging.INFO)
     return SubResultsSync(args)
 
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
-def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_clone_dry(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     data = {
         "jobs": [
             {
@@ -79,7 +79,7 @@ def test_clone_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
-def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     data = {
         "jobs": [
             {
@@ -107,7 +107,7 @@ def test_nogroup_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
-def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     data = {
         "jobs": [
             {
@@ -140,7 +140,7 @@ def test_devel_fast_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> No
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
-def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_devel_dry(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     data = {
         "jobs": [
             {
@@ -171,7 +171,7 @@ def test_devel_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
 
 @responses.activate
 @pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
-def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_passed_dry(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     data = {
         "jobs": [
             {

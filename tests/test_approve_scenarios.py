@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
-from argparse import Namespace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     ],
 )
 def test_approver_single_submission_parsing(raw: str | int | None, exp_sub: int | None, exp_type: str | None) -> None:
-    args = Namespace(dry=True, token="123", all_submissions=False, incident=raw, gitea_token=None, comment=False)
+    args = SimpleNamespace(dry=True, token="123", all_submissions=False, incident=raw, gitea_token=None, comment=False)
     inst = Approver(args)
     assert inst.single_submission == exp_sub
     assert inst.submission_type == exp_type
