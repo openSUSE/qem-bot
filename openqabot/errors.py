@@ -51,9 +51,31 @@ class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 
 
+class SubmissionArgError(ValueError):
+    """Raised when a ``--submission`` argument cannot be parsed."""
+
+    def __init__(self, raw: str, *, numeric: bool = False) -> None:
+        """Build the error message for an invalid submission argument."""
+        if numeric:
+            message = f"Invalid submission ID {raw!r}. '<id>' must be numeric."
+        else:
+            message = f"Invalid submission ID {raw!r}. Expected format '<type>:<id>:<project>'."
+        super().__init__(message)
+
+
 class PostOpenQAError(Error):
     """Raised when posting a job to openQA fails."""
 
 
 class DashboardError(Error):
     """Raised when a dashboard API request fails or returns unusable data."""
+
+
+class NoSubmissionDataError(DashboardError):
+    """Raised when a dashboard submission is missing required fields."""
+
+    def __init__(self, sub_type: str, sub: int, project: str | None) -> None:
+        """Initialize with the submission identity and its project."""
+        super().__init__(
+            f"Submission {sub_type}:{sub} (project {project!r}) is missing required fields on the dashboard"
+        )

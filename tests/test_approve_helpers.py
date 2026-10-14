@@ -39,8 +39,35 @@ def test_mark_job_as_acceptable_for_submission_request_error(
     caplog.set_level(logging.INFO)
     approver_instance = Approver(args)
     mocker.patch("openqabot.approver.dashboard.patch", side_effect=f_patch)
-    approver_instance.mark_job_as_acceptable_for_submission(1, 1)
+    approver_instance.mark_job_as_acceptable_for_submission(1, 1, "SUSE:Maintenance:1", "smelt")
     assert "Unable to mark job 1 as acceptable for submission smelt:1" in caplog.text
+
+
+def test_mark_job_as_acceptable_for_submission_with_project(mocker: MockerFixture) -> None:
+    approver_instance = Approver(args)
+    mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
+
+    approver_instance.mark_job_as_acceptable_for_submission(1, 2, "SUSE:Maintenance:2", "smelt")
+
+    assert mock_patch.call_args.kwargs["params"] == {
+        "text": "acceptable_for",
+        "incident_number": 2,
+        "project": "SUSE:Maintenance:2",
+        "type": "smelt",
+    }
+
+
+def test_approver_invalid_submission_arg_exits() -> None:
+    with pytest.raises(SystemExit):
+        Approver(make_approver_args(submission="not-a-valid-submission"))
+
+
+def test_approver_single_submission_not_found(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.approver.get_single_submission", return_value=[])
+
+    approver_instance = Approver(make_approver_args(submission="smelt:1:SUSE:Maintenance:1"))
+
+    assert approver_instance() == 1
 
 
 @pytest.mark.parametrize(
@@ -109,16 +136,16 @@ def test_reject_calls_update_incident_reason(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     approver.dry = False
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, type="smelt", project="SUSE:Maintenance:1")
     assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
-    mock_update.assert_called_once_with(1, "Reason SUSE:Maintenance:1:2")
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", "smelt", "Reason smelt:1")
 
 
 def test_reject_dry_run_skips_update_incident_reason(mocker: MockerFixture) -> None:
     approver = Approver(make_approver_args())
     approver.dry = True
     mock_update = mocker.patch("openqabot.approver.update_incident_reason")
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, type="smelt", project="SUSE:Maintenance:1")
     assert approver._reject(sub, "Reason %s") is False  # ruff: ignore[private-member-access]
     mock_update.assert_not_called()
 
@@ -131,11 +158,14 @@ def test_approvable_clears_reason(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_aggregate_settings", return_value=[])
     mocker.patch.object(approver, "get_submission_result", return_value=JobResult.PASSED)
 
-    sub = SubReq(1, 2)
+    sub = SubReq(1, 2, type="smelt", project="SUSE:Maintenance:1")
     assert approver.approvable(sub) is True
-    mock_update.assert_called_once_with(1, None)
+    mock_update.assert_called_once_with(1, "SUSE:Maintenance:1", "smelt", None)
     approver_instance = Approver(args)
-    assert approver_instance.get_submission_result([], "api/", 1) is JobResult.NO_JOBS
+    assert (
+        approver_instance.get_submission_result([], "api/", 1, submission_type="smelt", project="SUSE:Maintenance:1")
+        is JobResult.NO_JOBS
+    )
 
 
 def test_job_contains_submission_no_job_settings(mocker: MockerFixture) -> None:
@@ -155,7 +185,9 @@ def test_clone_dedup_latest_passes_approves(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_job_results)
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
-    result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
+    result = approver.get_jobs(
+        mock_aggr, "api/jobs/incident/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.PASSED
 
 
@@ -172,7 +204,9 @@ def test_clone_dedup_latest_fails_blocks(mocker: MockerFixture) -> None:
     mocker.patch.object(Approver, "is_job_marked_acceptable_for_submission", return_value=False)
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
-    result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
+    result = approver.get_jobs(
+        mock_aggr, "api/jobs/incident/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.FAILED
 
 
@@ -198,7 +232,9 @@ def test_clone_dedup_different_scenarios(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_job_results)
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
-    result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
+    result = approver.get_jobs(
+        mock_aggr, "api/jobs/incident/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.PASSED
 
 
@@ -214,7 +250,9 @@ def test_clone_dedup_two_scenarios_one_fails_blocks(mocker: MockerFixture) -> No
     mocker.patch.object(Approver, "is_job_marked_acceptable_for_submission", return_value=False)
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
-    result = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
+    result = approver.get_jobs(
+        mock_aggr, "api/jobs/incident/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.FAILED
 
 
@@ -234,8 +272,12 @@ def test_clone_dedup_fallback_to_other_urls(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", side_effect=mock_get_json)
     approver = Approver(make_approver_args())
     mock_aggr = JobAggr(id=1000, aggregate=False, with_aggregate=True)
-    result_incident = approver.get_jobs(mock_aggr, "api/jobs/incident/", 1)
-    result_update = approver.get_jobs(mock_aggr, "api/jobs/update/", 1)
+    result_incident = approver.get_jobs(
+        mock_aggr, "api/jobs/incident/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
+    result_update = approver.get_jobs(
+        mock_aggr, "api/jobs/update/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result_incident is JobResult.PASSED
     assert result_update is JobResult.PASSED
 
@@ -247,7 +289,9 @@ def test_clone_dedup_empty_results(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=[])
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
-    result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
+    result = approver.get_jobs(
+        mock_aggregates[0], "api/jobs/update/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.NO_JOBS
 
 
@@ -260,7 +304,9 @@ def test_clone_dedup_error_results(mocker: MockerFixture, caplog: pytest.LogCapt
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_job_results)
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
-    result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
+    result = approver.get_jobs(
+        mock_aggregates[0], "api/jobs/update/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.NO_JOBS
     assert any("Unexpected job results format" in msg for msg in caplog.messages)
 
@@ -276,7 +322,9 @@ def test_clone_dedup_jobs_without_job_id(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_job_results)
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
-    result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
+    result = approver.get_jobs(
+        mock_aggregates[0], "api/jobs/update/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.PASSED
 
 
@@ -291,5 +339,7 @@ def test_clone_dedup_keeps_highest_job_id(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.dashboard.get_json", return_value=mock_job_results)
     approver = Approver(make_approver_args())
     mock_aggregates = [JobAggr(id=1, aggregate=False, with_aggregate=True)]
-    result = approver.get_jobs(mock_aggregates[0], "api/jobs/update/", 1)
+    result = approver.get_jobs(
+        mock_aggregates[0], "api/jobs/update/", 1, submission_type="smelt", project="SUSE:Maintenance:1"
+    )
     assert result is JobResult.PASSED
