@@ -22,20 +22,17 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
     assert configs[0].flavor == "any"
     assert configs[0].project_base == "FOO"
     assert configs[0].build_project_suffix == "TEST"
-    assert configs[0].diff_project_suffix == "PUBLISH/product"
     assert configs[0].build_listing_sub_path == "product"
     assert configs[0].build_regex == "some.*regex"
     assert configs[0].product_regex == "^Foo.*"
     assert configs[0].archs == {"x86_64", "aarch64", "ppc64le"}
     assert configs[0].packages == ["kernel-source", "kernel-azure"]
     assert configs[0].build_project() == "FOO:TEST"
-    assert configs[0].diff_project_url() == "http://download.suse.de/ibs/FOO:/PUBLISH/product"
     assert configs[1].distri == "bar"
     assert configs[1].version == "42"
     assert configs[1].flavor == "Test-Increments"
     assert configs[1].project_base == ""  # ruff: ignore[compare-to-empty-string]
     assert configs[1].build_project() == "ToTest"
-    assert configs[1].diff_project_url() == "http://download.suse.de/ibs/none"
 
     path = Path("tests/fixtures/config")
     caplog.set_level(logging.DEBUG, logger="bot.loader.config")
@@ -119,7 +116,6 @@ def test_config_parsing_reference_repos() -> None:
         "distri": "sle",
         "project_base": "BASE",
         "build_project_suffix": "BUILD",
-        "diff_project_suffix": "DIFF",
         "build_listing_sub_path": "path",
         "build_regex": "regex",
         "product_regex": "pregex",
@@ -154,7 +150,6 @@ def test_config_parsing_with_arch() -> None:
         "distri": "sle",
         "project_base": "BASE",
         "build_project_suffix": "BUILD",
-        "diff_project_suffix": "DIFF",
         "build_listing_sub_path": "path",
         "build_regex": "regex",
         "product_regex": "pregex",
@@ -169,7 +164,6 @@ def test_config_parsing_with_arch_and_archs() -> None:
         "distri": "sle",
         "project_base": "BASE",
         "build_project_suffix": "BUILD",
-        "diff_project_suffix": "DIFF",
         "build_listing_sub_path": "path",
         "build_regex": "regex",
         "product_regex": "pregex",

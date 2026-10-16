@@ -6,7 +6,6 @@ product_increments:
 - distri: foo
   project_base: FOO
   build_project_suffix: TEST
-  diff_project_suffix: PUBLISH/product
   build_listing_sub_path: product
   build_regex: 'some.*regex'
   product_regex: '^Foo.*'
@@ -37,7 +36,6 @@ product_increments:
   flavor: 'Test-Increments'
   project_base: ''
   build_project_suffix: ToTest
-  diff_project_suffix: none
   build_listing_sub_path: product/iso
   build_regex: 'another.*regex'
   product_regex: '^Bar-.*'

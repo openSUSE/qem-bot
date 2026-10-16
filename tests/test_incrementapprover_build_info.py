@@ -181,7 +181,6 @@ def test_scheduling_parameters_with_additional_builds(caplog: pytest.LogCaptureF
         project_base="OBS:PROJECT",
         flavor="Test-Increments",
         build_project_suffix="TEST",
-        diff_project_suffix="PUBLISH/product",
         build_listing_sub_path="product",
         build_regex="some.*regex",
         product_regex="^Foo.*",
