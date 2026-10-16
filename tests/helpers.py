@@ -289,8 +289,12 @@ def prepare_approver_with_additional_config(caplog: pytest.LogCaptureFixture) ->
         product_regex="^SLES$",
         build_regex=BUILD_REGEX,
         settings={"FLAVOR": "Foo-Increments"},
+        reference_repos={
+            "SLES": "http://download.suse.de/ibs/Products/SLES/16.0",
+        },
         additional_builds=[
             {
+                "archs": ["x86_64"],
                 "build_suffix": "additional-build",
                 "package_name_regex": ".*",
                 "settings": {"FLAVOR": "Additional-Foo-Increments"},
@@ -370,3 +374,12 @@ def make_approver_args(**kwargs: Any) -> Namespace:
     }
     defaults.update(kwargs)
     return Namespace(**defaults)
+
+
+def format_increment_url(product: str, version: str, arch: str) -> str:
+    return settings.download_base_url.rstrip("/") + f"/OBS:/PROJECT:/TEST/product/repo/{product}-{version}-{arch}"
+
+
+def make_increment_build_params(base_params: dict[str, str], arch: str) -> dict[str, str]:
+    repo = format_increment_url(base_params["PRODUCT"], base_params["VERSION"], arch)
+    return base_params | {"ARCH": arch, "INCREMENT_REPO": repo}

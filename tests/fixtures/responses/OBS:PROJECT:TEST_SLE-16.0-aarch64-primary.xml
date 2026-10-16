@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://linux.duke.edu/metadata/common" xmlns:rpm="http://linux.duke.edu/metadata/rpm" packages="149298">
+<package type="rpm">
+  <!-- will be considered a changed package -->
+  <name>kernel-source</name>
+  <arch>noarch</arch>
+  <version epoch="0" ver="6.12.0" rel="160000.5.1"/>
+</package>
+</metadata>

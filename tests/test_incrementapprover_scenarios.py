@@ -26,6 +26,8 @@ from openqabot.types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
 from .helpers import (
     Action,
     ReviewState,
+    format_increment_url,
+    make_increment_build_params,
     prepare_approver,
     prepare_approver_with_additional_config,
     run_approver,
@@ -139,7 +141,7 @@ def test_scheduling_with_no_openqa_jobs(mocker: MockerFixture, caplog: pytest.Lo
             "BUILD": "PI-139.1",
             "ARCH": arch,
             "PRODUCT": "SLES",
-            "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
+            "INCREMENT_REPO": format_increment_url("SLES", "16.0", arch),
             "SUBMISSION_ID": "increment:42",
             "__CI_JOB_URL": ci_job_url,
             "_ONLY_OBSOLETE_SAME_BUILD": "1",
@@ -157,14 +159,14 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         "FLAVOR": "Online-Increments",
         "BUILD": "PI-139.1",
         "PRODUCT": "SLES",
-        "INCREMENT_REPO": "http://%REPO_MIRROR_HOST%/ibs/OBS:/PROJECT:/TEST/product",
         "SUBMISSION_ID": "increment:42",
         "FOO": "bar",
         "_OBSOLETE": "1",
         "_ONLY_OBSOLETE_SAME_BUILD": "1",
     }
+
     for arch in ["x86_64", "aarch64", "ppc64le"]:
-        assert base_params | {"ARCH": arch} in jobs
+        assert make_increment_build_params(base_params, arch) in jobs
     assert "s390x" not in (x["ARCH"] for x in jobs)
 
     def assert_livepatch(flavor: str, build_suffix: str, kernel_version: str) -> None:
@@ -174,11 +176,11 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
             "KERNEL_VERSION": kernel_version,
             "KGRAFT": "1",
         }
-        assert expected_params | {"ARCH": "ppc64le"} in jobs
+        assert make_increment_build_params(expected_params, "ppc64le") in jobs
 
     assert_livepatch("Default-qcow-Updates", "kernel-livepatch-default-6.12.0-160000.5", "6.12.0-160000.5")
     assert_livepatch("Base-RT-Updates", "kernel-livepatch-rt-6.12.0-160000.5", "6.12.0-160000.5")
-    assert base_params | {"ARCH": "aarch64"} in jobs
+    assert make_increment_build_params(base_params, "aarch64") in jobs
 
 
 @responses.activate
