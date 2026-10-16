@@ -165,7 +165,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
     }
     for arch in ["x86_64", "aarch64", "ppc64le"]:
         assert base_params | {"ARCH": arch} in jobs
-    assert base_params | {"ARCH": "s390x"} not in jobs
+    assert "s390x" not in (x["ARCH"] for x in jobs)
 
     def assert_livepatch(flavor: str, build_suffix: str, kernel_version: str) -> None:
         expected_params = base_params | {
