@@ -14,6 +14,7 @@ from openqabot.repodiff import Package
 from openqabot.types.increment import BuildInfo
 
 from .helpers import (
+    format_increment_url,
     obs_product_table_url,
     prepare_approver,
 )
@@ -164,3 +165,70 @@ def test_extra_builds_package_version_regex_no_match(caplog: pytest.LogCaptureFi
     build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
     res = approver.extra_builds_for_package(package, config, build_info)
     assert res is None
+
+
+@responses.activate
+def test_scheduling_parameters_with_additional_builds(caplog: pytest.LogCaptureFixture) -> None:
+    """Verify that additional_builds keys correctly expand into INCREMENT_REPO."""
+    approver = prepare_approver(caplog)
+    reference_repos = {
+        "SLES": "http://download.suse.de/ibs/Products/SLES/16.0",
+        "SLES-SAP": None,
+    }
+    config = IncrementConfig(
+        distri="foo",
+        version="16.0",
+        project_base="OBS:PROJECT",
+        flavor="Test-Increments",
+        build_project_suffix="TEST",
+        build_listing_sub_path="product",
+        build_regex="some.*regex",
+        product_regex="^Foo.*",
+        archs={"aarch64", "x86_64"},
+        reference_repos=reference_repos,
+        additional_builds=[
+            {
+                "build_suffix": "kernel-livepatch",
+                "archs": ["x86_64"],
+                "regex": "kernel-livepatch-(?P<kernel_version>[^-]+(?:-[^-]+)?)(?:-(?P<kind>default))?$",
+                "settings": {
+                    "FLAVOR": "Test-Increments",
+                },
+            }
+        ],
+    )
+    base_params = {
+        "DISTRI": "sle",
+        "VERSION": "16.0",
+        "FLAVOR": "Test-Increments",
+        "BUILD": "PI-1.1",
+        "PRODUCT": "SLES",
+        "SUBMISSION_ID": "increment:42",
+        "_OBSOLETE": "1",
+        "_ONLY_OBSOLETE_SAME_BUILD": "1",
+    }
+    klp_params = {
+        "ARCH": "x86_64",
+        "KERNEL_VERSION": "6.12.0-160000.5",
+        "BUILD": "PI-1.1-kernel-livepatch-default-6.12.0-160000.5",
+    }
+
+    # x86_64 must schedule both regular build and a livepatch
+    increment_repos = {format_increment_url(product, "16.0", "x86_64") for product in reference_repos}
+    build_info = BuildInfo("sle", "SLES", "16.0", "Test-Increments", "x86_64", "1.1")
+    res = approver.make_scheduling_parameters(config, build_info, 42)
+    for item in res:
+        assert increment_repos == set(item["INCREMENT_REPO"].split(","))
+        del item["INCREMENT_REPO"]
+    assert base_params | {"ARCH": "x86_64"} in res
+    assert base_params | klp_params in res
+
+    # aarch64 must schedule only the regular build
+    increment_repos = {format_increment_url(product, "16.0", "aarch64") for product in reference_repos}
+    build_info = BuildInfo("sle", "SLES", "16.0", "Test-Increments", "aarch64", "1.1")
+    res = approver.make_scheduling_parameters(config, build_info, 42)
+    for item in res:
+        assert increment_repos == set(item["INCREMENT_REPO"].split(","))
+        del item["INCREMENT_REPO"]
+    assert base_params | {"ARCH": "aarch64"} in res
+    assert not [x for x in res if "KERNEL_VERSION" in x]

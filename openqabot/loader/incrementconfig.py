@@ -46,7 +46,6 @@ class IncrementConfig:
     flavor_suffix: str = DEFAULT_FLAVOR_SUFFIX
     project_base: str = ""
     build_project_suffix: str = ""
-    diff_project_suffix: str = ""
     build_listing_sub_path: str = ""
     build_regex: str = ""
     product_regex: str = ""
@@ -55,14 +54,8 @@ class IncrementConfig:
     archs: set[str] = field(default_factory=set)
     settings: dict[str, str] = field(default_factory=dict)
     additional_builds: list[dict[str, Any]] = field(default_factory=list)
-    reference_repos: dict[str, str] = field(default_factory=dict)
+    reference_repos: dict[str, str | None] = field(default_factory=dict)
     obs_url: str | None = None
-    # Template for URL construction for package diffing (RepoDiff).
-    # NOTE: These templates only affect package diffing for additional builds (e.g. livepatches);
-    # they do NOT affect build/ISO discovery (which uses build_listing_sub_path and build_regex).
-    # Variables: base, project, version, arch, channel, suffix, product.
-    build_repo_template: str = ""
-    diff_repo_template: str = ""
 
     def _concat_project(self, project: str) -> str:
         if not self.project_base:
@@ -85,34 +78,6 @@ class IncrementConfig:
     def build_project_url(self, base_url: str | None = None) -> str:
         """Return the URL of the build project."""
         return self.to_url(self.build_project(), base_url)
-
-    def diff_project_url(self, base_url: str | None = None) -> str:
-        """Return the URL of the diff project."""
-        return self.to_url(self._concat_project(self.diff_project_suffix), base_url)
-
-    def _get_template_params(self, base: str, build_info: BuildInfo) -> dict[str, Any]:
-        return {
-            "base": base,
-            "project": self.build_project(),
-            "version": build_info.version,
-            "arch": build_info.arch,
-            "channel": build_info.flavor.removesuffix(f"-{self.flavor_suffix}"),
-            "suffix": self.diff_project_suffix,
-            "product": build_info.product,
-        }
-
-    def render_build_url(self, base: str, build_info: BuildInfo) -> str:
-        """Render the build repository URL for package diffing using a template or fallback."""
-        if not self.build_repo_template:
-            channel = build_info.flavor.removesuffix(f"-{self.flavor_suffix}")
-            return f"{base}/{channel}/{build_info.arch}"
-        return self.to_url(self.build_repo_template.format(**self._get_template_params(base, build_info)))
-
-    def render_diff_url(self, base: str, build_info: BuildInfo) -> str:
-        """Render the diff repository URL for package diffing using a template or fallback."""
-        if not self.diff_repo_template:
-            return f"{base}/{build_info.version}/{self.diff_project_suffix}/{build_info.arch}"
-        return self.to_url(self.diff_repo_template.format(**self._get_template_params(base, build_info)))
 
     @property
     def group_key(self) -> GroupKey:
@@ -154,7 +119,6 @@ class IncrementConfig:
             flavor_suffix=entry.get("flavor_suffix", DEFAULT_FLAVOR_SUFFIX),
             project_base=entry["project_base"],
             build_project_suffix=entry["build_project_suffix"],
-            diff_project_suffix=entry["diff_project_suffix"],
             build_listing_sub_path=entry["build_listing_sub_path"],
             build_regex=entry["build_regex"],
             product_regex=entry["product_regex"],
@@ -165,8 +129,6 @@ class IncrementConfig:
             additional_builds=entry.get("additional_builds", []),
             reference_repos=entry.get("reference_repos", {}),
             obs_url=entry.get("obs_url"),
-            build_repo_template=entry.get("build_repo_template", ""),
-            diff_repo_template=entry.get("diff_repo_template", ""),
         )
 
     @staticmethod

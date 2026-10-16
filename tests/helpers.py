@@ -212,7 +212,6 @@ def prepare_approver(
     *,
     schedule: bool = False,
     reschedule: bool = False,
-    diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: IncrementConfig | None = None,
     request_id: int | None = None,
@@ -230,7 +229,6 @@ def prepare_approver(
         request_id=request_id,
         project_base="OBS:PROJECT",
         build_project_suffix="TEST",
-        diff_project_suffix=diff_project_suffix,
         distri="sle",
         version="16.0",
         flavor="Online-Increments",
@@ -244,6 +242,7 @@ def prepare_approver(
         packages=[] if config is None else config.packages,
         archs=set() if config is None else config.archs,
         settings={} if config is None else config.settings,
+        reference_repos={} if config is None else config.reference_repos,
         additional_builds=[] if config is None else config.additional_builds,
     )
 
@@ -283,13 +282,16 @@ def prepare_approver_with_additional_config(caplog: pytest.LogCaptureFixture) ->
         flavor="Online-Increments",
         project_base="OBS:PROJECT",
         build_project_suffix="TEST",
-        diff_project_suffix="mocked",
         build_listing_sub_path="product",
         product_regex="^SLES$",
         build_regex=BUILD_REGEX,
         settings={"FLAVOR": "Foo-Increments"},
+        reference_repos={
+            "SLES": "http://download.suse.de/ibs/Products/SLES/16.0",
+        },
         additional_builds=[
             {
+                "archs": ["x86_64"],
                 "build_suffix": "additional-build",
                 "package_name_regex": ".*",
                 "settings": {"FLAVOR": "Additional-Foo-Increments"},
@@ -307,7 +309,6 @@ def run_approver(
     *,
     schedule: bool = False,
     reschedule: bool = False,
-    diff_project_suffix: str = "none",
     test_env_var: str = "",
     config: IncrementConfig | None = None,
     request_id: int | None = None,
@@ -318,7 +319,6 @@ def run_approver(
         caplog,
         schedule=schedule,
         reschedule=reschedule,
-        diff_project_suffix=diff_project_suffix,
         test_env_var=test_env_var,
         config=config,
         request_id=request_id,
@@ -369,3 +369,12 @@ def make_approver_args(**kwargs: Any) -> Namespace:
     }
     defaults.update(kwargs)
     return Namespace(**defaults)
+
+
+def format_increment_url(product: str, version: str, arch: str) -> str:
+    return settings.download_base_url.rstrip("/") + f"/OBS:/PROJECT:/TEST/product/repo/{product}-{version}-{arch}"
+
+
+def make_increment_build_params(base_params: dict[str, str], arch: str) -> dict[str, str]:
+    repo = format_increment_url(base_params["PRODUCT"], base_params["VERSION"], arch)
+    return base_params | {"ARCH": arch, "INCREMENT_REPO": repo}

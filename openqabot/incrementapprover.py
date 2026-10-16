@@ -27,7 +27,7 @@ from openqabot.pc_helper import apply_public_cloud_settings
 from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
-from .loader.incrementconfig import TEMPLATE_VARS, GroupKey, IncrementConfig
+from .loader.incrementconfig import GroupKey, IncrementConfig
 from .repodiff import Package, RepoDiff
 from .requests import approve_obs_request, find_request_on_obs
 from .types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
@@ -247,7 +247,7 @@ class IncrementApprover:
         build_info: BuildInfo,
     ) -> dict[str, str] | None:
         """Check if an additional build matches a package and return extra parameters."""
-        if (archs := additional_build.get("archs")) and package.arch not in archs:
+        if (archs := additional_build.get("archs")) and build_info.arch not in archs:
             return None
 
         if not (package_name_match := self._match_package_name_and_version(package, additional_build)):
@@ -346,49 +346,15 @@ class IncrementApprover:
         names_of_changed_packages = {p.name for p in package_diff}
         return any(package in names_of_changed_packages for package in packages_to_find)
 
-    def get_package_diff_from_repo(
-        self, config_inc: IncrementConfig, repo_sub_path: str, build_info: BuildInfo | None = None
-    ) -> defaultdict[str, set[Package]]:
+    def get_package_diff_from_repo(self, build_url: str, ref_url: str) -> defaultdict[str, set[Package]]:
         """Compute package diff by comparing repositories."""
-        build_url = config_inc.build_project_url() + repo_sub_path
-
-        is_reference_repo = False
-        diff_url = config_inc.diff_project_url()
-        if build_info:
-            # Check for a specific reference repository override by product name first, falling back to flavor
-            ref_repo = config_inc.reference_repos.get(build_info.product) or config_inc.reference_repos.get(
-                build_info.flavor
-            )
-            if ref_repo:
-                is_reference_repo = True
-                diff_url = config_inc.to_url(ref_repo)
-
-            if is_reference_repo:
-                try:
-                    build_url = config_inc.render_build_url(build_url, build_info)
-                    diff_url = config_inc.render_diff_url(diff_url, build_info)
-                except KeyError:
-                    log.exception(
-                        "Invalid template variable in config for %s. Available: %s",
-                        config_inc.distri,
-                        ", ".join(TEMPLATE_VARS),
-                    )
-                    return defaultdict(set)
-
-        if not is_reference_repo and any(s in diff_url for s in ("-Debug", "-Source")):
-            log.debug("Skipping repo diffing for %s (contains -Debug or -Source)", diff_url)
-            return defaultdict(set)
-
-        diff_key = f"{build_url}:{diff_url}"
+        diff_key = f"{build_url}:{ref_url}"
         if diff_key in self.package_diff:
             return self.package_diff[diff_key]
 
-        log.debug("Computing repo diff between reference %s and build %s", diff_url, build_url)
+        log.debug("Computing repo diff between reference %s and build %s", ref_url, build_url)
         self.package_diff[diff_key] = RepoDiff(self.args).compute_diff(
-            diff_url,
-            build_url,
-            repo_label_a="reference repository",
-            repo_label_b="build repository",
+            ref_url, build_url, repo_label_a="reference repository", repo_label_b="build repository"
         )[0]
         return self.package_diff[diff_key]
 
@@ -396,7 +362,6 @@ class IncrementApprover:
         self, config_inc: IncrementConfig, build_info: BuildInfo, request_id: int
     ) -> ScheduleParams:
         """Prepare scheduling parameters for a build."""
-        repo_sub_path = "/product"
         base_params = {
             "DISTRI": build_info.distri,
             "VERSION": build_info.version,
@@ -404,24 +369,41 @@ class IncrementApprover:
             "ARCH": build_info.arch,
             "BUILD": f"PI-{build_info.build}",
             "PRODUCT": build_info.product,
-            "INCREMENT_REPO": config_inc.build_project_url(config.settings.download_base_url) + repo_sub_path,
             "SUBMISSION_ID": f"increment:{request_id}",
             **OBSOLETE_PARAMS,
         }
         IncrementApprover.populate_params_from_env(base_params, "CI_JOB_URL")
-        base_params.update(config_inc.settings)
+        param_url = config_inc.build_project_url(config.settings.download_base_url)
+        diff_base_url = config_inc.build_project_url()
+        repo_template = "/product/repo/{channel}-{version}-{arch}"
+        reference_repos = []
+        increment_repos = []
         extra_params = []
-        if config_inc.diff_project_suffix != "none":
-            package_diff = self.get_package_diff_from_repo(config_inc, repo_sub_path, build_info)
-            relevant_diff = package_diff[build_info.arch] | package_diff["noarch"]
-            # schedule base params if package filter is empty for matching
-            if IncrementApprover.match_packages(relevant_diff, config_inc.packages):
-                extra_params.append({})
-            # schedule additional builds based on changed packages
-            extra_params.extend(self.extra_builds_for_additional_builds(relevant_diff, config_inc, build_info))
-        else:
-            # schedule always just base params if not computing the package diff
+        relevant_diff = set()
+        for channel, refpath in config_inc.reference_repos.items():
+            channel_url = repo_template.format(channel=channel, version=build_info.version, arch=build_info.arch)
+            increment_repos.append(param_url + channel_url)
+
+            if refpath is None:
+                continue
+
+            channel_url = diff_base_url + channel_url
+            ref_url = config_inc.to_url(refpath) + f"/{build_info.arch}/product"
+            reference_repos.append((channel_url, ref_url))
+            package_diff = self.get_package_diff_from_repo(channel_url, ref_url)
+            relevant_diff.update(*package_diff.values())
+        # schedule base params if package filter is empty for matching
+        if IncrementApprover.match_packages(relevant_diff, config_inc.packages):
             extra_params.append({})
+        # schedule additional builds based on changed packages
+        extra_params.extend(self.extra_builds_for_additional_builds(relevant_diff, config_inc, build_info))
+        if increment_repos:
+            base_params["INCREMENT_REPO"] = ",".join(increment_repos)
+        else:
+            base_params["INCREMENT_REPO"] = param_url + repo_template.format(
+                channel=build_info.product, version=build_info.version, arch=build_info.arch
+            )
+        base_params.update(config_inc.settings)
         return unique_dicts([merge_dicts(base_params, p) for p in extra_params])
 
     def schedule_openqa_jobs(self, build_info: BuildInfo, params: ScheduleParams) -> int:

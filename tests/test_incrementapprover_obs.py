@@ -134,7 +134,6 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         request_id=None,
         project_base="BASE",
         build_project_suffix="TEST",
-        diff_project_suffix="none",
         distri="sle",
         version="any",
         flavor="any",

@@ -690,13 +690,6 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
             help="The project on OBS to monitor. Schedule jobs for (if --schedule is specified) and approve (if all tests passed)",  # ruff: ignore[line-too-long]
         ),
     ] = "TEST",
-    diff_project_suffix: Annotated[
-        str,
-        typer.Option(
-            "--diff-project-suffix",
-            help="The project on OBS to compute a package diff to",
-        ),
-    ] = "PUBLISH/product",
     distri: Annotated[
         str,
         typer.Option(
@@ -786,7 +779,6 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
     _require_token(args)
     args.project_base = project_base
     args.build_project_suffix = build_project_suffix
-    args.diff_project_suffix = diff_project_suffix
     args.distri = distri
     args.version = version
     args.flavor = flavor
