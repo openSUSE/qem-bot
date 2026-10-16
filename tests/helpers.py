@@ -244,6 +244,7 @@ def prepare_approver(
         packages=[] if config is None else config.packages,
         archs=set() if config is None else config.archs,
         settings={} if config is None else config.settings,
+        reference_repos={} if config is None else config.reference_repos,
         additional_builds=[] if config is None else config.additional_builds,
     )
 
