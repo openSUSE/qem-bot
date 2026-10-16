@@ -19,6 +19,8 @@ product_increments:
   - kernel-azure
   settings:
     FOO: bar
+  reference_repos:
+    SLES: http://download.suse.de/ibs/Products/SLES/16.0
   additional_builds:
   - build_suffix: kernel-livepatch
     regex: 'kernel-livepatch-(?P<kernel_version>[^-]+(?:-[^-]+)?)(?:-(?P<kind>rt))?$'

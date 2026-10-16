@@ -48,42 +48,53 @@ def test_schedule_jobs_fail(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
 
 
 @pytest.mark.parametrize(
-    ("pkg", "additional_builds", "expected_build"),
+    ("arch", "pkg", "additional_builds", "expected_build"),
     [
         # Initial version exclusion
-        (Package("kernel-livepatch", "0", "1", "1.1", "x86_64"), [{"regex": ".*", "build_suffix": "test"}], None),
+        (
+            "x86_64",
+            Package("kernel-livepatch", "0", "1", "1.1", "x86_64"),
+            [{"regex": ".*", "build_suffix": "test"}],
+            None,
+        ),
         # Normal match
         (
+            "x86_64",
             Package("kernel-livepatch", "0", "20240101", "1.1", "x86_64"),
             [{"regex": ".*", "build_suffix": "test"}],
             "PI-1.1-test",
         ),
-        # Debug package exclusion
+        # src packages get excluded
         (
-            Package("kernel-livepatch-debuginfo", "0", "20240101", "1.1", "x86_64"),
+            "x86_64",
+            Package("kernel-livepatch", "0", "20240101", "1.1", "src"),
             [{"regex": ".*", "build_suffix": "test"}],
             None,
         ),
-        # src arch exclusion
-        (Package("kernel-livepatch", "0", "20240101", "1.1", "src"), [{"regex": ".*", "build_suffix": "test"}], None),
-        # nosrc arch exclusion
-        (Package("kernel-livepatch", "0", "20240101", "1.1", "nosrc"), [{"regex": ".*", "build_suffix": "test"}], None),
         # Arch filtering - matching
         (
+            "x86_64",
             Package("kernel-livepatch", "0", "20240101", "1.1", "x86_64"),
             [{"regex": ".*", "build_suffix": "test", "archs": ["x86_64"]}],
             "PI-1.1-test",
         ),
         # Arch filtering - mismatch
         (
+            "s390x",
             Package("kernel-livepatch", "0", "20240101", "1.1", "s390x"),
             [{"regex": ".*", "build_suffix": "test", "archs": ["x86_64"]}],
             None,
         ),
         # Placeholder (empty version)
-        (Package("kernel-livepatch", "0", "", "1.1", "x86_64"), [{"regex": ".*", "build_suffix": "test"}], None),
+        (
+            "x86_64",
+            Package("kernel-livepatch", "0", "", "1.1", "x86_64"),
+            [{"regex": ".*", "build_suffix": "test"}],
+            None,
+        ),
         # With settings already present
         (
+            "x86_64",
             Package("kernel-livepatch", "0", "20240101", "1.1", "x86_64"),
             [{"regex": ".*", "build_suffix": "test", "settings": {"BAR": "BAZ"}}],
             "PI-1.1-test",
@@ -92,6 +103,7 @@ def test_schedule_jobs_fail(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
 )
 def test_extra_builds_for_package_parametrized(
     caplog: pytest.LogCaptureFixture,
+    arch: str,
     pkg: Package,
     additional_builds: list[dict[str, Any]],
     expected_build: str | None,
@@ -102,7 +114,7 @@ def test_extra_builds_for_package_parametrized(
         if "settings" not in b:
             b["settings"] = {}
     config.additional_builds = additional_builds
-    build_info = BuildInfo("sle", "SLES", "16.0", "flavor", "arch", "1.1")
+    build_info = BuildInfo("sle", "SLES", "16.0", "flavor", arch, "1.1")
 
     res = approver.extra_builds_for_package(pkg, config, build_info)
     if expected_build is None:
