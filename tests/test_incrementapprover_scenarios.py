@@ -192,14 +192,12 @@ def test_scheduling_extra_livepatching_builds_with_no_openqa_jobs(
     configs = iter(
         get_configs_from_path(path, "product_increments", IncrementConfig.from_config_entry, load_defaults=False)
     )
-    (errors, jobs) = run_approver(
-        mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=next(configs)
-    )
+    (errors, jobs) = run_approver(mocker, caplog, schedule=True, config=next(configs))
     assert_run_with_extra_livepatching(errors, jobs, caplog.messages)
 
     config = next(configs)
     config.packages.append("foobar")
-    (errors, jobs) = run_approver(mocker, caplog, schedule=True, diff_project_suffix="PUBLISH/product", config=config)
+    (errors, jobs) = run_approver(mocker, caplog, schedule=True, config=config)
     assert jobs == []
     assert "filtered out via 'packages' or 'archs'" in caplog.text
 
