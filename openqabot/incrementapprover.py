@@ -35,7 +35,7 @@ from .types.pullrequest import OBSCommentable
 from .utils import merge_dicts, unique_dicts
 
 if TYPE_CHECKING:
-    from argparse import Namespace
+    from types import SimpleNamespace
 
 
 class JobState(Enum):
@@ -64,7 +64,7 @@ class IncrementApprover:
     disapprove the request.
     """
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the IncrementApprover class."""
         self.args = args
         self.client = OpenQAInterface()

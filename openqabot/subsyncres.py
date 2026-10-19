@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Sync submission results."""
 
-from argparse import Namespace
 from concurrent import futures
 from itertools import chain
 from logging import getLogger
+from types import SimpleNamespace
 
 from . import config
 from .loader.qem import get_active_submissions, get_submission_settings_data
@@ -19,7 +19,7 @@ class SubResultsSync(SyncRes):
 
     operation = "submission"
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize the SubResultsSync class."""
         super().__init__(args)
         self.active = get_active_submissions()

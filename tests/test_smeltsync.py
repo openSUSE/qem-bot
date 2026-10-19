@@ -4,7 +4,7 @@
 
 import logging
 import re
-from argparse import Namespace
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -17,8 +17,8 @@ from openqabot.smeltsync import SMELTSync
 
 
 @pytest.fixture
-def args() -> Namespace:
-    return Namespace(dry=False, token="123", retry=False)
+def args() -> SimpleNamespace:
+    return SimpleNamespace(dry=False, token="123", retry=False)
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def fake_dashboard_replyback() -> None:
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(args)() == 0
     assert "Fetching details for SMELT incident smelt:100" in caplog.messages
@@ -111,7 +111,7 @@ def test_sync_qam_inreview(caplog: pytest.LogCaptureFixture, args: Namespace) ->
 @responses.activate
 @pytest.mark.parametrize("fake_smelt_api", [["qam-openqa", "new", "review", None, None]], indirect=True)
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_no_embargoed_and_priority_value(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_no_embargoed_and_priority_value(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.syncres")
     assert SMELTSync(args)() == 0
     assert len(responses.calls) == 2
@@ -128,7 +128,7 @@ def test_no_embargoed_and_priority_value(caplog: pytest.LogCaptureFixture, args:
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api", "fake_dashboard_replyback")
-def test_sync_approved(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_sync_approved(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     caplog.set_level(logging.DEBUG)
     assert SMELTSync(args)() == 0
     assert "Fetching details for SMELT incident smelt:100" in caplog.messages
@@ -150,7 +150,7 @@ def test_sync_approved(caplog: pytest.LogCaptureFixture, args: Namespace) -> Non
     indirect=True,
 )
 @pytest.mark.usefixtures("fake_qem", "fake_smelt_api")
-def test_sync_dry_run(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
+def test_sync_dry_run(caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     caplog.set_level(logging.INFO, logger="bot.smeltsync")
     args.dry = True
     assert SMELTSync(args)() == 0

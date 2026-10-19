@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import chain
 from logging import getLogger
+from types import SimpleNamespace
 from typing import Any, cast
 
 import requests
@@ -74,7 +75,7 @@ class EvaluationSummary:
 class GiteaTrigger:
     """Trigger testing for PR(s) with certain label."""
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self, args: SimpleNamespace) -> None:
         """Initialize GiteaTrigger class.
 
         Args:
