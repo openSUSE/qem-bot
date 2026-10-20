@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 import responses
+from openqa_client.exceptions import OpenQAClientError
 
 from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
+from openqabot.errors import JobNotFoundError
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock
@@ -38,6 +40,15 @@ def args() -> Namespace:
 @pytest.fixture
 def amqp(args: Namespace) -> AMQP:
     return AMQP(args)
+
+
+@pytest.fixture
+def qem_project_job(mocker: MockerFixture) -> None:
+    """Make the openQA job lookup return a QEM dashboard project."""
+    mocker.patch(
+        "openqabot.openqa.OpenQAInterface.get_single_job",
+        return_value={"settings": {"QEM_DASHBOARD_PROJECT": "SUSE:Maintenance:42"}},
+    )
 
 
 def test_handling_aggregate_full_coverage(args: Namespace, mocker: MagicMock) -> None:
@@ -95,13 +106,15 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> N
 
 
 @responses.activate
+@pytest.mark.usefixtures("qem_project_job")
 def test_handle_submission_value_error(caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP) -> None:
     caplog.set_level(logging.DEBUG)
     mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=ValueError)
-    amqp.handle_submission(33222, DEFAULT_SUBMISSION_TYPE, {})
+    amqp.handle_submission(33222, DEFAULT_SUBMISSION_TYPE, {"id": 1})
     assert not caplog.text
 
 
+@pytest.mark.usefixtures("qem_project_job")
 def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: AMQP) -> None:
     mocker.patch("openqabot.approver.get_single_submission")
     mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
@@ -109,24 +122,100 @@ def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: 
     mocker.patch("openqabot.openqa.OpenQAInterface.get_jobs", return_value=[0])
     fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP.fetch_openqa_results", return_value=True)
 
-    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 1})
     fetch_openqa_results_mock.assert_called()
 
 
+@pytest.mark.usefixtures("qem_project_job")
 def test_handle_submission_exception(mocker: MockerFixture, amqp: AMQP) -> None:
     mocker.patch("openqabot.amqp.get_submission_settings_data", side_effect=Exception("error"))
     with pytest.raises(Exception, match="error"):
-        amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+        amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 1})
 
 
+@pytest.mark.usefixtures("qem_project_job")
 def test_handle_submission_not_matching_data(mocker: MockerFixture, amqp: AMQP) -> None:
     mocker.patch("openqabot.approver.get_single_submission")
     mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
     mocker.patch("openqabot.amqp.compare_submission_data", return_value=False)
     fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP.fetch_openqa_results")
 
-    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 1})
     fetch_openqa_results_mock.assert_not_called()
+
+
+def test_handle_submission_no_project_from_message(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.amqp")
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data")
+
+    # The job.done message carries no id, so the project cannot be recovered.
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {})
+
+    assert "Job.done message without a job id, cannot determine its project" in caplog.text
+    get_settings.assert_not_called()
+
+
+def test_handle_submission_project_lookup_empty(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.amqp")
+    mocker.patch("openqabot.openqa.OpenQAInterface.get_single_job", return_value=None)
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data")
+
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 7})
+
+    assert "openQA returned no data for job 7, cannot determine its project" in caplog.text
+    get_settings.assert_not_called()
+
+
+def test_handle_submission_project_lookup_job_not_found(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.amqp")
+    mocker.patch(
+        "openqabot.openqa.OpenQAInterface.get_single_job",
+        side_effect=JobNotFoundError(7),
+    )
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data")
+
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 7})
+
+    assert "Job 7 not found on openQA, cannot determine its project" in caplog.text
+    get_settings.assert_not_called()
+
+
+def test_handle_submission_project_lookup_api_error(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.amqp")
+    mocker.patch(
+        "openqabot.openqa.OpenQAInterface.get_single_job",
+        side_effect=OpenQAClientError("openQA is down"),
+    )
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data")
+
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 7})
+
+    assert "openQA API error when fetching job 7, cannot determine its project" in caplog.text
+    get_settings.assert_not_called()
+
+
+def test_handle_submission_project_lookup_missing_setting(
+    caplog: pytest.LogCaptureFixture, mocker: MockerFixture, amqp: AMQP
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.amqp")
+    mocker.patch(
+        "openqabot.openqa.OpenQAInterface.get_single_job",
+        return_value={"settings": {"FOO": "bar"}},
+    )
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data")
+
+    amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 7})
+
+    assert "Job 7 has no QEM_DASHBOARD_PROJECT, cannot determine its project" in caplog.text
+    get_settings.assert_not_called()
 
 
 def test_fetch_openqa_results_calls_post_result(mocker: MockerFixture, amqp: AMQP) -> None:

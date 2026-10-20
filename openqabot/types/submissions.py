@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
+from urllib.parse import urlencode
 
 import requests
 
@@ -108,11 +109,11 @@ class Submissions(BaseConf):
         return chan.product, chan.version, chan.arch
 
     @staticmethod
-    def _get_scheduled_jobs(sub_id: int, submission_type: str | None = None) -> list[dict[str, Any]]:
+    def _get_scheduled_jobs(sub_id: int, project: str, submission_type: str) -> list[dict[str, Any]]:
         """Fetch scheduled jobs from the dashboard, raising DashboardError on failure."""
+        url = settings.dashboard_url("api", "incident_settings", sub_id)
+        params = {"project": project, "type": submission_type}
         try:
-            url = settings.dashboard_url("api", "incident_settings", sub_id)
-            params = {"type": submission_type} if submission_type else {}
             res = retried_requests.get(url, headers=settings.dashboard_token_dict, params=params).json()
         except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
             log.exception("Dashboard API error: Could not retrieve scheduled jobs for submission %s", sub_id)
@@ -120,7 +121,7 @@ class Submissions(BaseConf):
         return res if isinstance(res, list) else []
 
     @staticmethod
-    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str | None = None) -> bool:
+    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str) -> bool:
         """Check if a job is already scheduled in the dashboard.
 
         If the dashboard API fails, treat the job as already scheduled so a
@@ -130,7 +131,7 @@ class Submissions(BaseConf):
             return False
 
         try:
-            jobs = Submissions._get_scheduled_jobs(ctx.sub.id, submission_type)
+            jobs = Submissions._get_scheduled_jobs(ctx.sub.id, ctx.sub.project, submission_type)
         except DashboardError:
             return True
 
@@ -231,6 +232,7 @@ class Submissions(BaseConf):
             else self.settings["VERSION"],
             "DISTRI": self.settings["DISTRI"],
             "INCIDENT_ID": sub.id,
+            "QEM_DASHBOARD_PROJECT": sub.project,
             "SUBMISSION_ID": f"{sub.type}:{sub.id}",
             "REPOHASH": revs,
             "BUILD": f":{sub.type}:{sub.id}:{sub.packages[0]}",
@@ -268,14 +270,20 @@ class Submissions(BaseConf):
 
     @staticmethod
     def add_metadata_urls(settings_data: dict[str, Any], sub: Submission) -> None:
-        """Add source and dashboard URLs to settings."""
-        url = (
-            f"{settings.gitea_url}/products/{sub.project}/pulls/{sub.id}"
-            if get_channel_type(sub.project) == ChannelType.SLFO
-            else f"{settings.smelt_url}/incident/{sub.id}"
-        )
+        """Add the source and dashboard URLs to settings.
+
+        Gitea submissions link to ``{gitea_url}/{project}/pulls/{id}``, where
+        ``project`` is the ``owner/repo`` path; other submissions link to the
+        SMELT incident. The dashboard URL carries the ``project`` and ``type``
+        query parameters that identify the incident there.
+        """
+        if sub.is_gitea:
+            url = f"{settings.gitea_url}/{sub.project}/pulls/{sub.id}"
+        else:
+            url = f"{settings.smelt_url}/incident/{sub.id}"
         settings_data["__SOURCE_CHANGE_URL"] = url
-        settings_data["__DASHBOARD_INCIDENT_URL"] = settings.dashboard_url("incident", sub.id)
+        query = urlencode({"project": sub.project, "type": sub.type})
+        settings_data["__DASHBOARD_INCIDENT_URL"] = f"{settings.dashboard_url('incident', sub.id)}?{query}"
 
     @staticmethod
     def apply_pc_images(settings: dict[str, Any]) -> dict[str, Any] | None:
@@ -349,6 +357,7 @@ class Submissions(BaseConf):
             "api": "api/incident_settings",
             "qem": {
                 "incident": ctx.sub.id,
+                "project": ctx.sub.project,
                 "type": ctx.sub.type,
                 "arch": ctx.arch,
                 "flavor": ctx.flavor,

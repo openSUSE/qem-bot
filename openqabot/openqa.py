@@ -124,11 +124,22 @@ class OpenQAInterface:
         )  # ID of Development Group
 
     @lru_cache(maxsize=256)  # ruff: ignore[cached-instance-method]
-    def get_single_job(self, job_id: int) -> dict[str, Any] | None:
-        """Fetch details for a single job."""
+    def get_single_job(self, job_id: int, *, raise_errors: bool = False) -> dict[str, Any] | None:
+        """Fetch details for a single job.
+
+        By default any openQA ``RequestError`` is masked and ``None`` is
+        returned so callers can treat a missing job as a normal condition. With
+        ``raise_errors`` set, a 404 raises ``JobNotFoundError`` and other
+        failures propagate, which lets callers tell a missing job apart from an
+        openQA API error.
+        """
         try:
             return self.openqa.openqa_request("GET", f"jobs/{job_id}")["job"]
-        except RequestError:
+        except RequestError as e:
+            if raise_errors:
+                if e.status_code == HTTPStatus.NOT_FOUND:
+                    raise JobNotFoundError(job_id) from e
+                raise
             log.exception("openQA API error when fetching job %s", job_id)
         return None
 

@@ -64,6 +64,8 @@ def _make_smelt_subreq(sub: int) -> SubReq:
     return SubReq(
         sub,
         rr,
+        "smelt",
+        f"SUSE:Maintenance:{sub}",
         submission=Submission.create({
             "number": sub,
             "rr_number": rr,
@@ -87,6 +89,7 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
             5,
             500,
             "git",
+            "products/SLFO",
             "https://src.suse.de/products/SLFO/pulls/124",
             "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
             submission=Submission.create({

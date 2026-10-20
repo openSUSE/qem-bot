@@ -4,7 +4,7 @@
 
 from argparse import Namespace
 from concurrent import futures
-from itertools import chain
+from itertools import chain, starmap
 from logging import getLogger
 
 from . import config
@@ -27,7 +27,7 @@ class SubResultsSync(SyncRes):
     def __call__(self) -> int:
         """Run the synchronization process."""
         log.info("Synchronizing results for %s active submissions...", len(self.active))
-        submissions = list(chain.from_iterable(get_submission_settings_data(sub) for sub in self.active))
+        submissions = list(chain.from_iterable(starmap(get_submission_settings_data, self.active)))
         full = {}
         with futures.ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
             future_result = {executor.submit(self.client.get_jobs, f): f for f in submissions}

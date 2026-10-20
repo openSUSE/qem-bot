@@ -140,7 +140,7 @@ def test_is_scheduled_job_non_list_response(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver")
+    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
 
 
 @pytest.mark.parametrize("failure", ["json", "request"])
@@ -155,7 +155,7 @@ def test_is_scheduled_job_treats_api_error_as_scheduled(mocker: MockerFixture, f
     else:
         get.side_effect = requests.exceptions.RequestException("boom")
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert Submissions.is_scheduled_job(ctx, "ver")
+    assert Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
 
 
 def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
@@ -166,7 +166,7 @@ def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver")
+    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
 
 
 def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
@@ -175,7 +175,17 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver")
+    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+
+
+def test_is_scheduled_job_passes_project(mocker: MockerFixture) -> None:
+    sub = MockSubmission(rev_fallback_value=42, project="SUSE:Maintenance:1")
+    sub.id = 1
+    get = mocker.patch("openqabot.types.submissions.retried_requests.get")
+    get.return_value.json.return_value = []
+    ctx = SubContext(sub, "arch", "flavor", {})
+    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert get.call_args.kwargs["params"] == {"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"}
 
 
 def test_handle_submission_embargoed_skip() -> None:

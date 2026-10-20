@@ -13,15 +13,16 @@ from enum import Enum, auto
 from functools import lru_cache
 from http import HTTPStatus
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.error import HTTPError
 
 import osc.conf
+import requests
 from openqa_client.exceptions import RequestError
 
 import openqabot.config as config_module
 from openqabot import config, dashboard
-from openqabot.errors import JobNotFoundError, NoResultsError
+from openqabot.errors import JobNotFoundError, NoResultsError, SubmissionArgError
 from openqabot.openqa import OpenQAInterface
 from openqabot.requests import approve_obs_request
 
@@ -34,6 +35,7 @@ from .loader.qem import (
     get_single_submission,
     get_submission_settings,
     get_submissions_approver,
+    parse_submission_arg,
     update_incident_reason,
 )
 
@@ -61,11 +63,6 @@ log = getLogger("bot.approver")
 
 ACCEPTABLE_FOR_TEMPLATE = r"@review:acceptable_for:(?:incident|submission)_{sub}:(.+?)(?:$|\s)"
 MAINTENANCE_INCIDENT_IDENTIFIER = "Maintenance:/"
-
-
-def ms2str(sub: SubReq) -> str:
-    """Convert a SubReq to a human-readable string."""
-    return f"{config.settings.obs_maint_prj}:{sub.sub}:{sub.req}" if sub.type is None else f"{sub.type}:{sub.sub}"
 
 
 def deduplicate_jobs_by_scenario(job_results: list[dict]) -> list[dict]:
@@ -116,6 +113,48 @@ def sanitize_comment_text(text: str) -> str:
     return text.strip()
 
 
+def mark_job_as_acceptable_for_submission(job_id: int, sub: int, project: str, submission_type: str) -> None:
+    """Mark a job as acceptable for a submission in the dashboard.
+
+    The dashboard identifies the incident by ``(sub, project, submission_type)``,
+    so all three are sent with the remark. This is best-effort: failures are
+    logged and approval continues, because the openQA comment that triggered the
+    remark is re-read on the next run.
+    """
+    params: dict[str, Any] = {
+        "text": "acceptable_for",
+        "incident_number": sub,
+        "project": project,
+        "type": submission_type,
+    }
+    try:
+        response = dashboard.patch(
+            f"api/jobs/{job_id}/remarks",
+            headers=config_module.settings.dashboard_token_dict,
+            params=params,
+        )
+    except requests.exceptions.RequestException as e:
+        log.warning(
+            "Unable to mark job %i as acceptable for submission %s:%s:%s: %s",
+            job_id,
+            submission_type,
+            sub,
+            project,
+            e,
+        )
+        return
+    if response.status_code != HTTPStatus.OK:
+        log.warning(
+            "Unable to mark job %i as acceptable for submission %s:%s:%s: dashboard returned %s: %s",
+            job_id,
+            submission_type,
+            sub,
+            project,
+            response.status_code,
+            response.text,
+        )
+
+
 class Approver:
     """Approval logic for submissions."""
 
@@ -124,36 +163,64 @@ class Approver:
         args: Namespace,
         single_submission: int | None = None,
         submission_type: str | None = None,
+        single_submission_project: str | None = None,
     ) -> None:
-        """Initialize the Approver class."""
+        """Initialize the Approver class.
+
+        With ``single_submission`` set, ``submission_type`` and
+        ``single_submission_project`` are required to address the incident by its
+        ``(number, project, type)`` dashboard key; otherwise a ``ValueError`` is
+        raised. Without it, ``args.submission``/``args.incident`` is parsed as
+        ``<type>:<id>:<project>``, and an unparsable value aborts with
+        ``SystemExit``.
+        """
         self.dry = args.dry
         self.gitea_token: dict[str, str] = make_token_header(args.gitea_token)
         if single_submission is None:
             raw = getattr(args, "submission", None) or getattr(args, "incident", None)
-            if isinstance(raw, str) and ":" in raw:
-                s_type, s_id = raw.split(":", 1)
-                self.single_submission = int(s_id)
-                self.submission_type = s_type
+            if raw:
+                try:
+                    self.submission_type, self.single_submission, self.single_submission_project = parse_submission_arg(
+                        raw
+                    )
+                except SubmissionArgError as e:
+                    raise SystemExit(str(e)) from e
             else:
-                self.single_submission = int(raw) if raw is not None else None
+                self.single_submission = None
                 self.submission_type = None
+                self.single_submission_project = None
             self.all_submissions = args.all_submissions
         else:
+            if not single_submission_project or not submission_type:
+                msg = "single_submission_project and submission_type are required when single_submission is set"
+                raise ValueError(msg)
             self.single_submission = single_submission
             self.all_submissions = False
             self.submission_type = submission_type
+            self.single_submission_project = single_submission_project
         self.comment = getattr(args, "comment", False)
         self.client = OpenQAInterface()
         self.commenter = Commenter(args, submissions=[])
 
     def __call__(self) -> int:
-        """Run the approval process."""
+        """Run the approval process.
+
+        Returns ``0`` on success and ``1`` when a requested single submission is
+        unknown or was rejected, or when any approval fails.
+        """
         log.info("Starting approving submissions in OBS or Gitea…")
-        subreqs = (
-            get_single_submission(self.single_submission, submission_type=self.submission_type)
-            if self.single_submission
-            else get_submissions_approver()
-        )
+        if self.single_submission and self.single_submission_project and self.submission_type:
+            subreqs = get_single_submission(
+                self.single_submission, self.single_submission_project, submission_type=self.submission_type
+            )
+            if not subreqs:
+                # get_single_submission logs the dashboard's response; the
+                # submission is unknown or was rejected, so there is nothing to
+                # approve. Signal failure to the CLI without raising to keep
+                # daemon running
+                return 1
+        else:
+            subreqs = get_submissions_approver()
 
         overall_result = True
         with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
@@ -163,11 +230,11 @@ class Approver:
 
         log.info("Submissions to approve:")
         for sub in submissions_to_approve:
-            log.info("* %s", ms2str(sub))
+            log.info("* %s:%s", sub.type, sub.sub)
 
         if self.dry:
             for sub in submissions_to_approve:
-                log.info("Dry run: Would approve %s", ms2str(sub))
+                log.info("Dry run: Would approve %s:%s", sub.type, sub.sub)
         else:
             osc.conf.get_config(override_apiurl=config.settings.obs_url)
             with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
@@ -179,22 +246,26 @@ class Approver:
         return 0 if overall_result else 1
 
     def _reject(self, sub: SubReq, reason: str) -> bool:
-        log.info(reason, ms2str(sub))
+        log.info(reason, f"{sub.type}:{sub.sub}")
         if self.comment and sub.submission:
             self.commenter.comment_on_submission(sub.submission)
         if not self.dry:
-            update_incident_reason(sub.sub, reason % ms2str(sub))
+            update_incident_reason(sub.sub, sub.project, sub.type, reason % f"{sub.type}:{sub.sub}")
         return False
 
     def _evaluate_results(self, sub: SubReq, s_jobs: list[JobAggr], a_jobs: list[JobAggr]) -> bool:
-        s_res = self.get_submission_result(s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type)
+        s_res = self.get_submission_result(
+            s_jobs, "api/jobs/incident/", sub.sub, submission_type=sub.type, project=sub.project
+        )
         if s_res is JobResult.FAILED:
             return self._reject(sub, "%s has at least one not-ok job in submission tests")
         if s_res is JobResult.NO_JOBS:
             return self._reject(sub, "%s has no jobs in submission tests (openQA job template mismatch?)")
 
         if any(s.with_aggregate for s in s_jobs):
-            a_res = self.get_submission_result(a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type)
+            a_res = self.get_submission_result(
+                a_jobs, "api/jobs/update/", sub.sub, submission_type=sub.type, project=sub.project
+            )
             if a_res is JobResult.FAILED:
                 return self._reject(sub, "%s has at least one not-ok job in aggregate tests")
             if a_res is JobResult.NO_JOBS:
@@ -205,12 +276,14 @@ class Approver:
     def approvable(self, sub: SubReq) -> bool:
         """Check if a submission is ready for approval."""
         try:
-            s_jobs = get_submission_settings(sub.sub, all_submissions=self.all_submissions, submission_type=sub.type)
+            s_jobs = get_submission_settings(
+                sub.sub, sub.project, all_submissions=self.all_submissions, submission_type=sub.type
+            )
         except NoResultsError as e:
-            log.info("Approval check for %s skipped: %s", ms2str(sub), e)
+            log.info("Approval check for %s:%s skipped: %s", sub.type, sub.sub, e)
             return False
         try:
-            a_jobs = get_aggregate_settings(sub.sub, submission_type=sub.type)
+            a_jobs = get_aggregate_settings(sub.sub, sub.project, submission_type=sub.type)
         except NoResultsError as e:
             if any(s.with_aggregate for s in s_jobs):
                 return self._reject(sub, "Required aggregate tests missing for %s")
@@ -221,31 +294,15 @@ class Approver:
             return False
 
         if not self.dry:
-            update_incident_reason(sub.sub, None)
+            update_incident_reason(sub.sub, sub.project, sub.type, None)
 
         # everything is green --> add submission to approve list
         return True
 
-    def mark_job_as_acceptable_for_submission(self, job_id: int, sub: int) -> None:
-        """Mark a job as acceptable for a submission in the dashboard."""
-        try:
-            dashboard.patch(
-                f"api/jobs/{job_id}/remarks?text=acceptable_for&incident_number={sub}",
-                headers=config_module.settings.dashboard_token_dict,
-            )
-        except RequestError as e:
-            log.info(
-                "Unable to mark job %i as acceptable for submission %s:%i: %s",
-                job_id,
-                self.submission_type or config.settings.default_submission_type,
-                sub,
-                e,
-            )
-
     @lru_cache(maxsize=512)  # ruff: ignore[cached-instance-method]
     def is_job_marked_acceptable_for_submission(self, job_id: int, sub: int) -> bool:
         """Check if a job is marked as acceptable for a submission."""
-        regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=sub), re.DOTALL)
+        regex = re.compile(ACCEPTABLE_FOR_TEMPLATE.format(sub=re.escape(str(sub))), re.DOTALL)
         try:
             comments = self.client.get_job_comments(job_id)
             return any(regex.search(sanitize_comment_text(comment["text"])) for comment in comments)
@@ -365,7 +422,9 @@ class Approver:
         """Check if a job result status is passed."""
         return job_result["status"] == "passed"
 
-    def mark_jobs_as_acceptable_for_submission(self, job_results: list[dict], sub: int) -> None:
+    def mark_jobs_as_acceptable_for_submission(
+        self, job_results: list[dict], sub: int, project: str, submission_type: str
+    ) -> None:
         """Mark not-ok jobs as acceptable if they have corresponding openQA comments."""
         for job_result in job_results:
             if self.is_job_passing(job_result):
@@ -374,7 +433,7 @@ class Approver:
             try:
                 if self.is_job_marked_acceptable_for_submission(job_id, sub):
                     job_result[f"acceptable_for_{sub}"] = True
-                    self.mark_job_as_acceptable_for_submission(job_id, sub)
+                    mark_job_as_acceptable_for_submission(job_id, sub, project, submission_type)
             except JobNotFoundError:
                 job_result["obsolete"] = True
                 self.client.handle_job_not_found(job_id)
@@ -410,19 +469,17 @@ class Approver:
         return False
 
     @lru_cache(maxsize=128)  # ruff: ignore[cached-instance-method]
-    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str | None = None) -> JobResult:
+    def get_jobs(self, job_aggr: JobAggr, api: str, sub: int, submission_type: str, project: str) -> JobResult:
         """Retrieve jobs for a specific aggregate or incident setting.
 
         Note: Results are cached. If new job clones are created in openQA after
-        caching, the stale cached result may be returned. Cache is keyed by
-        (job_aggr.id, api, sub, submission_type). Consider manual cache_clear()
-        if fresh data is needed.
+        caching, the stale cached result may be returned. Because
+        ``lru_cache`` wraps this method, the key includes ``self``, the whole
+        ``JobAggr`` and all arguments below, not just ``job_aggr.id``. Consider
+        a manual ``cache_clear()`` if fresh data is needed.
         """
-        params = {}
-        if submission_type:
-            params["type"] = submission_type
         job_results = dashboard.get_json(
-            api + str(job_aggr.id), headers=config_module.settings.dashboard_token_dict, params=params
+            api + str(job_aggr.id), headers=config_module.settings.dashboard_token_dict, params={}
         )
         if not job_results:
             log.info(
@@ -444,13 +501,13 @@ class Approver:
                 len(job_results),
                 job_aggr.id,
             )
-        self.mark_jobs_as_acceptable_for_submission(job_results, sub)
+        self.mark_jobs_as_acceptable_for_submission(job_results, sub, project, submission_type)
         if all(self.is_job_acceptable(sub, api, r, submission_type=submission_type) for r in job_results):
             return JobResult.PASSED
         return JobResult.FAILED
 
     def get_submission_result(
-        self, jobs: list[JobAggr], api: str, sub: int, submission_type: str | None = None
+        self, jobs: list[JobAggr], api: str, sub: int, submission_type: str, project: str
     ) -> JobResult:
         """Summarize results for all jobs of a submission."""
         if not jobs:
@@ -458,7 +515,7 @@ class Approver:
 
         has_passed = False
         for job_aggr in jobs:
-            success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type)
+            success = self.get_jobs(job_aggr, api, sub, submission_type=submission_type, project=project)
             if success is JobResult.FAILED:
                 return JobResult.FAILED
             if success is JobResult.PASSED:
@@ -469,7 +526,7 @@ class Approver:
     def approve(self, sub: SubReq) -> bool:
         """Approve a submission in OBS or Gitea."""
         msg = f"Request accepted for '{config.settings.obs_group}' based on data in {config.settings.dashboard_url()}"
-        log.info("Approving %s", ms2str(sub))
+        log.info("Approving %s:%s", sub.type, sub.sub)
         return self.git_approve(sub, msg) if sub.type == "git" else self.osc_approve(sub, msg)
 
     @staticmethod

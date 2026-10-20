@@ -51,6 +51,26 @@ class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 
 
+class SubmissionArgError(ValueError):
+    """Raised when a ``--submission`` argument cannot be parsed."""
+
+    def __init__(self, raw: str, *, numeric: bool = False, positive: bool = False) -> None:
+        """Build the error message for an invalid submission argument.
+
+        With ``numeric`` set, report that the ``<id>`` part must be numeric;
+        with ``positive`` set, that it must be greater than zero; otherwise
+        report the expected ``<type>:<id>:<project>`` format.
+        """
+        if numeric:
+            reason = "'<id>' must be numeric."
+        elif positive:
+            reason = "'<id>' must be greater than zero."
+        else:
+            reason = "Expected format '<type>:<id>:<project>'."
+        message = f"Invalid submission ID {raw!r}. {reason}"
+        super().__init__(message)
+
+
 class PostOpenQAError(Error):
     """Raised when posting a job to openQA fails."""
 

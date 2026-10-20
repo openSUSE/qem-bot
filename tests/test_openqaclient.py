@@ -14,7 +14,7 @@ from openqa_client.exceptions import RequestError
 from responses import matchers
 
 from openqabot.config import settings
-from openqabot.errors import PostOpenQAError
+from openqabot.errors import JobNotFoundError, PostOpenQAError
 from openqabot.openqa import OpenQAInterface as oQAI
 
 
@@ -109,6 +109,26 @@ def test_get_methods_handle_errors_gracefully() -> None:
         assert not client.get_single_job(42)
         assert client.get_jobs_by_ids([1, 2]) == []
         assert client.get_older_jobs(42, 0) == {"data": []}
+
+
+def test_get_single_job_raise_errors_job_not_found() -> None:
+    client = oQAI()
+    error = RequestError("GET", "no.where", 404, "not found")
+    with (
+        patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error),
+        pytest.raises(JobNotFoundError, match="Job 42 not found on openQA"),
+    ):
+        client.get_single_job(42, raise_errors=True)
+
+
+def test_get_single_job_raise_errors_other_error() -> None:
+    client = oQAI()
+    error = RequestError("GET", "no.where", 500, "no text")
+    with (
+        patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error),
+        pytest.raises(RequestError),
+    ):
+        client.get_single_job(42, raise_errors=True)
 
 
 @responses.activate
