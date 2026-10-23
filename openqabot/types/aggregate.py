@@ -4,9 +4,8 @@
 
 from __future__ import annotations
 
-import datetime
 from collections import defaultdict
-from datetime import UTC
+from datetime import UTC, datetime
 from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
@@ -87,7 +86,7 @@ class Aggregate(BaseConf):
         if repohash == old_repohash:
             raise SameBuildExistsError
 
-        today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+        today = datetime.now(tz=UTC).date().strftime("%Y%m%d")
         counter = int(build.rsplit("-", maxsplit=1)[-1]) + 1 if build.startswith(today) else 1
         return f"{today}-{counter}"
 
