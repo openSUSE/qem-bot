@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import datetime
 import logging
 from collections import defaultdict
-from datetime import UTC
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -201,20 +200,20 @@ def test_aggregate_call_pc_pint_fail(
     ids=["same-day", "prior-day-unchanged-repo"],
 )
 def test_get_buildnr_same_repohash_skips(old_build_days_ago: int) -> None:
-    old_date = datetime.datetime.now(tz=UTC).date() - datetime.timedelta(days=old_build_days_ago)
+    old_date = datetime.now(tz=UTC).date() - timedelta(days=old_build_days_ago)
     old_build = old_date.strftime("%Y%m%d") + "-1"
     with pytest.raises(SameBuildExistsError):
         Aggregate.get_buildnr("hash", "hash", old_build)
 
 
 def test_get_buildnr_new_repohash_increments_same_day() -> None:
-    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    today = datetime.now(tz=UTC).date().strftime("%Y%m%d")
     assert Aggregate.get_buildnr("new", "old", today + "-1") == today + "-2"
 
 
 def test_get_buildnr_new_repohash_resets_on_new_day() -> None:
-    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
-    old_build = (datetime.datetime.now(tz=UTC).date() - datetime.timedelta(days=2)).strftime("%Y%m%d") + "-5"
+    today = datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    old_build = (datetime.now(tz=UTC).date() - timedelta(days=2)).strftime("%Y%m%d") + "-5"
     assert Aggregate.get_buildnr("new", "old", old_build) == today + "-1"
 
 
@@ -344,7 +343,7 @@ def test_process_arch_onetime_skip(aggregate_factory: Any, config: dict, mocker:
     acc = aggregate_factory("product", config=config)
     acc.onetime = True
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="new")
-    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    today = datetime.now(tz=UTC).date().strftime("%Y%m%d")
     mocker.patch(
         "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "old"}]
     )
@@ -410,7 +409,7 @@ def test_process_arch_same_build_exists(
     config = {"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}}
     acc = aggregate_factory("product", config=config)
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="same")
-    today = datetime.datetime.now(tz=UTC).date().strftime("%Y%m%d")
+    today = datetime.now(tz=UTC).date().strftime("%Y%m%d")
     mocker.patch(
         "openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": today + "-1", "repohash": "same"}]
     )
