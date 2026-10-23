@@ -348,6 +348,49 @@ def test_approve_pr_scenarios(
         mock_review_pr.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("prs_return", "expected_commit", "_desc"),
+    [
+        (
+            [
+                PullRequest(
+                    number=123,
+                    state="open",
+                    project="repo",
+                    branch="main",
+                    url="http://url",
+                    commit_sha="sha123",
+                    raw_labels=[],
+                )
+            ],
+            "sha123",
+            "commit_id is retrieved from the PR if found",
+        ),
+        (
+            [],
+            "",
+            "commit_id fallback remains empty if PR is not found",
+        ),
+    ],
+)
+def test_approve_pr_empty_commit_id(
+    mock_review_pr: MagicMock,
+    mock_settings: MagicMock,
+    mocker: MockerFixture,
+    prs_return: list[PullRequest],
+    expected_commit: str,
+    _desc: str,
+) -> None:
+    """Verify approve_pr behavior when commit_id is empty."""
+    mocker.patch("openqabot.loader.gitea._get_single_pr", return_value=prs_return)
+    mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
+    mock_settings.obs_group = "openqa"
+    mock_settings.git_review_bot_user = "bot"
+
+    assert gitea.approve_pr({}, "repo", 123, "", "msg") is True
+    mock_review_pr.assert_called_once_with({}, "repo", 123, "msg", expected_commit, approve=True)
+
+
 def test_review_url() -> None:
     """Verify review_url construction."""
     assert gitea.review_url("repo", 123, 456) == "repos/repo/pulls/123/reviews/456"

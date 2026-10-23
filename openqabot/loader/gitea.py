@@ -300,16 +300,19 @@ def _is_already_approved(token: dict[str, str], repo_name: str, pr_number: int, 
         for r in bot_reviews
     )
     approved = not bot_reviews or has_active_approval
-    log.info("PR %s live-review approval for commit %s: %s", pr_number, commit_id, approved)
+    log.info("PR %s live-review approval for commit '%s': %s", pr_number, commit_id, approved)
     return approved
 
 
 def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id: str, msg: str) -> bool:
     """Approve a PR on Gitea using its repository name and commit ID."""
+    if not commit_id and (prs := _get_single_pr(token, repo_name, pr_number)):
+        commit_id = prs[0].commit_sha
+
     try:
         if _is_already_approved(token, repo_name, pr_number, commit_id):
             return True
-        log.info("PR %s approved for commit %s", pr_number, commit_id)
+        log.info("PR %s approved for commit '%s'", pr_number, commit_id)
         review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
     except Exception:
         log.exception("Gitea API error: Failed to approve PR %s", pr_number)
