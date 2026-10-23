@@ -96,6 +96,7 @@ class OpenQAInterface:
             "build": data.build,
             "version": data.version,
             "arch": data.arch,
+            "job_setting": "SUBMISSION_ID=" + data.format_submission_id(),
         }
         return self.openqa.openqa_request("GET", "jobs", param)["jobs"]
 
