@@ -53,6 +53,11 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     assert pr is not None
     mocker.patch("openqabot.loader.gitea.iter_gitea_items", return_value=[])
 
+    def mock_add_packages(pkgs: list[str]) -> Any:
+        return lambda submission, *_, **__: submission.update(packages=pkgs)
+
+    mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_packages(["some-package"]))
+
     # Skip due to no channels
     res = gitea.make_submission_from_gitea_pr(
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
@@ -76,6 +81,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
     # Skip due to no packages
     caplog.clear()
     mocker.patch("openqabot.loader.gitea.is_build_acceptable_and_log_if_not", return_value=True)
+    mocker.patch("openqabot.loader.gitea.add_packages_from_files", side_effect=mock_add_packages([]))
     res = gitea.make_submission_from_gitea_pr(
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
@@ -208,13 +214,6 @@ def test_make_submission_from_gitea_pr_no_packages(mocker: MockerFixture, caplog
     assert pr is not None
     # Mocking _fetch_details to return empty lists for reviews, comments, and files
     mocker.patch("openqabot.loader.gitea._fetch_details", return_value=([], [], []))
-
-    # Ensure it skips due to no packages
-    def mock_add_chan(inc: dict, *_: Any, **__: Any) -> None:
-        inc["channels"].append("chan")
-
-    mocker.patch("openqabot.loader.gitea.add_comments_and_referenced_build_results", side_effect=mock_add_chan)
-    # mock add_packages_from_files to do nothing (default)
 
     res = gitea.make_submission_from_gitea_pr(
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False

@@ -37,10 +37,10 @@ def test_add_build_results_url_mismatch_just_passes() -> None:
 
 def test_add_build_results_http_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs", return_value=None)
     err = urllib.error.HTTPError("url", 404, "msg", cast("Any", {}), None)
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=err)
-    incident = {"number": 123}
+    incident = {"number": 123, "packages": []}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=False)
     assert "Build results for project proj unreadable, skipping" in caplog.text
     assert "proj" in cast("list", incident["failed_or_unpublished_packages"])
@@ -79,7 +79,7 @@ def test_add_build_result_published(mocker: MockerFixture) -> None:
 
 def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs", return_value=None)
     mocker.patch("openqabot.config.settings.obs_repo_type", None)
     mocker.patch("openqabot.loader.gitea.get_product_version_from_repo_listing", return_value="15.4")
     xml_data = """
@@ -92,7 +92,7 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
-    incident = {"number": 123}
+    incident = {"number": 123, "packages": []}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=False)
     assert "PR git:123: Some packages failed: pkg1" in caplog.text
     assert "pkg1" in cast("list", incident["failed_or_unpublished_packages"])
@@ -105,26 +105,27 @@ def test_is_build_result_relevant_repo_match(mocker: MockerFixture) -> None:
 
 
 def test_add_build_results_dry_124(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mock_archs = mocker.patch("openqabot.loader.gitea.determine_relevant_archs", return_value=None)
     mock_read_xml = mocker.patch("openqabot.loader.gitea.read_xml")
     mock_read_xml.return_value.getroot.return_value.findall.return_value = []
-    incident = {"number": 124}
+    incident = {"number": 124, "packages": ["tree"]}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=True)
     mock_read_xml.assert_called_once_with("build-results-124-proj")
+    mock_archs.assert_called_once_with("proj", packages=["tree"], fake_data=True)
 
 
 def test_add_build_results_scminfo(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs", return_value=None)
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
     mock_read_xml = mocker.patch("openqabot.loader.gitea.read_xml")
     mock_read_xml.return_value.getroot.return_value.findall.return_value = []
-    incident = {"number": 124, "scminfo_SLES": "123"}
+    incident = {"number": 124, "scminfo_SLES": "123", "packages": []}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=True)
     assert incident["scminfo"] == "123"
 
 
 def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.determine_relevant_archs_from_multibuild_info", return_value=None)
+    mocker.patch("openqabot.loader.gitea.determine_relevant_archs", return_value=None)
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
 
     def mock_add_channel(_project: str, _arch: str, _product: str, _res: Any, projects: set[str]) -> str:
@@ -143,7 +144,7 @@ def test_add_build_results_duplicate_channels(mocker: MockerFixture) -> None:
     """
     mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
 
-    submission = {"channels": ["chan"], "number": 123}
+    submission = {"channels": ["chan"], "number": 123, "packages": []}
     gitea.add_build_results(submission, ["http://obs/project/show/proj"], fake_data=False)
     assert submission["channels"] == ["chan"]
 
