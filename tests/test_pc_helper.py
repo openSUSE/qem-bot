@@ -188,6 +188,30 @@ def test_get_recent_pint_image() -> None:
     assert ret == img3
 
 
+def test_get_recent_pint_image_broad_regex_order_dependent() -> None:
+    """Broad regex matching multiple architectures is order-dependent.
+
+    When publishedon is equal, max() keeps the first element among ties,
+    so the result depends entirely on the PINT API response order.
+    """
+    img_x86 = {
+        "name": "sle-micro-6-1-byos-v20260618-x86-64",
+        "state": "active",
+        "publishedon": "20260618",
+    }
+    img_arm = {
+        "name": "sle-micro-6-1-byos-v20260618-arm64",
+        "state": "active",
+        "publishedon": "20260618",
+    }
+    regex = r"sle-micro-6-1-byos-v[0-9]{8}-"
+
+    # x86-64 first in response -> x86-64 selected
+    assert get_recent_pint_image([img_x86, img_arm], regex) == img_x86
+    # arm64 first in response -> arm64 selected
+    assert get_recent_pint_image([img_arm, img_x86], regex) == img_arm
+
+
 @responses.activate
 def test_get_latest_tools_image() -> None:
     responses.add(
