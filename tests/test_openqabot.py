@@ -7,11 +7,13 @@ from __future__ import annotations
 import logging
 import os
 from argparse import Namespace
+from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NoReturn
 from urllib.parse import ParseResult, urlparse
 
 import pytest
+import requests
 import responses
 from typer.testing import CliRunner
 
@@ -262,6 +264,143 @@ def test_post_qem_dry(mocked_openqa_bot: Namespace, mocker: MockerFixture) -> No
     bot.post_qem(test_data, test_api)
 
     assert len(responses.calls) == 0
+
+
+def test_qem_summary_keeps_identifying_fields() -> None:
+    data = {
+        "incident": 1,
+        "project": "SUSE:Maintenance:1",
+        "status": "passed",
+        "incidents": [
+            {"number": 1, "project": "SUSE:Maintenance:1", "type": "smelt", "status": "passed"},
+            "not-a-dict",
+            {"number": 2},
+        ],
+    }
+
+    assert OpenQABot._qem_summary(data) == {  # ruff: ignore[private-member-access]
+        "incident": 1,
+        "project": "SUSE:Maintenance:1",
+        "incidents": [
+            {"number": 1, "project": "SUSE:Maintenance:1", "type": "smelt"},
+            {"number": 2},
+        ],
+    }
+    assert OpenQABot._qem_summary({"incident": 3, "incidents": "not-a-list"}) == {  # ruff: ignore[private-member-access]
+        "incident": 3
+    }
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_request_error_returns_false(
+    mocked_openqa_bot: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    test_api = "api/jobs/incident/1"
+    mocker.patch(
+        "openqabot.openqabot.dashboard.put",
+        side_effect=requests.exceptions.ConnectionError("dashboard unreachable"),
+    )
+
+    assert bot.post_qem({"incident": 1, "status": "passed"}, test_api) is False
+
+    assert f"Dashboard update failed for {test_api}: dashboard request error" in caplog.text
+    assert "Payload: {'incident': 1}" in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_http_error_returns_false(
+    mocked_openqa_bot: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    test_api = "api/jobs/incident/1"
+    responses.add(
+        responses.PUT,
+        f"{settings.qem_dashboard_url}{test_api}",
+        body="invalid incident",
+        status=400,
+    )
+
+    assert bot.post_qem({"incident": 1}, test_api) is False
+
+    assert f"Dashboard update failed for {test_api}: Status 400" in caplog.text
+    assert "invalid incident" in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_non_json_response(
+    mocked_openqa_bot: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    test_api = "api/jobs/incident/1"
+    responses.add(
+        responses.PUT,
+        f"{settings.qem_dashboard_url}{test_api}",
+        body="not json",
+        status=200,
+        content_type="text/plain",
+    )
+
+    assert bot.post_qem({"incident": 1}, test_api) is True
+
+    assert "Database ID unknown" in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_post_qem_json_response_without_id(
+    mocked_openqa_bot: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    test_api = "api/jobs/incident/1"
+    responses.add(responses.PUT, f"{settings.qem_dashboard_url}{test_api}", json={"ok": True})
+
+    assert bot.post_qem({"incident": 1}, test_api) is True
+
+    assert "Database ID unknown" in caplog.text
+
+
+def test_future_result_returns_value() -> None:
+    future: Future[bool] = Future()
+    future.set_result(True)
+
+    assert OpenQABot._future_result(future) is True  # ruff: ignore[private-member-access]
+
+
+def test_future_result_logs_unexpected_error(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.DEBUG)
+    future: Future[bool] = Future()
+    future.set_exception(RuntimeError("boom"))
+
+    assert OpenQABot._future_result(future) is False  # ruff: ignore[private-member-access]
+
+    assert "Unexpected error while posting a job" in caplog.text
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_passed")
+def test_failed_dashboard_update_returns_nonzero(
+    mocked_openqa_bot: Namespace, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    bot = OpenQABot(mocked_openqa_bot)
+    bot.openqa = mocker.Mock(spec=OpenQAInterface)
+    responses.add(responses.PUT, f"{settings.qem_dashboard_url}bar", status=500)
+
+    assert bot() == 1
+
+    assert "Dashboard update failed for 1 of 1 jobs" in caplog.text
 
 
 class MainTestError(Exception):
