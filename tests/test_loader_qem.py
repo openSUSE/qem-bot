@@ -13,9 +13,8 @@ import requests
 
 from openqabot import dashboard
 from openqabot.config import DEFAULT_SUBMISSION_TYPE, settings
-from openqabot.errors import SubmissionArgError
+from openqabot.errors import LoaderQemError
 from openqabot.loader.qem import (
-    LoaderQemError,
     NoAggregateResultsError,
     NoSubmissionResultsError,
     get_active_submissions,
@@ -28,12 +27,12 @@ from openqabot.loader.qem import (
     get_submission_settings_data,
     get_submissions,
     get_submissions_approver,
-    parse_submission_arg,
     post_job,
     update_incident_reason,
     update_job,
     update_submissions,
 )
+from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import Data
 
 if TYPE_CHECKING:
@@ -84,8 +83,8 @@ def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
 
 def test_get_submissions_on_submission_returns_single_submission(mocker: MockerFixture) -> None:
     get_sub_mock = mocker.patch("openqabot.loader.qem._get_submission")
-    get_submissions("git:42:myproject")
-    get_sub_mock.assert_called_once_with(42, "myproject", "git")
+    get_submissions("git:myproject:42")
+    get_sub_mock.assert_called_once_with(SubmissionKey("git", "myproject", 42))
 
 
 def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> None:
@@ -93,15 +92,17 @@ def test_get_submissions_on_submission_error_exits(mocker: MockerFixture) -> Non
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
     mock_log = mocker.patch("openqabot.loader.qem.log.error")
     with pytest.raises(SystemExit):
-        get_submissions("git:42:myproject")
+        get_submissions("git:myproject:42")
     mock_exit.assert_called_once_with(1)
-    mock_log.assert_any_call("Submission %s:%s was not found on the QEM Dashboard or is invalid.", "git", 42)
+    mock_log.assert_any_call(
+        "Submission %s was not found on the QEM Dashboard or is invalid.", SubmissionKey("git", "myproject", 42)
+    )
 
 
 def test_get_submissions_passes_project_to_dashboard(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = {**_FULL_INCIDENT, "number": 42}
 
-    res = get_submissions("git:42:myproject")
+    res = get_submissions("git:myproject:42")
 
     assert len(res) == 1
     mock_get_json.assert_called_once_with(
@@ -114,20 +115,6 @@ def test_get_submissions_passes_project_to_dashboard(mock_get_json: MagicMock) -
 def test_get_submissions_invalid_submission_arg_exits() -> None:
     with pytest.raises(SystemExit):
         get_submissions("not-a-valid-submission")
-
-
-@pytest.mark.parametrize(
-    ("raw", "message"),
-    [
-        ("smelt:1", "Expected format"),
-        ("smelt::SUSE:Maintenance:1", "Expected format"),
-        ("smelt:abc:SUSE:Maintenance:1", "must be numeric"),
-        ("smelt:0:SUSE:Maintenance:1", "must be greater than zero"),
-    ],
-)
-def test_parse_submission_arg_invalid(raw: str, message: str) -> None:
-    with pytest.raises(SubmissionArgError, match=message):
-        parse_submission_arg(raw)
 
 
 def test_get_submissions_error(mock_get_json: MagicMock) -> None:

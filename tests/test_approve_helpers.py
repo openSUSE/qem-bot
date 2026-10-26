@@ -41,7 +41,7 @@ def test_mark_job_as_acceptable_for_submission_request_error(
     caplog.set_level(logging.INFO)
     mocker.patch("openqabot.approver.dashboard.patch", side_effect=f_patch)
     mark_job_as_acceptable_for_submission(1, 1, "SUSE:Maintenance:1", "smelt")
-    assert "Unable to mark job 1 as acceptable for submission smelt:1" in caplog.text
+    assert "Unable to mark job 1 as acceptable for submission smelt:SUSE:Maintenance:1:1" in caplog.text
 
 
 def test_mark_job_as_acceptable_for_submission_with_project(mocker: MockerFixture) -> None:
@@ -90,7 +90,7 @@ def test_approver_single_submission_requires_project_and_type(project: str | Non
 def test_approver_single_submission_not_found(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.approver.get_single_submission", return_value=[])
 
-    approver_instance = Approver(make_approver_args(submission="smelt:1:SUSE:Maintenance:1"))
+    approver_instance = Approver(make_approver_args(submission="smelt:SUSE:Maintenance:1:1"))
 
     assert approver_instance() == 1
 

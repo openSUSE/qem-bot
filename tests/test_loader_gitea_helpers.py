@@ -212,13 +212,13 @@ def test_read_json_file_list_throws_on_dict(mocker: MockerFixture) -> None:
 
 def test_is_build_acceptable_fail(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    incident = {"failed_or_unpublished_packages": ["pkg1"], "successful_packages": ["pkg2"]}
+    incident = {"project": "owner/repo", "failed_or_unpublished_packages": ["pkg1"], "successful_packages": ["pkg2"]}
     assert not gitea.is_build_acceptable_and_log_if_not(incident, 123)
-    assert "Skipping PR git:123: Not all packages succeeded or published" in caplog.text
+    assert "Skipping PR git:owner/repo:123: Not all packages succeeded or published" in caplog.text
 
 
 def test_is_build_acceptable_success() -> None:
-    incident = {"failed_or_unpublished_packages": [], "successful_packages": ["pkg1"]}
+    incident = {"project": "owner/repo", "failed_or_unpublished_packages": [], "successful_packages": ["pkg1"]}
     assert gitea.is_build_acceptable_and_log_if_not(incident, 123)
 
 

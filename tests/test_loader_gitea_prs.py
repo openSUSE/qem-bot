@@ -49,7 +49,7 @@ def test_get_open_prs_single_request_exception(mocker: MockerFixture, caplog: py
     mocker.patch("openqabot.loader.gitea.get_json", side_effect=requests.exceptions.RequestException("Request failed"))
     res = gitea.get_open_prs({}, "my_repo", number=1)
     assert res == []
-    assert "PR git:1 ignored: Request failed" in caplog.text
+    assert "PR git:my_repo:1 ignored: Request failed" in caplog.text
 
 
 def test_get_open_prs_iter_request_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:

@@ -29,6 +29,7 @@ from osc.core import MultibuildFlavorResolver
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import PullRequest
+from openqabot.types.submission_key import SubmissionKey
 from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
@@ -246,7 +247,7 @@ def _get_single_pr(token: dict[str, str], project: str, number: int) -> list[Pul
         if pr := PullRequest.from_json(cast("dict[str, Any]", get_json(f"repos/{project}/pulls/{number}", token))):
             return [pr]
     except (requests.exceptions.RequestException, json.JSONDecodeError) as ex:
-        log.error("PR git:%s ignored: %s", number, ex, exc_info=True)  # ruff: ignore[logging-exc-info]
+        log.error("PR %s ignored: %s", SubmissionKey.gitea(project, number), ex, exc_info=True)  # ruff: ignore[logging-exc-info]
     return []
 
 
@@ -454,8 +455,8 @@ def _update_scminfo(submission: dict[str, Any], res: etree._Element, project: st
         if found:
             existing = submission.get(scm_key)
             if existing and found != existing:
-                msg = "PR git:%s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
-                log.warning(msg, submission["number"], project, found, existing)
+                msg = "PR %s: Inconsistent SCM info for project %s: found '%s' vs '%s'"
+                log.warning(msg, SubmissionKey.from_submission_dict(submission), project, found, existing)
                 continue
             submission[scm_key] = found
 
@@ -582,12 +583,14 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, fake_d
 
     if results.unpublished:
         log.info(
-            "PR git:%s: Some repos not published yet: %s",
-            submission["number"],
+            "PR %s: Some repos not published yet: %s",
+            SubmissionKey.from_submission_dict(submission),
             ", ".join(results.unpublished),
         )
     if results.failed:
-        log.info("PR git:%s: Some packages failed: %s", submission["number"], ", ".join(results.failed))
+        log.info(
+            "PR %s: Some packages failed: %s", SubmissionKey.from_submission_dict(submission), ", ".join(results.failed)
+        )
 
     submission.update({
         "failed_or_unpublished_packages": sorted(results.failed | results.unpublished | results.unavailable),
@@ -623,8 +626,8 @@ def add_comments_and_referenced_build_results(
         add_build_results(submission, sorted(obs_urls), fake_data=fake_data)
     else:
         log.warning(
-            "PR git:%s: No OBS URLs found in comments from %s",
-            submission["number"],
+            "PR %s: No OBS URLs found in comments from %s",
+            SubmissionKey.from_submission_dict(submission),
             config.settings.git_obs_staging_bot_user,
         )
 
@@ -665,13 +668,14 @@ def add_packages_from_files(
 
 def is_build_acceptable_and_log_if_not(submission: dict[str, Any], number: int) -> bool:
     """Check if all packages in a submission have been built and published successfully."""
+    key = SubmissionKey.gitea(submission["project"], number)
     failed_or_unpublished_packages = len(submission["failed_or_unpublished_packages"])
     if failed_or_unpublished_packages > 0:
-        log.info("Skipping PR git:%i: Not all packages succeeded or published", number)
+        log.info("Skipping PR %s: Not all packages succeeded or published", key)
         return False
     if len(submission["successful_packages"]) < 1:
-        info = "Skipping PR git:%i: No packages have been built/published (there are %i failed/unpublished packages)"
-        log.info(info, number, failed_or_unpublished_packages)
+        info = "Skipping PR %s: No packages have been built/published (there are %i failed/unpublished packages)"
+        log.info(info, key, failed_or_unpublished_packages)
         return False
     return True
 
@@ -726,8 +730,8 @@ def _validate_submission(
     """Validate if the submission has channels, acceptable builds, and packages."""
     if not submission["channels"]:
         log.info(
-            "PR git:%s skipped: No channels found (check OBS_REPO_TYPE, currently '%s')",
-            number,
+            "PR %s skipped: No channels found (check OBS_REPO_TYPE, currently '%s')",
+            SubmissionKey.gitea(submission["project"], number),
             config.settings.obs_repo_type,
         )
         return False
@@ -746,7 +750,7 @@ def _build_submission_record(
     reviews, comments, files = _fetch_details(pr.project, pr.number, token, fake_data=fake_data)
 
     if add_reviews(submission, reviews) < 1 and only_requested_prs:
-        log.info("PR git:%s skipped: No reviews by %s", pr.number, config.settings.obs_group)
+        log.info("PR %s skipped: No reviews by %s", pr.key, config.settings.obs_group)
         return None
 
     add_comments_and_referenced_build_results(submission, comments, fake_data=fake_data)
@@ -757,7 +761,7 @@ def _build_submission_record(
     add_packages_from_files(submission, token, files, fake_data=fake_data)
 
     if not submission["packages"]:
-        log.info("PR git:%s skipped: No packages found", pr.number)
+        log.info("PR %s skipped: No packages found", pr.key)
         return None
 
     submission["priority"], submission["emu"] = get_gitea_update_data(pr.project, pr.number)
@@ -805,7 +809,7 @@ def make_submission_from_gitea_pr(
     fake_data: bool,
 ) -> dict[str, Any] | None:
     """Create a dashboard-compatible submission record from a Gitea PR."""
-    log.debug("Fetching info for PR git:%s from Gitea", pr.number)
+    log.debug("Fetching info for PR %s from Gitea", pr.key)
     try:
         return _build_submission_record(
             pr,
@@ -815,7 +819,7 @@ def make_submission_from_gitea_pr(
             fake_data=fake_data,
         )
     except Exception:
-        log.exception("Gitea API error: Unable to process PR git:%s", pr.number)
+        log.exception("Gitea API error: Unable to process PR %s", pr.key)
         return None
 
 

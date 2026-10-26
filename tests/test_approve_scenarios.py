@@ -31,8 +31,8 @@ if TYPE_CHECKING:
 @pytest.mark.parametrize(
     ("raw", "exp_sub", "exp_type", "exp_project"),
     [
-        pytest.param("git:6189:SLFO", 6189, "git", "SLFO", id="type-colon-id-colon-project"),
-        pytest.param("smelt:42:SUSE:Maintenance:42", 42, "smelt", "SUSE:Maintenance:42", id="project-with-colons"),
+        pytest.param("git:SLFO:6189", 6189, "git", "SLFO", id="type-colon-project-colon-id"),
+        pytest.param("smelt:SUSE:Maintenance:42:42", 42, "smelt", "SUSE:Maintenance:42", id="project-with-colons"),
         pytest.param(None, None, None, None, id="none"),
     ],
 )

@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from logging import getLogger
 from typing import Any, Protocol, Self
 
+from openqabot.types.submission_key import SubmissionKey
+
 log = getLogger("bot.loader.pullrequest")
 
 
@@ -90,6 +92,11 @@ class PullRequest:
         return self.number
 
     @property
+    def key(self) -> SubmissionKey:
+        """Dashboard incident key of this pull request."""
+        return SubmissionKey.gitea(self.project, self.number)
+
+    @property
     def is_gitea(self) -> bool:
         """Check if representing a Gitea pull request."""
         return True
@@ -129,10 +136,11 @@ class PullRequest:
                 url=pr_json.get("html_url", pr_json.get("url", "")),
                 commit_sha=pr_json.get("head", {}).get("sha", "unknown"),
             )
-            log.debug("PR git:%i: %s", instance.number, instance)
+            log.debug("PR %s: %s", instance.key, instance)
         except KeyError:
             pr_id = pr_json.get("number", "?")
-            log.exception("PR git:%s ignored: Could not read PR metadata", pr_id)
+            project = ((pr_json.get("base") or {}).get("repo") or {}).get("full_name", "?")
+            log.exception("PR git:%s:%s ignored: Could not read PR metadata", project, pr_id)
             return None
         else:
             return instance

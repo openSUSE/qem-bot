@@ -16,13 +16,13 @@ from openqabot.loader.gitea import BuildResults
 
 def test_add_build_result_inconsistent_scminfo(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
-    incident = {"scminfo": "old", "number": 1}
+    incident = {"scminfo": "old", "number": 1, "project": "owner/repo"}
     res = mocker.Mock()
     res.get.return_value = "project"
     res.findall.return_value = [mocker.Mock(text="new")]
     mocker.patch("openqabot.loader.gitea.add_channel_for_build_result")
     gitea.add_build_result(incident, res, BuildResults())
-    assert "PR git:1: Inconsistent SCM info for project project: found 'new' vs 'old'" in caplog.text
+    assert "PR git:owner/repo:1: Inconsistent SCM info for project project: found 'new' vs 'old'" in caplog.text
 
 
 def test_is_build_result_relevant_repo_mismatch(mocker: MockerFixture) -> None:
@@ -92,9 +92,9 @@ def test_add_build_results_failed_packages(mocker: MockerFixture, caplog: pytest
     mocker.patch("openqabot.loader.gitea.http_GET", return_value=BytesIO(xml_data.encode()))
     mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
-    incident = {"number": 123}
+    incident = {"number": 123, "project": "owner/repo"}
     gitea.add_build_results(incident, ["http://obs/project/show/proj"], fake_data=False)
-    assert "PR git:123: Some packages failed: pkg1" in caplog.text
+    assert "PR git:owner/repo:123: Some packages failed: pkg1" in caplog.text
     assert "pkg1" in cast("list", incident["failed_or_unpublished_packages"])
 
 
@@ -209,9 +209,9 @@ def test_add_comments_no_bot_comments(mocker: MockerFixture) -> None:
 def test_add_comments_bot_comments_no_urls(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     """Verify that a warning is logged if bot comments exist but contain no URLs."""
     caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
-    submission = {"number": 123, "channels": [], "packages": []}
+    submission = {"number": 123, "project": "owner/repo", "channels": [], "packages": []}
     comments = [{"user": {"username": "autogits_obs_staging_bot"}, "body": "No URLs here"}]
     mock_add_build_results = mocker.patch("openqabot.loader.gitea.add_build_results")
     gitea.add_comments_and_referenced_build_results(submission, comments, fake_data=True)
     mock_add_build_results.assert_not_called()
-    assert "PR git:123: No OBS URLs found in comments from autogits_obs_staging_bot" in caplog.text
+    assert "PR git:owner/repo:123: No OBS URLs found in comments from autogits_obs_staging_bot" in caplog.text

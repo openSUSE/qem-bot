@@ -25,6 +25,7 @@ from openqabot import config, dashboard
 from openqabot.errors import JobNotFoundError, NoResultsError, SubmissionArgError
 from openqabot.openqa import OpenQAInterface
 from openqabot.requests import approve_obs_request
+from openqabot.types.submission_key import SubmissionKey
 
 from .commenter import Commenter
 from .loader.gitea import approve_pr, make_token_header
@@ -35,7 +36,6 @@ from .loader.qem import (
     get_single_submission,
     get_submission_settings,
     get_submissions_approver,
-    parse_submission_arg,
     update_incident_reason,
 )
 
@@ -135,21 +135,17 @@ def mark_job_as_acceptable_for_submission(job_id: int, sub: int, project: str, s
         )
     except requests.exceptions.RequestException as e:
         log.warning(
-            "Unable to mark job %i as acceptable for submission %s:%s:%s: %s",
+            "Unable to mark job %i as acceptable for submission %s: %s",
             job_id,
-            submission_type,
-            sub,
-            project,
+            SubmissionKey(submission_type, project, sub),
             e,
         )
         return
     if response.status_code != HTTPStatus.OK:
         log.warning(
-            "Unable to mark job %i as acceptable for submission %s:%s:%s: dashboard returned %s: %s",
+            "Unable to mark job %i as acceptable for submission %s: dashboard returned %s: %s",
             job_id,
-            submission_type,
-            sub,
-            project,
+            SubmissionKey(submission_type, project, sub),
             response.status_code,
             response.text,
         )
@@ -171,7 +167,7 @@ class Approver:
         ``single_submission_project`` are required to address the incident by its
         ``(number, project, type)`` dashboard key; otherwise a ``ValueError`` is
         raised. Without it, ``args.submission``/``args.incident`` is parsed as
-        ``<type>:<id>:<project>``, and an unparsable value aborts with
+        ``<type>:<project>:<id>``, and an unparsable value aborts with
         ``SystemExit``.
         """
         self.dry = args.dry
@@ -180,11 +176,12 @@ class Approver:
             raw = getattr(args, "submission", None) or getattr(args, "incident", None)
             if raw:
                 try:
-                    self.submission_type, self.single_submission, self.single_submission_project = parse_submission_arg(
-                        raw
-                    )
+                    key = SubmissionKey.parse(raw)
                 except SubmissionArgError as e:
                     raise SystemExit(str(e)) from e
+                self.submission_type = key.type
+                self.single_submission = key.number
+                self.single_submission_project = key.project
             else:
                 self.single_submission = None
                 self.submission_type = None

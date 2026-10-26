@@ -16,35 +16,15 @@ import requests
 
 import openqabot.config as config_module
 from openqabot import dashboard
-from openqabot.errors import NoResultsError, SubmissionArgError
+from openqabot.errors import LoaderQemError, NoResultsError, SubmissionArgError
 from openqabot.types.submission import Submission, sort_packages
+from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import Data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 log = getLogger("bot.loader.qem")
-
-
-_SUBMISSION_ARG_PARTS = 3
-
-
-def parse_submission_arg(raw: str) -> tuple[str, int, str]:
-    """Parse a ``<type>:<id>:<project>`` submission argument.
-
-    The project may itself contain colons (OBS/SMELT projects do), so only the
-    first two colons are used as separators.
-    """
-    parts = raw.split(":", 2)
-    if len(parts) != _SUBMISSION_ARG_PARTS or not all(parts):
-        raise SubmissionArgError(raw)
-    s_type, s_id, s_project = parts
-    if not s_id.isdigit():
-        raise SubmissionArgError(raw, numeric=True)
-    submission_id = int(s_id)
-    if submission_id == 0:
-        raise SubmissionArgError(raw, positive=True)
-    return s_type, submission_id, s_project
 
 
 class SubReq(NamedTuple):
@@ -107,10 +87,6 @@ class JobAggr(NamedTuple):
     with_aggregate: bool = False
 
 
-class LoaderQemError(Exception):
-    """Raised when an error occurs in QEM loader."""
-
-
 class NoSubmissionResultsError(NoResultsError):
     """Raised when no submission results are found."""
 
@@ -127,28 +103,29 @@ class NoAggregateResultsError(NoResultsError):
         super().__init__(f"No aggregate test results found for {sub}")
 
 
-def _get_submission(submission_id: int, project: str, submission_type: str) -> dict:
+def _get_submission(subkey: SubmissionKey) -> dict:
     """Fetch a single submission's raw data from the dashboard."""
-    params = {"project": project, "type": submission_type}
     return dashboard.get_json(
-        f"api/incidents/{submission_id}", headers=config_module.settings.dashboard_token_dict, params=params
+        f"api/incidents/{subkey.number}",
+        headers=config_module.settings.dashboard_token_dict,
+        params=subkey.to_dashboard_params(),
     )
 
 
 def get_submissions(submission: str | None = None) -> list[Submission]:
     """Fetch all or a specific submission from the dashboard and wrap them in Submission objects.
 
-    ``submission`` is given as ``<type>:<id>:<project>``; an unparsable value
+    ``submission`` is given as ``<type>:<project>:<id>``; an unparsable value
     terminates the process with ``SystemExit``.
     """
     if submission:
         try:
-            s_type, s_id, s_project = parse_submission_arg(submission)
+            key = SubmissionKey.parse(submission)
         except SubmissionArgError as e:
             raise SystemExit(str(e)) from e
-        res = _get_submission(s_id, s_project, s_type)
+        res = _get_submission(key)
         if isinstance(res, dict) and "error" in res:
-            log.error("Submission %s:%s was not found on the QEM Dashboard or is invalid.", s_type, s_id)
+            log.error("Submission %s was not found on the QEM Dashboard or is invalid.", key)
             log.error("Dashboard error details: %s", res.get("error"))
             log.error("Please verify that the submission ID is correct and active on the dashboard.")
             sys.exit(1)
@@ -205,7 +182,7 @@ def get_single_submission(submission_id: int, project: str, submission_type: str
     answers with ``{"error": ...}``) or when the returned entry cannot be
     turned into a ``SubReq``.
     """
-    submission = _get_submission(submission_id, project, submission_type)
+    submission = _get_submission(SubmissionKey(submission_type, project, submission_id))
     if isinstance(submission, dict) and "error" in submission:
         log.warning(
             "Submission %s:%s not found on the dashboard: %s",

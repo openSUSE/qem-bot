@@ -58,7 +58,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
     assert res is None
-    assert "PR git:123 skipped: No channels found" in caplog.text
+    assert "PR git:owner/repo:123 skipped: No channels found" in caplog.text
 
     # Skip due to build not acceptable
     caplog.clear()
@@ -80,7 +80,7 @@ def test_make_submission_from_gitea_pr_skips(mocker: MockerFixture, caplog: pyte
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
     assert res is None
-    assert "PR git:123 skipped: No packages found" in caplog.text
+    assert "PR git:owner/repo:123 skipped: No packages found" in caplog.text
 
 
 def test_make_submission_from_gitea_pr_dry_other_number_passes(mocker: MockerFixture) -> None:
@@ -128,7 +128,7 @@ def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog:
         pr, {}, only_successful_builds=False, only_requested_prs=True, fake_data=False
     )
     assert res is None
-    assert "PR git:123 skipped: No reviews by" in caplog.text
+    assert "PR git:owner/repo:123 skipped: No reviews by" in caplog.text
 
 
 def test_is_review_requested_by_explicit_users() -> None:
@@ -182,14 +182,14 @@ def test_add_reviews_stale_reapproval(
 
 
 def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
-    submission = {"number": 123}
+    submission = {"number": 123, "project": "owner/repo"}
     res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
     gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[private-member-access]
     assert submission["scminfo"] == "new"
     assert "Inconsistent SCM info" in caplog.text
 
     caplog.clear()
-    submission = {"number": 123, "scminfo_prod": "old"}
+    submission = {"number": 123, "project": "owner/repo", "scminfo_prod": "old"}
     res = etree.fromstring("<root><scminfo>new</scminfo></root>")
     gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[private-member-access]
     assert submission["scminfo_prod"] == "old"
@@ -220,7 +220,7 @@ def test_make_submission_from_gitea_pr_no_packages(mocker: MockerFixture, caplog
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
     assert res is None
-    assert "PR git:123 skipped: No packages found" in caplog.text
+    assert "PR git:owner/repo:123 skipped: No packages found" in caplog.text
 
 
 def test_make_submission_from_gitea_pr_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
@@ -240,4 +240,4 @@ def test_make_submission_from_gitea_pr_exception(mocker: MockerFixture, caplog: 
         pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
     )
     assert res is None
-    assert "Gitea API error: Unable to process PR git:123" in caplog.text
+    assert "Gitea API error: Unable to process PR git:owner/repo:123" in caplog.text

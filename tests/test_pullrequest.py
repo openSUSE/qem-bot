@@ -84,9 +84,9 @@ def test_create_from_json_invalid_data(caplog: pytest.LogCaptureFixture) -> None
     """Verify create_from_json returns None and logs error on invalid data."""
     # Missing 'number'
     assert PullRequest.from_json({"base": {"repo": {"full_name": "repo"}}}) is None
-    assert "PR git:? ignored: Could not read PR metadata" in caplog.text
+    assert "PR git:repo:? ignored: Could not read PR metadata" in caplog.text
 
     # Missing 'base'
     caplog.clear()
     assert PullRequest.from_json({"number": 123}) is None
-    assert "PR git:123 ignored: Could not read PR metadata" in caplog.text
+    assert "PR git:?:123 ignored: Could not read PR metadata" in caplog.text

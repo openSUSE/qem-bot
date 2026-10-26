@@ -51,7 +51,11 @@ class AmbiguousApprovalStatusError(Error):
     """Raised when several request IDs pointing to the same openQA job."""
 
 
-class SubmissionArgError(ValueError):
+class LoaderQemError(Exception):
+    """Raised when an error occurs in QEM loader."""
+
+
+class SubmissionArgError(LoaderQemError):
     """Raised when a ``--submission`` argument cannot be parsed."""
 
     def __init__(self, raw: str, *, numeric: bool = False, positive: bool = False) -> None:
@@ -59,14 +63,14 @@ class SubmissionArgError(ValueError):
 
         With ``numeric`` set, report that the ``<id>`` part must be numeric;
         with ``positive`` set, that it must be greater than zero; otherwise
-        report the expected ``<type>:<id>:<project>`` format.
+        report the expected ``<type>:<project>:<id>`` format.
         """
         if numeric:
             reason = "'<id>' must be numeric."
         elif positive:
             reason = "'<id>' must be greater than zero."
         else:
-            reason = "Expected format '<type>:<id>:<project>'."
+            reason = "Expected format '<type>:<project>:<id>'."
         message = f"Invalid submission ID {raw!r}. {reason}"
         super().__init__(message)
 

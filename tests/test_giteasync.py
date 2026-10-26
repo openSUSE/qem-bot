@@ -184,7 +184,7 @@ def test_sync_with_product_repo(mocker: MockerFixture, caplog: pytest.LogCapture
     expected_repo = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     assert "Relevant archs for " + expected_repo + ": ['aarch64', 'x86_64']" in caplog.messages
     assert "Loaded 7 active PRs from products/SLFO" in caplog.messages
-    assert "Fetching info for PR git:131 from Gitea" in caplog.messages
+    assert "Fetching info for PR git:products/SLFO:131 from Gitea" in caplog.messages
     assert "Syncing Gitea PRs to QEM Dashboard: Considering 1 submissions" in caplog.messages
     assert any("/api/experimental/v2/updates/" in cast("Any", call.request).url for call in responses.calls)
     assert len(cast("Any", responses.calls[-1].response).json()) == 1
@@ -251,7 +251,10 @@ def test_sync_with_codestream_repo(
 def test_sync_without_results(mocker: MockerFixture, caplog: pytest.LogCaptureFixture, args: SimpleNamespace) -> None:
     args.allow_build_failures = False
     run_gitea_sync(mocker, caplog, args, no_build_results=True)
-    m = "Skipping PR git:124: No packages have been built/published (there are 0 failed/unpublished packages)"
+    m = (
+        "Skipping PR git:products/SLFO:124: "
+        "No packages have been built/published (there are 0 failed/unpublished packages)"
+    )
     assert m in caplog.messages
 
 

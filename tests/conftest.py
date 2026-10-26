@@ -110,11 +110,11 @@ def fake_openqa_comment_api() -> None:
 def make_approver(submission: int | str = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
     if mocker:
         mocker.patch("openqabot.approver.Commenter", autospec=True)
-    # The CLI now expects a single "<type>:<id>:<project>" string. Translate the
+    # The CLI now expects a single "<type>:<project>:<id>" string. Translate the
     # helper's plain smelt submission number into that form; 0/None still means
     # "all submissions".
     incident = (
-        f"smelt:{submission}:SUSE:Maintenance:{submission}"
+        f"smelt:SUSE:Maintenance:{submission}:{submission}"
         if isinstance(submission, int) and submission
         else submission
     )
