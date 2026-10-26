@@ -388,7 +388,11 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
         r.raise_for_status()
         data = r.json()["data"]
     except requests.exceptions.HTTPError as e:
-        log.warning("Repo ignored: Could not query repository '%s' (%s->%s): %s", repository, product_name, project, e)
+        message = f"Repo ignored: Could not query repository '{repository}' ({product_name}->{project}): {e}"
+        if e.response is not None and e.response.status_code == HTTPStatus.NOT_FOUND:
+            log.info(message)
+        else:
+            log.warning(message)
         return ""
     # Catching both because requests' JSONDecodeError might not inherit from json's
     except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:

@@ -4,6 +4,7 @@
 
 import json
 import logging
+from http import HTTPStatus
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -78,15 +79,30 @@ def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture)
     assert mock_log.info.called
 
 
-def test_get_product_version_from_repo_listing_http_error(mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    ("response", "expected_log_level"),
+    [
+        (None, "warning"),
+        (MagicMock(status_code=HTTPStatus.NOT_FOUND), "info"),
+        (MagicMock(status_code=HTTPStatus.INTERNAL_SERVER_ERROR), "warning"),
+    ],
+)
+def test_get_product_version_from_repo_listing_http_error(
+    mocker: MockerFixture, response: MagicMock | None, expected_log_level: str
+) -> None:
     gitea.get_product_version_from_repo_listing.cache_clear()
     mock_log = mocker.patch("openqabot.loader.gitea.log")
     mock_response = MagicMock()
-    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error")
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error", response=response)
     mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
     res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
     assert not res
-    assert mock_log.warning.called
+    if expected_log_level == "info":
+        assert mock_log.info.called
+        assert not mock_log.warning.called
+    else:
+        assert mock_log.warning.called
+        assert not mock_log.info.called
 
 
 def test_get_product_version_from_repo_listing_request_exception(
