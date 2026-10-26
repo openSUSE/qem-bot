@@ -17,6 +17,7 @@ from openqabot.errors import SameBuildExistsError
 from openqabot.types.aggregate import Aggregate, PostData
 from openqabot.types.baseconf import JobConfig
 from openqabot.types.submission import Submission
+from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
@@ -62,6 +63,14 @@ def submission_mock(mocker: MockerFixture) -> Any:
         sub.priority = None
         sub.revisions_with_fallback.return_value = "rev_fallback"
         sub.__str__.return_value = str(sub.id)
+        # ``key`` is derived from the id/project/type above, which tests keep
+        # changing after construction, so bind it lazily instead of freezing it.
+        mocker.patch.object(
+            type(sub),
+            "key",
+            mocker.PropertyMock(side_effect=lambda: SubmissionKey(sub.type, sub.project, sub.id)),
+            create=True,
+        )
         return sub
 
     return _func
@@ -500,6 +509,12 @@ def test_aggregate_url_format(aggregate_factory: Any, mocker: MockerFixture) -> 
     sub.priority = None
     sub.__str__.side_effect = lambda: f"{sub.type}:{sub.id}"
     sub.channels = [Repos("product", "version", "x86_64")]
+    mocker.patch.object(
+        type(sub),
+        "key",
+        mocker.PropertyMock(side_effect=lambda: SubmissionKey(sub.type, sub.project, sub.id)),
+        create=True,
+    )
 
     _, test_repos = agg.get_test_submissions_and_repos([sub], "x86_64")
     repo_url = test_repos["ISSUE"][0]

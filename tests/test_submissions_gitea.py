@@ -10,6 +10,7 @@ from openqabot.types.submissions import Submissions
 from openqabot.types.types import ArchVer, Repos
 
 from .fixtures.submissions import MockSubmission
+from .helpers import GITEA_PR_COMMIT
 
 
 def _assert_gitea_settings(
@@ -41,6 +42,8 @@ def _assert_gitea_settings(
         "SUBMISSION_ID": f"{sub_type}:{sub_id}",
         "INCIDENT_REPO": f"{expected_repo}-{arch}/",
         "REPOHASH": repo_hash,
+        # The commit OBS built for the PR identifies its settings round.
+        "SCMINFO": GITEA_PR_COMMIT,
         "VERSION": f"{product_ver}:git-{sub_id}",
     }
 
@@ -67,7 +70,7 @@ def test_gitea_submissions() -> None:
     responses.add(responses.GET, f"{global_settings.qem_dashboard_url}api/incident_settings/42", json=[])
 
     # create a Git-based submission
-    sub = MockSubmission(type="git")
+    sub = MockSubmission(type="git", scminfo=GITEA_PR_COMMIT)
     sub.id = 42
     repo_hash = 12345
     sub.channels = [Repos(product, version, arch, product_ver) for arch in archs]

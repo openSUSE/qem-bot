@@ -59,6 +59,11 @@ class Repo:
     arch: str
 
 
+# Commit OBS built and tested for the fake Gitea PR of ``f_sub_approver``. The
+# approver compares it against the live Gitea head, so both must agree.
+GITEA_PR_COMMIT = "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d"
+
+
 def _make_smelt_subreq(sub: int) -> SubReq:
     rr = sub * 100
     return SubReq(
@@ -91,13 +96,13 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
             "git",
             "products/SLFO",
             "https://src.suse.de/products/SLFO/pulls/124",
-            "18bfa2a23fb7985d5d0cc356474a96a19d91d2d8652442badf7f13bc07cd1f3d",
+            GITEA_PR_COMMIT,
             submission=Submission.create({
                 "number": 5,
                 "rr_number": 500,
                 "type": "git",
                 "url": "https://src.suse.de/products/SLFO/pulls/124",
-                "scm_info": "...",
+                "scminfo": GITEA_PR_COMMIT,
                 "project": "products/SLFO",
                 "inReview": True,
                 "isActive": True,
@@ -108,6 +113,7 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
                 "packages": ["pkg5"],
                 "emu": False,
             }),
+            scminfo=GITEA_PR_COMMIT,
         ),
     ]
 
@@ -115,8 +121,6 @@ def f_sub_approver(*_args: Any) -> list[SubReq]:
 args = Namespace(
     dry=False,
     token="123",
-    all_submissions=False,
-    incident=None,
     gitea_token=None,
 )
 
@@ -368,7 +372,6 @@ def make_approver_args(**kwargs: Any) -> Namespace:
         "gitea_token": None,
         "token": "dummy_token",
         "dry": False,
-        "all_submissions": False,
     }
     defaults.update(kwargs)
     return Namespace(**defaults)

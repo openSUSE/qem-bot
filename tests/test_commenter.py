@@ -16,7 +16,10 @@ from openqabot.errors import EmptyCommentError, NoResultsError
 from openqabot.types.increment import BuildIdentifier
 from openqabot.types.pullrequest import OBSCommentable
 from openqabot.types.submission import Submission
+from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import ArchVer
+
+from .helpers import GITEA_PR_COMMIT
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -73,6 +76,8 @@ def mock_smelt_sub() -> MagicMock:
     sub.project = "SUSE:Maintenance:1"
     sub.rr = 274060
     sub.revisions = None
+    sub.scminfo = None
+    sub.key = SubmissionKey("smelt", "SUSE:Maintenance:1", 1)
     sub.__str__ = MagicMock(return_value="smelt:1")
     return sub
 
@@ -84,6 +89,8 @@ def mock_git_sub() -> MagicMock:
     sub.type = "git"
     sub.project = "owner/repo"
     sub.url = "https://src.suse.de/owner/repo/pulls/123"
+    sub.scminfo = GITEA_PR_COMMIT
+    sub.key = SubmissionKey.gitea("owner/repo", 123)
     sub.__str__ = MagicMock(return_value="git:123")
     return sub
 
@@ -136,10 +143,10 @@ def test_commenter_call_failed_jobs(
     make_job: Callable,
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.commenter")
-    mocker.patch(
+    mock_results = mocker.patch(
         "openqabot.commenter.get_submission_results", return_value=[make_job(name="test_failed", status="failed")]
     )
-    mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
+    mock_aggregates = mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
     mock_osc_comment = mocker.patch.object(Commenter, "osc_comment")
 
     c = Commenter(mock_args, submissions=[mock_smelt_sub])
@@ -147,6 +154,8 @@ def test_commenter_call_failed_jobs(
     assert "comment state" in caplog.text
     assert "failed" in caplog.text
     mock_osc_comment.assert_called_once_with(mock_smelt_sub, mocker.ANY, "failed")
+    mock_results.assert_called_once_with(mock_smelt_sub.key, scminfo=None)
+    mock_aggregates.assert_called_once_with(mock_smelt_sub.key)
 
 
 @pytest.mark.usefixtures("commenter_setup")
@@ -486,7 +495,7 @@ def test_commenter_call_git(
     mocker: MockerFixture,
     make_job: Callable,
 ) -> None:
-    mocker.patch("openqabot.commenter.get_submission_results", return_value=[make_job()])
+    mock_results = mocker.patch("openqabot.commenter.get_submission_results", return_value=[make_job()])
     mocker.patch("openqabot.commenter.get_aggregate_results", return_value=[])
 
     mock_gitea_comment = mocker.patch.object(Commenter, "gitea_comment")
@@ -496,6 +505,8 @@ def test_commenter_call_git(
     assert c() == 0
     mock_summarize.assert_called_once()
     mock_gitea_comment.assert_called_once()
+    # A PR's results are filtered to the commit OBS built for it.
+    mock_results.assert_called_once_with(mock_git_sub.key, scminfo=GITEA_PR_COMMIT)
 
 
 @pytest.mark.usefixtures("commenter_setup")
