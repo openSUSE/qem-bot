@@ -381,7 +381,7 @@ def _extract_version(name: str, prefix: str) -> str:
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     """Determine the product version by inspecting an OBS repository listing."""
     project_path = project.replace(":", ":/")
-    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo"
+    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo/"
     start = f"{product_name}-"
     try:
         r = retried_requests.get(url, params={"jsontable": 1})
