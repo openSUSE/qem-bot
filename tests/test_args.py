@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 from openqabot.args import GiteaSyncOptions, app, main
 from openqabot.config import settings
+from openqabot.types.submission_key import SubmissionKey
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -137,6 +138,52 @@ def test_sub_approve(
     assert result.exit_code == 0
     approve.assert_called_once()
     assert approve.call_args[0][0].comment is expected_comment
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_key", "expected_all_submissions"),
+    [
+        pytest.param([], None, False, id="no_single_submission"),
+        pytest.param(["--all-submissions"], None, True, id="all_submissions"),
+        pytest.param(["--submission", "git:SLFO:6189"], SubmissionKey("git", "SLFO", 6189), False, id="git_pr"),
+        pytest.param(
+            ["--submission", "smelt:SUSE:Maintenance:42:42"],
+            SubmissionKey("smelt", "SUSE:Maintenance:42", 42),
+            False,
+            id="project_with_colons",
+        ),
+    ],
+)
+def test_sub_approve_forwards_parsed_submission(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    extra_args: list[str],
+    expected_key: SubmissionKey | None,
+    expected_all_submissions: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
+) -> None:
+    """The CLI parses ``--submission`` into the dashboard key the Approver takes."""
+    approve = mocker.patch("openqabot.args.Approver")
+    approve.return_value.return_value = 0
+
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(tmp_path), "sub-approve", *extra_args])
+
+    assert result.exit_code == 0
+    approve.assert_called_once()
+    assert approve.call_args.kwargs["single_submission"] == expected_key
+    assert approve.call_args.kwargs["all_submissions"] is expected_all_submissions
+
+
+def test_sub_approve_invalid_submission_exits(mocker: MockerFixture, tmp_path: Path) -> None:
+    approve = mocker.patch("openqabot.args.Approver")
+
+    result = runner.invoke(
+        app,
+        ["--token", "foo", "--configs", str(tmp_path), "sub-approve", "--submission", "not-a-valid-submission"],
+    )
+
+    assert result.exit_code == 1
+    assert "Invalid submission ID 'not-a-valid-submission'" in str(result.exception)
+    approve.assert_not_called()
 
 
 def test_sub_comment_with_detailed_args(mocker: MockerFixture, tmp_path: Path) -> None:

@@ -32,6 +32,9 @@ class SubReq(NamedTuple):
 
     ``sub``, ``type`` and ``project`` together form the dashboard incident key;
     ``req`` is the OBS release request ID.
+
+    ``scminfo`` is the submission's ``scminfo`` on the dashboard: the revision
+    OBS reported for the build of a Gitea PR.
     """
 
     sub: int
@@ -39,8 +42,13 @@ class SubReq(NamedTuple):
     type: str
     project: str
     url: str | None = None
-    scm_info: str | None = None
     submission: Submission | None = None
+    scminfo: str | None = None
+
+    @property
+    def key(self) -> SubmissionKey:
+        """Dashboard incident key of this submission."""
+        return SubmissionKey(self.type, self.project, self.sub)
 
     @classmethod
     def from_dashboard(cls, d: dict) -> SubReq | None:
@@ -76,7 +84,15 @@ class SubReq(NamedTuple):
             )
             submission = None
 
-        return cls(number, rr_number, s_type, project, d.get("url", ""), d.get("scm_info", ""), submission)
+        return cls(
+            number,
+            rr_number,
+            s_type,
+            project,
+            url=d.get("url", ""),
+            submission=submission,
+            scminfo=d.get("scminfo") or None,
+        )
 
 
 class JobAggr(NamedTuple):
@@ -143,22 +159,21 @@ def get_submissions(submission: str | None = None) -> list[Submission]:
     return [sub for s in submissions if (sub := Submission.create(s))]
 
 
-def get_active_submissions(submission_type: str | None = None) -> Sequence[tuple[int, str, str]]:
-    """Fetch (number, project, type) of all active submissions from the dashboard.
+def get_active_submissions(submission_type: str | None = None) -> Sequence[SubmissionKey]:
+    """Fetch the keys of all active submissions from the dashboard.
 
-    Incidents missing one of these identity fields are logged and skipped
-    instead of raising, so a single malformed record cannot abort a batch
-    results sync.
+    Incidents missing one of the identity fields are logged and skipped instead
+    of raising, so a single malformed record cannot abort a batch results sync.
     """
     params = {}
     if submission_type:
         params["type"] = submission_type
     data = dashboard.get_json("api/incidents", headers=config_module.settings.dashboard_token_dict, params=params)
 
-    active: set[tuple[int, str, str]] = set()
+    active: set[SubmissionKey] = set()
     for incident in data:
         try:
-            active.add((incident["number"], incident["project"], incident["type"]))
+            active.add(SubmissionKey.from_dashboard(incident))
         except KeyError as e:
             log.warning("Dashboard incident %s skipped: missing identity field %s", incident.get("number"), e)
     return list(active)
@@ -175,75 +190,95 @@ def get_submissions_approver() -> list[SubReq]:
     ]
 
 
-def get_single_submission(submission_id: int, project: str, submission_type: str) -> list[SubReq]:
+def get_single_submission(key: SubmissionKey) -> list[SubReq]:
     """Fetch a single submission and wrap it in a list of SubReq objects.
 
     Returns an empty list when the dashboard does not know the submission (it
     answers with ``{"error": ...}``) or when the returned entry cannot be
     turned into a ``SubReq``.
     """
-    submission = _get_submission(SubmissionKey(submission_type, project, submission_id))
+    submission = _get_submission(key)
     if isinstance(submission, dict) and "error" in submission:
         log.warning(
-            "Submission %s:%s not found on the dashboard: %s",
-            submission_type,
-            submission_id,
+            "Submission %s not found on the dashboard: %s",
+            key,
             submission.get("error"),
         )
         return []
     subreq = SubReq.from_dashboard(submission)
     if subreq is None:
-        log.warning(
-            "Submission %s:%s (project %s) is missing required fields on the dashboard",
-            submission_type,
-            submission_id,
-            project,
-        )
+        log.warning("Submission %s is missing required fields on the dashboard", key)
         return []
     return [subreq]
 
 
+def _keep_current_round(
+    settings: list[dict[str, Any]], submission_type: str, scminfo: str | None
+) -> list[dict[str, Any]]:
+    """Drop settings that belong to an earlier revision of the submission.
+
+    Rescheduling a ``version``/``flavor``/``arch`` combination overwrites its
+    settings row, but the jobs of earlier rounds stay linked to it, so the jobs
+    of a submission mix revisions. OBS submissions separate rounds with the
+    monotonically increasing ``RRID``. Gitea PRs have no release request; their
+    settings carry the commit OBS built for them as ``SCMINFO``. Settings without
+    that marker predate it and are kept, so the filter never empties the result on
+    its own.
+    """
+    if submission_type == "git":
+        if not scminfo:
+            return settings
+        return [s for s in settings if s["settings"].get("SCMINFO", scminfo) == scminfo]
+
+    rrids = sorted([r for r in (s["settings"].get("RRID", None) for s in settings) if r])
+    if not rrids:
+        return settings
+    rrid = rrids[-1]
+    return [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
+
+
 def get_submission_settings(
-    sub: int, project: str, submission_type: str, *, all_submissions: bool = False
+    key: SubmissionKey,
+    *,
+    all_submissions: bool = False,
+    scminfo: str | None = None,
 ) -> list[JobAggr]:
-    """Fetch job settings associated with a submission."""
-    params = {"project": project, "type": submission_type}
+    """Fetch job settings associated with a submission.
+
+    With ``scminfo`` set, settings of a Gitea PR that were created for another
+    revision are dropped, so an empty result means "the recorded commit has no
+    settings yet".
+    """
     settings = dashboard.get_json(
-        f"api/incident_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
+        f"api/incident_settings/{key.number}",
+        headers=config_module.settings.dashboard_token_dict,
+        params=key.to_dashboard_params(),
     )
     if not settings:
-        raise NoSubmissionResultsError(sub)
+        raise NoSubmissionResultsError(key.number)
 
     if not all_submissions:
-        rrids = [i["settings"].get("RRID", None) for i in settings]
-        rrid = sorted([r for r in rrids if r])
-        if rrid:
-            rrid = rrid[-1]
-            settings = [s for s in settings if s["settings"].get("RRID", rrid) == rrid]
+        settings = _keep_current_round(settings, key.type, scminfo)
 
     return [JobAggr(i["id"], aggregate=False, with_aggregate=i["withAggregate"]) for i in settings]
 
 
-def get_submission_settings_data(number: int, project: str, submission_type: str) -> Sequence[Data]:
+def get_submission_settings_data(key: SubmissionKey) -> Sequence[Data]:
     """Fetch job settings data for a submission and wrap them in Data objects."""
-    log.debug("Fetching settings for submission %s:%s", submission_type, number)
-    params = {"project": project, "type": submission_type}
+    log.debug("Fetching settings for submission %s", key)
     data = dashboard.get_json(
-        "api/incident_settings/" + f"{number}", headers=config_module.settings.dashboard_token_dict, params=params
+        f"api/incident_settings/{key.number}",
+        headers=config_module.settings.dashboard_token_dict,
+        params=key.to_dashboard_params(),
     )
     if "error" in data:
-        log.warning(
-            "Submission %s:%s error: %s",
-            submission_type,
-            number,
-            data["error"],
-        )
+        log.warning("Submission %s error: %s", key, data["error"])
         return []
 
     return [
         Data(
-            number,
-            submission_type,
+            key.number,
+            key.type,
             d["id"],
             d["flavor"],
             d["arch"],
@@ -256,9 +291,9 @@ def get_submission_settings_data(number: int, project: str, submission_type: str
     ]
 
 
-def get_submission_results(sub: int, project: str, submission_type: str) -> list[dict[str, Any]]:
+def get_submission_results(key: SubmissionKey, *, scminfo: str | None = None) -> list[dict[str, Any]]:
     """Fetch all test results associated with a submission."""
-    settings = get_submission_settings(sub, project, all_submissions=False, submission_type=submission_type)
+    settings = get_submission_settings(key, all_submissions=False, scminfo=scminfo)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific settings ID."""
@@ -273,14 +308,15 @@ def get_submission_results(sub: int, project: str, submission_type: str) -> list
     return list(chain.from_iterable(all_data))
 
 
-def get_aggregate_settings(sub: int, project: str, submission_type: str) -> list[JobAggr]:
+def get_aggregate_settings(key: SubmissionKey) -> list[JobAggr]:
     """Fetch aggregate job settings associated with a submission."""
-    params = {"project": project, "type": submission_type}
     settings = dashboard.get_json(
-        f"api/update_settings/{sub}", headers=config_module.settings.dashboard_token_dict, params=params
+        f"api/update_settings/{key.number}",
+        headers=config_module.settings.dashboard_token_dict,
+        params=key.to_dashboard_params(),
     )
     if not settings:
-        raise NoAggregateResultsError(sub)
+        raise NoAggregateResultsError(key.number)
 
     # we need a reverse sort due to doing a string comparison
     settings = sorted(settings, key=itemgetter("build"), reverse=True)
@@ -307,9 +343,9 @@ def get_aggregate_settings_data(data: Data) -> Sequence[Data]:
     return [data._replace(settings_id=s["id"], build=s["build"]) for s in settings[:3]]
 
 
-def get_aggregate_results(sub: int, project: str, submission_type: str) -> list[dict[str, Any]]:
+def get_aggregate_results(key: SubmissionKey) -> list[dict[str, Any]]:
     """Fetch all aggregate test results associated with a submission."""
-    settings = get_aggregate_settings(sub, project, submission_type=submission_type)
+    settings = get_aggregate_settings(key)
 
     def _get_job_data(job_aggr: JobAggr) -> list[dict[str, Any]]:
         """Fetch job data for a specific aggregate settings ID."""
@@ -374,24 +410,23 @@ def update_job(job_id: int, data: dict[str, Any]) -> None:
         log.exception("QEM Dashboard API request failed")
 
 
-def update_incident_reason(incident_number: int, project: str, submission_type: str, reason: str | None = None) -> None:
+def update_incident_reason(key: SubmissionKey, reason: str | None = None) -> None:
     """Update the rejection reason for a submission on the dashboard.
 
     The dashboard addresses an incident by its ``(number, project, type)`` key,
-    so ``project`` and ``submission_type`` are required.
+    which ``key`` carries in full.
     """
-    params = {"project": project, "type": submission_type}
     try:
         result = dashboard.patch(
-            f"api/incidents/{incident_number}/rejection_reason",
+            f"api/incidents/{key.number}/rejection_reason",
             headers=config_module.settings.dashboard_token_dict,
-            params=params,
+            params=key.to_dashboard_params(),
             json={"rejection_reason": reason},
         )
         if result.status_code != HTTPStatus.OK:
             log.error(
                 "Dashboard API error: Could not update rejection reason for incident %s: %s",
-                incident_number,
+                key,
                 result.text,
             )
     except requests.exceptions.RequestException:

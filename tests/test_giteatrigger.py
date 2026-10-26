@@ -111,6 +111,34 @@ def test_check_pullrequest_triggers_job(
     assert settings["ISO_1"] == "SLES-15.5-Online-x86_64-Build1.1.install.iso"
 
 
+def test_check_pullrequest_no_openqa_templates(
+    trigger: GiteaTrigger,
+    mocker: MockerFixture,
+    mock_trigger_config: TriggerConfig,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """When openQA matches no job templates the PR is reported as not considered."""
+    caplog.set_level(logging.WARNING, logger="bot.giteatrigger")
+    mock_match = MagicMock()
+    mock_match.group.side_effect = lambda x: {
+        0: "SLES-15.5-Online-x86_64-Build1.1.install.iso",
+        "product": "SLES",
+        "version": "15.5",
+        "arch": "x86_64",
+        "build": "1.1",
+    }[x]
+
+    mocker.patch("openqabot.giteatrigger.Crawler").return_value.get_regex_match_from_url.return_value = mock_match
+    mocker.patch("openqabot.loader.triggerconfig.TriggerConfig.generate_obs_repo_url", return_value="http://fake.url/")
+    mocker.patch.object(trigger, "is_openqa_triggering_needed", return_value=True)
+    cast("MagicMock", trigger.openqa.post_iso).return_value = False
+
+    trigger.check_pullrequest(_make_pr(123, mock_trigger_config))
+
+    cast("MagicMock", trigger.openqa.post_iso).assert_called_once()
+    assert "No openQA job templates matched for PR 123 on x86_64 (Online-Staging), nothing scheduled" in caplog.messages
+
+
 def test_check_pullrequest_with_image_regex(trigger: GiteaTrigger, mocker: MockerFixture) -> None:
     """Verifies that HDD parameters are used when image_regex is configured and image is found."""
     # Create a trigger config with image_regex

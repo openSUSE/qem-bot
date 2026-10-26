@@ -57,14 +57,15 @@ class Commenter:
             log.debug("Submission %s skipped: Not a SMELT incident or Gitea PR (type: %s)", sub, sub.type)
             return
 
-        def get_jobs(func: Callable[[int, str, str], list[dict[str, Any]]]) -> list[dict[str, Any]]:
+        def get_jobs(fetch: Callable[[], list[dict[str, Any]]]) -> list[dict[str, Any]]:
             try:
-                return func(sub.id, sub.project, sub.type)
+                return fetch()
             except (ValueError, NoResultsError) as e:
                 log.debug(e)
                 return []
 
-        all_jobs = get_jobs(get_submission_results) + get_jobs(get_aggregate_results)
+        all_jobs = get_jobs(lambda: get_submission_results(sub.key, scminfo=sub.scminfo))
+        all_jobs += get_jobs(lambda: get_aggregate_results(sub.key))
 
         if res := self.generate_comment(sub, all_jobs):
             handlers = {config.settings.default_submission_type: self.osc_comment, "git": self.gitea_comment}
