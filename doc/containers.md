@@ -20,4 +20,5 @@ echo "$SSH_PRIV_KEY" > /var/lib/data/qem/ssh/id_rsa
 chmod 600 /var/lib/data/qem/ssh/id_rsa
 ```
 6. `for quadlet in qem-bot/containers/systemd/*; do ln -s "$PWD/$quadlet" /etc/containers/systemd/; done`
+   (builds the internal SUSE image from `containers/suse/Containerfile` via `qem-bot.build`)
 7. `systemctl daemon-reload && systemctl start qem-bot-gitea-sync`
