@@ -3,11 +3,9 @@
 """Sync aggregate results."""
 
 from argparse import Namespace
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from itertools import chain
 from logging import getLogger
 
-from . import config
 from .loader.config import read_products
 from .loader.qem import get_aggregate_settings_data
 from .syncres import SyncRes
@@ -30,11 +28,7 @@ class AggregateResultsSync(SyncRes):
         log.info("Synchronizing results for %s products...", len(self.product))
         update_setting = list(chain.from_iterable(get_aggregate_settings_data(product) for product in self.product))
 
-        job_results = {}
-        with ThreadPoolExecutor(max_workers=config.settings.max_workers) as executor:
-            future_j = {executor.submit(self.client.get_jobs, f): f for f in update_setting}
-            for future in as_completed(future_j):
-                job_results[future_j[future]] = future.result()
+        job_results = self.fetch_job_results(update_setting)
 
         total_jobs = sum(len(v) for v in job_results.values())
         log.info("Fetched %s total jobs from openQA.", total_jobs)
