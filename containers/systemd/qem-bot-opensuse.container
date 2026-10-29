@@ -1,0 +1,10 @@
+[Service]
+EnvironmentFile=/var/lib/data/qem/qem-bot.env
+
+[Container]
+Image=registry.opensuse.org/opensuse/qem-bot:latest
+AutoUpdate=registry
+Exec=-g $GITEA_TOKEN -t $DASHBOARD_TOKEN gitea-sync
+Mount=type=bind,source=/var/lib/data/qem/config,destination=/etc/openqabot,ro=true,relabel=shared
+Mount=type=bind,source=/var/lib/data/qem/oscrc,destination=/root/.config/osc/oscrc,ro=true,relabel=shared
+Mount=type=bind,source=/var/lib/data/qem/ssh,destination=/root/.ssh,ro=true,relabel=shared
