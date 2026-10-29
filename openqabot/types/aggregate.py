@@ -223,7 +223,9 @@ class Aggregate(BaseConf):
             (s.priority for s in chain.from_iterable(data.test_submissions.values()) if s.priority is not None),
             default=0,
         ):
-            full_post["openqa"]["_PRIORITY"] = config.settings.base_prio - (max_prio // config.settings.priority_scale)
+            full_post["openqa"]["_PRIORITY"] = config.settings.priority_offset - (
+                max_prio // config.settings.priority_scale
+            )
 
         self._finalize_post(full_post, arch)
         return full_post

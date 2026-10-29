@@ -382,7 +382,7 @@ def test_aggregate_priority(aggregate_factory: Any, submission_mock: Any, mocker
     sub = submission_mock(product="P", version="V", arch="A")
     sub.priority = 100
     res = acc([sub], ci_url=None)
-    assert res[0]["openqa"]["_PRIORITY"] == 45
+    assert res[0]["openqa"]["_PRIORITY"] == 325
 
 
 def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
@@ -399,7 +399,7 @@ def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: An
     sub2.id = 2
     sub2.priority = 200
     res = acc([sub1, sub2], ci_url=None)
-    assert res[0]["openqa"]["_PRIORITY"] == 40
+    assert res[0]["openqa"]["_PRIORITY"] == 275
 
 
 def test_process_arch_same_build_exists(

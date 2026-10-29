@@ -275,3 +275,11 @@ services and tweaking global behavior.
 
 For a full list of available environment variables and their default values, please
 refer to the source code in [openqabot/config.py](../openqabot/config.py).
+
+Job priority variables:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `BASE_PRIO` | `50` | openQA priority for submissions without a submission priority. `override_priority` is interpreted relative to this value. |
+| `QEM_BOT_PRIORITY_OFFSET` | `375` | Base of the openQA priority: openQA priority = offset minus the submission priority divided by the scale, rounded down. |
+| `QEM_BOT_PRIORITY_SCALE` | `2` | Divisor applied to the submission priority in the formula above. |
