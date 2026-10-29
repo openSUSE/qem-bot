@@ -1,26 +1,11 @@
 FROM opensuse/tumbleweed:latest
 
 # Add repository for internal CA and install dependencies
+COPY container-packages.txt /tmp/container-packages.txt
 RUN zypper ar https://download.opensuse.org/repositories/SUSE:/CA/openSUSE_Tumbleweed/SUSE:CA.repo \
     && zypper --gpg-auto-import-keys ref \
-    && zypper in -y -C \
-        ca-certificates \
-        ca-certificates-suse \
-        git \
-        openssh-clients \
-        python3-PyYAML \
-        python3-jsonschema \
-        python3-lxml \
-        python3-openqa_client \
-        python3-osc \
-        python3-pika \
-        python3-pydantic-settings \
-        python3-pyzstd \
-        python3-requests \
-        python3-responses \
-        python3-ruamel.yaml \
-        python3-typer \
-        python3-urllib3 \
+    && zypper in -y -C ca-certificates-suse \
+    && zypper in -y -C $(cat /tmp/container-packages.txt) \
     && zypper clean -a
 
 # Install application
