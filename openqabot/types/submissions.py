@@ -247,18 +247,18 @@ class Submissions(BaseConf):
         """Compute the openQA priority so urgent non-EMU submissions sort below prio 60.
 
         Higher submission priority yields a lower openQA value, which is scheduled earlier.
-        Without a submission priority the result is ``base_prio`` plus 10. ``*Minimal`` flavors
+        Without a submission priority the result is ``default_prio`` plus 10. ``*Minimal`` flavors
         shift the result by -5 and EMU submissions by -30. ``override_priority`` replaces the
-        computed value and is expressed relative to the default of 50 (``base_prio``).
+        computed value and is expressed relative to the default of 50 (``default_prio``).
         """
         sub, flavor, data = ctx.sub, ctx.flavor, ctx.data
         if "override_priority" in data:
-            return settings.base_prio + data["override_priority"] - 50
+            return settings.default_prio + data["override_priority"] - 50
         offset = -5 if flavor.endswith("Minimal") else 0
         if sub.emu:
             offset = -30
         if sub.priority is None:
-            return settings.base_prio + 10 + offset
+            return settings.default_prio + 10 + offset
         return settings.priority_offset - sub.priority // settings.priority_scale + offset
 
     @staticmethod

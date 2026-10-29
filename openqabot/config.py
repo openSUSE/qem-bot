@@ -110,7 +110,7 @@ class Settings(BaseSettings):
     amqp_url: str = Field(default="amqps://suse:suse@rabbit.suse.de", alias="AMQP_URL")
     deprioritize_limit: int | None = Field(default=None, alias="QEM_BOT_DEPRIORITIZE_LIMIT")
     # Default openQA prio for submissions without a submission priority; also the reference for override_priority
-    base_prio: int = 50
+    default_prio: int = Field(default=50, alias="QEM_BOT_DEFAULT_PRIO")
     # Anchor of the submission-priority mapping: prio = priority_offset - submission_priority // priority_scale
     priority_offset: int = Field(default=375, alias="QEM_BOT_PRIORITY_OFFSET")
     priority_scale: int = Field(default=2, alias="QEM_BOT_PRIORITY_SCALE")
@@ -200,7 +200,7 @@ def __getattr__(name: str) -> Any:  # ruff: ignore[any-type]
         "AMQP_URL": "amqp_url",
         "OLDEST_APPROVAL_JOB_DAYS": "oldest_approval_job_days",
         "DEPRIORITIZE_LIMIT": "deprioritize_limit",
-        "BASE_PRIO": "base_prio",
+        "DEFAULT_PRIO": "default_prio",
         "PRIORITY_OFFSET": "priority_offset",
         "PRIORITY_SCALE": "priority_scale",
         "OPENQA_URL": "main_openqa_domain",
