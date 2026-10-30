@@ -1,0 +1,21 @@
+---
+name: container
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    paths:
+      - 'containers/opensuse/**'
+      - '.containerignore'
+      - 'container-packages.txt'
+      - '.github/workflows/container.yml'
+  schedule:
+    - cron: '42 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Build openSUSE container
+        run: sudo podman build -t localhost/qem-bot-opensuse -f containers/opensuse/Dockerfile .
