@@ -148,8 +148,8 @@ def mock_openqa_passed(mocker: MockerFixture, fake_openqa_url: str) -> Any:
         def __bool__(self) -> bool:
             return self.url.netloc == "openqa.suse.de"
 
-        def post_iso(self, *args: Any, **kwargs: Any) -> None:
-            pass
+        def post_iso(self, *_args: Any, **_kwargs: Any) -> bool:  # ruff: ignore[no-self-use]
+            return True
 
     return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
 
@@ -162,6 +162,19 @@ def mock_openqa_exception(mocker: MockerFixture) -> Any:
 
         def post_iso(self, *_args: Any, **_kwargs: Any) -> NoReturn:  # ruff: ignore[no-self-use]
             raise PostOpenQAError
+
+    return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
+
+
+@pytest.fixture
+def mock_openqa_not_scheduled(mocker: MockerFixture) -> Any:
+    class FakeClient:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            pass
+
+        def post_iso(self, *_args: Any, **_kwargs: Any) -> bool:  # ruff: ignore[no-self-use]
+            # openQA found no matching job templates, so nothing was scheduled.
+            return False
 
     return mocker.patch("openqabot.openqabot.OpenQAInterface", FakeClient)
 
@@ -230,6 +243,20 @@ def test_passed_post_osd_failed(mocked_openqa_bot: Namespace, caplog: pytest.Log
     assert "Loaded 1 submissions from QEM Dashboard" in caplog.messages
     assert "Triggering 1 products in openQA" in caplog.messages
     assert "Skipping dashboard update: Job post failed" in caplog.messages
+
+
+@responses.activate
+@pytest.mark.usefixtures("mock_runtime", "mock_openqa_not_scheduled")
+def test_no_job_scheduled_skips_dashboard_update(
+    mocked_openqa_bot: Namespace, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Nothing is recorded on the dashboard when openQA scheduled no job."""
+    caplog.set_level(logging.DEBUG)
+
+    assert OpenQABot(mocked_openqa_bot)() == 0
+
+    assert "Skipping dashboard update: openQA scheduled no job for these settings" in caplog.messages
+    assert len(responses.calls) == 0
 
 
 @responses.activate

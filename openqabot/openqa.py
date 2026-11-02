@@ -55,8 +55,13 @@ class OpenQAInterface:
         """
         return self.url.netloc == config.settings.main_openqa_domain
 
-    def post_iso(self, settings: dict[str, Any]) -> None:
-        """Post a job to openQA with the given settings."""
+    def post_iso(self, settings: dict[str, Any]) -> bool:
+        """Post a job to openQA with the given settings.
+
+        Returns ``False`` when openQA did not schedule anything because no job
+        templates matched, so callers can skip recording settings that would
+        never get jobs.
+        """
         log.info(
             "openqa-cli api --host %s -X post isos %s",
             self.url.geturl(),
@@ -64,20 +69,21 @@ class OpenQAInterface:
         )
         if self.dry:
             log.info("OpenQA post_job skipped due dry run mode")
-            return
+            return True
         try:
             self.openqa.openqa_request("POST", "isos", data=settings, retries=self.retries)
         except RequestError as e:
             (_, _, status_code, text, *_) = e.args
             if status_code == HTTPStatus.NOT_FOUND and "no templates found" in str(text):
                 log.info("Skipping job POST, no openQA templates for product (test-owner scope): %s", text)
-                return
+                return False
             log.exception("openQA API error: %s", text)
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
         except Exception as e:
             log.exception("Job POST failed for settings: %s", pformat(settings))
             raise PostOpenQAError from e
+        return True
 
     @staticmethod
     def handle_job_not_found(job_id: int) -> None:

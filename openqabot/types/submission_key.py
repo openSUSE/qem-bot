@@ -5,9 +5,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openqabot.errors import SubmissionArgError
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 GITEA_TYPE = "git"
 
@@ -48,13 +51,34 @@ class SubmissionKey:
             raise SubmissionArgError(raw, positive=True)
         return cls(s_type, s_project, number)
 
-    def to_dashboard_params(self) -> dict[str, str]:
-        """Return the dashboard query parameters that address this incident."""
-        return {"project": self.project, "type": self.type}
+    def to_dashboard_params(self, extra: Mapping[str, str] | None = None) -> dict[str, str]:
+        """Return the dashboard query parameters that address this incident.
+
+        Optional ``extra`` key/value pairs are merged into the result, so callers
+        that need additional query parameters do not have to build the whole
+        mapping themselves. An ``extra`` key wins over the identity fields.
+        """
+        params = {"project": self.project, "type": self.type}
+        if extra:
+            params.update(extra)
+        return params
+
+    @classmethod
+    def from_dashboard(cls, incident: dict[str, Any]) -> SubmissionKey:
+        """Return the key of a dashboard incident record.
+
+        The record must carry the full identity: a ``KeyError`` is raised when
+        ``type``, ``project`` or ``number`` is missing, so callers that tolerate
+        a partial record have to check the fields first.
+        """
+        return cls(incident["type"], incident["project"], incident["number"])
 
     @classmethod
     def from_submission_dict(cls, submission: dict[str, Any]) -> SubmissionKey:
-        """Return the key of a submission record built by ``_init_submission_dict``."""
+        """Return the key of a submission record built by ``_init_submission_dict``.
+
+        Such records are always Gitea PRs and do not carry a ``type`` yet.
+        """
         return cls(GITEA_TYPE, submission["project"], submission["number"])
 
     def __str__(self) -> str:

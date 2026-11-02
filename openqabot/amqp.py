@@ -17,6 +17,7 @@ from .errors import JobNotFoundError
 from .loader.amqp_listener import AMQPListener
 from .loader.qem import get_submission_settings_data
 from .syncres import SyncRes
+from .types.submission_key import SubmissionKey
 from .types.types import Data
 from .utils import compare_submission_data
 
@@ -119,8 +120,9 @@ class AMQP(SyncRes):
             # project-less job kill the daemon.
             return
         # Load Data about current submission from dashboard database
+        key = SubmissionKey(sub_type, project, sub_nr)
         try:
-            settings: Sequence[Data] = get_submission_settings_data(sub_nr, project, submission_type=sub_type)
+            settings: Sequence[Data] = get_submission_settings_data(key)
         except ValueError:
             return
 
@@ -131,7 +133,5 @@ class AMQP(SyncRes):
             self.fetch_openqa_results(sub, message)
 
         # Try to approve submission
-        approve = Approver(
-            self.args, single_submission=sub_nr, submission_type=sub_type, single_submission_project=project
-        )
+        approve = Approver(self.args, single_submission=key)
         approve()

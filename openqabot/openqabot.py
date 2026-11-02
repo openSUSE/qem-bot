@@ -108,9 +108,9 @@ class OpenQABot:
         log.info("Dashboard update successful for %s: Status %s, Database ID %s", api, res.status_code, res_id)
         return True
 
-    def post_openqa(self, data: dict[str, Any]) -> None:
-        """Post a job to openQA."""
-        self.openqa.post_iso(data)
+    def post_openqa(self, data: dict[str, Any]) -> bool:
+        """Post a job to openQA and report whether anything was scheduled."""
+        return self.openqa.post_iso(data)
 
     @staticmethod
     def _future_result(future: Future[bool]) -> bool:
@@ -131,9 +131,12 @@ class OpenQABot:
         def poster(job: dict[str, Any]) -> bool:
             log.info("Triggering job with details from dashboard: %s", job)
             try:
-                self.post_openqa(job["openqa"])
+                scheduled = self.post_openqa(job["openqa"])
             except PostOpenQAError:
                 log.info("Skipping dashboard update: Job post failed")
+                return True
+            if not scheduled:
+                log.info("Skipping dashboard update: openQA scheduled no job for these settings")
                 return True
             return self.post_qem(job["qem"], job["api"])
 

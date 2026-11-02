@@ -25,6 +25,7 @@ class MockSubmission(Submission):
         self.project = kwargs.get("project", "")
         self.ongoing = kwargs.get("ongoing", True)
         self.type = kwargs.get("type", DEFAULT_SUBMISSION_TYPE)
+        self.scminfo = kwargs.get("scminfo")
         self.embargoed = kwargs.get("embargoed", False)
         self.channels = kwargs.get("channels", [])
         self.rr = kwargs.get("rr")

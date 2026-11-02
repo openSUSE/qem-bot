@@ -239,7 +239,14 @@ class GiteaTrigger:
 
         if self.is_openqa_triggering_needed(matched_iso, trigger_config):
             openqa_settings = self._build_openqa_settings(pullrequest, trigger_config, matched_iso, repo_url, iso_name)
-            self.openqa.post_iso(openqa_settings)
+            if not self.openqa.post_iso(openqa_settings):
+                log.warning(
+                    "No openQA job templates matched for PR %s on %s (%s), nothing scheduled",
+                    pullrequest.number,
+                    matched_iso.arch,
+                    trigger_config.flavor,
+                )
+                return None
             log.info("Triggered openQA tests for PR %s on %s", pullrequest.number, matched_iso.arch)
             return EvaluationResult(triggered=True)
 

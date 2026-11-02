@@ -54,6 +54,11 @@ def mock_put(mocker: MockerFixture) -> MagicMock:
     return mocker.patch("openqabot.loader.qem.dashboard.put")
 
 
+def _smelt_key(number: int = 1, project: str = "SUSE:Maintenance:1") -> SubmissionKey:
+    """Return the dashboard key of a fake SMELT submission."""
+    return SubmissionKey(DEFAULT_SUBMISSION_TYPE, project, number)
+
+
 def test_get_submissions_simple(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [
         {
@@ -155,7 +160,7 @@ def test_get_active_submissions(mock_get_json: MagicMock) -> None:
     res = get_active_submissions(submission_type="git")
 
     assert len(res) == 2
-    assert set(res) == {(1, "PRJ1", "git"), (2, "PRJ2", "git")}
+    assert set(res) == {SubmissionKey("git", "PRJ1", 1), SubmissionKey("git", "PRJ2", 2)}
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": "git"}
     )
@@ -172,7 +177,7 @@ def test_get_active_submissions_skips_incident_without_identity(
 
     res = get_active_submissions(submission_type="git")
 
-    assert res == [(2, "PRJ2", "git")]
+    assert res == [SubmissionKey("git", "PRJ2", 2)]
     assert "Dashboard incident 1 skipped: missing identity field 'project'" in caplog.text
 
 
@@ -193,7 +198,7 @@ _FULL_INCIDENT: dict = {
 
 def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [
-        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scm_info": "foo"},
+        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scm_info": "foo", "scminfo": "deadbeef"},
         {"number": 2, "rr_number": 124, "inReviewQAM": False},
     ]
 
@@ -205,7 +210,18 @@ def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
     assert res[0].type == "gitea"
     assert res[0].url == "http://foo.bar"
     assert res[0].scm_info == "foo"
+    assert res[0].scminfo == "deadbeef"
+    assert res[0].key == SubmissionKey("gitea", "PRJ1", 1)
     assert res[0].submission is not None
+
+
+def test_get_submissions_approver_treats_missing_scminfo_as_none(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [{**_FULL_INCIDENT, "type": "gitea", "scminfo": ""}]
+
+    res = get_submissions_approver()
+
+    assert len(res) == 1
+    assert res[0].scminfo is None
 
 
 def test_get_submissions_approver_skips_malformed_incident(
@@ -248,7 +264,7 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
         "scm_info": "foo_commit",
     }
 
-    res = get_single_submission(1, "PRJ1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_single_submission(_smelt_key(project="PRJ1"))
 
     assert len(res) == 1
     assert res[0].sub == 1
@@ -269,7 +285,7 @@ def test_get_single_submission_not_found(mock_get_json: MagicMock, caplog: pytes
     caplog.set_level(logging.WARNING, logger="bot.loader.qem")
     mock_get_json.return_value = {"error": "Incident not found"}
 
-    res = get_single_submission(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_single_submission(_smelt_key())
 
     assert res == []
     assert "not found on the dashboard" in caplog.text
@@ -286,17 +302,18 @@ def test_get_single_submission_missing_required_fields(
     caplog.set_level(logging.WARNING, logger="bot.loader.qem")
     mock_get_json.return_value = {"number": 1, "type": DEFAULT_SUBMISSION_TYPE}
 
-    res = get_single_submission(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_single_submission(_smelt_key())
 
     assert res == []
     assert "is missing required fields on the dashboard" in caplog.text
+    assert f"Submission {_smelt_key()} is missing required fields" in caplog.text
 
 
 def test_get_submission_settings_no_settings(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = []
 
     with pytest.raises(NoSubmissionResultsError):
-        get_submission_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+        get_submission_settings(_smelt_key())
 
 
 def test_get_submission_settings_all_submissions(mock_get_json: MagicMock) -> None:
@@ -305,7 +322,7 @@ def test_get_submission_settings_all_submissions(mock_get_json: MagicMock) -> No
         {"id": 2, "settings": {"RRID": 2}, "withAggregate": False},
     ]
 
-    res = get_submission_settings(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE, all_submissions=True)
+    res = get_submission_settings(_smelt_key(), all_submissions=True)
 
     assert len(res) == 2
     assert res[0].id == 1
@@ -319,7 +336,7 @@ def test_get_submission_settings_multiple_rrids(mock_get_json: MagicMock) -> Non
         {"id": 3, "settings": {}, "withAggregate": False},
     ]
 
-    res = get_submission_settings(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE, all_submissions=False)
+    res = get_submission_settings(_smelt_key(), all_submissions=False)
 
     assert len(res) == 2
     assert res[0].id == 2
@@ -332,15 +349,40 @@ def test_get_submission_settings_no_rrids(mock_get_json: MagicMock) -> None:
         {"id": 2, "settings": {}, "withAggregate": False},
     ]
 
-    res = get_submission_settings(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE, all_submissions=False)
+    res = get_submission_settings(_smelt_key(), all_submissions=False)
 
     assert len(res) == 2
+
+
+def test_get_submission_settings_git_keeps_only_tested_commit(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [
+        {"id": 1, "settings": {"SCMINFO": "old"}, "withAggregate": False},
+        {"id": 2, "settings": {"SCMINFO": "new"}, "withAggregate": False},
+        {"id": 3, "settings": {}, "withAggregate": False},
+    ]
+
+    res = get_submission_settings(SubmissionKey("git", "products/SLFO", 1), scminfo="new")
+
+    # Rows from another revision are dropped; rows recorded before the marker
+    # existed are kept so the filter cannot empty the result on its own.
+    assert [j.id for j in res] == [2, 3]
+
+
+def test_get_submission_settings_git_without_scminfo_keeps_all(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = [
+        {"id": 1, "settings": {"SCMINFO": "old"}, "withAggregate": False},
+        {"id": 2, "settings": {}, "withAggregate": False},
+    ]
+
+    res = get_submission_settings(SubmissionKey("git", "products/SLFO", 1))
+
+    assert [j.id for j in res] == [1, 2]
 
 
 def test_get_submission_settings_with_project(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"id": 1, "settings": {"RRID": 1}, "withAggregate": False}]
 
-    get_submission_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    get_submission_settings(_smelt_key())
 
     mock_get_json.assert_called_once_with(
         "api/incident_settings/1",
@@ -360,7 +402,7 @@ def test_get_submission_settings_data(mock_get_json: MagicMock) -> None:
         }
     ]
 
-    res = get_submission_settings_data(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_submission_settings_data(_smelt_key())
 
     assert len(res) == 1
     assert res[0].submission == 1
@@ -388,7 +430,7 @@ def test_get_submission_settings_data_with_project(mock_get_json: MagicMock) -> 
         }
     ]
 
-    res = get_submission_settings_data(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_submission_settings_data(_smelt_key())
 
     assert len(res) == 1
     mock_get_json.assert_called_once_with(
@@ -401,7 +443,7 @@ def test_get_submission_settings_data_with_project(mock_get_json: MagicMock) -> 
 def test_get_submission_settings_data_error(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = {"error": "foo"}
 
-    res = get_submission_settings_data(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+    res = get_submission_settings_data(_smelt_key())
 
     assert len(res) == 0
 
@@ -410,13 +452,11 @@ def test_get_submission_results(mock_get_json: MagicMock, mocker: MockerFixture)
     mock_get_json.return_value = [{"foo": "bar"}]
     mock_settings = mocker.patch("openqabot.loader.qem.get_submission_settings", return_value=[MagicMock(id=1)])
 
-    res = get_submission_results(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+    res = get_submission_results(_smelt_key())
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(
-        1, "SUSE:Maintenance:1", all_submissions=False, submission_type=DEFAULT_SUBMISSION_TYPE
-    )
+    mock_settings.assert_called_once_with(_smelt_key(), all_submissions=False, scminfo=None)
     mock_get_json.assert_called_once_with("api/jobs/incident/1", headers=settings.dashboard_token_dict)
 
 
@@ -425,20 +465,20 @@ def test_get_submission_results_error(mock_get_json: MagicMock, mocker: MockerFi
     mocker.patch("openqabot.loader.qem.get_submission_settings", return_value=[MagicMock(id=1)])
 
     with pytest.raises(ValueError, match="foo"):
-        get_submission_results(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+        get_submission_results(_smelt_key())
 
 
 def test_get_aggregate_settings_no_settings(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = []
 
     with pytest.raises(NoAggregateResultsError):
-        get_aggregate_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+        get_aggregate_settings(_smelt_key())
 
 
 def test_get_aggregate_settings(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"id": 1, "build": "20220101-1"}]
 
-    res = get_aggregate_settings(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+    res = get_aggregate_settings(_smelt_key())
 
     assert len(res) == 1
     assert res[0].id == 1
@@ -448,7 +488,7 @@ def test_get_aggregate_settings(mock_get_json: MagicMock) -> None:
 def test_get_aggregate_settings_with_project(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"id": 1, "build": "20220101-1"}]
 
-    get_aggregate_settings(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    get_aggregate_settings(_smelt_key())
 
     mock_get_json.assert_called_once_with(
         "api/update_settings/1",
@@ -475,11 +515,11 @@ def test_get_aggregate_results(mock_get_json: MagicMock, mocker: MockerFixture) 
     mock_get_json.return_value = [{"foo": "bar"}]
     mock_settings = mocker.patch("openqabot.loader.qem.get_aggregate_settings", return_value=[MagicMock(id=1)])
 
-    res = get_aggregate_results(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+    res = get_aggregate_results(_smelt_key())
 
     assert len(res) == 1
     assert res[0]["foo"] == "bar"
-    mock_settings.assert_called_once_with(1, "SUSE:Maintenance:1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    mock_settings.assert_called_once_with(_smelt_key())
     mock_get_json.assert_called_once_with("api/jobs/update/1", headers=settings.dashboard_token_dict)
 
 
@@ -488,7 +528,7 @@ def test_get_aggregate_results_error(mock_get_json: MagicMock, mocker: MockerFix
     mocker.patch("openqabot.loader.qem.get_aggregate_settings", return_value=[MagicMock(id=1)])
 
     with pytest.raises(ValueError, match="foo"):
-        get_aggregate_results(1, "SUSE:Maintenance:1", DEFAULT_SUBMISSION_TYPE)
+        get_aggregate_results(_smelt_key())
 
 
 def test_get_aggregate_settings_data_none(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
@@ -602,9 +642,16 @@ def test_update_job_request_exception(mock_patch: MagicMock, caplog: pytest.LogC
 def test_update_incident_reason_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.return_value.status_code = 200
+    key = _smelt_key(1, "project")
 
-    update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason")
+    update_incident_reason(key, "reason")
     assert "error" not in caplog.text
+    mock_patch.assert_called_once_with(
+        "api/incidents/1/rejection_reason",
+        headers=settings.dashboard_token_dict,
+        params={"type": DEFAULT_SUBMISSION_TYPE, "project": "project"},
+        json={"rejection_reason": "reason"},
+    )
 
 
 def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
@@ -612,21 +659,21 @@ def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pyte
     mock_patch.return_value.text = "Error message"
     caplog.set_level(logging.ERROR)
 
-    update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason")
+    update_incident_reason(_smelt_key(1, "project"), "reason")
     assert "Error message" in caplog.text
 
 
 def test_update_incident_reason_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.side_effect = requests.exceptions.RequestException
-    update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason")
+    update_incident_reason(_smelt_key(1, "project"), "reason")
     assert "QEM Dashboard API request failed" in caplog.text
 
 
 def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123, "project": "SUSE:Maintenance:123", "type": DEFAULT_SUBMISSION_TYPE}]
     res = get_active_submissions(submission_type=DEFAULT_SUBMISSION_TYPE)
-    assert res == [(123, "SUSE:Maintenance:123", DEFAULT_SUBMISSION_TYPE)]
+    assert res == [SubmissionKey(DEFAULT_SUBMISSION_TYPE, "SUSE:Maintenance:123", 123)]
     mock_get_json.assert_called_once_with(
         "api/incidents", headers=settings.dashboard_token_dict, params={"type": DEFAULT_SUBMISSION_TYPE}
     )
@@ -635,13 +682,13 @@ def test_get_active_submissions_with_type(mock_get_json: MagicMock) -> None:
 def test_get_active_submissions_no_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [{"number": 123, "project": "SUSE:Maintenance:123", "type": DEFAULT_SUBMISSION_TYPE}]
     res = get_active_submissions()
-    assert res == [(123, "SUSE:Maintenance:123", DEFAULT_SUBMISSION_TYPE)]
+    assert res == [SubmissionKey(DEFAULT_SUBMISSION_TYPE, "SUSE:Maintenance:123", 123)]
     mock_get_json.assert_called_once_with("api/incidents", headers=settings.dashboard_token_dict, params={})
 
 
 def test_get_single_submission_with_type(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = {**_FULL_INCIDENT, "number": 123, "rr_number": 456, "type": DEFAULT_SUBMISSION_TYPE}
-    res = get_single_submission(123, "PRJ1", submission_type=DEFAULT_SUBMISSION_TYPE)
+    res = get_single_submission(_smelt_key(123, "PRJ1"))
     assert len(res) == 1
     assert res[0].sub == 123
     assert not res[0].url

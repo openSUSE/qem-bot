@@ -16,7 +16,7 @@ import responses
 
 import openqabot.config as config_module
 from openqabot.approver import Approver
-from openqabot.config import Settings, settings
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
@@ -24,8 +24,11 @@ from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list
+from openqabot.types.pullrequest import PullRequest
+from openqabot.types.submission_key import SubmissionKey
 
 from .helpers import (
+    GITEA_PR_COMMIT,
     add_two_passed_response,
     f_sub_approver,
     fake_change_review_state,
@@ -107,26 +110,22 @@ def fake_openqa_comment_api() -> None:
     )
 
 
-def make_approver(submission: int | str = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
+def make_approver(submission: int = 0, *, mocker: MockerFixture | None = None, comment: bool = False) -> int:
     if mocker:
         mocker.patch("openqabot.approver.Commenter", autospec=True)
-    # The CLI now expects a single "<type>:<project>:<id>" string. Translate the
-    # helper's plain smelt submission number into that form; 0/None still means
-    # "all submissions".
-    incident = (
-        f"smelt:SUSE:Maintenance:{submission}:{submission}"
-        if isinstance(submission, int) and submission
-        else submission
+    # The Approver takes the parsed dashboard key directly, so translate the
+    # helper's smelt submission number into the key of the fake SMELT incident;
+    # 0 still means "all submissions".
+    single_submission = (
+        SubmissionKey(DEFAULT_SUBMISSION_TYPE, f"SUSE:Maintenance:{submission}", submission) if submission else None
     )
     args = Namespace(
         dry=True,
         token="123",
-        all_submissions=False,
-        incident=incident,
         gitea_token=None,
         comment=comment,
     )
-    instance = Approver(args)
+    instance = Approver(args, single_submission=single_submission)
     instance.client.retries = 0
     return instance()
 
@@ -162,7 +161,7 @@ def _mock_load_dotenv(mocker: MockerFixture) -> None:
 def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
     request_param = request.node.get_closest_marker("qem_behavior").args[0]
 
-    def f_sub_settins(sub: int, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
+    def f_sub_settins(key: SubmissionKey, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
         if "inc" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -179,9 +178,9 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
             4: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(4000, 4010)],
             5: [JobAggr(i, aggregate=False, with_aggregate=False) for i in range(5000, 5010)],
         }
-        return results.get(sub, [])
+        return results.get(key.number, [])
 
-    def f_aggr_settings(sub: int, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
+    def f_aggr_settings(key: SubmissionKey, *_args: Any, **_kwargs: Any) -> list[JobAggr]:
         if "aggr" in request_param:
             msg = "No results for settings"
             raise NoResultsError(msg)
@@ -192,15 +191,31 @@ def fake_qem(request: pytest.FixtureRequest, mocker: MockerFixture) -> None:
             2: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(20000, 20010)],
             3: [JobAggr(i, aggregate=True, with_aggregate=False) for i in range(30000, 30010)],
         }
-        return results.get(sub, [])
+        return results.get(key.number, [])
+
+    def f_open_prs(_token: dict[str, str], repo: str, *, number: int | None) -> list[PullRequest]:
+        # The approver reads the PR head live from Gitea; report the commit that
+        # the fake submission was built and tested at so it stays approvable.
+        return [
+            PullRequest(
+                number=number or 0,
+                state="open",
+                project=repo,
+                branch="main",
+                url=f"https://src.suse.de/{repo}/pulls/{number}",
+                commit_sha=GITEA_PR_COMMIT,
+                raw_labels=[],
+            )
+        ]
 
     mocker.patch(
         "openqabot.approver.get_single_submission",
-        side_effect=lambda i, *_args, **_kwargs: [s for s in f_sub_approver() if s.sub == i],
+        side_effect=lambda key, *_args, **_kwargs: [s for s in f_sub_approver() if s.sub == key.number],
     )
     mocker.patch("openqabot.approver.get_submissions_approver", side_effect=f_sub_approver)
     mocker.patch("openqabot.approver.get_submission_settings", side_effect=f_sub_settins)
     mocker.patch("openqabot.approver.get_aggregate_settings", side_effect=f_aggr_settings)
+    mocker.patch("openqabot.approver.get_open_prs", side_effect=f_open_prs)
 
     OpenQAInterface.get_job_comments.cache_clear()
     OpenQAInterface.get_single_job.cache_clear()

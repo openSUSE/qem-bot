@@ -15,6 +15,7 @@ from openqa_client.exceptions import OpenQAClientError
 from openqabot.amqp import AMQP
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import JobNotFoundError
+from openqabot.types.submission_key import SubmissionKey
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock
@@ -117,13 +118,19 @@ def test_handle_submission_value_error(caplog: pytest.LogCaptureFixture, mocker:
 @pytest.mark.usefixtures("qem_project_job")
 def test_handle_submission_updates_dashboard_entry(mocker: MockerFixture, amqp: AMQP) -> None:
     mocker.patch("openqabot.approver.get_single_submission")
-    mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
+    get_settings = mocker.patch("openqabot.amqp.get_submission_settings_data", return_value=[0])
+    mock_approver = mocker.patch("openqabot.amqp.Approver")
     mocker.patch("openqabot.amqp.compare_submission_data", return_value=True)
     mocker.patch("openqabot.openqa.OpenQAInterface.get_jobs", return_value=[0])
     fetch_openqa_results_mock = mocker.patch("openqabot.amqp.AMQP.fetch_openqa_results", return_value=True)
 
     amqp.handle_submission(42, DEFAULT_SUBMISSION_TYPE, {"id": 1})
     fetch_openqa_results_mock.assert_called()
+    # The project read back from openQA completes the dashboard key, which is
+    # used both for the settings lookup and for approving only this submission.
+    key = SubmissionKey(DEFAULT_SUBMISSION_TYPE, "SUSE:Maintenance:42", 42)
+    get_settings.assert_called_once_with(key)
+    mock_approver.assert_called_once_with(amqp.args, single_submission=key)
 
 
 @pytest.mark.usefixtures("qem_project_job")
