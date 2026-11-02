@@ -1,0 +1,19 @@
+<services>
+  <service name="obs_scm">
+    <param name="scm">git</param>
+    <param name="url">https://github.com/openSUSE/qem-bot</param>
+    <param name="revision">master</param>
+    <param name="versionprefix">1</param>
+    <param name="versionformat">%ct.%h</param>
+    <param name="subdir">containers/opensuse</param>
+    <param name="extract">Dockerfile</param>
+    <param name="changesgenerate">enable</param>
+    <param name="changesauthor">okurz@suse.de</param>
+    <param name="exclude-re">^tests/</param>
+    <param name="exclude-re">^doc/</param>
+    <param name="exclude-re">^containers/</param>
+    <param name="exclude-re">^\.github/</param>
+  </service>
+  <service name="kiwi_metainfo_helper" mode="buildtime"/>
+  <service name="docker_label_helper" mode="buildtime"/>
+</services>
