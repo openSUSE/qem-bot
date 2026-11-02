@@ -395,7 +395,6 @@ def test_check_pullrequest_mixed_trigger_and_covered_skips_comment(
     config_trigger.project = config_covered.project = "SLFO"
     trigger.config_list = [config_trigger, config_covered]
     mock_iso = MagicMock(arch="x86_64", build="b", flavor="A")
-    mocker.patch.object(trigger, "_should_skip_pr", return_value=False)
     mocker.patch.object(trigger, "_get_matched_iso", return_value=(mock_iso, "iso"))
     mocker.patch.object(trigger, "is_openqa_triggering_needed", side_effect=[True, False])
     mock_comment = mocker.patch.object(trigger, "comment_on_pr")
@@ -582,13 +581,13 @@ def test_comment_on_pr_data_creation(trigger: GiteaTrigger, mock_trigger_config:
     assert data.distri == mock_trigger_config.distri
 
 
-def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig, mocker: MockerFixture) -> None:
-    """Tests branch and label-based skipping of pull requests."""
+def test_skip_reason(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig, mocker: MockerFixture) -> None:
+    """Tests branch and label-based skipping reasons for pull requests."""
     # Scenario 1: PR has required labels
     pr_ok = MagicMock(spec=PullRequest)
     pr_ok.branch = "slfo-main"
     pr_ok.has_all_labels.return_value = True
-    assert trigger._should_skip_pr(pr_ok, mock_trigger_config) is False  # ruff: ignore[private-member-access]
+    assert trigger._skip_reason(pr_ok, mock_trigger_config) is None  # ruff: ignore[private-member-access]
 
     # Scenario 2: PR is missing required labels
     pr_skip = MagicMock(spec=PullRequest)
@@ -596,7 +595,10 @@ def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfi
     pr_skip.has_all_labels.return_value = False
     pr_skip.number = 123
     pr_skip.labels = {"label1"}
-    assert trigger._should_skip_pr(pr_skip, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert (
+        trigger._skip_reason(pr_skip, mock_trigger_config)  # ruff: ignore[private-member-access]
+        == f"missing required labels {sorted(trigger.pr_required_labels)}"
+    )
 
     # Scenario 3: opensuse (o3) mode
     trigger.is_maintenance = True
@@ -605,13 +607,49 @@ def test_should_skip_pr(trigger: GiteaTrigger, mock_trigger_config: TriggerConfi
     pr_o3.branch = "master"
     pr_o3.number = 123
     mocker.patch.object(trigger, "is_build_finished", return_value=True)
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is False  # ruff: ignore[private-member-access]
+    assert trigger._skip_reason(pr_o3, mock_trigger_config) is None  # ruff: ignore[private-member-access]
 
     mocker.patch.object(trigger, "is_build_finished", return_value=False)
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert trigger._skip_reason(pr_o3, mock_trigger_config) == "build not finished in Gitea"  # ruff: ignore[private-member-access]
 
     pr_o3.branch = "wrong-branch"
-    assert trigger._should_skip_pr(pr_o3, mock_trigger_config) is True  # ruff: ignore[private-member-access]
+    assert (
+        trigger._skip_reason(pr_o3, mock_trigger_config)  # ruff: ignore[private-member-access]
+        == "does not match requested branch(master)"
+    )
+
+
+def test_applicable_configs(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig, mocker: MockerFixture) -> None:
+    """Tests selecting applicable configs and logging skip reasons."""
+    mock_log = mocker.patch("openqabot.giteatrigger.log.debug")
+
+    # Scenario 1: matching config and non-matching project config
+    pr = _make_pr(1, mock_trigger_config)
+    pr.has_all_labels.return_value = True
+    other_config = TriggerConfig(distri="sle", flavor="Other")
+    other_config.project = "other/project"
+    trigger.config_list = [mock_trigger_config, other_config]
+
+    configs = trigger._applicable_configs(pr)  # ruff: ignore[private-member-access]
+    assert configs == [mock_trigger_config]
+
+    # Scenario 2: no config matches PR project
+    pr_unmatched = _make_pr(2, mock_trigger_config)
+    pr_unmatched.project = "unmatched/project"
+    assert trigger._applicable_configs(pr_unmatched) == []  # ruff: ignore[private-member-access]
+    mock_log.assert_called_with(
+        "No applicable configs found for %s: %s", pr_unmatched, "no trigger config for this project"
+    )
+
+    # Scenario 3: config matches project but is skipped
+    pr_skipped = _make_pr(3, mock_trigger_config)
+    pr_skipped.branch = "wrong-branch"
+    assert trigger._applicable_configs(pr_skipped) == []  # ruff: ignore[private-member-access]
+    mock_log.assert_called_with(
+        "No applicable configs found for %s: %s",
+        pr_skipped,
+        f"does not match requested branch({mock_trigger_config.branch})",
+    )
 
 
 def test_check_pullrequest_opensuse_success(
@@ -685,7 +723,7 @@ def test_check_pullrequest_skipped(
 ) -> None:
     """Tests that check_pullrequest returns early if PR can be skipped."""
     mock_pr = _make_pr(None, mock_trigger_config, spec=PullRequest)
-    mocker.patch.object(trigger, "_should_skip_pr", return_value=True)
+    mocker.patch.object(trigger, "_applicable_configs", return_value=[])
     mock_log = mocker.patch("openqabot.giteatrigger.log.info")
 
     trigger.check_pullrequest(mock_pr)

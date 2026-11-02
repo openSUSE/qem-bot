@@ -121,21 +121,38 @@ class GiteaTrigger:
         }
         return not self.openqa.get_latest_scheduled_product_jobs(openqa_settings)
 
-    def _should_skip_pr(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> bool:
-        """Determine if a pull request should be skipped based on branch or status/labels."""
+    def _skip_reason(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> str | None:
+        """Return why a pull request is skipped for a config (branch or status/labels), or None if applicable."""
         if pullrequest.branch != trigger_config.branch:
-            log.info("PR %s does not match requested branch(%s)", pullrequest, trigger_config.branch)
-            return True
+            return f"does not match requested branch({trigger_config.branch})"
 
         if self.is_maintenance:
             if not self.is_build_finished(pullrequest, trigger_config):
-                log.debug("PR %s disregarded (build not finished in Gitea)", pullrequest.number)
-                return True
+                return "build not finished in Gitea"
         elif not pullrequest.has_all_labels(self.pr_required_labels):
-            log.debug("PR %s disregarded (labels: %s)", pullrequest.number, pullrequest.labels)
-            return True
+            return f"missing required labels {sorted(self.pr_required_labels)}"
 
-        return False
+        return None
+
+    def _applicable_configs(self, pullrequest: PullRequest) -> list[TriggerConfig]:
+        """Select the configs a pull request applies to, logging the skip reasons once per pull request."""
+        applicable_configs: list[TriggerConfig] = []
+        skip_reasons: dict[str, None] = {}
+        for tc in self.config_list:
+            if tc.project != pullrequest.project:
+                continue
+            if reason := self._skip_reason(pullrequest, tc):
+                skip_reasons.setdefault(reason)
+            else:
+                applicable_configs.append(tc)
+
+        if not applicable_configs:
+            log.debug(
+                "No applicable configs found for %s: %s",
+                pullrequest,
+                "; ".join(skip_reasons) or "no trigger config for this project",
+            )
+        return applicable_configs
 
     def _get_matched_iso(
         self, pullrequest: PullRequest, trigger_config: TriggerConfig, repo_url: str
@@ -206,25 +223,17 @@ class GiteaTrigger:
             pullrequest (PullRequest): The pull request object to validate and test.
 
         """
-        applicable_configs = [
-            tc
-            for tc in self.config_list
-            if tc.project == pullrequest.project and not self._should_skip_pr(pullrequest, tc)
-        ]
-        if not applicable_configs:
-            log.debug("No applicable configs found for PR %s in project %s", pullrequest.number, pullrequest.project)
-            return
+        if applicable_configs := self._applicable_configs(pullrequest):
+            log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
 
-        log.info("Evaluating PR %s for openQA triggering", pullrequest.number)
+            outcomes = [res for tc in applicable_configs if (res := self._evaluate_config(pullrequest, tc)) is not None]
+            summary = EvaluationSummary(outcomes, len(applicable_configs))
 
-        outcomes = [res for tc in applicable_configs if (res := self._evaluate_config(pullrequest, tc)) is not None]
-        summary = EvaluationSummary(outcomes, len(applicable_configs))
+            if not summary.approve:
+                log.info("Approval blocked for PR %s: unevaluated configs", pullrequest.number)
 
-        if not summary.approve:
-            log.info("Approval blocked for PR %s: unevaluated configs", pullrequest.number)
-
-        if self.comment and summary.covered_data and not summary.any_triggered:
-            self.comment_on_pr(pullrequest, summary.covered_data, approve=summary.approve)
+            if self.comment and summary.covered_data and not summary.any_triggered:
+                self.comment_on_pr(pullrequest, summary.covered_data, approve=summary.approve)
 
     def _evaluate_config(self, pullrequest: PullRequest, trigger_config: TriggerConfig) -> EvaluationResult | None:
         """Trigger openQA for one config, or return its coverage Data."""
