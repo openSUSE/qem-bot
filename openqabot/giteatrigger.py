@@ -21,7 +21,7 @@ from openqabot.loader.crawler import Crawler
 from openqabot.loader.triggerconfig import TriggerConfig
 from openqabot.repodiff import RepoDiff
 from openqabot.types.isomatch import IsoMatch
-from openqabot.types.pullrequest import PullRequest
+from openqabot.types.pullrequest import NO_QE_LABEL, PullRequest
 from openqabot.types.types import Data
 
 from .commenter import Commenter
@@ -125,6 +125,9 @@ class GiteaTrigger:
         """Return why a pull request is skipped for a config (branch or status/labels), or None if applicable."""
         if pullrequest.branch != trigger_config.branch:
             return f"does not match requested branch({trigger_config.branch})"
+
+        if pullrequest.is_qe_excluded:
+            return f"labeled {NO_QE_LABEL}"
 
         if self.is_maintenance:
             if not self.is_build_finished(pullrequest, trigger_config):

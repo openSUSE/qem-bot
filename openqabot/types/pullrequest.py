@@ -11,6 +11,9 @@ from openqabot.types.submission_key import SubmissionKey
 
 log = getLogger("bot.loader.pullrequest")
 
+# PRs carrying this label are excluded from QE testing in openQA
+NO_QE_LABEL = "NO_QE"
+
 
 class CommentableProtocol(Protocol):
     """Protocol for objects representing a commentable entity."""
@@ -118,6 +121,11 @@ class PullRequest:
     def has_all_labels(self, required_labels: set[str]) -> bool:
         """Check if pull request has ALL labels provided in the input list."""
         return self.labels.issuperset(required_labels)
+
+    @property
+    def is_qe_excluded(self) -> bool:
+        """Check if the pull request is labeled to be excluded from QE testing."""
+        return NO_QE_LABEL in self.labels
 
     def is_active(self) -> bool:
         """Check if the pull request is in an active state."""
