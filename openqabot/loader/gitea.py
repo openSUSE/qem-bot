@@ -28,7 +28,7 @@ from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
-from openqabot.types.pullrequest import PullRequest
+from openqabot.types.pullrequest import NO_QE_LABEL, PullRequest
 from openqabot.types.submission_key import SubmissionKey
 from openqabot.utils import retry10_gitea as retried_requests
 
@@ -750,6 +750,10 @@ def _build_submission_record(
     only_requested_prs: bool,
     fake_data: bool,
 ) -> dict[str, Any] | None:
+    if pr.is_qe_excluded:
+        log.info("PR %s skipped: Labeled %s", pr.key, NO_QE_LABEL)
+        return None
+
     submission = _init_submission_dict(pr)
     reviews, comments, files = _fetch_details(pr.project, pr.number, token, fake_data=fake_data)
 

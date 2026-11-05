@@ -59,6 +59,7 @@ def _make_pr(number: int | None, trigger_config: TriggerConfig, **kwargs: Any) -
     pr = MagicMock(number=number, **kwargs)
     pr.project = trigger_config.project
     pr.branch = trigger_config.branch
+    pr.is_qe_excluded = False
     return pr
 
 
@@ -585,12 +586,14 @@ def test_skip_reason(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig, 
     """Tests branch and label-based skipping reasons for pull requests."""
     # Scenario 1: PR has required labels
     pr_ok = MagicMock(spec=PullRequest)
+    pr_ok.is_qe_excluded = False
     pr_ok.branch = "slfo-main"
     pr_ok.has_all_labels.return_value = True
     assert trigger._skip_reason(pr_ok, mock_trigger_config) is None  # ruff: ignore[private-member-access]
 
     # Scenario 2: PR is missing required labels
     pr_skip = MagicMock(spec=PullRequest)
+    pr_skip.is_qe_excluded = False
     pr_skip.branch = "slfo-main"
     pr_skip.has_all_labels.return_value = False
     pr_skip.number = 123
@@ -600,10 +603,18 @@ def test_skip_reason(trigger: GiteaTrigger, mock_trigger_config: TriggerConfig, 
         == f"missing required labels {sorted(trigger.pr_required_labels)}"
     )
 
-    # Scenario 3: opensuse (o3) mode
+    # Scenario 3: PR is labeled NO_QE
+    pr_no_qe = MagicMock(spec=PullRequest)
+    pr_no_qe.branch = "slfo-main"
+    pr_no_qe.is_qe_excluded = True
+    pr_no_qe.has_all_labels.return_value = True
+    assert trigger._skip_reason(pr_no_qe, mock_trigger_config) == "labeled NO_QE"  # ruff: ignore[private-member-access]
+
+    # Scenario 4: opensuse (o3) mode
     trigger.is_maintenance = True
     mock_trigger_config.branch = "master"
     pr_o3 = MagicMock(spec=PullRequest)
+    pr_o3.is_qe_excluded = False
     pr_o3.branch = "master"
     pr_o3.number = 123
     mocker.patch.object(trigger, "is_build_finished", return_value=True)

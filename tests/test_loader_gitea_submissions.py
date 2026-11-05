@@ -131,6 +131,26 @@ def test_make_submission_from_gitea_pr_no_reviews(mocker: MockerFixture, caplog:
     assert "PR git:owner/repo:123 skipped: No reviews by" in caplog.text
 
 
+def test_make_submission_from_gitea_pr_no_qe_label(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
+    pr_dict = {
+        "number": 123,
+        "state": "open",
+        "url": "url",
+        "labels": [{"name": "NO_QE"}],
+        "base": {"repo": {"full_name": "owner/repo", "name": "repo"}},
+    }
+    pr = PullRequest.from_json(pr_dict)
+    assert pr is not None
+    mock_fetch = mocker.patch("openqabot.loader.gitea._fetch_details")
+    res = gitea.make_submission_from_gitea_pr(
+        pr, {}, only_successful_builds=False, only_requested_prs=False, fake_data=False
+    )
+    assert res is None
+    mock_fetch.assert_not_called()
+    assert "PR git:owner/repo:123 skipped: Labeled NO_QE" in caplog.text
+
+
 def test_is_review_requested_by_explicit_users() -> None:
     review = {"user": {"login": "user1"}}
     assert gitea.is_review_requested_by(review, users=("user1",))

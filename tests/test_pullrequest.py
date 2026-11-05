@@ -26,6 +26,28 @@ def test_pull_request_has_labels() -> None:
     assert not pr.has_all_labels({"feature"})
 
 
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        pytest.param([{"name": "NO_QE"}, {"name": "bug"}], True, id="no-qe"),
+        pytest.param([{"name": "bug"}], False, id="other-labels"),
+        pytest.param([], False, id="no-labels"),
+    ],
+)
+def test_pull_request_is_qe_excluded(labels: list[dict[str, str]], *, expected: bool) -> None:
+    """Verify that is_qe_excluded is True only when the NO_QE label is present."""
+    pr = PullRequest(
+        number=124,
+        state="open",
+        project="os-autoinst",
+        branch="master",
+        url="http://gitea/pull/124",
+        commit_sha="abcd123",
+        raw_labels=labels,
+    )
+    assert pr.is_qe_excluded is expected
+
+
 def test_pull_request_is_active() -> None:
     """Verify that is_active returns True only for open PRs."""
     pr_open = PullRequest(
