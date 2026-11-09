@@ -283,3 +283,5 @@ Job priority variables:
 | `QEM_BOT_DEFAULT_PRIO` | `50` | openQA priority for submissions without a submission priority. `override_priority` is interpreted relative to this value. |
 | `QEM_BOT_PRIORITY_OFFSET` | `375` | Base of the openQA priority: openQA priority = offset minus the submission priority divided by the scale, rounded down. |
 | `QEM_BOT_PRIORITY_SCALE` | `2` | Divisor applied to the submission priority in the formula above. |
+| `QEM_BOT_AGGREGATE_PRIORITY_OFFSET` | `320` | Base of the openQA priority for aggregate tests: openQA priority = offset minus the maximum submission priority divided by the scale, rounded down. |
+| `QEM_BOT_AGGREGATE_PRIORITY_SCALE` | `5` | Divisor applied to the maximum submission priority in aggregate tests. |

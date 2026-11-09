@@ -143,5 +143,7 @@ def test_module_getattr_constants() -> None:
     """Test legacy and module-level constants mapped through __getattr__."""
     assert cfg.GITEA_PROJECT == "products/SLFO,products/SLFO_Kernel"
     assert cfg.AMQP_URL == "amqps://suse:suse@rabbit.suse.de"
+    assert cfg.AGGREGATE_PRIORITY_OFFSET == 320
+    assert cfg.AGGREGATE_PRIORITY_SCALE == 5
     with pytest.raises(AttributeError, match="has no attribute non_existent_attr"):
         _ = cfg.non_existent_attr

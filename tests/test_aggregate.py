@@ -374,15 +374,27 @@ def test_aggregate_call_pc_tools_success(aggregate_factory: Any, submission_mock
     assert res[0]["openqa"]["PUBLIC_CLOUD_TOOLS_IMAGE_BASE"] == "Base"
 
 
-def test_aggregate_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    ("priority", "expected_prio"),
+    [
+        (100, 300),
+        (650, 190),
+        (1500, 20),
+        (1547, 11),
+        (2000, -80),
+    ],
+)
+def test_aggregate_priority(
+    aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture, priority: int, expected_prio: int
+) -> None:
     acc = aggregate_factory("product", config={"FLAVOR": "None", "archs": ["A"], "test_issues": {"I": "P:V"}})
     mocker.patch("openqabot.types.aggregate.merge_repohash", return_value="hash")
     mocker.patch("openqabot.types.aggregate.dashboard.get_json", return_value=[{"build": "old", "repohash": "old"}])
 
     sub = submission_mock(product="P", version="V", arch="A")
-    sub.priority = 100
+    sub.priority = priority
     res = acc([sub], ci_url=None)
-    assert res[0]["openqa"]["_PRIORITY"] == 325
+    assert res[0]["openqa"]["_PRIORITY"] == expected_prio
 
 
 def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: Any, mocker: MockerFixture) -> None:
@@ -399,7 +411,7 @@ def test_aggregate_multiple_priority(aggregate_factory: Any, submission_mock: An
     sub2.id = 2
     sub2.priority = 200
     res = acc([sub1, sub2], ci_url=None)
-    assert res[0]["openqa"]["_PRIORITY"] == 275
+    assert res[0]["openqa"]["_PRIORITY"] == 280
 
 
 def test_process_arch_same_build_exists(
