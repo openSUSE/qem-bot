@@ -120,6 +120,9 @@ def fake_osc_get_config(override_apiurl: str) -> None:
 
 
 def fake_get_multibuild_data(obs_project: str) -> str:
+    if obs_project == "SUSE:SLFO:1.1.99:PullRequest:124":
+        url = f"http://obs/build/{obs_project}/000productcompose/_multibuild"
+        raise HTTPError(url, 404, "Not found", cast("Any", {}), None)
     assert obs_project == "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
     return read_utf8("_multibuild-124-" + obs_project + ".xml")
 
@@ -273,10 +276,12 @@ def test_extracting_product_name_and_version() -> None:
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
     mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
+    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_urllib_http_error)
     submission = {}
     add_build_results(submission, ["https://foo/project/show/bar"], fake_data=False)
     assert submission["successful_packages"] == []
     assert submission["failed_or_unpublished_packages"] == ["bar"]
+    assert "Could not determine relevant architectures for bar" in caplog.text
     assert "Build results for project bar unreadable, skipping:" in caplog.text
     assert "Traceback" not in caplog.text
 

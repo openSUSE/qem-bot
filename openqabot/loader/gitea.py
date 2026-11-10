@@ -502,13 +502,19 @@ def get_multibuild_data(obs_project: str) -> str:
 
 
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data: bool) -> set[str] | None:
-    """Determine which architectures are relevant for a product based on multibuild data."""
-    # retrieve the _multibuild info like `osc cat SUSE:SLFO:1.1.99:PullRequest:124:SLES 000productcompose _multibuild`
-    product_name = get_product_name(obs_project)
-    if not product_name:
-        return None
-    product_prefix = product_name.replace("SL-", "sle_").replace(":", "_").lower() + "_"
-    prefix_len = len(product_prefix)
+    """Determine the relevant architectures of an OBS project from its multibuild flavors.
+
+    The `_multibuild` file of `000productcompose` is read and every architecture from `ARCHS` that
+    a flavor name ends with is considered relevant.
+
+    Build results may list archs (e.g. `local` or `ppc64le`) as published even though no repos exist
+    for them. Considering those would cause problems later on (e.g. when computing the repohash), so
+    only the archs found in the flavors are kept.
+
+    Returns:
+        The set of relevant architectures, or None if the multibuild data could not be retrieved.
+
+    """
     if fake_data:
         multibuild_data = read_utf8("_multibuild-124-" + obs_project + ".xml")
     else:
@@ -517,17 +523,8 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data
         except (urllib.error.HTTPError, urllib.error.URLError) as e:
             log.warning("Could not determine relevant architectures for %s: %s", obs_project, e)
             return None
-
-    # determine from the flavors we got what architectures are actually expected to be present
-
-    # note: The build info will contain result elements for archs like `local` and `ppc64le` that and the published
-    # flag set even though no repos for those products are actually present. Considering these would lead to problems
-    # later on (e.g. when computing the repohash) so it makes sense to reduce the archs we are considering to actually
-    # relevant ones.
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
-    relevant_archs = {
-        flavor[prefix_len:] for flavor in flavors if flavor.startswith(product_prefix) and flavor[prefix_len:] in ARCHS
-    }
+    relevant_archs = {arch for flavor in flavors for arch in ARCHS if flavor.endswith(arch)}
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 

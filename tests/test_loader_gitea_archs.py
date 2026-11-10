@@ -12,26 +12,32 @@ from openqabot.loader import gitea
 
 
 def test_determine_relevant_archs_from_multibuild_info_success(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="prod")
     mocker.patch("openqabot.loader.gitea.read_utf8", return_value="xml")
-    mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data", return_value=["prod_x86_64"])
-    mocker.patch("openqabot.loader.gitea.ARCHS", ["x86_64"])
+    mocker.patch(
+        "openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data",
+        return_value=["prod_x86_64", "prod_offline_aarch64", "other_flavor"],
+    )
+    mocker.patch("openqabot.loader.gitea.ARCHS", ["x86_64", "aarch64"])
     res = gitea.determine_relevant_archs_from_multibuild_info("project", fake_data=True)
-    assert res is not None
-    assert "x86_64" in res
+    assert res == {"x86_64", "aarch64"}
+
+
+def test_determine_relevant_archs_from_multibuild_info_not_fake(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.get_multibuild_data", return_value="xml")
+    mocker.patch(
+        "openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data",
+        return_value=["sles_x86_64"],
+    )
+    mocker.patch("openqabot.loader.gitea.ARCHS", ["x86_64"])
+    res = gitea.determine_relevant_archs_from_multibuild_info("project", fake_data=False)
+    assert res == {"x86_64"}
 
 
 def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="prod")
     mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=URLError("oops"))
     res = gitea.determine_relevant_archs_from_multibuild_info("project", fake_data=False)
     assert res is None
     assert "Could not determine relevant architectures for project: <urlopen error oops>" in caplog.text
-
-
-def test_determine_relevant_archs_empty_product(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="")
-    assert gitea.determine_relevant_archs_from_multibuild_info("project", fake_data=False) is None
 
 
 def test_get_multibuild_data(mocker: MockerFixture) -> None:
