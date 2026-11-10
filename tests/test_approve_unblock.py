@@ -115,8 +115,11 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
 
     assert approver(mocker) == 0
     expected = [
-        "* smelt:2",
-        "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
+        "* smelt:SUSE:Maintenance:2:2",
+        (
+            "Ignoring not-ok job http://instance.qa/t100002 for submission "
+            "smelt:SUSE:Maintenance:2:2 (manually marked as acceptable)"
+        ),
     ]
     assert_log_messages(caplog.messages, expected)
 
@@ -125,7 +128,7 @@ def test_approval_unblocked_via_openqa_comment(caplog: pytest.LogCaptureFixture,
         headers=mocker.ANY,
         params={
             "text": "acceptable_for",
-            "incident_number": 2,
+            "incident_number": "2",
             "project": "SUSE:Maintenance:2",
             "type": "smelt",
         },
@@ -178,20 +181,25 @@ def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
 
     assert approver(mocker) == 0
     expected = [
-        "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)",
-        "Found not-ok, not-ignored job http://instance.qa/t100003 for submission smelt:2",
-        "smelt:2 has at least one not-ok job in submission tests",
+        (
+            "Ignoring not-ok job http://instance.qa/t100002 for submission "
+            "smelt:SUSE:Maintenance:2:2 (manually marked as acceptable)"
+        ),
+        "Found not-ok, not-ignored job http://instance.qa/t100003 for submission smelt:SUSE:Maintenance:2:2",
+        "smelt:SUSE:Maintenance:2:2 has at least one not-ok job in submission tests",
     ]
     assert_log_messages(caplog.messages, expected)
     # The submission should be blocked because job 100003 is NOT marked as acceptable.
-    assert "* smelt:2" not in caplog.messages, "submission not approved due to one unacceptable failure"
+    assert "* smelt:SUSE:Maintenance:2:2" not in caplog.messages, (
+        "submission not approved due to one unacceptable failure"
+    )
 
     mock_patch.assert_any_call(
         "api/jobs/100002/remarks",
         headers=mocker.ANY,
         params={
             "text": "acceptable_for",
-            "incident_number": 2,
+            "incident_number": "2",
             "project": "SUSE:Maintenance:2",
             "type": "smelt",
         },
@@ -201,7 +209,7 @@ def test_some_jobs_marked_as_acceptable_for_via_openqa_comment(
         headers=mocker.ANY,
         params={
             "text": "acceptable_for",
-            "incident_number": 2,
+            "incident_number": "2",
             "project": "SUSE:Maintenance:2",
             "type": "smelt",
         },
@@ -243,8 +251,8 @@ def test_approval_still_blocked_if_openqa_comment_not_relevant(
     mocker.patch("openqabot.openqa.OpenQAInterface.get_job_comments", return_value=comments_return_value)
 
     assert approver(mocker) == 0
-    assert "smelt:2 has at least one not-ok job in submission tests" in caplog.messages
-    assert "* smelt:2" not in caplog.messages
+    assert "smelt:SUSE:Maintenance:2:2 has at least one not-ok job in submission tests" in caplog.messages
+    assert "* smelt:SUSE:Maintenance:2:2" not in caplog.messages
 
 
 @responses.activate
@@ -288,7 +296,7 @@ def test_approval_via_openqa_older_ok_job(
 
     assert approver(mocker) == 0
 
-    log_message = "* smelt:2"
+    log_message = "* smelt:SUSE:Maintenance:2:2"
     assert log_message in caplog.messages if approved else log_message not in caplog.messages
 
 
@@ -324,7 +332,7 @@ def test_approval_still_blocked_via_openqa_older_ok_job_because_not_in_dashboard
     )
 
     assert approver(mocker) == 0
-    assert "* smelt:2" not in caplog.messages
+    assert "* smelt:SUSE:Maintenance:2:2" not in caplog.messages
 
 
 @responses.activate
@@ -340,7 +348,7 @@ def test_approval_still_blocked_if_openqa_older_job_dont_include_submission(
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.approver")
     assert approver(mocker) == 0
-    assert "* smelt:2" not in caplog.messages
+    assert "* smelt:SUSE:Maintenance:2:2" not in caplog.messages
 
 
 @responses.activate
@@ -392,10 +400,10 @@ def test_approval_unblocked_with_various_comment_formats(
     mock_patch = mocker.patch("openqabot.approver.dashboard.patch")
 
     assert approver(mocker) == 0
-    assert "* smelt:2" in caplog.messages
+    assert "* smelt:SUSE:Maintenance:2:2" in caplog.messages
     assert (
-        "Ignoring not-ok job http://instance.qa/t100002 for submission smelt:2 (manually marked as acceptable)"
-        in caplog.messages
+        "Ignoring not-ok job http://instance.qa/t100002 for submission "
+        "smelt:SUSE:Maintenance:2:2 (manually marked as acceptable)" in caplog.messages
     )
 
     mock_patch.assert_called_once_with(
@@ -403,7 +411,7 @@ def test_approval_unblocked_with_various_comment_formats(
         headers=mocker.ANY,
         params={
             "text": "acceptable_for",
-            "incident_number": 2,
+            "incident_number": "2",
             "project": "SUSE:Maintenance:2",
             "type": "smelt",
         },

@@ -140,7 +140,7 @@ def test_is_scheduled_job_non_list_response(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert not Submissions.is_scheduled_job(ctx, "ver")
 
 
 @pytest.mark.parametrize("failure", ["json", "request"])
@@ -155,7 +155,7 @@ def test_is_scheduled_job_treats_api_error_as_scheduled(mocker: MockerFixture, f
     else:
         get.side_effect = requests.exceptions.RequestException("boom")
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.is_scheduled_job(ctx, "ver")
 
 
 def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
@@ -166,7 +166,7 @@ def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert not Submissions.is_scheduled_job(ctx, "ver")
 
 
 def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
@@ -175,7 +175,7 @@ def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert not Submissions.is_scheduled_job(ctx, "ver")
 
 
 def test_is_scheduled_job_passes_project(mocker: MockerFixture) -> None:
@@ -184,8 +184,50 @@ def test_is_scheduled_job_passes_project(mocker: MockerFixture) -> None:
     get = mocker.patch("openqabot.types.submissions.retried_requests.get")
     get.return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert not Submissions.is_scheduled_job(ctx, "ver")
     assert get.call_args.kwargs["params"] == {"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"}
+
+
+def test_is_scheduled_job_other_repository_revision_not_scheduled(mocker: MockerFixture) -> None:
+    """A settings entry for another revision of the repository does not count."""
+    sub = MockSubmission(rev_fallback_value=42)
+    sub.id = 1
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [
+        {"flavor": "flavor", "arch": "arch", "version": "ver", "settings": {"REPOHASH": 41}}
+    ]
+    ctx = SubContext(sub, "arch", "flavor", {})
+
+    assert not Submissions.is_scheduled_job(ctx, "ver")
+
+
+@pytest.mark.parametrize(
+    ("sub_scminfo", "recorded_scminfo", "expected"),
+    [
+        ("new", "new", True),
+        ("new", "old", False),
+        ("new", None, False),
+        (None, "old", True),
+    ],
+    ids=["same_commit", "other_commit", "no_marker", "sub_without_revision"],
+)
+def test_is_scheduled_job_matches_gitea_commit(
+    mocker: MockerFixture,
+    sub_scminfo: str | None,
+    recorded_scminfo: str | None,
+    *,
+    expected: bool,
+) -> None:
+    """A PR's settings only count for the commit OBS built for it."""
+    sub = MockSubmission(id=1, type="git", scminfo=sub_scminfo, rev_fallback_value=42)
+    job_settings: dict[str, Any] = {"REPOHASH": 42}
+    if recorded_scminfo is not None:
+        job_settings["SCMINFO"] = recorded_scminfo
+    mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [
+        {"flavor": "flavor", "arch": "arch", "version": "ver", "settings": job_settings}
+    ]
+    ctx = SubContext(sub, "arch", "flavor", {})
+
+    assert Submissions.is_scheduled_job(ctx, "ver") is expected
 
 
 def test_handle_submission_embargoed_skip() -> None:

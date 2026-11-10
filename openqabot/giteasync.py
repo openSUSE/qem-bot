@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from openqabot.types.pullrequest import PullRequest
+from openqabot.types.submission_key import SubmissionKey
 
 from .loader.amqp_listener import AMQPListener
 from .loader.gitea import get_open_prs, get_submissions_from_open_prs, make_submission_from_gitea_pr, make_token_header
@@ -94,5 +95,9 @@ class GiteaSync:
             log.debug("Submission: %s", submission)
             if submission and not self.dry:
                 log.info("Syncing Gitea PRs #%s to QEM Dashboard", submission["number"])
-                ret = update_submissions([submission], params={"type": "git", "project": pr.project}, retry=self.retry)
+                ret = update_submissions(
+                    [submission],
+                    params=SubmissionKey.gitea(pr.project, pr.number).to_dashboard_params(),
+                    retry=self.retry,
+                )
                 log.debug("update_submissions returned %d", ret)

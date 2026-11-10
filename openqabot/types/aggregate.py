@@ -38,7 +38,7 @@ def _submission_hash(submission: Submission, issues_arch: str, version: str) -> 
     same-numbered submissions from different projects must hash differently.
     """
     revisions = submission.revisions_with_fallback(issues_arch, version)
-    return f"{submission.type}:{submission.project}:{submission.id}:{revisions}"
+    return f"{submission.key}:{revisions}"
 
 
 class PostData(NamedTuple):
@@ -161,7 +161,7 @@ class Aggregate(BaseConf):
         seen = set()
         unique_incidents = []
         for sub in full_post["qem"]["incidents"]:
-            key = (sub.id, sub.project, sub.type)
+            key = sub.key
             if key not in seen:
                 seen.add(key)
                 unique_incidents.append(sub)
@@ -171,7 +171,7 @@ class Aggregate(BaseConf):
         """Finalize the dashboard post with metadata and summary information."""
         incident_url = config.settings.dashboard_url
         full_post["openqa"]["__DASHBOARD_INCIDENTS_URL"] = ",".join(
-            f"{incident_url('incident', sub.id)}?{urlencode({'project': sub.project, 'type': sub.type})}"
+            f"{incident_url('incident', sub.key.number)}?{urlencode(sub.key.to_dashboard_params())}"
             for sub in full_post["qem"]["incidents"]
         )
         full_post["openqa"]["__SMELT_INCIDENTS_URL"] = ",".join(

@@ -10,8 +10,9 @@ import pytest
 import responses
 from pytest_mock import MockerFixture
 
-from openqabot.config import settings
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, settings
 from openqabot.subsyncres import SubResultsSync
+from openqabot.types.submission_key import SubmissionKey
 
 openqa_url = (
     "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123"
@@ -21,7 +22,8 @@ openqa_url = (
 
 @pytest.fixture
 def get_a_s(mocker: MockerFixture) -> Generator[None]:
-    return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[(100, None, None)])
+    key = SubmissionKey(DEFAULT_SUBMISSION_TYPE, "SUSE:Maintenance:100", 100)
+    return mocker.patch("openqabot.subsyncres.get_active_submissions", return_value=[key])
 
 
 @pytest.fixture

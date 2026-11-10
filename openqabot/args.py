@@ -22,6 +22,7 @@ from .approver import Approver
 from .chained_typer import _ChainedTyperGroup
 from .commenter import Commenter
 from .config import BUILD_REGEX
+from .errors import SubmissionArgError
 from .giteasync import GiteaSync
 from .giteatrigger import GiteaTrigger
 from .incrementapprover import IncrementApprover
@@ -31,6 +32,7 @@ from .openqabot import OpenQABot
 from .repodiff import RepoDiff
 from .smeltsync import SMELTSync
 from .subsyncres import SubResultsSync
+from .types.submission_key import SubmissionKey
 from .utils import create_logger
 
 app = typer.Typer(
@@ -609,9 +611,10 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
     """Approve submissions which passed tests."""
     args = ctx.obj
     _require_token(args)
-    args.all_submissions = all_submissions
-    args.submission = submission
-    args.incident = submission
+    try:
+        single_submission = SubmissionKey.parse(submission) if submission else None
+    except SubmissionArgError as e:
+        raise SystemExit(str(e)) from e
     args.comment = comment
 
     _apply_detailed_comment_options(
@@ -622,7 +625,7 @@ def sub_approve(  # ruff: ignore[too-many-arguments]
         max_detailed_comment_entries=max_detailed_comment_entries,
     )
 
-    approve = Approver(args)
+    approve = Approver(args, single_submission=single_submission, all_submissions=all_submissions)
     if (ret := approve()) != 0:
         sys.exit(ret)
 

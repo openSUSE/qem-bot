@@ -16,6 +16,7 @@ from openqabot.config import settings
 from openqabot.loader.qem import SubReq
 
 from .helpers import (
+    GITEA_PR_COMMIT,
     ReviewState,
     args,
     assert_log_messages,
@@ -118,19 +119,20 @@ def test_osc_all_pass(caplog: pytest.LogCaptureFixture, mocker: MockerFixture) -
     expected = [
         "Submissions to approve:",
         "Submission approval process finished",
-        "* smelt:1",
-        "Approving smelt:1",
-        "* smelt:2",
-        "Approving smelt:2",
-        "* smelt:3",
-        "Approving smelt:3",
-        "* smelt:4",
-        "Approving smelt:4",
-        "* git:5",
-        "Approving git:5",
+        "* smelt:SUSE:Maintenance:1:1",
+        "Approving smelt:SUSE:Maintenance:1:1",
+        "* smelt:SUSE:Maintenance:2:2",
+        "Approving smelt:SUSE:Maintenance:2:2",
+        "* smelt:SUSE:Maintenance:3:3",
+        "Approving smelt:SUSE:Maintenance:3:3",
+        "* smelt:SUSE:Maintenance:4:4",
+        "Approving smelt:SUSE:Maintenance:4:4",
+        "* git:products/SLFO:5",
+        "Approving git:products/SLFO:5",
     ]
     assert_log_messages(caplog.messages, expected)
-    mock_review_pr.assert_called_once_with(mocker.ANY, mocker.ANY, 5, mocker.ANY, mocker.ANY)
+    # The PR is only approved for the commit OBS built and openQA tested.
+    mock_review_pr.assert_called_once_with(mocker.ANY, mocker.ANY, 5, GITEA_PR_COMMIT, mocker.ANY)
 
 
 @pytest.mark.parametrize(
