@@ -28,16 +28,7 @@ from .helpers import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from pytest_mock import MockerFixture
-
-
-@pytest.fixture(autouse=True)
-def mock_request_from_api_default(mocker: MockerFixture) -> Any:
-    req = mocker.Mock()
-    req.reviews = [ReviewState("review", settings.obs_group)]
-    return mocker.patch("osc.core.Request.from_api", return_value=req)
 
 
 @responses.activate

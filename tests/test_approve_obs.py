@@ -22,13 +22,6 @@ from .helpers import (
 )
 
 
-@pytest.fixture(autouse=True)
-def mock_request_from_api_default(mocker: MockerFixture) -> Any:
-    req = mocker.Mock()
-    req.reviews = [ReviewState("review", settings.obs_group)]
-    return mocker.patch("osc.core.Request.from_api", return_value=req)
-
-
 def with_fake_qem(mode: str) -> Any:
     def decorator(test_func: object) -> object:
         test_func = pytest.mark.qem_behavior(mode)(test_func)

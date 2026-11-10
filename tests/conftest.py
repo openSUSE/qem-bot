@@ -26,6 +26,7 @@ from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list
 
 from .helpers import (
+    ReviewState,
     add_two_passed_response,
     f_sub_approver,
     fake_change_review_state,
@@ -280,3 +281,6 @@ def mock_osc(mocker: MockerFixture) -> None:
     mocker.patch("osc.core.get_request_list", side_effect=fake_get_request_list)
     mocker.patch("osc.core.change_review_state", side_effect=fake_change_review_state)
     mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
+    req = mocker.Mock()
+    req.reviews = [ReviewState("review", settings.obs_group)]
+    mocker.patch("osc.core.Request.from_api", return_value=req)
