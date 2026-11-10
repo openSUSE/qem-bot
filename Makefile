@@ -15,18 +15,25 @@ help: ## Display this help
 all: help
 
 # Detect if pytest-xdist is installed for parallel testing
-PYTEST_XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
+PYTEST_XDIST := $(shell $(PYTHON_RUN) python3 -c "import xdist" 2>/dev/null && echo "-n auto" || echo "")
 
-# Override to use uv, e.g. PYTHON_RUN="uv run"
+# Run tools through the locked uv environment by default; fall back to distribution packages on PATH
+# if uv is missing or cannot be called. Override, e.g. PYTHON_RUN="" to skip uv.
+UV_AVAILABLE := $(shell uv --version >/dev/null 2>&1 && echo 1)
+ifeq ($(UV_AVAILABLE),1)
+PYTHON_RUN ?= uv run --locked
+else
+$(warning uv not found or not callable; falling back to distribution-installed packages, versions may differ from uv.lock)
 PYTHON_RUN ?=
+endif
 
 .PHONY: test-unit
 test-unit: ## Run dynamic tests with coverage report
-	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST) --cov --cov-report=xml --cov-report=term-missing
+	$(UNSHARE) $(PYTHON_RUN) python3 -m pytest $(PYTEST_XDIST) --cov --cov-report=xml --cov-report=term-missing
 
 .PHONY: test-unit-no-coverage
 test-unit-no-coverage: ## Run dynamic tests without coverage analysis and without style checks
-	$(UNSHARE) python3 -m pytest $(PYTEST_XDIST)
+	$(UNSHARE) $(PYTHON_RUN) python3 -m pytest $(PYTEST_XDIST)
 
 .PHONY: only-test-with-coverage
 only-test-with-coverage: test-unit  ## Alias for "test-unit"
