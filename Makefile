@@ -65,11 +65,19 @@ check-types: check-types-ty
 check-lock: ## Verify uv.lock is in sync with pyproject.toml
 	uv lock --check
 
+.PHONY: check-tool-versions
+check-tool-versions: ## Warn if the ty on PATH differs from the locked version
+	@locked=$$(uv export --locked --only-dev --no-hashes 2>/dev/null | sed -n 's/^ty==//p'); \
+	local=$$(ty --version 2>/dev/null | awk '{print $$2}'); \
+	if [ -n "$$locked" ] && [ "$$locked" != "$$local" ]; then \
+		echo "Warning: ty $$local on PATH but uv.lock pins ty $$locked; results may differ from CI"; \
+	fi
+
 # aggregate targets
 
 .PHONY: checkstyle
 checkstyle: ## Run fast style and static analysis checks
-	@$(MAKE) -j check-ruff check-conventions check-types check-lock
+	@$(MAKE) -j check-ruff check-conventions check-types check-lock check-tool-versions
 
 .PHONY: checkstyle-all
 checkstyle-all: ## Run all style and static analysis checks
