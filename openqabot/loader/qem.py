@@ -76,7 +76,9 @@ class SubReq(NamedTuple):
             )
             submission = None
 
-        return cls(number, rr_number, s_type, project, d.get("url", ""), d.get("scm_info", ""), submission)
+        return cls(
+            number, rr_number, s_type, project, d.get("url", ""), d.get("scminfo") or d.get("scm_info", ""), submission
+        )
 
 
 class JobAggr(NamedTuple):

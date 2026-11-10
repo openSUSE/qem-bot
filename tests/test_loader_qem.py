@@ -193,7 +193,7 @@ _FULL_INCIDENT: dict = {
 
 def test_get_submissions_approver(mock_get_json: MagicMock) -> None:
     mock_get_json.return_value = [
-        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scm_info": "foo"},
+        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scminfo": "foo"},
         {"number": 2, "rr_number": 124, "inReviewQAM": False},
     ]
 
@@ -215,7 +215,7 @@ def test_get_submissions_approver_skips_malformed_incident(
     malformed = {k: v for k, v in {**_FULL_INCIDENT, "type": "gitea"}.items() if k != "project"}
     mock_get_json.return_value = [
         malformed,
-        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scm_info": "foo"},
+        {**_FULL_INCIDENT, "type": "gitea", "url": "http://foo.bar", "scminfo": "foo"},
     ]
 
     res = get_submissions_approver()
@@ -245,7 +245,7 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
         **_FULL_INCIDENT,
         "type": DEFAULT_SUBMISSION_TYPE,
         "url": "http://foo.bar",
-        "scm_info": "foo_commit",
+        "scminfo": "foo_commit",
     }
 
     res = get_single_submission(1, "PRJ1", submission_type=DEFAULT_SUBMISSION_TYPE)
@@ -263,6 +263,20 @@ def test_get_single_submission(mock_get_json: MagicMock) -> None:
         headers=settings.dashboard_token_dict,
         params={"project": "PRJ1", "type": DEFAULT_SUBMISSION_TYPE},
     )
+
+
+def test_get_single_submission_legacy_scm_info(mock_get_json: MagicMock) -> None:
+    mock_get_json.return_value = {
+        **_FULL_INCIDENT,
+        "type": DEFAULT_SUBMISSION_TYPE,
+        "url": "http://foo.bar",
+        "scm_info": "foo_commit",
+    }
+
+    res = get_single_submission(1, "PRJ1", submission_type=DEFAULT_SUBMISSION_TYPE)
+
+    assert len(res) == 1
+    assert res[0].scm_info == "foo_commit"
 
 
 def test_get_single_submission_not_found(mock_get_json: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
