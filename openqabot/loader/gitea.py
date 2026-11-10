@@ -593,7 +593,7 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, fake_d
     channels = submission.setdefault("channels", [])
     channels.extend(result for result in sorted(results.projects) if result not in channels)
 
-    if "scminfo" not in submission and (
+    if not submission.get("scminfo") and (
         len(config.settings.obs_products_set),
         "all" in config.settings.obs_products_set,
     ) == (1, False):
@@ -711,6 +711,7 @@ def _init_submission_dict(pr: PullRequest) -> dict[str, Any]:
         "channels": [],
         "url": pr.url,
         "type": "git",
+        "scminfo": pr.commit_sha if pr.commit_sha and pr.commit_sha != "unknown" else "",
     }
 
 
