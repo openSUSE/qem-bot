@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: MIT
 """Test SyncRes."""
 
+import logging
 from argparse import Namespace
 from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
+
+import pytest
 
 from openqabot.syncres import SyncRes
 
@@ -22,10 +25,12 @@ def test_clone_dry() -> None:
         post_job_mock.assert_called()
 
 
-def testnormalize_data_safe_handles_error_gracefully() -> None:
+def test_normalize_data_safe_logs_missing_field(caplog: pytest.LogCaptureFixture) -> None:
     syncres = SyncRes(Namespace(dry=False))
-    with patch("openqabot.syncres.SyncRes.normalize_data", side_effect=KeyError):
-        assert syncres.normalize_data_safe(cast("Data", None), cast("dict", None)) is None
+    caplog.set_level(logging.WARNING)
+    with patch("openqabot.syncres.SyncRes.normalize_data", side_effect=KeyError("group")):
+        assert syncres.normalize_data_safe(cast("Data", None), {"id": 1234}) is None
+    assert "Skipping job 1234: openQA job data missing field 'group'" in caplog.text
 
 
 def test_post_result_aggregate() -> None:

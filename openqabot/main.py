@@ -17,7 +17,8 @@ from .args import app
 from .utils import create_logger
 
 errorcnt = defaultdict(int)
-error_limit = 10
+# exit code Typer produces for a SIGINT, e.g. from 'timeout --signal=SIGINT 29m'
+SIGINT_EXIT_CODE = 130
 
 
 def _handle_exception(e: Exception, log: Logger) -> None:
@@ -27,16 +28,23 @@ def _handle_exception(e: Exception, log: Logger) -> None:
     k = hashlib.sha256(signature.encode("utf-8")).hexdigest()
     errorcnt[k] += 1
     count = errorcnt[k]
-    log.debug("%s(%s) [hash=%s, count=%d]", type(e).__name__, e, k, count, exc_info=e)
-    if count > error_limit:
-        log.error("error limit hit for exception %s, reraising", k)
+    limit = config_module.settings.app_same_error_limit
+    log.error("%s(%s) [hash=%s, count=%d]", type(e).__name__, e, k, count, exc_info=e)
+    if count > limit:
+        log.error("error limit %s hit for exception hash %s, reraising", limit, k)
         raise e
-    log.info("Exception %s encountered, error count increased", e)
 
 
 def _run_attempt(attempt: int, log: Logger) -> bool:
     try:
         app()
+    except SystemExit as ex:
+        # Typer turns a SIGINT into Exit(130), which would leave the CI log without
+        # any explanation of the interrupted run
+        if ex.code == SIGINT_EXIT_CODE:
+            log.info("Interrupted by SIGINT before completing the command")
+            raise SystemExit(1) from ex
+        raise
     except KeyboardInterrupt:
         log.info("Interrupted by user")
         sys.exit(1)
@@ -46,9 +54,10 @@ def _run_attempt(attempt: int, log: Logger) -> bool:
         return True
 
     retries = config_module.settings.app_max_retries
-    delay = config_module.settings.app_backoff_factor * attempt
-    log.warning("attempt %d/%d failed, retrying in %ds", attempt, retries, delay)
-    time.sleep(delay)
+    if attempt + 1 < retries:
+        delay = config_module.settings.app_backoff_factor * attempt
+        log.warning("attempt %d/%d failed, retrying in %ds", attempt + 1, retries, delay)
+        time.sleep(delay)
     return False
 
 
@@ -56,8 +65,9 @@ def main() -> None:
     """Run the main entry point of the bot."""
     load_dotenv()
     log = create_logger("bot")
-    attempt = 0
-    while attempt < config_module.settings.app_max_retries:
+    retries = config_module.settings.app_max_retries
+    for attempt in range(retries):
         if _run_attempt(attempt, log):
-            break
-        attempt += 1
+            return
+    log.error("giving up after %s attempt(s), see the reported exception(s) above", retries)
+    sys.exit(1)

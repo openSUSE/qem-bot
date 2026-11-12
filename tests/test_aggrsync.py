@@ -8,6 +8,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.aggrsync import AggregateResultsSync
+from openqabot.errors import FetchJobsError
+from openqabot.types.types import Data
 
 
 @pytest.fixture
@@ -59,3 +61,20 @@ def test_call_with_results(
     sync()
 
     mock_post_result.assert_called_once()
+
+
+def test_aggregate_fetch_failure_names_product(
+    args: MagicMock, mocker: MockerFixture, mock_read_products: MagicMock, mock_openqa_interface: MagicMock
+) -> None:
+    data = Data(0, "aggregate", 110, "Flavor", "x86_64", "linux", "15.5", "20260101-1", "ProductX")
+    mock_read_products.return_value = ["ProductX"]
+    mocker.patch("openqabot.aggrsync.get_aggregate_settings_data", return_value=[data])
+    mock_client = mock_openqa_interface.return_value
+    mock_client.get_jobs.side_effect = RuntimeError("Fetch failed")
+
+    sync = AggregateResultsSync(args)
+    with pytest.raises(FetchJobsError) as exc_info:
+        sync()
+
+    assert "aggregate ProductX settings 110 (linux 15.5 Flavor x86_64 build 20260101-1)" in str(exc_info.value)
+    assert "Fetch failed" in str(exc_info.value)
