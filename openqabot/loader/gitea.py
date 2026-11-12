@@ -301,7 +301,7 @@ def _is_already_approved(token: dict[str, str], repo_name: str, pr_number: int, 
         for r in bot_reviews
     )
     approved = not bot_reviews or has_active_approval
-    log.info("PR %s live-review approval for commit %s: %s", pr_number, commit_id, approved)
+    log.info("PR %s live-review approval for commit '%s': %s", pr_number, commit_id, approved)
     return approved
 
 
@@ -310,7 +310,7 @@ def approve_pr(token: dict[str, str], repo_name: str, pr_number: int, commit_id:
     try:
         if _is_already_approved(token, repo_name, pr_number, commit_id):
             return True
-        log.info("PR %s approved for commit %s", pr_number, commit_id)
+        log.info("PR %s approved for commit '%s'", pr_number, commit_id)
         review_pr(token, repo_name, pr_number, msg, commit_id, approve=True)
     except Exception:
         log.exception("Gitea API error: Failed to approve PR %s", pr_number)
@@ -601,7 +601,7 @@ def add_build_results(submission: dict[str, Any], obs_urls: list[str], *, fake_d
     channels = submission.setdefault("channels", [])
     channels.extend(result for result in sorted(results.projects) if result not in channels)
 
-    if "scminfo" not in submission and (
+    if not submission.get("scminfo") and (
         len(config.settings.obs_products_set),
         "all" in config.settings.obs_products_set,
     ) == (1, False):
@@ -719,6 +719,7 @@ def _init_submission_dict(pr: PullRequest) -> dict[str, Any]:
         "channels": [],
         "url": pr.url,
         "type": "git",
+        "scminfo": pr.commit_sha if pr.commit_sha and pr.commit_sha != "unknown" else "",
     }
 
 
