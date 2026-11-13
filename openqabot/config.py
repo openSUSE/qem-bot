@@ -171,6 +171,11 @@ class Settings(BaseSettings):
         """The set of OBS products to consider."""
         return set(self.obs_products.split(","))
 
+    def is_obs_product_enabled(self, product: str) -> bool:
+        """Check whether the given OBS product is configured to be considered."""
+        products = self.obs_products_set
+        return "all" in products or product in products
+
     @property
     def dashboard_token_dict(self) -> dict[str, str]:
         """The QAM Dashboard token dict needed for HTTP header."""
