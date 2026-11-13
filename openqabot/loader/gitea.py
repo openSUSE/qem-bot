@@ -58,6 +58,7 @@ class BuildResults:
 PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
 VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
+VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
 # Regex to find all HTTPS URLs, excluding common trailing punctuation like dots or parentheses
 # that are likely part of the surrounding text (e.g. at the end of a sentence or in Markdown).
@@ -371,10 +372,9 @@ def add_reviews(submission: dict[str, Any], reviews: list[Any]) -> int:
     return len(qam_states)
 
 
-def _extract_version(name: str, prefix: str) -> str:
-    """Extract version number from a package name string."""
-    remainder = name.removeprefix(prefix)
-    return next((part for part in remainder.split("-") if VERSION_EXTRACT_REGEX.search(part)), "")
+def _extract_version(name: str) -> str:
+    """Extract the first version token from a repo directory name, including one embedded in the product name."""
+    return next((part for part in name.rstrip("/").split("-") if VERSION_TOKEN_REGEX.fullmatch(part)), "")
 
 
 @lru_cache(maxsize=512)
@@ -401,29 +401,21 @@ def get_product_version_from_repo_listing(project: str, product_name: str, repos
     except requests.exceptions.RequestException as e:
         log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
         return ""
-    versions = (_extract_version(entry["name"], start) for entry in data if entry["name"].startswith(start))
-    return next((v for v in versions if len(v) > 0), "")
+    versions = (_extract_version(entry["name"]) for entry in data if entry["name"].startswith(start))
+    return next(filter(None, versions), "")
 
 
 def _get_product_version(res: etree._Element, project: str, product_name: str) -> str:
     """Extract product version from scmsync element or repository listing."""
     # read product version from scmsync element if possible, e.g. 15.99
-    product_version = ""
-    for e in res.findall("scmsync"):
-        _, pv = get_product_name_and_version_from_scmsync(e.text)
-        if pv:
-            product_version = pv
-            break
+    scmsync_versions = (get_product_name_and_version_from_scmsync(e.text)[1] for e in res.findall("scmsync") if e.text)
+    if product_version := next(filter(None, scmsync_versions), ""):
+        return product_version
 
     # read product version from directory listing if the project is for a concrete product
-    if (
-        len(product_name) != 0
-        and len(product_version) == 0
-        and ("all" in config.settings.obs_products_set or product_name in config.settings.obs_products_set)
-    ):
-        product_version = get_product_version_from_repo_listing(project, product_name, res.get("repository"))
-
-    return product_version
+    if product_name and config.settings.is_obs_product_enabled(product_name):
+        return get_product_version_from_repo_listing(project, product_name, res.get("repository"))
+    return ""
 
 
 def add_channel_for_build_result(
@@ -441,9 +433,9 @@ def add_channel_for_build_result(
     product_version = _get_product_version(res, project, product_name)
 
     # append product version to channel if known; otherwise skip channel if this is for a concrete product
-    if len(product_version) > 0:
+    if product_version:
         channel = f"{channel}#{product_version}"
-    elif len(product_name) > 0:
+    elif product_name:
         log.debug("Channel skipped: Product version for build result %s:%s could not be determined", project, arch)
         return channel
 
