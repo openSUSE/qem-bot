@@ -144,7 +144,7 @@ class Submission:
                 if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
                     obs_project = ":".join(val[2:-1])
                     product = gitea.get_product_name(obs_project)
-                    if "all" in config.settings.obs_products_set or product in config.settings.obs_products_set:
+                    if config.settings.is_obs_product_enabled(product):
                         slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
                     else:
                         skipped.add(product)

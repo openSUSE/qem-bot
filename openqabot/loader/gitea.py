@@ -485,7 +485,7 @@ def add_build_result(
 
     channel = add_channel_for_build_result(project, res.get("arch"), product, res, results.projects)
 
-    if "all" not in config.settings.obs_products_set and product not in config.settings.obs_products_set:
+    if not config.settings.is_obs_product_enabled(product):
         return
 
     if res.get("state") != "published":
