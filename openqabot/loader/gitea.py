@@ -533,10 +533,10 @@ def is_build_result_relevant(res: etree._Element, relevant_archs: set[str] | Non
     """Check if a build result is relevant for the current product and architecture."""
     if config.settings.obs_repo_type and res.get("repository") != config.settings.obs_repo_type:
         log.debug(
-            "Build result %s:%s ignored (obs_repo_type='%s')",
+            "Build result %s ignored. Expected obs_repo_type='%s' does not match with actual '%s' from repo",
             res.get("project"),
-            res.get("repository"),
             config.settings.obs_repo_type,
+            res.get("repository"),
         )
         return False
     arch = res.get("arch")
