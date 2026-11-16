@@ -11,6 +11,7 @@ import pytest
 import requests
 import responses
 from openqa_client.exceptions import RequestError
+from pytest_mock import MockerFixture
 from responses import matchers
 
 from openqabot.config import settings
@@ -291,3 +292,64 @@ def test_enrich_stats() -> None:
     enriched = client.enrich_stats(stats, job_map)
     assert enriched["passed"]["job1"]["group"] == "G1"
     assert "group" not in enriched["failed"]["job2"]
+
+
+@pytest.mark.parametrize(
+    ("dry", "status", "expect_applied", "expect_not_found"),
+    [
+        pytest.param(True, None, True, False, id="dry-run-skips-request"),
+        pytest.param(False, None, True, False, id="success"),
+        pytest.param(False, 404, False, True, id="job-gone-marks-obsolete"),
+        pytest.param(False, 500, False, False, id="other-error-logged"),
+    ],
+)
+def test_set_priority_outcomes(
+    mocker: MockerFixture,
+    *,
+    dry: bool,
+    status: int | None,
+    expect_applied: bool,
+    expect_not_found: bool,
+) -> None:
+    client = oQAI()
+    client.dry = dry
+    client.retries = 0
+    request = mocker.patch("openqabot.openqa.OpenQA_Client.openqa_request")
+    if status is not None:
+        request.side_effect = RequestError("POST", "no.where", status, "text")
+    handle_not_found = mocker.patch.object(client, "handle_job_not_found")
+
+    assert client.set_priority(42, 60) is expect_applied
+    assert request.called is (not dry)
+    assert handle_not_found.called is expect_not_found
+
+
+def test_set_priority_posts_prio_parameter(mocker: MockerFixture) -> None:
+    client = oQAI()
+    client.retries = 3
+    request = mocker.patch("openqabot.openqa.OpenQA_Client.openqa_request")
+    assert client.set_priority(42, 60)
+    request.assert_called_once_with("POST", "jobs/42/prio", data={"prio": 60}, retries=3)
+
+
+def test_get_scheduled_jobs_by_build_queries_and_drops_devel_groups(mocker: MockerFixture) -> None:
+    client = oQAI()
+    client.retries = 2
+    jobs = [{"id": 1, "group_id": 10}, {"id": 2, "group_id": 20}]
+    request = mocker.patch("openqabot.openqa.OpenQA_Client.openqa_request", return_value={"jobs": jobs})
+    mocker.patch.object(client, "is_in_devel_group", side_effect=lambda job: job["id"] == 2)
+
+    assert client.get_scheduled_jobs_by_build(":smelt:1:pkg") == [{"id": 1, "group_id": 10}]
+    request.assert_called_once_with(
+        "GET",
+        "jobs",
+        {"scope": "relevant", "latest": "1", "state": "scheduled", "build": ":smelt:1:pkg"},
+        retries=2,
+    )
+
+
+def test_get_scheduled_jobs_by_build_request_error_returns_empty() -> None:
+    client = oQAI()
+    error = RequestError("GET", "no.where", 500, "no text")
+    with patch("openqabot.openqa.OpenQA_Client.openqa_request", side_effect=error):
+        assert client.get_scheduled_jobs_by_build(":smelt:1:pkg") == []

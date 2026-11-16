@@ -157,6 +157,31 @@ class OpenQAInterface:
                 log.exception("openQA API error when fetching multiple jobs")
         return results
 
+    def get_scheduled_jobs_by_build(self, build: str) -> list[dict[str, Any]]:
+        """Fetch relevant, scheduled jobs of a build, excluding development groups."""
+        params = {"scope": "relevant", "latest": "1", "state": "scheduled", "build": build}
+        try:
+            jobs = self.openqa.openqa_request("GET", "jobs", params, retries=self.retries).get("jobs", [])
+        except RequestError:
+            log.exception("openQA API error when fetching scheduled jobs for build %s", build)
+            return []
+        return [job for job in jobs if not self.is_in_devel_group(job)]
+
+    def set_priority(self, job_id: int, prio: int) -> bool:
+        """Set the priority of a scheduled openQA job, returning whether it was applied."""
+        if self.dry:
+            log.info("openQA job %s priority set to %s skipped due dry run mode", job_id, prio)
+            return True
+        try:
+            self.openqa.openqa_request("POST", f"jobs/{job_id}/prio", data={"prio": prio}, retries=self.retries)
+        except RequestError as e:
+            if e.status_code == HTTPStatus.NOT_FOUND:
+                self.handle_job_not_found(job_id)
+            else:
+                log.exception("openQA API error when setting priority of job %s", job_id)
+            return False
+        return True
+
     def is_in_devel_group(self, job: dict[str, Any]) -> bool:
         """Check if a job belongs to a development group."""
         if config.settings.allow_development_groups:
