@@ -309,3 +309,19 @@ Job priority variables:
 | `QEM_BOT_AGGREGATE_PRIORITY_SCALE` | `5` | Divisor applied to the maximum submission priority in aggregate tests. |
 | `QEM_BOT_PI_PRIORITY_OFFSET` | `420` | Base of the openQA priority for product increments: openQA priority = offset minus the maximum priority of the included updates divided by the scale, rounded down. |
 | `QEM_BOT_PI_PRIORITY_SCALE` | `5` | Divisor applied to the maximum included update priority in product increments. |
+| `QEM_BOT_MIN_PRIO_DELTA` | `5` | Smallest difference between the stored and the recomputed openQA priority that triggers rewriting still scheduled jobs. `0` rewrites on any difference. |
+
+The priority computed at scheduling time is re-applied to jobs that are still
+scheduled when `submissions-run` or `full-run` runs again, so a later SMELT or
+Gitea priority change reaches the openQA queue without rescheduling. Only jobs
+of the same build, flavor, architecture, version and repository hash are
+touched, development groups are skipped, aggregate tests and jobs created by
+`gitea-trigger` are not covered, and `--ignore-onetime` disables the
+reprioritization together with the scheduling. openQA's own priority penalties
+for long-running and resource-heavy jobs (shown in the job as
+`_PRIORITY_EXPLANATION`) are preserved, only their difference to the stored
+base priority is applied. The reprioritization runs only against the main
+openQA instance and is applied all or nothing: a failed openQA write or
+dashboard update restores the jobs already changed, so the next run retries
+the whole context instead of shifting it twice. A `--dry` run logs the planned
+changes instead.
