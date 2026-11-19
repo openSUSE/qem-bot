@@ -117,6 +117,8 @@ class Settings(BaseSettings):
     # Anchor of the aggregate priority mapping: prio = aggregate_priority_offset - max_prio // aggregate_priority_scale
     aggregate_priority_offset: int = Field(default=320, alias="QEM_BOT_AGGREGATE_PRIORITY_OFFSET")
     aggregate_priority_scale: int = Field(default=5, alias="QEM_BOT_AGGREGATE_PRIORITY_SCALE")
+    # Smallest stored-vs-computed prio difference worth rewriting, so 1-point SMELT drift does not churn jobs
+    min_prio_delta: int = Field(default=5, alias="QEM_BOT_MIN_PRIO_DELTA")
     main_openqa_domain: str = Field(default="openqa.suse.de", alias="MAIN_OPENQA_DOMAIN")
     git_review_bot: str | None = Field(default=None, alias="GIT_REVIEW_BOT")
     git_obs_staging_bot_user: str = Field(default="autogits_obs_staging_bot", alias="GIT_OBS_STAGING_BOT_USER")
@@ -208,6 +210,7 @@ def __getattr__(name: str) -> Any:  # ruff: ignore[any-type]
         "PRIORITY_SCALE": "priority_scale",
         "AGGREGATE_PRIORITY_OFFSET": "aggregate_priority_offset",
         "AGGREGATE_PRIORITY_SCALE": "aggregate_priority_scale",
+        "MIN_PRIO_DELTA": "min_prio_delta",
         "OPENQA_URL": "main_openqa_domain",
         "GIT_REVIEW_BOT": "git_review_bot_user",
         "GIT_OBS_STAGING_BOT": "git_obs_staging_bot_user",
