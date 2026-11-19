@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlencode
 
 import requests
+from openqa_client.exceptions import OpenQAClientError
 
 from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
@@ -18,6 +19,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.priority import openqa_priority
 from openqabot.utils import retry3 as retried_requests
 
+from . import reprioritize
 from .baseconf import BaseConf, JobConfig
 from .types import ChannelType, ProdVer, Repos, get_channel_type
 
@@ -25,6 +27,7 @@ if TYPE_CHECKING:
     from .submission import Submission
 
 log = getLogger("bot.types.submissions")
+
 
 VALID_FLAVOR_KEYS = frozenset({
     "archs",
@@ -149,30 +152,6 @@ class Submissions(BaseConf):
             None,
         )
 
-    def planned_reprioritization(self, ctx: SubContext, matched: dict[str, Any]) -> int | None:
-        """Return the priority a scheduled job should get if its stored priority is stale.
-
-        Pure computation, no openQA request. Returns None when the stored
-        ``_PRIORITY`` already equals the value ``get_priority`` computes now.
-        """
-        if not matched:
-            return None
-        stored = matched.get("settings", {}).get("_PRIORITY")
-        desired = self.get_priority(ctx)
-        return None if stored == desired else desired
-
-    def _log_planned_reprioritization(self, ctx: SubContext, matched: dict[str, Any]) -> None:
-        """Log the reprioritization that would apply to an already scheduled context (no write)."""
-        if (prio := self.planned_reprioritization(ctx, matched)) is not None:
-            log.info(
-                "Reprioritization candidate for submission %s (%s, %s): openQA prio %s -> %s",
-                ctx.sub,
-                ctx.flavor,
-                ctx.arch,
-                matched.get("settings", {}).get("_PRIORITY"),
-                prio,
-            )
-
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
         return (
@@ -248,7 +227,10 @@ class Submissions(BaseConf):
             is not None
         ):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
-            self._log_planned_reprioritization(ctx, matched)
+            try:
+                reprioritize.scheduled(ctx, matched, self.get_priority(ctx))
+            except (OpenQAClientError, requests.exceptions.RequestException):
+                log.exception("Reprioritizing submission %s failed, scheduling continues", ctx.sub)
             return True
 
         return self._is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
