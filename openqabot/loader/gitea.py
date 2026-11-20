@@ -22,10 +22,10 @@ import osc.conf
 import osc.core
 import osc.util.xml
 import requests
+import yaml
 from lxml import etree  # ty: ignore[unresolved-import]
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
-from ruamel.yaml import YAML, YAMLError
 
 from openqabot import config
 from openqabot.loader.smelt import get_gitea_update_data
@@ -557,8 +557,8 @@ def get_productcompose_packages_per_arch(obs_project: str, *, fake_data: bool) -
         return None
 
     try:
-        data = YAML(typ="safe").load(content)
-    except YAMLError as e:
+        data = yaml.load(content, Loader=yaml.CSafeLoader)
+    except yaml.YAMLError as e:
         log.warning("Could not parse productcompose YAML for %s: %s", obs_project, e)
         return None
 
