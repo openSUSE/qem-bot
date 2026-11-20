@@ -261,3 +261,25 @@ def test_make_submission_from_gitea_pr_exception(mocker: MockerFixture, caplog: 
     )
     assert res is None
     assert "Gitea API error: Unable to process PR git:owner/repo:123" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("sha", "expected_scminfo", "_desc"),
+    [
+        ("abc1234", "abc1234", "populates scminfo with commit_sha"),
+        ("unknown", "", "uses empty string when commit_sha is unknown"),
+        ("", "", "uses empty string when commit_sha is empty"),
+    ],
+)
+def test_init_submission_dict_scminfo(sha: str, expected_scminfo: str, _desc: str) -> None:
+    pr = PullRequest(
+        number=123,
+        state="open",
+        project="owner/repo",
+        branch="main",
+        url="http://url",
+        commit_sha=sha,
+        raw_labels=[],
+    )
+    submission = gitea._init_submission_dict(pr)  # ruff: ignore[private-member-access]
+    assert submission["scminfo"] == expected_scminfo
