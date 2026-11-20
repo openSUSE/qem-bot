@@ -5,15 +5,18 @@
 from __future__ import annotations
 
 import json
+from http import HTTPStatus
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlencode
 
 import requests
 
+from openqabot import dashboard
 from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
 from openqabot.loader import gitea
+from openqabot.openqa import OpenQAInterface
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
 
@@ -24,6 +27,12 @@ if TYPE_CHECKING:
     from .submission import Submission
 
 log = getLogger("bot.types.submissions")
+
+
+def _openqa_client() -> OpenQAInterface:
+    """Return the openQA client used for reprioritization; a function so tests can patch it."""
+    return OpenQAInterface()
+
 
 VALID_FLAVOR_KEYS = frozenset({
     "archs",
@@ -121,27 +130,143 @@ class Submissions(BaseConf):
         return res if isinstance(res, list) else []
 
     @staticmethod
-    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str) -> bool:
-        """Check if a job is already scheduled in the dashboard.
+    def find_scheduled_job(ctx: SubContext, ver: str, submission_type: str) -> dict[str, Any] | None:
+        """Return the dashboard row of the already scheduled job matching this context, if any.
 
         If the dashboard API fails, treat the job as already scheduled so a
-        transient error does not trigger an unnecessary reschedule.
+        transient error does not trigger an unnecessary reschedule; the error
+        is signalled by returning an empty placeholder row.
         """
         if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
-            return False
+            return None
 
         try:
             jobs = Submissions._get_scheduled_jobs(ctx.sub.id, ctx.sub.project, submission_type)
         except DashboardError:
-            return True
+            return {}
 
-        return any(
-            job["flavor"] == ctx.flavor
-            and job["arch"] == ctx.arch
-            and job["version"] == ver
-            and job.get("settings", {}).get("REPOHASH") == revs
-            for job in jobs
+        return next(
+            (
+                job
+                for job in jobs
+                if job["flavor"] == ctx.flavor
+                and job["arch"] == ctx.arch
+                and job["version"] == ver
+                and job.get("settings", {}).get("REPOHASH") == revs
+            ),
+            None,
         )
+
+    def planned_reprioritization(self, ctx: SubContext, matched: dict[str, Any]) -> int | None:
+        """Return the priority a scheduled job should get if its stored priority is stale.
+
+        Pure computation, no openQA request. Returns None when the stored
+        ``_PRIORITY`` already equals the value ``get_priority`` computes now.
+        """
+        if not matched:
+            return None
+        stored = matched.get("settings", {}).get("_PRIORITY")
+        desired = self.get_priority(ctx)
+        return None if stored == desired else desired
+
+    @staticmethod
+    def _job_key(settings: dict[str, Any]) -> tuple[str, ...]:
+        """Return the settings identifying one job of a scheduled submission.
+
+        openQA returns job settings as text (``REPOHASH`` is ``"42"``) while the
+        dashboard stores the integer, so compare the string form of both sides.
+        """
+        return tuple(str(settings.get(key)) for key in ("FLAVOR", "ARCH", "VERSION", "REPOHASH"))
+
+    @staticmethod
+    def _job_target(current: int, stored: int | None, desired: int) -> int:
+        """Return the openQA priority preserving openQA's own throttling penalty.
+
+        openQA adds penalties for long-running and resource-heavy jobs
+        (``_apply_prio_throttling``) on top of the posted ``_PRIORITY``. The difference between the
+        stored job priority and the stored base keeps that penalty intact while applying our delta.
+        """
+        baseline = settings.default_prio if stored is None else stored
+        return desired + current - baseline
+
+    def _reprioritize_jobs(
+        self,
+        client: OpenQAInterface,
+        matched: dict[str, Any],
+        stored: int | None,
+        desired: int,
+        *,
+        dry_run: bool = False,
+    ) -> int:
+        """Reprioritize the scheduled openQA jobs matching the given dashboard row.
+
+        A failed write is logged and the remaining jobs are still attempted; the
+        stored priority is updated even on a partial failure so a later run does
+        not re-apply the delta on top of already shifted jobs.
+        """
+        stored_settings = matched.get("settings", {})
+        if not (build := stored_settings.get("BUILD")):
+            return 0
+        key = self._job_key(stored_settings)
+        applied = 0
+        for job in client.get_scheduled_jobs_by_build(build):
+            if self._job_key(job.get("settings") or {}) != key:
+                continue
+            current = job.get("priority")
+            if current is None or (target := self._job_target(current, stored, desired)) == current:
+                continue
+            if dry_run:
+                log.info("Would reprioritize openQA job %s from %s to %s", job["id"], current, target)
+                applied += 1
+            elif client.set_priority(int(job["id"]), target):
+                applied += 1
+                log.info("Reprioritized openQA job %s from %s to %s", job["id"], current, target)
+            else:
+                log.warning("Could not reprioritize openQA job %s, it keeps priority %s", job["id"], current)
+        return applied
+
+    @staticmethod
+    def _store_priority(matched: dict[str, Any], desired: int) -> bool:
+        """Persist the applied priority in the dashboard so the next run does not repeat the delta."""
+        payload = {key: value for key, value in matched.items() if key != "id"}
+        payload["settings"] = {**(matched.get("settings") or {}), "_PRIORITY": desired}
+        try:
+            res = dashboard.put("api/incident_settings", headers=settings.dashboard_token_dict, json=payload)
+        except requests.exceptions.RequestException:
+            log.exception("Dashboard update failed: could not store reprioritized settings %s", payload["settings"])
+            return False
+        if not HTTPStatus.OK <= res.status_code < HTTPStatus.MULTIPLE_CHOICES:
+            log.error("Dashboard update failed with status %s: %r", res.status_code, res.text[:200])
+            return False
+        return True
+
+    def _reprioritize_scheduled(self, ctx: SubContext, matched: dict[str, Any]) -> None:
+        """Apply the reprioritization of an already scheduled context, or log it in a dry run."""
+        desired = self.planned_reprioritization(ctx, matched)
+        if desired is None:
+            return
+        stored = matched.get("settings", {}).get("_PRIORITY")
+        if abs(desired - (settings.default_prio if stored is None else stored)) < settings.min_prio_delta:
+            log.debug(
+                "Submission %s (%s, %s) prio %s -> %s below min_prio_delta",
+                ctx.sub,
+                ctx.flavor,
+                ctx.arch,
+                stored,
+                desired,
+            )
+            return
+        client = _openqa_client()
+        if client.dry:
+            self._reprioritize_jobs(client, matched, stored, desired, dry_run=True)
+            return
+        if self._reprioritize_jobs(client, matched, stored, desired) and not self._store_priority(matched, desired):
+            log.warning(
+                "Reprioritized openQA jobs of submission %s but the dashboard still stores prio %s; "
+                "a later run may re-apply the delta",
+                ctx.sub,
+                stored,
+            )
 
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
@@ -212,10 +337,13 @@ class Submissions(BaseConf):
         if self._is_invalid_package_or_channel(ctx, matches):
             return True
 
-        if not cfg.ignore_onetime and self.is_scheduled_job(
-            ctx, self.settings["VERSION"], submission_type=ctx.sub.type
+        if (
+            not cfg.ignore_onetime
+            and (matched := self.find_scheduled_job(ctx, self.settings["VERSION"], submission_type=ctx.sub.type))
+            is not None
         ):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
+            self._reprioritize_scheduled(ctx, matched)
             return True
 
         return self._is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
