@@ -1,0 +1,42 @@
+product_compose_schema: 0.2
+
+vendor: SUSE
+name: SLES
+version: "16.1"
+product-type: base
+summary: SUSE Linux Enterprise Server 16.1
+
+flavors:
+  sles:
+    architectures: [x86_64, aarch64, ppc64le, s390x]
+    name: SLES
+  sles_x86_64:
+    architectures: [x86_64]
+    name: SLES
+
+packagesets:
+  - name: sles_x86_64_installer
+    supportstatus: unsupported
+    flavors: [sles_installer_x86_64]
+    add: [installer_additions]
+  - name: sles
+    supportstatus: unsupported
+    flavors: [sles]
+    packages: [389-ds, 7zip, bash, systemd]
+  - name: sles_x86_64
+    supportstatus: unsupported
+    flavors: [sles, sles_x86_64]
+    architectures: [x86_64]
+    packages: [biosdevname, crash-gcore, kernel-default]
+  - name: sles_aarch64
+    supportstatus: unsupported
+    flavors: [sles, sles_aarch64]
+    architectures: [aarch64]
+    packages: [arm-trusted-firmware, kernel-64kb]
+  - name: sles_s390x
+    supportstatus: unsupported
+    flavors: [sles, sles_s390x]
+    architectures: [s390x]
+    packages: []
+  - name: main
+    add: [sles, sles_x86_64, sles_aarch64, sles_s390x]
