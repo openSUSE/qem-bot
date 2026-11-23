@@ -759,7 +759,9 @@ def test_dashboard_put(mocker: MagicMock) -> None:
     response = dashboard.put(route, json=payload, headers=headers)
 
     expected_url = dashboard.settings.dashboard_url(route)
-    mock_put.assert_called_once_with(expected_url, json=payload, headers=headers)
+    mock_put.assert_called_once_with(
+        expected_url, json=payload, headers=headers, timeout=dashboard.settings.url_timeout
+    )
 
     assert response.status_code == 200
     assert response == mock_response

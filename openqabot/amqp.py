@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 from openqa_client.exceptions import OpenQAClientError
 
+from . import dashboard
 from .approver import Approver
 from .config import settings
 from .errors import JobNotFoundError
@@ -49,6 +50,10 @@ class AMQP(SyncRes):
 
     def on_message(self, message: dict[str, Any], routing_key: str) -> None:
         """Handle incoming AMQP message."""
+        # Dashboard GET responses are cached for the process lifetime, so the
+        # daemon must drop them per message: otherwise a submission's settings
+        # stay frozen at first read and new builds are never picked up.
+        dashboard.clear_cache()
         if routing_key != "suse.openqa.job.done" or "BUILD" not in message:
             return None
         if match := build_sub_regex.match(message["BUILD"]):
