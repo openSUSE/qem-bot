@@ -73,7 +73,10 @@ class SyncRes:
 
     def filter_jobs(self, data: dict[str, Any]) -> bool:
         """Filter out invalid/development jobs from results."""
-        if "group" not in data:
+        # The dashboard requires a job group (``job_group`` and ``group_id`` are
+        # non-nullable), so a job outside any group can never be stored.
+        if not data.get("group") or not data.get("group_id"):
+            log.debug("Skipping job %s: no job group", data.get("id"))
             return False
 
         if data["clone_id"]:
