@@ -46,8 +46,16 @@ class AggregateResultsSync(SyncRes):
             if self.filter_jobs(v) and (r := self.normalize_data_safe(key, v))
         ]
 
-        for r in results:
-            self.post_result(r)
-        log.info("Aggregate results sync completed: Synced %s job results to the dashboard", len(results))
+        outcome = self.post_results(results)
+        if outcome.failed:
+            log.error(
+                "Aggregate results sync incomplete: %s of %s job results failed after %s attempts "
+                "and will be retried on the next run",
+                outcome.failed,
+                len(results),
+                outcome.attempted,
+            )
+            return 1
 
+        log.info("Aggregate results sync completed: Synced %s job results to the dashboard", len(results))
         return 0

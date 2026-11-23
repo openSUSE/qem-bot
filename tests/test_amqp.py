@@ -12,8 +12,9 @@ import pytest
 import responses
 from openqa_client.exceptions import OpenQAClientError
 
+from openqabot import dashboard
 from openqabot.amqp import AMQP
-from openqabot.config import DEFAULT_SUBMISSION_TYPE
+from openqabot.config import DEFAULT_SUBMISSION_TYPE, settings
 from openqabot.errors import JobNotFoundError
 
 if TYPE_CHECKING:
@@ -103,6 +104,20 @@ def test_on_message_bad_build(caplog: pytest.LogCaptureFixture, amqp: AMQP) -> N
     caplog.set_level(logging.DEBUG)
     amqp.on_message({"BUILD": "badbuild"}, fake_job_done)
     assert not caplog.text
+
+
+@responses.activate
+def test_on_message_clears_dashboard_get_cache(amqp: AMQP) -> None:
+    route = "api/incidents/42"
+    responses.add(method="GET", url=settings.dashboard_url(route), json={"number": 42})
+
+    assert dashboard.get_json(route) == {"number": 42}
+
+    # Any handled message must drop the cached GET so the next read hits the dashboard.
+    amqp.on_message({"NOBUILD": "12345678-9"}, fake_job_done)
+
+    assert dashboard.get_json(route) == {"number": 42}
+    assert len(responses.calls) == 2
 
 
 @responses.activate

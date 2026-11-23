@@ -18,12 +18,12 @@ from .errors import PostOpenQAError
 from .loader.config import get_onearch, load_metadata
 from .loader.qem import get_submissions
 from .openqa import OpenQAInterface
+from .utils import MAX_RESPONSE_CHARS
 
 log = getLogger("bot.openqabot")
 
 QEM_SUMMARY_KEYS = ("incident", "project", "type", "flavor", "arch", "version", "product", "build", "repohash")
 QEM_INCIDENT_KEYS = ("number", "project", "type")
-MAX_RESPONSE_CHARS = 500
 
 
 class OpenQABot:

@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 
 from openqabot.config import settings
 from openqabot.subsyncres import SubResultsSync
+from openqabot.syncres import SyncOutcome
 
 openqa_url = (
     "http://instance.qa/api/v1/jobs?scope=relevant&latest=1&flavor=FakeFlavor&distri=linux&build=123"
@@ -199,3 +200,29 @@ def test_passed_dry(caplog: pytest.LogCaptureFixture, args: Namespace) -> None:
         "openQA client not configured - skipping dashboard update",
         "Submission results sync completed: Synced 1 job results to the dashboard",
     ]
+
+
+@responses.activate
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_failed_posts_return_error(caplog: pytest.LogCaptureFixture, args: Namespace, mocker: MockerFixture) -> None:
+    data = {
+        "jobs": [
+            {
+                "name": "FakeName",
+                "id": 1234,
+                "distri": "linux",
+                "group_id": 10,
+                "group": "FakeGroup",
+                "result": "passed",
+                "clone_id": False,
+            },
+        ],
+    }
+    responses.add(method="GET", url=openqa_url, json=data)
+    responses.add(method="GET", url="http://instance.qa/api/v1/job_groups/10", json=[{"parent_id": 100}])
+
+    syncer = prepare_syncer(caplog, args)
+    mocker.patch.object(syncer, "post_results", return_value=SyncOutcome(failed=1, attempted=1))
+
+    assert syncer() == 1
+    assert "Submission results sync incomplete: 1 of 1 job results failed after 1 attempts" in caplog.text

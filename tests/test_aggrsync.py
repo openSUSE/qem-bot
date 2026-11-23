@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: MIT
 """Test aggregate sync."""
 
+import logging
 from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 
 from openqabot.aggrsync import AggregateResultsSync
+from openqabot.syncres import SyncOutcome
 
 
 @pytest.fixture
@@ -54,8 +56,33 @@ def test_call_with_results(
     # Mock methods from base class SyncRes
     mocker.patch.object(sync, "filter_jobs", return_value=True)
     mocker.patch.object(sync, "normalize_data_safe", return_value={"job_id": 1, "status": "passed"})
-    mock_post_result = mocker.patch.object(sync, "post_result")
+    mock_post_result = mocker.patch.object(sync, "post_result", return_value=True)
 
     sync()
 
     mock_post_result.assert_called_once()
+
+
+def test_call_with_failed_posts_returns_error(
+    args: MagicMock,
+    mocker: MockerFixture,
+    mock_read_products: MagicMock,
+    mock_openqa_interface: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_read_products.return_value = ["product1"]
+    mocker.patch(
+        "openqabot.aggrsync.get_aggregate_settings_data",
+        return_value=[mocker.Mock(spec=["settings_id"])],
+    )
+    mock_openqa_interface.return_value.get_jobs.return_value = [
+        {"id": 1, "group": "group", "clone_id": None, "result": "passed"}
+    ]
+    sync = AggregateResultsSync(args)
+    mocker.patch.object(sync, "filter_jobs", return_value=True)
+    mocker.patch.object(sync, "normalize_data_safe", return_value={"job_id": 1, "status": "passed"})
+    mocker.patch.object(sync, "post_results", return_value=SyncOutcome(failed=1, attempted=1))
+
+    assert sync() == 1
+    assert "Aggregate results sync incomplete: 1 of 1 job results failed after 1 attempts" in caplog.text

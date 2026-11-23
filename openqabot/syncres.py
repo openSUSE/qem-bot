@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from logging import getLogger
 from pprint import pformat
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from .config import settings
 from .loader.qem import post_job
@@ -19,6 +19,18 @@ if TYPE_CHECKING:
     from .types.types import Data
 
 log = getLogger("bot.syncres")
+
+#: Abort a result sync after this many dashboard writes failed in a row: the
+#: dashboard is broken, and posting the remaining jobs would only flood the log
+#: and keep hammering an already failing service.
+MAX_CONSECUTIVE_FAILURES = 25
+
+
+class SyncOutcome(NamedTuple):
+    """Result of posting a batch of job results to the dashboard."""
+
+    failed: int
+    attempted: int
 
 
 class SyncRes:
@@ -74,8 +86,11 @@ class SyncRes:
 
         return True
 
-    def post_result(self, result: dict[str, Any]) -> None:
-        """Post job results to the dashboard."""
+    def post_result(self, result: dict[str, Any]) -> bool:
+        """Post job results to the dashboard and return whether posting succeeded.
+
+        Intentional skips (dry run, no openQA configuration) count as success.
+        """
         sub_id = ""
         if result.get("incident_settings"):
             sub_id = (
@@ -95,9 +110,34 @@ class SyncRes:
         log.debug("Full post data: %s", pformat(result))
         if self.dry:
             log.debug("Dry run: Skipping dashboard update")
-            return
+            return True
         if not self.client:
             log.warning("openQA client not configured - skipping dashboard update")
-            return
+            return True
 
-        post_job(result)
+        return post_job(result)
+
+    def post_results(self, results: list[dict[str, Any]]) -> SyncOutcome:
+        """Post results, stopping early when the dashboard is clearly broken.
+
+        Intentional skips (dry run, no openQA configuration) count as success.
+        """
+        failed = attempted = consecutive = 0
+        for index, result in enumerate(results):
+            attempted = index + 1
+            if self.post_result(result):
+                consecutive = 0
+                continue
+            failed += 1
+            consecutive += 1
+            if consecutive >= MAX_CONSECUTIVE_FAILURES:
+                log.error(
+                    "Aborting %s result sync after %s consecutive dashboard failures; "
+                    "%s of %s results were not posted and will be retried on the next run",
+                    self.operation,
+                    consecutive,
+                    len(results) - attempted,
+                    len(results),
+                )
+                break
+        return SyncOutcome(failed=failed, attempted=attempted)
