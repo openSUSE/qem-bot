@@ -8,8 +8,8 @@ import re
 from logging import getLogger
 
 import osc.core
+import yaml
 from osc.connection import http_GET
-from ruamel.yaml import YAML, YAMLError
 
 from openqabot import config
 from openqabot.loader.fixtures import read_utf8
@@ -79,8 +79,8 @@ def _parse_productcompose_groups(groups: list[object]) -> dict[str, frozenset[st
 def _parse_productcompose(content: str, obs_project: str) -> dict[str, frozenset[str]] | None:
     """Parse one productcompose document into a mapping of architectures to supported packages."""
     try:
-        data = YAML(typ="safe").load(content)
-    except YAMLError as e:
+        data = yaml.load(content, Loader=yaml.CSafeLoader)
+    except yaml.YAMLError as e:
         log.warning("Could not parse productcompose YAML for %s: %s", obs_project, e)
         return None
 
