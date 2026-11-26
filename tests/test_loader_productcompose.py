@@ -108,6 +108,24 @@ def test_get_productcompose_packages_per_arch_merges_files(mocker: MockerFixture
     assert res == {"x86_64": frozenset({"kernel-default", "biosdevname"})}
 
 
+def test_get_productcompose_packages_per_arch_resolves_merge_keys(mocker: MockerFixture) -> None:
+    yaml_content = """
+base: &base
+  packages: [biosdevname, kernel-default]
+packagesets:
+  - <<: *base
+    name: sles_x86_64
+  - name: sles_aarch64
+    architectures: [aarch64]
+    packages: [kernel-64kb]
+"""
+    mocker.patch("openqabot.loader.productcompose.read_utf8", return_value=yaml_content)
+    assert productcompose.get_productcompose_packages_per_arch("proj", fake_data=True) == {
+        "x86_64": frozenset({"biosdevname", "kernel-default"}),
+        "aarch64": frozenset({"kernel-64kb"}),
+    }
+
+
 def test_get_productcompose_packages_per_arch_fails_open_on_broken_file(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:

@@ -703,6 +703,7 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "typer" },
     { name = "urllib3" },
+    { name = "yamlcore" },
 ]
 
 [package.dev-dependencies]
@@ -737,6 +738,7 @@ requires-dist = [
     { name = "ruamel-yaml" },
     { name = "typer" },
     { name = "urllib3" },
+    { name = "yamlcore", specifier = ">=0.1.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1001,4 +1003,16 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/66/3e/4d08c5903b2c0c70cad583c170cc4a663fc6a61e2ad00b711fcda61358cd/vulture-2.16.tar.gz", hash = "sha256:f8d9f6e2af03011664a3c6c240c9765b3f392917d3135fddca6d6a68d359f717", size = 52680, upload-time = "2026-03-25T14:41:27.141Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f5/be/f935130312330614811dae2ea9df3f395f6d63889eb6c2e68c14507152ee/vulture-2.16-py3-none-any.whl", hash = "sha256:6e0f1c312cef1c87856957e5c2ca9608834a7c794c2180477f30bf0e4cc58eee", size = 26993, upload-time = "2026-03-25T14:41:26.21Z" },
+]
+
+[[package]]
+name = "yamlcore"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f2/ff/d96b723fe194349df8547f26324146bd3f60e7c0c5ccbc39717ebb462e86/yamlcore-0.1.1.tar.gz", hash = "sha256:7a3a7e83e659b7b282610b70a632ff27708b3315ac884890c0382476bf453f28", size = 10644, upload-time = "2026-11-11T18:04:11.244Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/80/17597c65886db896fcd3d9d272156f269b42792ed6ba29b2b327c9b6265a/yamlcore-0.1.1-py3-none-any.whl", hash = "sha256:85adda6abfe2ed6b13c80818d6b733f286bd6685314f7e6705321f4477f2dba1", size = 6055, upload-time = "2026-11-11T18:04:10.032Z" },
 ]
