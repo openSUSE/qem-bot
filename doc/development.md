@@ -62,6 +62,9 @@ an environment variable, declare `envvar=` on the `typer.Option` in `args.py`
 The test `test_cli_envvars_covered_by_settings` in `tests/test_config.py`
 enforces this automatically.
 
+Product data YAML is parsed with the YAML 1.2 core schema plus merge keys via
+[`openqabot/yaml12.py`](../openqabot/yaml12.py); the loader comparison behind that
+choice is recorded in [the YAML parser notes](yaml-parser.md).
 
 ## Local testing
 
