@@ -13,7 +13,6 @@ from concurrent import futures
 from dataclasses import dataclass, field
 from functools import lru_cache
 from http import HTTPStatus
-from io import BytesIO
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, cast
 
@@ -26,7 +25,8 @@ from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
-from openqabot.loader.fixtures import read_utf8
+from openqabot.loader.fixtures import read_utf8, read_xml
+from openqabot.loader.parentbuild import filter_archs_by_parent_results
 from openqabot.loader.productcompose import ARCHS, get_productcompose_packages_per_arch, safe_fake_project
 from openqabot.loader.smelt import get_gitea_update_data
 from openqabot.types.pullrequest import NO_QE_LABEL, PullRequest
@@ -153,12 +153,6 @@ def read_json_file_list(name: str) -> list[Any]:
         msg = f"JSON response file '{name}' returned {type(res).__name__} instead of list"
         raise TypeError(msg)
     return res
-
-
-@lru_cache(maxsize=128)
-def read_xml(name: str) -> etree.ElementTree:
-    """Read an XML response file."""
-    return etree.parse(BytesIO(read_utf8(name + ".xml").encode("utf-8")))
 
 
 def reviews_url(repo_name: str, number: int) -> str:
@@ -486,13 +480,18 @@ def get_multibuild_data(obs_project: str) -> str:
     return cast("str", r.get_multibuild_data())
 
 
+def _supported_packages(packages_per_arch: dict[str, frozenset[str]]) -> set[str]:
+    """Return every package the productcompose lists for at least one architecture."""
+    return set().union(*packages_per_arch.values())
+
+
 def _filter_archs_by_packages(
     relevant_archs: set[str],
     packages: list[str],
     packages_per_arch: dict[str, frozenset[str]],
+    known_pkgs: set[str],
     obs_project: str,
 ) -> set[str]:
-    known_pkgs = set().union(*packages_per_arch.values())
     relevant_packages = frozenset(packages) & known_pkgs
     supported = {arch for arch in relevant_archs if relevant_packages <= packages_per_arch.get(arch, frozenset())}
     if not supported:
@@ -542,6 +541,11 @@ def determine_relevant_archs(
     another architecture only. When no remaining architecture supports every package, e.g. because a
     PR touches packages of different architectures, all architectures are kept instead of none.
 
+    Packages that the productcompose does not list under any architecture, e.g. source packages like
+    `kernel-livepatch-SLE16_Update_0` that only exist as built binaries, are checked against the build
+    results of the parent PR project instead: an architecture is dropped when the parent excludes all
+    of them there. Without productcompose data every package is checked there.
+
     Returns:
         The set of relevant architectures, or None if the multibuild data could not be retrieved.
 
@@ -550,8 +554,14 @@ def determine_relevant_archs(
         return None
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {arch for flavor in flavors for arch in ARCHS if flavor.endswith(arch)}
+    unknown_packages = packages or []
     if packages and (packages_per_arch := get_productcompose_packages_per_arch(obs_project, fake_data=fake_data)):
-        relevant_archs = _filter_archs_by_packages(relevant_archs, packages, packages_per_arch, obs_project)
+        known_packages = _supported_packages(packages_per_arch)
+        relevant_archs = _filter_archs_by_packages(
+            relevant_archs, packages, packages_per_arch, known_packages, obs_project
+        )
+        unknown_packages = [pkg for pkg in packages if pkg not in known_packages]
+    relevant_archs = filter_archs_by_parent_results(relevant_archs, unknown_packages, obs_project, fake_data=fake_data)
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 

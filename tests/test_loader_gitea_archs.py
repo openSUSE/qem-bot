@@ -11,6 +11,23 @@ from pytest_mock import MockerFixture
 from openqabot.config import settings
 from openqabot.loader import gitea
 
+PROJ = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
+PARENT = "SUSE:SLFO:1.1.99:PullRequest:124"
+UNKNOWN_PACKAGE = "kernel-livepatch-SLE16_Update_0"
+
+
+def _prepare_parent_check(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.read_utf8", return_value="xml")
+    mocker.patch(
+        "openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data",
+        return_value=["sles_x86_64", "sles_aarch64"],
+    )
+    mocker.patch("openqabot.loader.gitea.ARCHS", {"x86_64", "aarch64"})
+    mocker.patch(
+        "openqabot.loader.gitea.get_productcompose_packages_per_arch",
+        return_value={"x86_64": frozenset({"systemd"}), "aarch64": frozenset({"systemd"})},
+    )
+
 
 def test_determine_relevant_archs_success(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.gitea.read_utf8", return_value="xml")
@@ -110,3 +127,73 @@ def test_determine_relevant_archs_invalid_project(caplog: pytest.LogCaptureFixtu
     bad_proj = "SUSE:PullRequest:1:proj/../bad"
     assert gitea.determine_relevant_archs(bad_proj, fake_data=True) is None
     assert f"Invalid project name {bad_proj}" in caplog.text
+
+
+def test_determine_relevant_archs_drops_parent_excluded_arch(mocker: MockerFixture) -> None:
+    _prepare_parent_check(mocker)
+    mocker.patch(
+        "openqabot.loader.parentbuild.get_parent_statuses",
+        return_value=frozenset({("aarch64", UNKNOWN_PACKAGE, "excluded"), ("x86_64", UNKNOWN_PACKAGE, "succeeded")}),
+    )
+    assert gitea.determine_relevant_archs(PROJ, packages=[UNKNOWN_PACKAGE], fake_data=True) == {"x86_64"}
+
+
+def test_determine_relevant_archs_warns_about_undecided_arch(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.parentbuild")
+    _prepare_parent_check(mocker)
+    mocker.patch(
+        "openqabot.loader.parentbuild.get_parent_statuses",
+        return_value=frozenset({("x86_64", UNKNOWN_PACKAGE, "excluded")}),
+    )
+    assert gitea.determine_relevant_archs(PROJ, packages=[UNKNOWN_PACKAGE], fake_data=True) == {"aarch64"}
+    assert f"Parent build results of {PARENT} do not report every package" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("project", "packages"),
+    [(PROJ, ["systemd"]), ("project", [UNKNOWN_PACKAGE])],
+    ids=["packages_known_to_compose", "project_without_parent"],
+)
+def test_determine_relevant_archs_parent_untouched(mocker: MockerFixture, project: str, packages: list[str]) -> None:
+    _prepare_parent_check(mocker)
+    parent_statuses = mocker.patch("openqabot.loader.parentbuild.get_parent_statuses")
+    gitea.determine_relevant_archs(project, packages=packages, fake_data=True)
+    parent_statuses.assert_not_called()
+
+
+def test_determine_relevant_archs_parent_checks_only_unknown_packages(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.parentbuild")
+    _prepare_parent_check(mocker)
+    mocker.patch(
+        "openqabot.loader.parentbuild.get_parent_statuses",
+        return_value=frozenset({
+            ("aarch64", UNKNOWN_PACKAGE, "succeeded"),
+            ("x86_64", UNKNOWN_PACKAGE, "succeeded"),
+        }),
+    )
+    res = gitea.determine_relevant_archs(PROJ, packages=["systemd", UNKNOWN_PACKAGE], fake_data=True)
+    assert res == {"aarch64", "x86_64"}
+    assert "do not report every package" not in caplog.text
+
+
+def test_determine_relevant_archs_parent_checks_all_packages_without_compose(mocker: MockerFixture) -> None:
+    _prepare_parent_check(mocker)
+    mocker.patch("openqabot.loader.gitea.get_productcompose_packages_per_arch", return_value=None)
+    mocker.patch(
+        "openqabot.loader.parentbuild.get_parent_statuses",
+        return_value=frozenset({
+            ("aarch64", "systemd", "excluded"),
+            ("x86_64", "systemd", "succeeded"),
+        }),
+    )
+    assert gitea.determine_relevant_archs(PROJ, packages=["systemd"], fake_data=True) == {"x86_64"}
+
+
+def test_determine_relevant_archs_parent_unreadable(mocker: MockerFixture) -> None:
+    _prepare_parent_check(mocker)
+    mocker.patch("openqabot.loader.parentbuild.get_parent_statuses", return_value=None)
+    assert gitea.determine_relevant_archs(PROJ, packages=[UNKNOWN_PACKAGE], fake_data=True) == {"aarch64", "x86_64"}

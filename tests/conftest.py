@@ -20,6 +20,7 @@ from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
+from openqabot.loader.parentbuild import get_parent_statuses
 from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
@@ -135,6 +136,7 @@ def make_approver(submission: int | str = 0, *, mocker: MockerFixture | None = N
 @pytest.fixture(autouse=True)
 def _auto_clear_cache() -> None:
     clear_cache()
+    get_parent_statuses.cache_clear()
 
 
 @pytest.fixture(scope="session")
