@@ -20,8 +20,6 @@ pull_request_rules:
       - and:
         - "#approved-reviews-by>=2"
         - "#changes-requested-reviews-by=0"
-        # https://doc.mergify.io/examples.html#require-all-requested-reviews-to-be-approved
-        - "#review-requested=0"
     actions: &merge
       merge:
         method: fast-forward
@@ -31,15 +29,29 @@ pull_request_rules:
       - and:
           - "label=merge-fast"
     actions: *merge
-  - name: automatic merge for dependabot updates
+  - name: automatic merge for dependabot updates that only bump dependencies
     conditions:
       - and: *base_checks
-      - and:
+      - and: &bot_gate
           - author=dependabot[bot]
-    actions:
+          - "#changes-requested-reviews-by=0"
+      # A commit pushed on top of the bot's own is a code change, not a bump
+      - "#commits=1"
+      # A bump writes manifests and action revisions only; a hand edit inside
+      # the bot's own commit still passes, which this config does not cover
+      - -files~=^(?!(uv\.lock|pyproject\.toml|\.github/workflows/[^/]+\.ya?ml)$).+
+    actions: &squash
       queue:
       merge:
         method: squash
+  - name: require review for other dependabot updates
+    conditions:
+      # One approval, not the base rule's two: the reviewer has to see the code
+      # change riding along, not re-review the bump
+      - and: *base_checks
+      - and: *bot_gate
+      - "#approved-reviews-by>=1"
+    actions: *squash
   - name: continuously rebase pull requests when it's labeled with `rebase`
     conditions:
       - label=rebase
