@@ -40,8 +40,42 @@ def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytes
     assert "Could not determine relevant architectures for project: <urlopen error oops>" in caplog.text
 
 
-def test_get_multibuild_data(mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    "flavors",
+    [
+        [],
+        ["other_flavor"],
+    ],
+)
+def test_determine_relevant_archs_no_arch_flavors(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, flavors: list[str]
+) -> None:
+    mocker.patch("openqabot.loader.gitea.get_multibuild_data", return_value="xml")
+    mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver.parse_multibuild_data", return_value=flavors)
+    res = gitea.determine_relevant_archs_from_multibuild_info("project", fake_data=False)
+    assert res is None
+    assert "Could not determine relevant architectures for project: No arch-specific flavors found" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("packages", "expected"),
+    [
+        (["000productcompose", "000package-groups"], "000productcompose"),
+        (["000package-groups", "000productcompose-nvidia"], "000productcompose-nvidia"),
+        (["000productcompose-nvidia", "000productcompose"], "000productcompose"),
+    ],
+)
+def test_get_multibuild_data(mocker: MockerFixture, packages: list[str], expected: str) -> None:
+    mock_packagelist = mocker.patch("openqabot.loader.gitea.osc.core.meta_get_packagelist", return_value=packages)
     mock_resolver = mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver")
     mock_resolver.return_value.get_multibuild_data.return_value = "data"
     assert gitea.get_multibuild_data("proj") == "data"
-    mock_resolver.assert_called_with(settings.obs_url, "proj", "000productcompose")
+    mock_packagelist.assert_called_once_with(settings.obs_url, "proj")
+    mock_resolver.assert_called_with(settings.obs_url, "proj", expected)
+
+
+def test_get_multibuild_data_no_productcompose(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.osc.core.meta_get_packagelist", return_value=["000package-groups"])
+    mock_resolver = mocker.patch("openqabot.loader.gitea.MultibuildFlavorResolver")
+    assert not gitea.get_multibuild_data("proj")
+    mock_resolver.assert_not_called()

@@ -59,6 +59,7 @@ PROJECT_PRODUCT_REGEX = re.compile(r".*:PullRequest:\d+:(.*)")
 SCMSYNC_REGEX = re.compile(r".*/products/(.*)#([\d\.]{2,6})$")
 VERSION_EXTRACT_REGEX = re.compile(r"[.\d]+")
 VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
+PRODUCTCOMPOSE_PACKAGE = "000productcompose"
 OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
 # Regex to find all HTTPS URLs, excluding common trailing punctuation like dots or parentheses
 # that are likely part of the surrounding text (e.g. at the end of a sentence or in Markdown).
@@ -487,24 +488,34 @@ def add_build_result(
     _update_build_statuses(res, results)
 
 
+def _find_productcompose_package(obs_project: str) -> str | None:
+    """Return the productcompose package, e.g. `000productcompose` or `000productcompose-nvidia`."""
+    packages = osc.core.meta_get_packagelist(config.settings.obs_url, obs_project)
+    return min((p for p in packages if p.startswith(PRODUCTCOMPOSE_PACKAGE)), default=None)
+
+
 def get_multibuild_data(obs_project: str) -> str:
-    """Fetch multibuild configuration data for an OBS project."""
-    r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, "000productcompose")
-    return cast("str", r.get_multibuild_data())
+    """Fetch multibuild configuration data of the productcompose package of an OBS project."""
+    if not (package := _find_productcompose_package(obs_project)):
+        return ""
+    r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, package)
+    return cast("str", r.get_multibuild_data() or "")
 
 
 def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data: bool) -> set[str] | None:
     """Determine the relevant architectures of an OBS project from its multibuild flavors.
 
-    The `_multibuild` file of `000productcompose` is read and every architecture from `ARCHS` that
-    a flavor name ends with is considered relevant.
+    The `_multibuild` file of the productcompose package (`000productcompose` or a suffixed variant
+    like `000productcompose-nvidia`) is read and every architecture from `ARCHS` that a flavor name
+    ends with is considered relevant.
 
     Build results may list archs (e.g. `local` or `ppc64le`) as published even though no repos exist
     for them. Considering those would cause problems later on (e.g. when computing the repohash), so
     only the archs found in the flavors are kept.
 
     Returns:
-        The set of relevant architectures, or None if the multibuild data could not be retrieved.
+        The set of relevant architectures, or None if it could not be determined. None disables the
+        filtering, so a missing or unexpected `_multibuild` does not drop all build results.
 
     """
     if fake_data:
@@ -517,6 +528,9 @@ def determine_relevant_archs_from_multibuild_info(obs_project: str, *, fake_data
             return None
     flavors = MultibuildFlavorResolver.parse_multibuild_data(multibuild_data)
     relevant_archs = {arch for flavor in flavors for arch in ARCHS if flavor.endswith(arch)}
+    if not relevant_archs:
+        log.warning("Could not determine relevant architectures for %s: No arch-specific flavors found", obs_project)
+        return None
     log.debug("Relevant archs for %s: %s", obs_project, sorted(relevant_archs))
     return relevant_archs
 
