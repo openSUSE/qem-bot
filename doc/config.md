@@ -231,6 +231,28 @@ When computing package diffs and determining additional builds, the following pa
 * Initial livepatches (version matching `1` or `1.*`).
 * Source and NoSource architectures (`src` or `nosrc`).
 
+### Priority of product increment jobs
+When `reference_repos` are configured, `qem-bot` derives the openQA `_PRIORITY` of
+a product increment from the updates it contains, i.e. from the submissions the
+dashboard still lists as pending release (merged and released updates are not
+returned by the dashboard API at all, so they cannot pin a later increment).
+Every such submission whose packages appear in the repository diff for the same
+product version drives the priority of the increment:
+
+```
+openQA priority = QEM_BOT_PI_PRIORITY_OFFSET - max included priority // QEM_BOT_PI_PRIORITY_SCALE
+```
+
+With the defaults (420 and 5) the increment of routine content lands at 380 to
+420, behind the incidents and aggregates of the same content, while an urgent
+update (SMELT priority 1500) still moves the increment to 120. The derived value
+applies to the base product and to every product of `additional_builds`. A
+`_PRIORITY` in `settings` overrides it. When the dashboard is unavailable the
+anchor of the band (420 with the defaults) applies instead of openQA's default
+of 50, so an outage cannot make increments preempt the maintenance queue. Only
+without a reference repository diff is no `_PRIORITY` sent at all. Already
+queued increment jobs are not reprioritized.
+
 ### Behavior of `increment-approve` command
 `qem-bot` will go through all listed product increments. This is the sequence for
 the example configuration above:
@@ -285,3 +307,5 @@ Job priority variables:
 | `QEM_BOT_PRIORITY_SCALE` | `2` | Divisor applied to the submission priority in the formula above. |
 | `QEM_BOT_AGGREGATE_PRIORITY_OFFSET` | `320` | Base of the openQA priority for aggregate tests: openQA priority = offset minus the maximum submission priority divided by the scale, rounded down. |
 | `QEM_BOT_AGGREGATE_PRIORITY_SCALE` | `5` | Divisor applied to the maximum submission priority in aggregate tests. |
+| `QEM_BOT_PI_PRIORITY_OFFSET` | `420` | Base of the openQA priority for product increments: openQA priority = offset minus the maximum priority of the included updates divided by the scale, rounded down. |
+| `QEM_BOT_PI_PRIORITY_SCALE` | `5` | Divisor applied to the maximum included update priority in product increments. |
