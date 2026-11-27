@@ -8,9 +8,11 @@ from collections.abc import Generator
 
 import pytest
 import responses
+from openqa_client.exceptions import RequestError
 from pytest_mock import MockerFixture
 
 from openqabot.config import settings
+from openqabot.errors import FetchJobsError
 from openqabot.subsyncres import SubResultsSync
 
 openqa_url = (
@@ -46,6 +48,23 @@ def args() -> Namespace:
 def prepare_syncer(caplog: pytest.LogCaptureFixture, args: Namespace) -> SubResultsSync:
     caplog.set_level(logging.INFO)
     return SubResultsSync(args)
+
+
+@responses.activate
+@pytest.mark.usefixtures("get_a_s", "mock_dashboard_settings")
+def test_fetch_failure_names_settings(caplog: pytest.LogCaptureFixture, args: Namespace, mocker: MockerFixture) -> None:
+    mocker.patch(
+        "openqabot.openqa.OpenQAInterface.get_jobs",
+        side_effect=RequestError("GET", "http://instance.qa/api/v1/jobs", 502, "Bad Gateway"),
+    )
+
+    syncer = prepare_syncer(caplog, args)
+
+    with pytest.raises(FetchJobsError) as exc_info:
+        syncer()
+
+    assert "submission None:100 settings 110 (linux 13.3 FakeFlavor arch build 123)" in str(exc_info.value)
+    assert "Bad Gateway" in str(exc_info.value)
 
 
 @responses.activate

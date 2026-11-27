@@ -4,17 +4,20 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger
 from pprint import pformat
 from typing import TYPE_CHECKING, Any
 
 from .config import settings
+from .errors import FetchJobsError
 from .loader.qem import post_job
 from .openqa import OpenQAInterface
 from .utils import normalize_results
 
 if TYPE_CHECKING:
     from argparse import Namespace
+    from collections.abc import Sequence
 
     from .types.types import Data
 
@@ -52,11 +55,29 @@ class SyncRes:
 
         return ret
 
+    def fetch_job_results(self, criteria: Sequence[Data]) -> dict[Data, list[dict[str, Any]]]:
+        """Fetch openQA jobs for all criteria with a shared thread pool.
+
+        A failed fetch names the affected settings entry so CI logs identify what
+        could not be synced instead of dying with a context-free traceback.
+        """
+        results: dict[Data, list[dict[str, Any]]] = {}
+        with ThreadPoolExecutor(max_workers=settings.max_workers) as executor:
+            future_data = {executor.submit(self.client.get_jobs, data): data for data in criteria}
+            for future in as_completed(future_data):
+                data = future_data[future]
+                try:
+                    results[data] = future.result()
+                except Exception as ex:
+                    raise FetchJobsError(data, self.operation, ex) from ex
+        return results
+
     def normalize_data_safe(self, key: Data, job: dict[str, Any]) -> dict[str, Any] | None:
-        """Safely normalize data, returning None on failure."""
+        """Safely normalize data, skipping the job and logging the missing field on failure."""
         try:
             return self.normalize_data(key, job)
-        except KeyError:
+        except KeyError as e:
+            log.warning("Skipping job %s: openQA job data missing field %s", job.get("id"), e)
             return None
 
     def filter_jobs(self, data: dict[str, Any]) -> bool:

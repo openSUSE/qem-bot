@@ -27,6 +27,8 @@ from openqabot.openqa import OpenQAInterface
 from openqabot.openqabot import OpenQABot
 
 if TYPE_CHECKING:
+    from unittest.mock import Mock
+
     from pytest_mock import MockerFixture
 
 runner = CliRunner()
@@ -407,6 +409,15 @@ class MainTestError(Exception):
     """Custom exception class for main tests to satisfy ruff rules."""
 
 
+def _mock_main(mocker: MockerFixture, side_effect: object) -> Mock:
+    mocker.patch("openqabot.main.load_dotenv")
+    mocker.patch("openqabot.main.app", side_effect=side_effect)
+    mock_logger = mocker.Mock()
+    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
+    errorcnt.clear()
+    return mock_logger
+
+
 def test_main_success(mocker: MockerFixture) -> None:
     mock_app = mocker.patch("openqabot.main.app")
     mock_logger = mocker.Mock()
@@ -432,41 +443,78 @@ def test_main_retry_success(mocker: MockerFixture) -> None:
             msg = "Test error"
             raise MainTestError(msg)
 
-    mocker.patch("openqabot.main.app", side_effect=side_effect)
-    mock_logger = mocker.Mock()
-    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
-    mocker.patch("openqabot.main.load_dotenv")
-
-    errorcnt.clear()
+    mock_logger = _mock_main(mocker, side_effect)
 
     main()
 
     assert call_count == 2
     mock_sleep.assert_called_once_with(0)
+    assert mock_logger.warning.call_args_list[0].args[0].startswith("attempt %d/%d failed")
+
+
+def test_main_gives_up_with_clear_error(mocker: MockerFixture) -> None:
+    mocker.patch.object(settings, "app_max_retries", 2)
+    mocker.patch.object(settings, "app_backoff_factor", 0)
+    mocker.patch.object(settings, "app_same_error_limit", 5)
+    mock_sleep = mocker.patch("openqabot.main.time.sleep")
+
+    def side_effect() -> None:
+        msg = "persistent failure"
+        raise MainTestError(msg)
+
+    mock_logger = _mock_main(mocker, side_effect)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert any("giving up after %s attempt(s)" in str(call) for call in mock_logger.error.call_args_list)
+    assert mock_sleep.call_count == 1
+
+
+@pytest.mark.parametrize(
+    ("retries", "raised", "expected_code", "interrupted"),
+    [
+        (1, KeyboardInterrupt(), 1, "Interrupted by user"),
+        (1, SystemExit(130), 1, "Interrupted by SIGINT before completing the command"),
+        (1, SystemExit(3), 3, None),
+        (3, SystemExit(130), 1, "Interrupted by SIGINT before completing the command"),
+    ],
+)
+def test_main_reports_interruption(
+    mocker: MockerFixture, retries: int, raised: BaseException, expected_code: int, interrupted: str | None
+) -> None:
+    mocker.patch.object(settings, "app_max_retries", retries)
+    mocker.patch.object(settings, "app_backoff_factor", 0)
+    mock_logger = _mock_main(mocker, raised)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    messages = [call.args[0] for call in mock_logger.info.call_args_list]
+    interrupted_messages = [m for m in messages if "Interrupted" in m]
+    assert interrupted_messages == ([interrupted] if interrupted else [])
+    assert exc_info.value.code == expected_code
 
 
 def test_main_exception_limit_reraise(mocker: MockerFixture) -> None:
     mocker.patch.object(settings, "app_max_retries", 15)
     mocker.patch.object(settings, "app_backoff_factor", 0)
+    mocker.patch.object(settings, "app_same_error_limit", 2)
     mocker.patch("openqabot.main.time.sleep")
 
     def side_effect() -> None:
         msg = "Persistent error"
         raise MainTestError(msg)
 
-    mocker.patch("openqabot.main.app", side_effect=side_effect)
-    mock_logger = mocker.Mock()
-    mocker.patch("openqabot.main.create_logger", return_value=mock_logger)
-    mocker.patch("openqabot.main.load_dotenv")
-
-    errorcnt.clear()
+    mock_logger = _mock_main(mocker, side_effect)
 
     with pytest.raises(MainTestError, match="Persistent error"):
         main()
 
     assert len(errorcnt) == 1
-    key = next(iter(errorcnt))
-    assert errorcnt[key] == 11
+    assert next(iter(errorcnt.values())) == 3
+    assert any("error limit %s hit" in str(call) for call in mock_logger.error.call_args_list)
 
 
 def _raise_key_error() -> None:
@@ -474,13 +522,16 @@ def _raise_key_error() -> None:
     raise KeyError(key)
 
 
-def test_handle_exception_debug_log_is_self_contained(mocker: MockerFixture) -> None:
+def test_handle_exception_reports_error_with_traceback(mocker: MockerFixture) -> None:
     mock_log = mocker.Mock()
     errorcnt.clear()
-    try:
+    with pytest.raises(KeyError) as exc_info:
         _raise_key_error()
-    except KeyError as e:
-        main_module._handle_exception(e, mock_log)  # ruff: ignore[private-member-access]
 
-    debug_calls = [str(c) for c in mock_log.debug.call_args_list]
-    assert any("KeyError" in c and "'number'" in c for c in debug_calls), debug_calls
+    main_module._handle_exception(exc_info.value, mock_log)  # ruff: ignore[private-member-access]
+
+    report = mock_log.error.call_args_list[0]
+    assert report.args[1] == "KeyError"
+    assert str(report.args[2]) == "'number'"
+    assert report.kwargs["exc_info"] is exc_info.value
+    assert mock_log.error.call_count == 1

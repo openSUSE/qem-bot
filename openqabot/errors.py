@@ -2,6 +2,13 @@
 # SPDX-License-Identifier: MIT
 """Custom exceptions."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .types.types import Data
+
 
 class Error(Exception):
     """Base class for exceptions in this module."""
@@ -73,6 +80,21 @@ class SubmissionArgError(LoaderQemError):
             reason = "Expected format '<type>:<project>:<id>'."
         message = f"Invalid submission ID {raw!r}. {reason}"
         super().__init__(message)
+
+
+class FetchJobsError(Error):
+    """Raised when fetching openQA jobs for a settings entry fails."""
+
+    def __init__(self, data: Data, operation: str, cause: Exception) -> None:
+        """Name the openQA query that failed so CI logs identify the affected submission."""
+        target = (
+            f"{data.submission_type}:{data.submission}" if data.submission else (data.product or data.submission_type)
+        )
+        super().__init__(
+            f"Failed to fetch openQA jobs for {operation} {target}"
+            f" settings {data.settings_id} ({data.distri} {data.version} {data.flavor} {data.arch}"
+            f" build {data.build}): {cause}"
+        )
 
 
 class PostOpenQAError(Error):
