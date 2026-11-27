@@ -1,6 +1,21 @@
 # Copyright SUSE LLC
 # SPDX-License-Identifier: MIT
-"""Channel families.
+"""Channel families: the channel string families openQA jobs read.
 
-Deployment-neutral parsing and URL rules for the channel string families openQA jobs read.
+Importing this package registers the families, so a channel string resolves to its kind.
 """
+
+from . import opensuse, slfo, updates
+from .base import ChannelKind, ChannelType, Repos, channel_kind, get_channel_type, kinds
+
+__all__ = [
+    "ChannelKind",
+    "ChannelType",
+    "Repos",
+    "channel_kind",
+    "get_channel_type",
+    "kinds",
+    "opensuse",
+    "slfo",
+    "updates",
+]

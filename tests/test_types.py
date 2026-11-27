@@ -51,13 +51,6 @@ def test_prodver_from_issue_channel_type() -> None:
     assert get_channel_type(ProdVer.from_issue_channel("openSUSE-SLE:15.4").product) == ChannelType.OPENSUSE
 
 
-def test_repos_compute_url_slfo_via_project_param() -> None:
-    """project='SLFO' triggers SLFO URL path regardless of product string."""
-    repo = Repos("SomeProduct", "1.2", "x86_64")
-    url = repo.compute_url("base", path="repomd.xml", project="SLFO")
-    assert url == "base/SomeProduct:/1.2/product/repomd.xml"
-
-
 def test_repos_compute_url_opensuse() -> None:
     """OpenSUSE URL omits architecture."""
     repo = Repos("openSUSE-SLE", "15.4", "x86_64")

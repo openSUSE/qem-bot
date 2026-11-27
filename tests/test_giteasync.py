@@ -281,7 +281,7 @@ def test_extracting_product_name_and_version() -> None:
 
 
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
+    caplog.set_level(logging.INFO, logger="bot.loader.obs")
     mocker.patch("openqabot.loader.obs.http_GET", side_effect=fake_urllib_http_error)
     mocker.patch("openqabot.loader.obs.get_multibuild_data", side_effect=fake_urllib_http_error)
     submission = {"packages": []}
@@ -301,18 +301,18 @@ def test_reviewing_pr() -> None:
 
 def test_computing_repo_url(mocker: MockerFixture) -> None:
     mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"Foo", "Foo-Bar"}))
-    repos = Repos("product", "1.2", "x86_64")
+    repos = Repos("SUSE:SLFO", "1.2", "x86_64")
 
     url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")
-    expected_url = "base/product:/1.2/product/repo/Foo-16.0-x86_64/"
+    expected_url = "base/SUSE:/SLFO:/1.2/product/repo/Foo-16.0-x86_64/"
     assert url == expected_url
 
     url = compute_repo_url_for_job_setting("base", repos, ["Foo", "Foo-Bar"], "16.0")
-    expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
+    expected_url += ",base/SUSE:/SLFO:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
 
     # Test with empty product_version should now raise ValueError
-    repos_no_ver = Repos("product", "1.2", "x86_64", "")
+    repos_no_ver = Repos("SUSE:SLFO", "1.2", "x86_64", "")
     with pytest.raises(ValueError, match="Product version must be provided for Foo"):
         compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
 
@@ -327,9 +327,9 @@ def test_computing_repo_url_of_product_not_in_product_repo(mocker: MockerFixture
 
 
 def test_computing_repo_url_empty_product() -> None:
-    repo = ProdVer("product", "1.2")
+    repo = ProdVer("SUSE:SLFO", "1.2")
     url = repo.compute_url("base", "", "x86_64")
-    assert url == "base/product:/1.2/product/repodata/repomd.xml"
+    assert url == "base/SUSE:/SLFO:/1.2/product/repodata/repomd.xml"
 
 
 def test_adding_packages_from_files() -> None:

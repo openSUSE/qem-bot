@@ -94,4 +94,4 @@ def compute_repo_url_for_job_setting(
     p_ver = product_version or repo.product_version
     repo_with_opts = repo._replace(product_version=p_ver)
     product_names = product_names_for_channel(repo, product_repo)
-    return ",".join(repo_with_opts.compute_url(base, p, path="", project="SLFO") for p in product_names)
+    return ",".join(repo_with_opts.compute_url(base, p, path="") for p in product_names)
