@@ -12,12 +12,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import Enum, auto
+from logging import getLogger
 from typing import TYPE_CHECKING, NamedTuple
 
 from openqabot.config import settings
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+log = getLogger("bot.types.channels")
 
 
 class ChannelType(Enum):
@@ -50,7 +53,8 @@ class Repos(NamedTuple):
         project: str | None = None,
     ) -> str:
         """Construct the repository URL."""
-        return channel_kind(self.product).repo_url(self, base, product_name, arch or self.arch, path, project)
+        kind = channel_kind(self.product) or _KINDS[UPDATES]
+        return kind.repo_url(self, base, product_name, arch or self.arch, path, project)
 
 
 @dataclass(frozen=True)
@@ -66,7 +70,9 @@ class ChannelKind:
     filters_by_product: bool = False
 
 
+UPDATES = "UPDATES"
 _KINDS: dict[str, ChannelKind] = {}
+_UNKNOWN_WARNED: set[str] = set()
 
 
 def register(kind: ChannelKind) -> ChannelKind:
@@ -78,19 +84,27 @@ def register(kind: ChannelKind) -> ChannelKind:
 def kinds() -> tuple[ChannelKind, ...]:
     """Return the registered channel families with their configured prefixes."""
     configured = settings.channel_kinds
+    for unknown in sorted(configured.keys() - _KINDS.keys() - _UNKNOWN_WARNED):
+        _UNKNOWN_WARNED.add(unknown)
+        log.warning("Unknown channel family %s in channel_kinds, ignoring it", unknown)
     return tuple(replace(kind, prefixes=tuple(configured.get(kind.name, kind.prefixes))) for kind in _KINDS.values())
 
 
-def channel_kind(channel: str) -> ChannelKind:
-    """Return the channel family a channel string belongs to, defaulting to updates."""
-    families = kinds()
-    matched = [kind for kind in families if any(_is_prefixed(channel, prefix) for prefix in kind.prefixes)]
-    return matched[0] if matched else next(kind for kind in families if kind.channel_type is ChannelType.UPDATES)
+def channel_kind(channel: str) -> ChannelKind | None:
+    """Return the channel family whose prefixes match a channel string; None when none matches."""
+    return next((kind for kind in kinds() if any(_is_prefixed(channel, prefix) for prefix in kind.prefixes)), None)
 
 
 def get_channel_type(channel: str) -> ChannelType:
-    """Determine the channel type of a channel or product string."""
-    return channel_kind(channel).channel_type
+    """Determine the channel type of a channel or product string, defaulting to updates."""
+    kind = channel_kind(channel)
+    return kind.channel_type if kind else _KINDS[UPDATES].channel_type
+
+
+def filters_by_product(channel: str) -> bool:
+    """Return whether a channel string belongs to a family that selects its repositories by product."""
+    kind = channel_kind(channel)
+    return bool(kind and kind.filters_by_product)
 
 
 def _is_prefixed(channel: str, prefix: str) -> bool:

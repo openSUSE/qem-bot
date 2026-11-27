@@ -18,7 +18,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
-from .channels import channel_kind
+from .channels import filters_by_product
 from .types import ProdVer, Repos
 
 if TYPE_CHECKING:
@@ -150,14 +150,14 @@ class Submissions(BaseConf):
             repourl.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-            if channel_kind(chan.product).filters_by_product
+            if filters_by_product(chan.product)
             else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
     @staticmethod
     def get_matching_channels(sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:
         """Find channels in a submission matching the given product and architecture."""
-        if channel_kind(channel.product).filters_by_product:
+        if filters_by_product(channel.product):
             return [
                 ic
                 for ic in sub.channels

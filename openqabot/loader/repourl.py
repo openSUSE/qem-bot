@@ -53,7 +53,7 @@ def product_names_for_channel(repo: Repos, product_repo: list[str] | str | None)
     """
     configured = [product_repo] if isinstance(product_repo, str) else list(product_repo or [])
     kind = channel_kind(repo.product)
-    own = kind.product_of(repo.version) if kind.filters_by_product else ""
+    own = kind.product_of(repo.version) if kind and kind.filters_by_product else ""
     if not own or own in configured:
         return configured or [own]
     if not (published := published_products(f"{repo.product}:{repo.version}", repo.arch)):

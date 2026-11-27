@@ -157,6 +157,18 @@ def test_sub_nochannels() -> None:
 
 
 @pytest.mark.usefixtures("mock_good")
+def test_sub_channels_of_no_known_family_are_ignored() -> None:
+    bad_data = deepcopy(test_data)
+    bad_data["channels"] = [
+        "SUSE:SLE-15-SP4:Update:x86_64",
+        "home:okurz:branches:SLES:15-SP4:x86_64",
+    ]
+
+    with pytest.raises(EmptyChannelsError):
+        Submission(bad_data)
+
+
+@pytest.mark.usefixtures("mock_good")
 def test_sub_nochannels2() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = [

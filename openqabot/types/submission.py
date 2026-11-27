@@ -70,6 +70,14 @@ def sort_packages(names: list[str]) -> list[str]:
     return sorted(names, key=_package_sort_key)
 
 
+def _reads_product(repo: Repos, product_name: str | None) -> bool:
+    """Check whether a channel reads the configured product, or belongs to a family that ignores it."""
+    kind = channel_kind(repo.product)
+    if kind is None or not kind.filters_by_product:
+        return True
+    return bool(product_name and product_name.startswith(kind.product_of(repo.version)))
+
+
 class Submission:
     """Information about a submission."""
 
@@ -130,7 +138,7 @@ class Submission:
 
         for channel in raw_channels:
             kind = channel_kind(channel)
-            if (repo := kind.parse(channel)) is None:
+            if kind is None or (repo := kind.parse(channel)) is None:
                 continue
             product = kind.product_of(repo.version)
             if kind.filters_by_product and not config.settings.is_obs_product_enabled(product):
@@ -240,13 +248,7 @@ class Submission:
         """Keep the channels that read the configured product; None when none is left."""
         if not options.product_name:
             return repos
-        kinds = {repo.product: channel_kind(repo.product) for repo in repos}
-        kept = [
-            repo
-            for repo in repos
-            if not kinds[repo.product].filters_by_product
-            or options.product_name.startswith(kinds[repo.product].product_of(repo.version))
-        ]
+        kept = [repo for repo in repos if _reads_product(repo, options.product_name)]
         return kept or None
 
     @staticmethod

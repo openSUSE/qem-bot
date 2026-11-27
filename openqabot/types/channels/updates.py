@@ -33,7 +33,7 @@ KIND = register(
     ChannelKind(
         name="UPDATES",
         channel_type=ChannelType.UPDATES,
-        prefixes=(),
+        prefixes=("SUSE:Updates",),
         parse=_parse_channel,
         repo_url=_repo_url,
     )

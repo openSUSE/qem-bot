@@ -6,13 +6,14 @@ Importing this package registers the families, so a channel string resolves to i
 """
 
 from . import opensuse, slfo, updates
-from .base import ChannelKind, ChannelType, Repos, channel_kind, get_channel_type, kinds
+from .base import ChannelKind, ChannelType, Repos, channel_kind, filters_by_product, get_channel_type, kinds
 
 __all__ = [
     "ChannelKind",
     "ChannelType",
     "Repos",
     "channel_kind",
+    "filters_by_product",
     "get_channel_type",
     "kinds",
     "opensuse",
