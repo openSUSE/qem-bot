@@ -1,5 +1,8 @@
 [general]
-contrib=contrib-title-conventional-commits
+# Cleanup commits are rejected by the CI range invocation only: the commit-msg hook
+# lints with this file alone and must keep accepting `git commit --fixup`, so the
+# ignore-*-commits=false options never go here.
+contrib=contrib-title-conventional-commits,contrib-disallow-cleanup-commits
 ignore=body-min-length,body-is-missing
 regex-style-search=True
 

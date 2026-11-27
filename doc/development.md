@@ -44,6 +44,11 @@ Feel free to add issues in github or send pull requests.
 * For git commit messages use the rules stated on
   [How to Write a Git Commit Message](http://chris.beams.io/posts/git-commit/)
   as a reference.
+* Never leave `fixup!`, `squash!` or `amend!` commits in a branch: the CI commit
+  message check rejects them. `gitlint --commits` skips cleanup commits unless
+  `general.ignore-fixup-commits`, `general.ignore-squash-commits` and
+  `general.ignore-fixup-amend-commits` are each set to `false` with `-c`, which
+  is what CI does.
 * Every commit MUST ensure full statement and branch coverage.
 * Run `make tidy` before committing changes to format code according to our
   standards. Preferably also run other tests as described in the subsequent
