@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 import requests
 
-from openqabot.loader import repourl
+from openqabot.loader import obs, repourl
 from openqabot.types.types import Repos
 
 if TYPE_CHECKING:
@@ -94,7 +94,7 @@ def test_product_names_for_channel(
 
 
 def test_published_products_of_a_project(mocker: MockerFixture) -> None:
-    repourl.published_products.cache_clear()
+    obs.repo_listing.cache_clear()
     mocked_response = mocker.Mock()
     mocked_response.json.return_value = {
         "data": [
@@ -105,15 +105,15 @@ def test_published_products_of_a_project(mocker: MockerFixture) -> None:
             {"name": "repodata"},
         ]
     }
-    mocker.patch("openqabot.loader.repourl.retried_requests.get", return_value=mocked_response)
+    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
 
     assert repourl.published_products("SUSE:SLFO:1.3:PullRequest:10936:SLES", "ppc64le") == frozenset({"SLES-SAP"})
 
 
 def test_published_products_of_unreadable_project(mocker: MockerFixture) -> None:
-    repourl.published_products.cache_clear()
+    obs.repo_listing.cache_clear()
     mocked_response = mocker.Mock()
     mocked_response.raise_for_status.side_effect = requests.exceptions.HTTPError
-    mocker.patch("openqabot.loader.repourl.retried_requests.get", return_value=mocked_response)
+    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
 
     assert repourl.published_products("SUSE:SLFO:1.3:PullRequest:10936:SLES", "ppc64le") == frozenset()

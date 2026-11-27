@@ -8,23 +8,17 @@ the repository URLs and product names openQA jobs read.
 
 from __future__ import annotations
 
-import re
-from functools import lru_cache
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-import requests
-
 from openqabot import config
+from openqabot.loader.obs import VERSION_TOKEN_REGEX, repo_listing
 from openqabot.types.channels import channel_kind
-from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
     from openqabot.types.types import Repos
 
 log = getLogger("bot.loader.repourl")
-
-VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 
 
 def _split_repo_dir_name(name: str) -> tuple[str, str]:
@@ -37,21 +31,12 @@ def _split_repo_dir_name(name: str) -> tuple[str, str]:
     return ("-".join(parts[:version_index]), parts[-1]) if version_index else ("", "")
 
 
-@lru_cache(maxsize=2048)
 def published_products(obs_project: str, arch: str) -> frozenset[str]:
     """Return the products that an OBS project publishes for one architecture.
 
     An empty result also means that the listing could not be read, so callers keep their defaults.
     """
-    repository = config.settings.obs_repo_type or "product"
-    url = f"{config.settings.obs_download_url}/{obs_project.replace(':', ':/')}/{repository}/repo/"
-    try:
-        response = retried_requests.get(url, params={"jsontable": 1})
-        response.raise_for_status()
-        names = [entry["name"] for entry in response.json()["data"]]
-    except (KeyError, TypeError, ValueError, requests.exceptions.RequestException) as e:
-        log.debug("Could not read the published products of %s: %s", obs_project, e)
-        return frozenset()
+    names = repo_listing(obs_project, config.settings.obs_repo_type or "product") or ()
     return frozenset(
         product for product, entry_arch in map(_split_repo_dir_name, names) if product and entry_arch == arch
     )

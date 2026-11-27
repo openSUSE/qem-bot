@@ -42,10 +42,32 @@ def test_determine_relevant_archs_exception(mocker: MockerFixture, caplog: pytes
 
 
 def test_get_multibuild_data(mocker: MockerFixture) -> None:
+    mocker.patch("osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia", "kernel-default"])
     mock_resolver = mocker.patch("openqabot.loader.obs.MultibuildFlavorResolver")
     mock_resolver.return_value.get_multibuild_data.return_value = "data"
+
     assert obs.get_multibuild_data("proj") == "data"
-    mock_resolver.assert_called_with(settings.obs_url, "proj", "000productcompose")
+
+    mock_resolver.assert_called_with(settings.obs_url, "proj", "000productcompose-nvidia")
+
+
+def test_determine_relevant_archs_of_a_project_with_a_flavored_productcompose(mocker: MockerFixture) -> None:
+    mocker.patch("osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia"])
+    mock_resolver = mocker.patch("openqabot.loader.obs.MultibuildFlavorResolver")
+    mock_resolver.parse_multibuild_data.return_value = ["nvidia_x86_64", "nvidia_aarch64"]
+    mocker.patch(
+        "openqabot.loader.obs.get_productcompose_packages_per_arch",
+        return_value={"x86_64": frozenset({"kernel-default"}), "aarch64": frozenset({"kernel-64kb"})},
+    )
+
+    res = obs.determine_relevant_archs(
+        "SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA", packages=["kernel-64kb"], fake_data=False
+    )
+
+    assert res == {"aarch64"}
+    mock_resolver.assert_called_with(
+        settings.obs_url, "SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA", "000productcompose-nvidia"
+    )
 
 
 def test_determine_relevant_archs_drops_unsupported_arch(caplog: pytest.LogCaptureFixture) -> None:

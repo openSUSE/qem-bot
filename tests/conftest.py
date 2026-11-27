@@ -20,6 +20,7 @@ from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
+from openqabot.loader.obs import repo_listing
 from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
@@ -39,6 +40,12 @@ from .helpers import (
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
+
+
+@pytest.fixture(autouse=True)
+def _clear_repo_listing_cache() -> None:
+    """Keep a cached OBS repository listing from one test out of the next."""
+    repo_listing.cache_clear()
 
 
 @pytest.fixture

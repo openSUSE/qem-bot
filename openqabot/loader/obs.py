@@ -24,8 +24,12 @@ from osc.core import MultibuildFlavorResolver
 
 from openqabot import config
 from openqabot.loader.fixtures import read_utf8, read_xml
-from openqabot.loader.productcompose import ARCHS, get_productcompose_packages_per_arch, safe_fake_project
-from openqabot.loader.repourl import VERSION_TOKEN_REGEX
+from openqabot.loader.productcompose import (
+    ARCHS,
+    get_productcompose_packages_per_arch,
+    productcompose_package,
+    safe_fake_project,
+)
 from openqabot.types.channels.slfo import get_product_name, get_product_name_and_version_from_scmsync
 from openqabot.types.submission_key import SubmissionKey
 from openqabot.utils import retry10_gitea as retried_requests
@@ -34,6 +38,8 @@ if TYPE_CHECKING:
     from lxml import etree  # ty: ignore[unresolved-import]
 
 log = getLogger("bot.loader.obs")
+
+VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 
 
 @dataclass
@@ -55,31 +61,34 @@ def _extract_version(name: str) -> str:
     return next((part for part in name.rstrip("/").split("-") if VERSION_TOKEN_REGEX.fullmatch(part)), "")
 
 
-@lru_cache(maxsize=512)
-def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
-    """Determine the product version by inspecting an OBS repository listing."""
-    project_path = project.replace(":", ":/")
-    url = f"{config.settings.obs_download_url}/{project_path}/{repository}/repo/"
-    start = f"{product_name}-"
+@lru_cache(maxsize=2048)
+def repo_listing(project: str, repository: str) -> tuple[str, ...] | None:
+    """Read the directory names of an OBS repository; None when the listing is unreadable."""
+    url = f"{config.settings.obs_download_url}/{project.replace(':', ':/')}/{repository}/repo/"
     try:
         r = retried_requests.get(url, params={"jsontable": 1})
         r.raise_for_status()
-        data = r.json()["data"]
+        return tuple(entry["name"] for entry in r.json()["data"])
     except requests.exceptions.HTTPError as e:
-        message = f"Repo ignored: Could not query repository '{repository}' ({product_name}->{project}): {e}"
+        message = f"Repo ignored: Could not query repository '{repository}' of {project}: {e}"
         if e.response is not None and e.response.status_code == HTTPStatus.NOT_FOUND:
             log.info(message)
         else:
             log.warning(message)
-        return ""
     # Catching both because requests' JSONDecodeError might not inherit from json's
     except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
         log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
-        return ""
     except requests.exceptions.RequestException as e:
         log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
-        return ""
-    versions = (_extract_version(entry["name"]) for entry in data if entry["name"].startswith(start))
+    except (KeyError, TypeError) as e:
+        log.debug("Unexpected repository listing at '%s': %s", url, e)
+    return None
+
+
+def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
+    """Determine the product version by inspecting an OBS repository listing."""
+    names = repo_listing(project, repository) or ()
+    versions = (_extract_version(name) for name in names if name.startswith(f"{product_name}-"))
     return next(filter(None, versions), "")
 
 
@@ -166,8 +175,8 @@ def add_build_result(
 
 
 def get_multibuild_data(obs_project: str) -> str:
-    """Fetch multibuild configuration data for an OBS project."""
-    r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, "000productcompose")
+    """Fetch the multibuild configuration data of a project's productcompose package."""
+    r = MultibuildFlavorResolver(config.settings.obs_url, obs_project, productcompose_package(obs_project))
     return cast("str", r.get_multibuild_data())
 
 

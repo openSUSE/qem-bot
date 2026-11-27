@@ -183,7 +183,7 @@ def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture)
 def test_get_product_version_from_repo_listing_http_error(
     mocker: MockerFixture, response: MagicMock | None, expected_log_level: str
 ) -> None:
-    obs.get_product_version_from_repo_listing.cache_clear()
+    obs.repo_listing.cache_clear()
     mock_log = mocker.patch("openqabot.loader.obs.log")
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error", response=response)
@@ -201,7 +201,7 @@ def test_get_product_version_from_repo_listing_http_error(
 def test_get_product_version_from_repo_listing_request_exception(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    obs.get_product_version_from_repo_listing.cache_clear()
+    obs.repo_listing.cache_clear()
     caplog.set_level(logging.WARNING, logger="bot.loader.obs")
     mocker.patch("openqabot.loader.obs.retried_requests.get", side_effect=requests.RequestException("error"))
     res = obs.get_product_version_from_repo_listing("project", "product", "repo")
@@ -210,7 +210,7 @@ def test_get_product_version_from_repo_listing_request_exception(
 
 
 def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) -> None:
-    obs.get_product_version_from_repo_listing.cache_clear()
+    obs.repo_listing.cache_clear()
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "data": [
@@ -229,7 +229,7 @@ def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) ->
 def test_get_product_version_from_repo_listing_requests_json_error(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    obs.get_product_version_from_repo_listing.cache_clear()
+    obs.repo_listing.cache_clear()
     caplog.set_level(logging.INFO, logger="bot.loader.obs")
     mock_response = MagicMock()
     # Use a dummy exception that mimics requests.exceptions.JSONDecodeError if needed,
@@ -239,6 +239,15 @@ def test_get_product_version_from_repo_listing_requests_json_error(
     res = obs.get_product_version_from_repo_listing("project_json", "product_json", "repo_json")
     assert not res
     assert "Invalid JSON document" in caplog.text
+
+
+def test_get_product_version_from_repo_listing_without_a_data_field(mocker: MockerFixture) -> None:
+    obs.repo_listing.cache_clear()
+    mocked_response = MagicMock()
+    mocked_response.json.return_value = {"rows": []}
+    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
+
+    assert not obs.get_product_version_from_repo_listing("project", "product", "repo")
 
 
 def test_add_channel_for_build_result_local() -> None:
