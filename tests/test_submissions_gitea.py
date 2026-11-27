@@ -101,7 +101,7 @@ def test_gitea_submissions() -> None:
 
 
 def test_gitea_repo_url_of_other_product_channel(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES-NVIDIA"}))
     subs = Submissions(JobConfig("SLFO", ["SLES"], "16.1", {}, {"FLAVOR": {}}), set())
     sub = MockSubmission(type="git")
     channel = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", "aarch64", "16.1")

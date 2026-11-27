@@ -22,7 +22,6 @@ from openqabot.giteasync import GiteaSync
 from openqabot.loader.gitea import (
     add_build_results,
     add_packages_from_files,
-    compute_repo_url_for_job_setting,
     get_product_name,
     get_product_name_and_version_from_scmsync,
     read_json_file,
@@ -30,6 +29,7 @@ from openqabot.loader.gitea import (
     read_xml,
     review_pr,
 )
+from openqabot.loader.repourl import compute_repo_url_for_job_setting
 from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
@@ -301,7 +301,7 @@ def test_reviewing_pr() -> None:
 
 
 def test_computing_repo_url(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"Foo", "Foo-Bar"}))
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"Foo", "Foo-Bar"}))
     repos = Repos("product", "1.2", "x86_64")
 
     url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")
@@ -319,7 +319,7 @@ def test_computing_repo_url(mocker: MockerFixture) -> None:
 
 
 def test_computing_repo_url_of_product_not_in_product_repo(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES-NVIDIA"}))
     repos = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", "aarch64", "16.1")
 
     url = compute_repo_url_for_job_setting("base", repos, ["SLES"], "16.1")

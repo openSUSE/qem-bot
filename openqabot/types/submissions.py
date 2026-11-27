@@ -13,7 +13,7 @@ import requests
 
 from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
-from openqabot.loader import gitea
+from openqabot.loader import repourl
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
 
@@ -146,7 +146,7 @@ class Submissions(BaseConf):
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
         return (
-            gitea.compute_repo_url_for_job_setting(
+            repourl.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
             if get_channel_type(chan.product) == ChannelType.SLFO
