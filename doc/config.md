@@ -29,6 +29,13 @@ Other YAML files contain the definition of **product** and data for either or bo
 An optional `config.yml` in the same directory holds settings shared across all products.
 
 * `excluded_packages` - optional, list of package names (or first part of pkg name). A central blocklist applied to **every** product's incident and aggregate scheduling, in addition to any per-flavor or per-aggregate `excluded_packages`. Use this to keep a package (e.g. `kernel-livepatch-...`) out of scheduling everywhere without duplicating the key across files. A non-list value is logged as a warning and ignored.
+* `channel_kinds` - optional, mapping of channel family names to their channel string prefixes. The families are `SLFO` (default `SUSE:SLFO` and `SLFO`), `OPENSUSE` (default `openSUSE`) and `UPDATES` (the fallback for every channel string that matches no other family). A prefix matches a channel string that equals it or continues with `:` or `-`, so `SLFO` does not match an `SLFOO` product. A family accepts a list or a single prefix. Set this only when a deployment uses other channel strings than the defaults:
+
+```yaml
+channel_kinds:
+  SLFO:
+    - SUSE:SLFO2
+```
 
 
 ## Structure of a product definition
