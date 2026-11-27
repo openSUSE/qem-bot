@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING, Any
+from unittest.mock import call
 
 import pytest
 import requests
@@ -135,18 +136,16 @@ def test_handle_submission_with_ci_url(mocker: MockerFixture) -> None:
     assert result["openqa"]["__CI_JOB_URL"] == "http://my-ci.com/123"
 
 
-def test_is_scheduled_job_non_list_response(mocker: MockerFixture) -> None:
+def test_find_scheduled_job_non_list_response(mocker: MockerFixture) -> None:
     sub = MockSubmission(rev_fallback_value=42)
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = {"error": "foo"}
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.find_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE) is None
 
 
 @pytest.mark.parametrize("failure", ["json", "request"])
-def test_is_scheduled_job_treats_api_error_as_scheduled(mocker: MockerFixture, failure: str) -> None:
-    # On a dashboard API error is_scheduled_job returns True so the caller
-    # skips scheduling instead of retriggering on a transient failure.
+def test_find_scheduled_job_treats_api_error_as_placeholder(mocker: MockerFixture, failure: str) -> None:
     sub = MockSubmission(rev_fallback_value=42)
     sub.id = 1
     get = mocker.patch("openqabot.types.submissions.retried_requests.get")
@@ -155,36 +154,33 @@ def test_is_scheduled_job_treats_api_error_as_scheduled(mocker: MockerFixture, f
     else:
         get.side_effect = requests.exceptions.RequestException("boom")
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.find_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE) == {}
 
 
-def test_is_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
-    # On an API error the job is treated as scheduled but nothing is persisted,
-    # so once the dashboard recovers and reports no jobs the bot schedules the
-    # missing job again.
+def test_find_scheduled_job_recovers_after_error(mocker: MockerFixture) -> None:
     sub = MockSubmission(rev_fallback_value=42)
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.find_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE) is None
 
 
-def test_is_scheduled_job_no_revs(mocker: MockerFixture) -> None:
+def test_find_scheduled_job_no_revs(mocker: MockerFixture) -> None:
     sub = MockSubmission()
     sub.id = 1
     mocker.patch("openqabot.types.submissions.retried_requests.get").return_value.json.return_value = [{"id": 1}]
     mocker.patch.object(sub, "revisions_with_fallback", return_value=None)
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.find_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE) is None
 
 
-def test_is_scheduled_job_passes_project(mocker: MockerFixture) -> None:
+def test_find_scheduled_job_passes_project(mocker: MockerFixture) -> None:
     sub = MockSubmission(rev_fallback_value=42, project="SUSE:Maintenance:1")
     sub.id = 1
     get = mocker.patch("openqabot.types.submissions.retried_requests.get")
     get.return_value.json.return_value = []
     ctx = SubContext(sub, "arch", "flavor", {})
-    assert not Submissions.is_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE)
+    assert Submissions.find_scheduled_job(ctx, "ver", DEFAULT_SUBMISSION_TYPE) is None
     assert get.call_args.kwargs["params"] == {"type": DEFAULT_SUBMISSION_TYPE, "project": "SUSE:Maintenance:1"}
 
 
@@ -305,8 +301,7 @@ def test_handle_submission_livepatch_kgraft(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    # Mock is_scheduled_job to return False
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -375,7 +370,7 @@ def test_handle_submission_already_scheduled(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=True)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value={})
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
 
@@ -407,7 +402,7 @@ def test_handle_submission_kernel_no_product_repo_skip(mocker: MockerFixture) ->
         data=submissions_obj.flavors["SomeKernel-Flavor"],
     )
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
@@ -433,7 +428,7 @@ def test_handle_submission_singlearch_no_aggregate(mocker: MockerFixture) -> Non
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -461,7 +456,7 @@ def test_handle_submission_should_aggregate_logic(mocker: MockerFixture, aggrega
     submissions_obj = _get_submissions_obj(test_config=test_config)
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
 
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
@@ -491,7 +486,7 @@ def test_handle_submission_params_expand_forbidden(mocker: MockerFixture) -> Non
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
 
@@ -511,7 +506,7 @@ def test_handle_submission_pc_tools_image_fail(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
     mocker.patch("openqabot.types.submissions.apply_pc_tools_image", return_value={})
 
     assert submissions_obj.handle_submission(ctx, cfg) is None
@@ -532,7 +527,7 @@ def test_handle_submission_pc_pint_image_fail(mocker: MockerFixture) -> None:
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
     mocker.patch(
         "openqabot.types.submissions.apply_publiccloud_pint_image", return_value={"PUBLIC_CLOUD_IMAGE_ID": None}
     )
@@ -588,7 +583,7 @@ def test_handle_submission_priority_logic(
     submissions_obj = _get_submissions_obj(test_config=test_config)
     ctx = SubContext(sub=sub, arch="x86_64", flavor=flavor, data=submissions_obj.flavors[flavor])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
     result = submissions_obj.handle_submission(ctx, cfg)
     assert result is not None
     assert result["openqa"]["_PRIORITY"] == expected_prio
@@ -609,7 +604,7 @@ def test_handle_submission_pc_tools_image_success(mocker: MockerFixture) -> None
     )
     ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
-    mocker.patch.object(submissions_obj, "is_scheduled_job", return_value=False)
+    mocker.patch.object(submissions_obj, "find_scheduled_job", return_value=None)
     mocker.patch(
         "openqabot.types.submissions.apply_pc_tools_image",
         return_value={"PUBLIC_CLOUD_TOOLS_IMAGE_BASE": "some_image"},
@@ -797,3 +792,346 @@ def test_handle_submission_packages_mismatch() -> None:
     cfg = SubConfig(ci_url=None, ignore_onetime=False)
 
     assert submissions_obj.should_skip(ctx, cfg, {}) is True
+
+
+_MATCHES = {"OS_TEST_ISSUES": [Repos("SLES", "15-SP3", "x86_64")]}
+
+
+@pytest.mark.parametrize(
+    "matched",
+    [
+        pytest.param({}, id="dashboard-error-placeholder"),
+        pytest.param({"settings": {"_PRIORITY": 325}}, id="stored-priority-unchanged"),
+    ],
+)
+def test_should_skip_reprioritization_skips_unchanged_priority(mocker: MockerFixture, matched: dict[str, Any]) -> None:
+    obj, ctx, _ = _reprio_ctx(325, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    openqa_client = mocker.patch("openqabot.types.reprioritize._openqa_client")
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    openqa_client.assert_not_called()
+    put.assert_not_called()
+
+
+def test_should_skip_dry_run_logs_would_reprioritize(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.types.reprioritize")
+    sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123, staging=False)
+    submissions_obj = _get_submissions_obj(
+        test_config={"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    )
+    ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
+    mocker.patch.object(
+        Submissions,
+        "find_scheduled_job",
+        return_value={
+            "settings": {
+                "_PRIORITY": 300,
+                "BUILD": ":smelt:1:pkg",
+                "FLAVOR": "AAA",
+                "ARCH": "x86_64",
+                "VERSION": "15-SP3",
+                "REPOHASH": 123,
+            },
+            "flavor": "AAA",
+            "arch": "x86_64",
+            "version": "15-SP3",
+        },
+    )
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = True
+    client.get_scheduled_jobs_by_build.return_value = [
+        {
+            "id": 11,
+            "priority": 356,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "123"},
+        }
+    ]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert submissions_obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+    assert any("Would reprioritize openQA job 11 from 356 to 116" in m for m in caplog.messages)
+    client.get_scheduled_jobs_by_build.assert_called_once_with(":smelt:1:pkg")
+    client.set_priority.assert_not_called()
+    put.assert_not_called()
+
+
+def test_should_skip_no_candidate_when_not_scheduled(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.types.submissions")
+    sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123, staging=False)
+    submissions_obj = _get_submissions_obj(
+        test_config={"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    )
+    ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=submissions_obj.flavors["AAA"])
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=None)
+
+    assert submissions_obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is False
+    assert not any("Reprioritization candidate" in m for m in caplog.messages)
+
+
+def _scheduled_job(job_id: int, priority: int | None, repohash: str = "123") -> dict[str, Any]:
+    return {
+        "id": job_id,
+        "priority": priority,
+        "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": repohash},
+    }
+
+
+def _reprio_ctx(
+    stored: int | None = None, priority: int | None = None
+) -> tuple[Submissions, SubContext, dict[str, Any]]:
+    sub = MockSubmission(id=1, channels=[Repos("SLES", "15-SP3", "x86_64")], rev_fallback_value=123, priority=priority)
+    obj = _get_submissions_obj(
+        test_config={"FLAVOR": {"AAA": {"archs": ["x86_64"], "issues": {"OS_TEST_ISSUES": "SLES:15-SP3"}}}}
+    )
+    ctx = SubContext(sub=sub, arch="x86_64", flavor="AAA", data=obj.flavors["AAA"])
+    settings = {
+        "_PRIORITY": stored,
+        "BUILD": ":smelt:1:pkg",
+        "FLAVOR": "AAA",
+        "ARCH": "x86_64",
+        "VERSION": "15-SP3",
+        "REPOHASH": 123,
+    }
+    matched = {
+        "id": 7,
+        "incident": 1,
+        "project": "SUSE:Maintenance:1",
+        "type": "smelt",
+        "arch": "x86_64",
+        "flavor": "AAA",
+        "version": "15-SP3",
+        "withAggregate": False,
+        "settings": settings,
+    }
+    return obj, ctx, matched
+
+
+@pytest.mark.parametrize(
+    ("stored", "priority", "expected_target", "expected_stored"),
+    [
+        pytest.param(300, 100, 381, 325, id="delta-applied-preserving-throttling"),
+        pytest.param(323, 100, None, None, id="delta-below-min-prio-delta-skipped"),
+        pytest.param(None, None, 366, 60, id="no-stored-priority-uses-default-baseline"),
+    ],
+)
+def test_should_skip_reprioritizes_scheduled_job(
+    mocker: MockerFixture,
+    *,
+    stored: int | None,
+    priority: int | None,
+    expected_target: int | None,
+    expected_stored: int | None,
+) -> None:
+    obj, ctx, matched = _reprio_ctx(stored, priority)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = [
+        {
+            "id": 11,
+            "priority": 356,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "123"},
+        },
+        {
+            "id": 12,
+            "priority": 156,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "999"},
+        },
+        {
+            "id": 13,
+            "priority": None,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "123"},
+        },
+    ]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+    put.return_value.status_code = 200
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    if expected_target is None:
+        client.set_priority.assert_not_called()
+        put.assert_not_called()
+        return
+    client.set_priority.assert_called_once_with(11, expected_target)
+    payload = put.call_args.kwargs["json"]
+    assert payload["settings"]["_PRIORITY"] == expected_stored
+    assert "id" not in payload
+
+
+def test_should_skip_reprioritization_without_build_skips_openqa(mocker: MockerFixture) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    matched["settings"].pop("BUILD")
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.get_scheduled_jobs_by_build.assert_not_called()
+
+
+def test_should_skip_reprioritization_skips_dashboard_update_without_applied_job(mocker: MockerFixture) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.set_priority.return_value = False
+    client.get_scheduled_jobs_by_build.return_value = [
+        {
+            "id": 11,
+            "priority": 350,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "123"},
+        }
+    ]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.set_priority.assert_called_once()
+    put.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("status", "raises", "expected_log"),
+    [
+        pytest.param(500, False, "Dashboard update failed with status 500", id="non-2xx-logged"),
+        pytest.param(200, True, "Dashboard update failed: could not store", id="request-error-logged"),
+    ],
+)
+def test_should_skip_reprioritization_logs_dashboard_update_failure(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture, status: int, *, raises: bool, expected_log: str
+) -> None:
+    caplog.set_level(logging.INFO, logger="bot.types.submissions")
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = [
+        {
+            "id": 11,
+            "priority": 356,
+            "settings": {"FLAVOR": "AAA", "ARCH": "x86_64", "VERSION": "15-SP3", "REPOHASH": "123"},
+        }
+    ]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+    put.return_value.status_code = status
+    put.return_value.text = "boom"
+    if raises:
+        put.side_effect = requests.exceptions.RequestException("boom")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    assert any(expected_log in message for message in caplog.messages)
+    assert client.set_priority.call_args_list == [call(11, 381), call(11, 356)]
+
+
+def test_should_skip_reprioritization_stores_priority_without_scheduled_job(
+    mocker: MockerFixture,
+) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = []
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+    put.return_value.status_code = 200
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.set_priority.assert_not_called()
+    assert put.call_args.kwargs["json"]["settings"]["_PRIORITY"] == 325
+
+
+def test_should_skip_reprioritization_stores_nothing_when_openqa_query_fails(mocker: MockerFixture) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = None
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.set_priority.assert_not_called()
+    put.assert_not_called()
+
+
+def test_should_skip_reprioritization_skips_other_openqa_instances(mocker: MockerFixture) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.__bool__.return_value = False
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.get_scheduled_jobs_by_build.assert_not_called()
+    client.set_priority.assert_not_called()
+    put.assert_not_called()
+
+
+def test_should_skip_reprioritization_restores_jobs_after_failed_write(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = [_scheduled_job(11, 356), _scheduled_job(12, 200)]
+    client.set_priority.side_effect = [True, False, True]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    assert client.set_priority.call_args_list == [call(11, 381), call(12, 225), call(11, 356)]
+    put.assert_not_called()
+    assert any("Could not reprioritize openQA job 12, it keeps priority 200" in m for m in caplog.messages)
+
+
+def test_should_skip_reprioritization_logs_failed_restore(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = [_scheduled_job(11, 356), _scheduled_job(12, 200)]
+    client.set_priority.side_effect = [True, False, False]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    put.assert_not_called()
+    assert any("Could not restore priority 356 of openQA job 11" in m for m in caplog.messages)
+
+
+def test_should_skip_reprioritization_skips_job_already_at_target(mocker: MockerFixture) -> None:
+    obj, ctx, matched = _reprio_ctx(None, 650)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    mocker.patch("openqabot.types.reprioritize.settings.min_prio_delta", 0)
+    client = mocker.patch("openqabot.types.reprioritize._openqa_client").return_value
+    client.dry = False
+    client.get_scheduled_jobs_by_build.return_value = [_scheduled_job(11, 50)]
+    put = mocker.patch("openqabot.types.reprioritize.dashboard.put")
+    put.return_value.status_code = 200
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    client.set_priority.assert_not_called()
+    assert put.call_args.kwargs["json"]["settings"]["_PRIORITY"] == 50
+
+
+def test_should_skip_continues_when_reprioritization_raises(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    obj, ctx, matched = _reprio_ctx(300, 100)
+    mocker.patch.object(Submissions, "find_scheduled_job", return_value=matched)
+    mocker.patch("openqabot.types.reprioritize.scheduled", side_effect=requests.exceptions.ConnectionError("boom"))
+
+    assert obj.should_skip(ctx, SubConfig(ci_url=None, ignore_onetime=False), _MATCHES) is True
+
+    assert any("Reprioritizing submission smelt:1 failed, scheduling continues" in m for m in caplog.messages)

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlencode
 
 import requests
+from openqa_client.exceptions import OpenQAClientError
 
 from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
@@ -18,6 +19,7 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.priority import openqa_priority
 from openqabot.utils import retry3 as retried_requests
 
+from . import reprioritize
 from .baseconf import BaseConf, JobConfig
 from .types import ChannelType, ProdVer, Repos, get_channel_type
 
@@ -25,6 +27,7 @@ if TYPE_CHECKING:
     from .submission import Submission
 
 log = getLogger("bot.types.submissions")
+
 
 VALID_FLAVOR_KEYS = frozenset({
     "archs",
@@ -122,26 +125,31 @@ class Submissions(BaseConf):
         return res if isinstance(res, list) else []
 
     @staticmethod
-    def is_scheduled_job(ctx: SubContext, ver: str, submission_type: str) -> bool:
-        """Check if a job is already scheduled in the dashboard.
+    def find_scheduled_job(ctx: SubContext, ver: str, submission_type: str) -> dict[str, Any] | None:
+        """Return the dashboard row of the already scheduled job matching this context, if any.
 
         If the dashboard API fails, treat the job as already scheduled so a
-        transient error does not trigger an unnecessary reschedule.
+        transient error does not trigger an unnecessary reschedule; the error
+        is signalled by returning an empty placeholder row.
         """
         if not (revs := ctx.sub.revisions_with_fallback(ctx.arch, ver)):
-            return False
+            return None
 
         try:
             jobs = Submissions._get_scheduled_jobs(ctx.sub.id, ctx.sub.project, submission_type)
         except DashboardError:
-            return True
+            return {}
 
-        return any(
-            job["flavor"] == ctx.flavor
-            and job["arch"] == ctx.arch
-            and job["version"] == ver
-            and job.get("settings", {}).get("REPOHASH") == revs
-            for job in jobs
+        return next(
+            (
+                job
+                for job in jobs
+                if job["flavor"] == ctx.flavor
+                and job["arch"] == ctx.arch
+                and job["version"] == ver
+                and job.get("settings", {}).get("REPOHASH") == revs
+            ),
+            None,
         )
 
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
@@ -213,10 +221,16 @@ class Submissions(BaseConf):
         if self._is_invalid_package_or_channel(ctx, matches):
             return True
 
-        if not cfg.ignore_onetime and self.is_scheduled_job(
-            ctx, self.settings["VERSION"], submission_type=ctx.sub.type
+        if (
+            not cfg.ignore_onetime
+            and (matched := self.find_scheduled_job(ctx, self.settings["VERSION"], submission_type=ctx.sub.type))
+            is not None
         ):
             log.info("Submission %s already scheduled for %s on %s", ctx.sub, ctx.flavor, ctx.arch)
+            try:
+                reprioritize.scheduled(ctx, matched, self.get_priority(ctx))
+            except (OpenQAClientError, requests.exceptions.RequestException):
+                log.exception("Reprioritizing submission %s failed, scheduling continues", ctx.sub)
             return True
 
         return self._is_kernel_missing_repo(ctx.sub, ctx.flavor, matches)
