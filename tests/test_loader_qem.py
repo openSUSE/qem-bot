@@ -34,6 +34,7 @@ from openqabot.loader.qem import (
 )
 from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import Data
+from openqabot.utils import MAX_RESPONSE_CHARS
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -575,6 +576,76 @@ def test_post_job_request_exception(mock_put: MagicMock, caplog: pytest.LogCaptu
     assert "QEM Dashboard API request failed" in caplog.text
 
 
+def test_post_job_returns_success_flag(mock_put: MagicMock) -> None:
+    mock_put.return_value.status_code = 200
+    assert post_job({}) is True
+    mock_put.return_value.status_code = 400
+    mock_put.return_value.text = "Error message"
+    assert post_job({}) is False
+    mock_put.side_effect = requests.exceptions.RequestException
+    assert post_job({}) is False
+
+
+def test_post_job_sends_only_schema_fields(mock_put: MagicMock) -> None:
+    mock_put.return_value.status_code = 200
+    post_job({"job_id": 1, "status": "passed", "submission_id": 5, "submission_type": "smelt"})
+    assert mock_put.call_args.kwargs["json"] == {"job_id": 1, "status": "passed"}
+
+
+def test_post_job_request_exception_logs_job_summary(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_put.side_effect = requests.exceptions.RequestException
+    post_job({"job_id": 42, "name": "job", "submission_id": 5})
+    assert "while posting job" in caplog.text
+    assert "'job_id': 42" in caplog.text
+    assert "submission_id" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("status_code", "body", "expected"),
+    [
+        (500, {"errors": [{"path": "/x", "message": "HASH(0x1)"}]}, "dashboard internal error, see the dashboard logs"),
+        (400, {"errors": [{"path": "/job_id", "message": "Missing property."}]}, "(/job_id: Missing property.)"),
+        (400, {"errors": [{"message": "Bad"}]}, "(<body>: Bad)"),
+        (400, {"errors": ["plain", {"path": "/a", "message": "m"}]}, "(plain; /a: m)"),
+        (400, {"error": "Something broke"}, "(Something broke)"),
+        (400, {"errors": []}, "HTTP 400; response:"),
+        (400, ["not", "a", "dict"], "HTTP 400; response:"),
+        (400, ValueError("no json"), "HTTP 400; response:"),
+    ],
+)
+def test_post_job_unsuccessful_reason(
+    mock_put: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+    status_code: int,
+    body: object,
+    expected: str,
+) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_put.return_value.status_code = status_code
+    mock_put.return_value.text = "raw body"
+    if isinstance(body, Exception):
+        mock_put.return_value.json.side_effect = body
+    else:
+        mock_put.return_value.json.return_value = body
+
+    assert post_job({"job_id": 7}) is False
+    assert "Could not post job 7" in caplog.text
+    assert f"HTTP {status_code}" in caplog.text
+    assert expected in caplog.text
+    assert "'raw body'" in caplog.text
+
+
+def test_post_job_truncates_logged_response(mock_put: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.ERROR)
+    mock_put.return_value.status_code = 400
+    mock_put.return_value.text = "x" * (MAX_RESPONSE_CHARS + 100)
+    mock_put.return_value.json.side_effect = ValueError
+    post_job({})
+    assert "x" * MAX_RESPONSE_CHARS in caplog.text
+    assert "x" * (MAX_RESPONSE_CHARS + 1) not in caplog.text
+
+
 def test_update_job_success(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.ERROR)
     mock_patch.return_value.status_code = 200
@@ -590,6 +661,16 @@ def test_update_job_unsuccessful(mock_patch: MagicMock, caplog: pytest.LogCaptur
 
     update_job(1, {})
     assert "Error message" in caplog.text
+
+
+def test_update_job_returns_success_flag(mock_patch: MagicMock) -> None:
+    mock_patch.return_value.status_code = 200
+    assert update_job(1, {}) is True
+    mock_patch.return_value.status_code = 400
+    mock_patch.return_value.text = "Error message"
+    assert update_job(1, {}) is False
+    mock_patch.side_effect = requests.exceptions.RequestException
+    assert update_job(1, {}) is False
 
 
 def test_update_job_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
@@ -614,6 +695,16 @@ def test_update_incident_reason_unsuccessful(mock_patch: MagicMock, caplog: pyte
 
     update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason")
     assert "Error message" in caplog.text
+
+
+def test_update_incident_reason_returns_success_flag(mock_patch: MagicMock) -> None:
+    mock_patch.return_value.status_code = 200
+    assert update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason") is True
+    mock_patch.return_value.status_code = 400
+    mock_patch.return_value.text = "Error message"
+    assert update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason") is False
+    mock_patch.side_effect = requests.exceptions.RequestException
+    assert update_incident_reason(1, "project", DEFAULT_SUBMISSION_TYPE, "reason") is False
 
 
 def test_update_incident_reason_request_exception(mock_patch: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
@@ -668,7 +759,47 @@ def test_dashboard_put(mocker: MagicMock) -> None:
     response = dashboard.put(route, json=payload, headers=headers)
 
     expected_url = dashboard.settings.dashboard_url(route)
-    mock_put.assert_called_once_with(expected_url, json=payload, headers=headers)
+    mock_put.assert_called_once_with(
+        expected_url, json=payload, headers=headers, timeout=dashboard.settings.url_timeout
+    )
+
+    assert response.status_code == 200
+    assert response == mock_response
+
+
+def test_dashboard_get_json(mocker: MagicMock) -> None:
+    mock_get = mocker.patch("openqabot.dashboard.retried_requests.get")
+
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"number": 42}
+    mock_get.return_value = mock_response
+
+    route = "api/incidents/123"
+    headers = {"Authorization": "Token secret"}
+
+    assert dashboard.get_json(route, headers=headers) == {"number": 42}
+
+    mock_get.assert_called_once_with(
+        dashboard.settings.dashboard_url(route), headers=headers, timeout=dashboard.settings.url_timeout
+    )
+
+
+def test_dashboard_patch(mocker: MagicMock) -> None:
+    mock_patch = mocker.patch("openqabot.dashboard.retried_requests.patch")
+
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_patch.return_value = mock_response
+
+    route = "api/incident/123"
+    payload = {"status": "approved"}
+    headers = {"Authorization": "Token secret"}
+
+    response = dashboard.patch(route, json=payload, headers=headers)
+
+    mock_patch.assert_called_once_with(
+        dashboard.settings.dashboard_url(route), json=payload, headers=headers, timeout=dashboard.settings.url_timeout
+    )
 
     assert response.status_code == 200
     assert response == mock_response

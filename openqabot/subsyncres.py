@@ -43,7 +43,16 @@ class SubResultsSync(SyncRes):
             for job in job_results
             if self.filter_jobs(job) and (r := self.normalize_data_safe(submission, job))
         ]
-        for r in results:
-            self.post_result(r)
+        outcome = self.post_results(results)
+        if outcome.failed:
+            log.error(
+                "Submission results sync incomplete: %s of %s job results failed after %s attempts "
+                "and will be retried on the next run",
+                outcome.failed,
+                len(results),
+                outcome.attempted,
+            )
+            return 1
+
         log.info("Submission results sync completed: Synced %s job results to the dashboard", len(results))
         return 0

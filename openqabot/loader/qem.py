@@ -20,11 +20,94 @@ from openqabot.errors import LoaderQemError, NoResultsError, SubmissionArgError
 from openqabot.types.submission import Submission, sort_packages
 from openqabot.types.submission_key import SubmissionKey
 from openqabot.types.types import Data
+from openqabot.utils import MAX_RESPONSE_CHARS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 log = getLogger("bot.loader.qem")
+
+#: Columns of the dashboard's ``api/jobs`` schema. Anything else in a result
+#: (e.g. ``submission_id``/``submission_type``, which only drive log messages)
+#: is not part of the request body.
+JOB_PAYLOAD_KEYS = (
+    "incident_settings",
+    "update_settings",
+    "name",
+    "job_group",
+    "job_id",
+    "group_id",
+    "status",
+    "distri",
+    "flavor",
+    "version",
+    "arch",
+    "build",
+)
+#: Identity fields of a job result, so a failed write can be traced without
+#: dumping the whole openQA payload into the log.
+JOB_SUMMARY_KEYS = (
+    "job_id",
+    "name",
+    "distri",
+    "flavor",
+    "arch",
+    "version",
+    "build",
+    "status",
+    "incident_settings",
+    "update_settings",
+)
+
+
+def _job_summary(data: dict[str, Any]) -> dict[str, Any]:
+    """Return the identity fields of a job result for logging."""
+    return {key: data[key] for key in JOB_SUMMARY_KEYS if key in data}
+
+
+def _write_succeeded(response: requests.Response) -> bool:
+    """Return whether the dashboard accepted a write."""
+    return HTTPStatus.OK <= response.status_code < HTTPStatus.MULTIPLE_CHOICES
+
+
+def _dashboard_error_reason(response: requests.Response) -> str:
+    """Explain a failed dashboard write.
+
+    The dashboard reports schema problems as ``errors`` entries carrying a path
+    and a message. A 5xx, however, is rendered by the dashboard's own error
+    handler, which can replace the real message with an opaque value such as
+    ``HASH(0x...)``, so for server errors point at the dashboard logs instead.
+    """
+    if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return "dashboard internal error, see the dashboard logs for the cause"
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if isinstance(errors, list) and errors:
+        rendered = []
+        for error in errors:
+            if isinstance(error, dict):
+                rendered.append(f"{error.get('path') or '<body>'}: {error.get('message', '')}")
+            else:
+                rendered.append(str(error))
+        return "; ".join(rendered)
+    if isinstance(body, dict) and body.get("error"):
+        return str(body["error"])
+    return ""
+
+
+def _log_write_failure(action: str, response: requests.Response) -> None:
+    """Log a rejected dashboard write with its reason and a bounded body."""
+    reason = _dashboard_error_reason(response)
+    log.error(
+        "Dashboard API error: %s: HTTP %s%s; response: %r",
+        action,
+        response.status_code,
+        f" ({reason})" if reason else "",
+        response.text[:MAX_RESPONSE_CHARS],
+    )
 
 
 class SubReq(NamedTuple):
@@ -352,33 +435,48 @@ def update_submissions(data: list[dict[str, Any]], **kwargs: Any) -> int:  # ruf
     return 2
 
 
-def post_job(data: dict[str, Any]) -> None:
-    """Create a new job record on the dashboard."""
+def post_job(data: dict[str, Any]) -> bool:
+    """Create a new job record on the dashboard.
+
+    Return ``True`` only when the dashboard stored the record. A rejected write
+    is logged with the job identity and the dashboard's reason, and the request
+    body is trimmed to the dashboard's ``api/jobs`` schema.
+    """
+    payload = {key: value for key, value in data.items() if key in JOB_PAYLOAD_KEYS}
     try:
-        result = dashboard.put("api/jobs", headers=config_module.settings.dashboard_token_dict, json=data)
-        if result.status_code != HTTPStatus.OK:
-            log.error("Dashboard API error: Could not post job: %s", result.text)
-
+        result = dashboard.put("api/jobs", headers=config_module.settings.dashboard_token_dict, json=payload)
     except requests.exceptions.RequestException:
-        log.exception("QEM Dashboard API request failed")
+        log.exception("QEM Dashboard API request failed while posting job %s", _job_summary(data))
+        return False
+    if not _write_succeeded(result):
+        _log_write_failure(f"Could not post job {data.get('job_id')}", result)
+        return False
+    return True
 
 
-def update_job(job_id: int, data: dict[str, Any]) -> None:
-    """Update an existing job record on the dashboard."""
+def update_job(job_id: int, data: dict[str, Any]) -> bool:
+    """Update an existing job record on the dashboard.
+
+    Return ``True`` only when the dashboard accepted the update.
+    """
     try:
         result = dashboard.patch(f"api/jobs/{job_id}", headers=config_module.settings.dashboard_token_dict, json=data)
-        if result.status_code != HTTPStatus.OK:
-            log.error("Dashboard API error: Could not update job %s: %s", job_id, result.text)
-
     except requests.exceptions.RequestException:
-        log.exception("QEM Dashboard API request failed")
+        log.exception("QEM Dashboard API request failed while updating job %s", job_id)
+        return False
+    if not _write_succeeded(result):
+        _log_write_failure(f"Could not update job {job_id}", result)
+        return False
+    return True
 
 
-def update_incident_reason(incident_number: int, project: str, submission_type: str, reason: str | None = None) -> None:
+def update_incident_reason(incident_number: int, project: str, submission_type: str, reason: str | None = None) -> bool:
     """Update the rejection reason for a submission on the dashboard.
 
     The dashboard addresses an incident by its ``(number, project, type)`` key,
     so ``project`` and ``submission_type`` are required.
+
+    Return ``True`` only when the dashboard accepted the update.
     """
     params = {"project": project, "type": submission_type}
     try:
@@ -388,11 +486,10 @@ def update_incident_reason(incident_number: int, project: str, submission_type: 
             params=params,
             json={"rejection_reason": reason},
         )
-        if result.status_code != HTTPStatus.OK:
-            log.error(
-                "Dashboard API error: Could not update rejection reason for incident %s: %s",
-                incident_number,
-                result.text,
-            )
     except requests.exceptions.RequestException:
-        log.exception("QEM Dashboard API request failed")
+        log.exception("QEM Dashboard API request failed while updating the rejection reason of %s", incident_number)
+        return False
+    if not _write_succeeded(result):
+        _log_write_failure(f"Could not update rejection reason for incident {incident_number}", result)
+        return False
+    return True

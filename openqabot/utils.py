@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
+#: Maximum number of HTTP response characters copied into an error log line.
+MAX_RESPONSE_CHARS = 500
+
 
 def create_logger(name: str) -> logging.Logger:
     """Create and configure a logger with a stream handler."""
