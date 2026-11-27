@@ -8,6 +8,7 @@ the repository URLs and product names openQA jobs read.
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from logging import getLogger
 from typing import TYPE_CHECKING
@@ -15,7 +16,7 @@ from typing import TYPE_CHECKING
 import requests
 
 from openqabot import config
-from openqabot.loader.gitea import VERSION_TOKEN_REGEX, get_product_name
+from openqabot.types.channels.slfo import get_product_name
 from openqabot.types.types import ChannelType, get_channel_type
 from openqabot.utils import retry10_gitea as retried_requests
 
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     from openqabot.types.types import Repos
 
 log = getLogger("bot.loader.repourl")
+
+VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 
 
 def _split_repo_dir_name(name: str) -> tuple[str, str]:

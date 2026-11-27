@@ -12,9 +12,9 @@ from typing import Any
 
 from openqabot import config
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
-from openqabot.loader import gitea
 from openqabot.loader.repohash import RepoOptions, get_max_revision
 
+from .channels.slfo import get_product_name
 from .types import ArchVer, ChannelType, Repos, get_channel_type
 
 log = getLogger("bot.types.submission")
@@ -143,7 +143,7 @@ class Submission:
                 val = r.split(":")
                 if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
                     obs_project = ":".join(val[2:-1])
-                    product = gitea.get_product_name(obs_project)
+                    product = get_product_name(obs_project)
                     if config.settings.is_obs_product_enabled(product):
                         slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
                     else:
@@ -264,9 +264,7 @@ class Submission:
         for archver, lrepos in tmpdict.items():
             repos_to_check = lrepos
             if get_channel_type(project) == ChannelType.SLFO and options.product_name:
-                filtered_repos = [
-                    r for r in lrepos if options.product_name.startswith(gitea.get_product_name(r.version))
-                ]
+                filtered_repos = [r for r in lrepos if options.product_name.startswith(get_product_name(r.version))]
                 if not filtered_repos:
                     continue
                 repos_to_check = filtered_repos

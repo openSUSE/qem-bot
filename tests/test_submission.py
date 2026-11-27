@@ -317,7 +317,7 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
     def mock_product_name(p: str) -> str:
         return "SLES" if "SLES" in p else "UNKNOWN"
 
-    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=mock_product_name)
+    mocker.patch("openqabot.types.submission.get_product_name", side_effect=mock_product_name)
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
 
     submission = Submission(slfo_data)
@@ -336,7 +336,7 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
     # Need a channel with no product name
     slfo_data_no_prod = deepcopy(test_data)
     slfo_data_no_prod["channels"] = ["SUSE:SLFO:1.1.99:PullRequest:166:x86_64#15.99"]
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="")
+    mocker.patch("openqabot.types.submission.get_product_name", return_value="")
     submission = Submission(slfo_data_no_prod)
     assert len(submission.channels) == 1
     assert submission.channels[0].product == "SUSE:SLFO"
@@ -438,7 +438,9 @@ def test_rev_filtering_non_sensible_combinations(mocker: MockerFixture) -> None:
     sub = Submission(data)
 
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
-    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "SL-Micro")
+    mocker.patch(
+        "openqabot.types.submission.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "SL-Micro"
+    )
 
     # If we request SLES 16.0, SL-Micro 6.2 should be filtered out
     assert sub.compute_revisions_for_product_repo("SLES", "16.0")
@@ -471,7 +473,7 @@ def test_rev_filtering_slfo_no_compatible_repos(mocker: MockerFixture) -> None:
 
     mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
     # Requested product is SL-Micro, which doesn't start with SLES
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.types.submission.get_product_name", return_value="SLES")
 
     # Should raise NoRepoFoundError (caught by compute_revisions_for_product_repo returning False)
     # because the only repo is SLES but we want SL-Micro

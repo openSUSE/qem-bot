@@ -2,14 +2,11 @@
 # SPDX-License-Identifier: MIT
 """Test loader Gitea helpers."""
 
-import json
 import logging
-from http import HTTPStatus
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-import requests
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
@@ -69,53 +66,6 @@ def test_patch_json_success(mocker: MockerFixture) -> None:
     gitea.patch_json("foo", {}, {})
 
 
-def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture) -> None:
-    mock_log = mocker.patch("openqabot.loader.gitea.log")
-    mock_response = MagicMock()
-    mock_response.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
-    mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    assert mock_log.info.called
-
-
-@pytest.mark.parametrize(
-    ("response", "expected_log_level"),
-    [
-        (None, "warning"),
-        (MagicMock(status_code=HTTPStatus.NOT_FOUND), "info"),
-        (MagicMock(status_code=HTTPStatus.INTERNAL_SERVER_ERROR), "warning"),
-    ],
-)
-def test_get_product_version_from_repo_listing_http_error(
-    mocker: MockerFixture, response: MagicMock | None, expected_log_level: str
-) -> None:
-    gitea.get_product_version_from_repo_listing.cache_clear()
-    mock_log = mocker.patch("openqabot.loader.gitea.log")
-    mock_response = MagicMock()
-    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error", response=response)
-    mocker.patch.object(gitea.retried_requests, "get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    if expected_log_level == "info":
-        assert mock_log.info.called
-        assert not mock_log.warning.called
-    else:
-        assert mock_log.warning.called
-        assert not mock_log.info.called
-
-
-def test_get_product_version_from_repo_listing_request_exception(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    gitea.get_product_version_from_repo_listing.cache_clear()
-    caplog.set_level(logging.WARNING, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.retried_requests.get", side_effect=requests.RequestException("error"))
-    res = gitea.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    assert "Product version unresolved" in caplog.text
-
-
 def test_add_packages_from_patchinfo_non_dry(mocker: MockerFixture) -> None:
     mock_get = mocker.patch("openqabot.loader.gitea.retried_requests.get")
     mock_get.return_value.content = b"<patchinfo><package>pkg1</package></patchinfo>"
@@ -132,45 +82,6 @@ def test_add_packages_from_patchinfo_parse_error(mocker: MockerFixture, caplog: 
     gitea.add_packages_from_patchinfo(incident, {}, "url", fake_data=False)
     assert incident["packages"] == []
     assert "Failed to parse patchinfo from url: Start tag expected, '<' not found" in caplog.text
-
-
-def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) -> None:
-    gitea.get_product_version_from_repo_listing.cache_clear()
-    mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": [
-            {"name": "SLES-15-SP4-x86_64"},
-            {"name": "other-pkg"},
-        ]
-    }
-    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
-    # product name 'SLES', prefix 'SLES-'
-    # _extract_version will be called with name 'SLES-15-SP4-x86_64' and prefix 'SLES-'
-    # remainder '15-SP4-x86_64', next(...) returns '15'
-    res = gitea.get_product_version_from_repo_listing("project", "SLES", "repo")
-    assert res == "15"
-
-
-def test_get_product_version_from_repo_listing_requests_json_error(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    gitea.get_product_version_from_repo_listing.cache_clear()
-    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mock_response = MagicMock()
-    # Use a dummy exception that mimics requests.exceptions.JSONDecodeError if needed,
-    # but requests.exceptions.JSONDecodeError should work.
-    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
-    mocker.patch("openqabot.loader.gitea.retried_requests.get", return_value=mock_response)
-    res = gitea.get_product_version_from_repo_listing("project_json", "product_json", "repo_json")
-    assert not res
-    assert "Invalid JSON document" in caplog.text
-
-
-def test_add_channel_for_build_result_local() -> None:
-    projects: set[str] = set()
-    res = gitea.add_channel_for_build_result("myproj", "local", "myprod", None, projects)
-    assert res == "myproj:local"
-    assert len(projects) == 0
 
 
 def test_get_json_success(mocker: MockerFixture) -> None:

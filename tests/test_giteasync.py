@@ -19,17 +19,15 @@ from responses import GET, matchers
 
 from openqabot.config import settings
 from openqabot.giteasync import GiteaSync
+from openqabot.loader.fixtures import read_utf8, read_xml
 from openqabot.loader.gitea import (
-    add_build_results,
     add_packages_from_files,
-    get_product_name,
-    get_product_name_and_version_from_scmsync,
     read_json_file,
-    read_utf8,
-    read_xml,
     review_pr,
 )
+from openqabot.loader.obs import add_build_results
 from openqabot.loader.repourl import compute_repo_url_for_job_setting
+from openqabot.types.channels.slfo import get_product_name, get_product_name_and_version_from_scmsync
 from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
@@ -153,10 +151,10 @@ def args() -> SimpleNamespace:
 
 @pytest.fixture
 def gitea_sync_mocks(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_osc_http_get)
+    mocker.patch("openqabot.loader.obs.http_GET", side_effect=fake_osc_http_get)
     mocker.patch("osc.util.xml.xml_parse", side_effect=fake_osc_xml_parse)
     mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_get_multibuild_data)
+    mocker.patch("openqabot.loader.obs.get_multibuild_data", side_effect=fake_get_multibuild_data)
     mocker.patch(
         "openqabot.loader.productcompose.get_productcompose_contents", side_effect=fake_get_productcompose_contents
     )
@@ -171,9 +169,10 @@ def run_gitea_sync(
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
+    caplog.set_level(logging.DEBUG, logger="bot.loader.obs")
 
     if no_build_results:
-        mocker.patch("openqabot.loader.gitea.http_GET", side_effect=noop_osc_http_get)
+        mocker.patch("openqabot.loader.obs.http_GET", side_effect=noop_osc_http_get)
 
     assert GiteaSync(args)() == 0
 
@@ -283,8 +282,8 @@ def test_extracting_product_name_and_version() -> None:
 
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_urllib_http_error)
+    mocker.patch("openqabot.loader.obs.http_GET", side_effect=fake_urllib_http_error)
+    mocker.patch("openqabot.loader.obs.get_multibuild_data", side_effect=fake_urllib_http_error)
     submission = {"packages": []}
     add_build_results(submission, ["https://foo/project/show/bar"], fake_data=False)
     assert submission["successful_packages"] == []
