@@ -117,6 +117,9 @@ class Settings(BaseSettings):
     # Anchor of the aggregate priority mapping: prio = aggregate_priority_offset - max_prio // aggregate_priority_scale
     aggregate_priority_offset: int = Field(default=320, alias="QEM_BOT_AGGREGATE_PRIORITY_OFFSET")
     aggregate_priority_scale: int = Field(default=5, alias="QEM_BOT_AGGREGATE_PRIORITY_SCALE")
+    # Anchor of the product increment priority mapping: prio = pi_priority_offset - max_prio // pi_priority_scale
+    pi_priority_offset: int = Field(default=420, alias="QEM_BOT_PI_PRIORITY_OFFSET")
+    pi_priority_scale: int = Field(default=5, alias="QEM_BOT_PI_PRIORITY_SCALE")
     main_openqa_domain: str = Field(default="openqa.suse.de", alias="MAIN_OPENQA_DOMAIN")
     git_review_bot: str | None = Field(default=None, alias="GIT_REVIEW_BOT")
     git_obs_staging_bot_user: str = Field(default="autogits_obs_staging_bot", alias="GIT_OBS_STAGING_BOT_USER")
@@ -213,6 +216,8 @@ def __getattr__(name: str) -> Any:  # ruff: ignore[any-type]
         "PRIORITY_SCALE": "priority_scale",
         "AGGREGATE_PRIORITY_OFFSET": "aggregate_priority_offset",
         "AGGREGATE_PRIORITY_SCALE": "aggregate_priority_scale",
+        "PI_PRIORITY_OFFSET": "pi_priority_offset",
+        "PI_PRIORITY_SCALE": "pi_priority_scale",
         "OPENQA_URL": "main_openqa_domain",
         "GIT_REVIEW_BOT": "git_review_bot_user",
         "GIT_OBS_STAGING_BOT": "git_obs_staging_bot_user",

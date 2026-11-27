@@ -28,6 +28,7 @@ from .commenter import Commenter
 from .errors import AmbiguousApprovalStatusError, PostOpenQAError
 from .loader.buildinfo import load_build_info
 from .loader.incrementconfig import GroupKey, IncrementConfig
+from .priority import increment_priority
 from .repodiff import Package, RepoDiff
 from .requests import approve_obs_request, find_request_on_obs
 from .types.increment import ApprovalStatus, BuildIdentifier, BuildInfo
@@ -379,6 +380,7 @@ class IncrementApprover:
         increment_repos = []
         extra_params = []
         relevant_diff = set()
+        has_reference_diff = False
         for channel, refpath in config_inc.reference_repos.items():
             channel_url = repo_template.format(channel=channel, version=build_info.version, arch=build_info.arch)
             increment_repos.append(param_url + channel_url)
@@ -386,6 +388,7 @@ class IncrementApprover:
             if refpath is None:
                 continue
 
+            has_reference_diff = True
             channel_url = diff_base_url + channel_url
             ref_url = config_inc.to_url(refpath) + f"/{build_info.arch}/product"
             package_diff = self.get_package_diff_from_repo(channel_url, ref_url)
@@ -401,6 +404,8 @@ class IncrementApprover:
             base_params["INCREMENT_REPO"] = param_url + repo_template.format(
                 channel=build_info.product, version=build_info.version, arch=build_info.arch
             )
+        if has_reference_diff:
+            base_params["_PRIORITY"] = increment_priority(build_info, relevant_diff)
         base_params.update(config_inc.settings)
         return unique_dicts([merge_dicts(base_params, p) for p in extra_params])
 

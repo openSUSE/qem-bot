@@ -22,6 +22,7 @@ from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
 from openqabot.loader.qem import JobAggr
 from openqabot.openqa import OpenQAInterface
+from openqabot.priority import dashboard_submissions
 from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list
 
@@ -135,6 +136,12 @@ def make_approver(submission: int | str = 0, *, mocker: MockerFixture | None = N
 @pytest.fixture(autouse=True)
 def _auto_clear_cache() -> None:
     clear_cache()
+    dashboard_submissions.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def fake_priority_submissions(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.priority.get_submissions", return_value=[])
 
 
 @pytest.fixture(scope="session")

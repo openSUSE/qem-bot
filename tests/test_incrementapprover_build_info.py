@@ -204,6 +204,7 @@ def test_scheduling_parameters_with_additional_builds(caplog: pytest.LogCaptureF
         "BUILD": "PI-1.1",
         "PRODUCT": "SLES",
         "SUBMISSION_ID": "increment:42",
+        "_PRIORITY": "420",
         "_OBSOLETE": "1",
         "_ONLY_OBSOLETE_SAME_BUILD": "1",
     }

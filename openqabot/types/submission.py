@@ -83,7 +83,8 @@ class Submission:
         self.id: int = submission["number"]
         self.rrid: str | None = f"{self.project}:{self.rr}" if self.rr else None
         self.staging: bool = not submission["inReview"]
-        self.ongoing: bool = submission["isActive"] and submission["inReviewQAM"] and not submission["approved"]
+        self.is_active: bool = submission["isActive"]
+        self.ongoing: bool = self.is_active and submission["inReviewQAM"] and not submission["approved"]
         self.embargoed: bool = submission["embargoed"]
         self.priority: int | None = submission.get("priority")
         self.type: str = submission.get("type") or config.settings.default_submission_type

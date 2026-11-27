@@ -15,6 +15,7 @@ from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
 from openqabot.loader import gitea
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
+from openqabot.priority import openqa_priority
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
@@ -259,7 +260,7 @@ class Submissions(BaseConf):
             offset = -30
         if sub.priority is None:
             return settings.default_prio + 10 + offset
-        return settings.priority_offset - sub.priority // settings.priority_scale + offset
+        return openqa_priority(settings.priority_offset, settings.priority_scale, sub.priority) + offset
 
     @staticmethod
     def apply_params_expand(settings: dict[str, Any], data: dict[str, Any], flavor: str) -> bool:

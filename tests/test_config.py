@@ -145,5 +145,7 @@ def test_module_getattr_constants() -> None:
     assert cfg.AMQP_URL == "amqps://suse:suse@rabbit.suse.de"
     assert cfg.AGGREGATE_PRIORITY_OFFSET == 320
     assert cfg.AGGREGATE_PRIORITY_SCALE == 5
+    assert cfg.PI_PRIORITY_OFFSET == 420
+    assert cfg.PI_PRIORITY_SCALE == 5
     with pytest.raises(AttributeError, match="has no attribute non_existent_attr"):
         _ = cfg.non_existent_attr

@@ -161,6 +161,7 @@ def assert_run_with_extra_livepatching(errors: int, jobs: list, messages: list) 
         "PRODUCT": "SLES",
         "SUBMISSION_ID": "increment:42",
         "FOO": "bar",
+        "_PRIORITY": "420",
         "_OBSOLETE": "1",
         "_ONLY_OBSOLETE_SAME_BUILD": "1",
     }

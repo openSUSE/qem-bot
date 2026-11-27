@@ -17,6 +17,7 @@ from openqabot import config, dashboard
 from openqabot.errors import NoTestIssuesError, SameBuildExistsError
 from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_public_cloud_settings
+from openqabot.priority import openqa_priority
 
 from .baseconf import BaseConf, JobConfig
 from .types import ChannelType, ProdVer, Repos, get_channel_type
@@ -223,8 +224,8 @@ class Aggregate(BaseConf):
             (s.priority for s in chain.from_iterable(data.test_submissions.values()) if s.priority is not None),
             default=0,
         ):
-            full_post["openqa"]["_PRIORITY"] = config.settings.aggregate_priority_offset - (
-                max_prio // config.settings.aggregate_priority_scale
+            full_post["openqa"]["_PRIORITY"] = openqa_priority(
+                config.settings.aggregate_priority_offset, config.settings.aggregate_priority_scale, max_prio
             )
 
         self._finalize_post(full_post, arch)
