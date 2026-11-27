@@ -27,8 +27,8 @@ from openqabot.loader.gitea import (
 )
 from openqabot.loader.obs import add_build_results
 from openqabot.loader.repourl import compute_repo_url_for_job_setting
+from openqabot.types.channels import Repos
 from openqabot.types.channels.slfo import get_product_name, get_product_name_and_version_from_scmsync
-from openqabot.types.types import ProdVer, Repos
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -324,12 +324,6 @@ def test_computing_repo_url_of_product_not_in_product_repo(mocker: MockerFixture
     url = compute_repo_url_for_job_setting("base", repos, ["SLES"], "16.1")
 
     assert url == "base/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA/product/repo/SLES-NVIDIA-16.1-aarch64/"
-
-
-def test_computing_repo_url_empty_product() -> None:
-    repo = ProdVer("SUSE:SLFO", "1.2")
-    url = repo.compute_url("base", "", "x86_64")
-    assert url == "base/SUSE:/SLFO:/1.2/product/repodata/repomd.xml"
 
 
 def test_adding_packages_from_files() -> None:

@@ -14,8 +14,8 @@ from openqabot import config
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions, get_max_revision
 
-from .channels import channel_kind
-from .types import ArchVer, Repos
+from .channels import Repos, channel_kind
+from .types import ArchVer
 
 log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")

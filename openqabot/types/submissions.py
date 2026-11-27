@@ -18,8 +18,8 @@ from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_ima
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
-from .channels import filters_by_product
-from .types import ProdVer, Repos
+from .channels import Repos, filters_by_product
+from .types import ProdVer
 
 if TYPE_CHECKING:
     from .submission import Submission

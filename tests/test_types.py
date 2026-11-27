@@ -6,8 +6,9 @@ import re
 
 import pytest
 
+from openqabot.types.channels import ChannelType, Repos, get_channel_type
 from openqabot.types.isomatch import IsoMatch
-from openqabot.types.types import ChannelType, ProdVer, Repos, get_channel_type
+from openqabot.types.types import ProdVer
 
 
 @pytest.mark.parametrize(

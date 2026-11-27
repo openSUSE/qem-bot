@@ -6,13 +6,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-from .channels import ChannelType, Repos, get_channel_type
-
 if TYPE_CHECKING:
     from openqabot.loader.triggerconfig import TriggerConfig
     from openqabot.types.isomatch import IsoMatch
-
-__all__ = ["ArchVer", "ChannelType", "Data", "ProdVer", "Repos", "get_channel_type"]
 
 
 class ProdVer(NamedTuple):
@@ -28,19 +24,6 @@ class ProdVer(NamedTuple):
         channel_parts = issue.split(":")
         version_parts = channel_parts[1].split("#")
         return cls(channel_parts[0], version_parts[0], version_parts[1] if len(version_parts) > 1 else "")
-
-    def compute_url(
-        self,
-        base: str,
-        product_name: str,
-        arch: str,
-        path: str = "repodata/repomd.xml",
-        project: str | None = None,
-    ) -> str:
-        """Construct the repository URL for a Gitea submission."""
-        # This is a bit redundant but keeps ProdVer functional until it can be fully removed
-        repo = Repos(self.product, self.version, arch, self.product_version)
-        return repo.compute_url(base, product_name, arch, path, project)
 
 
 class Data(NamedTuple):

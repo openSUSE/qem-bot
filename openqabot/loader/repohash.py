@@ -21,7 +21,7 @@ from . import repourl
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from openqabot.types.types import Repos
+    from openqabot.types.channels import Repos
 
 log = getLogger("bot.loader.repohash")
 

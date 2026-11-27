@@ -10,8 +10,9 @@ import responses
 
 from openqabot.config import settings as global_settings
 from openqabot.types.baseconf import JobConfig
+from openqabot.types.channels import Repos
 from openqabot.types.submissions import Submissions
-from openqabot.types.types import ArchVer, Repos
+from openqabot.types.types import ArchVer
 
 from .fixtures.submissions import MockSubmission
 

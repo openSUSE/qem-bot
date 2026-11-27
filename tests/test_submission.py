@@ -12,8 +12,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
+from openqabot.types.channels import Repos
 from openqabot.types.submission import Submission, sort_packages
-from openqabot.types.types import ArchVer, Repos
+from openqabot.types.types import ArchVer
 
 from .fixtures.submissions import MockSubmission
 

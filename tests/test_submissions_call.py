@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING
 import pytest
 
 from openqabot.types.baseconf import JobConfig
+from openqabot.types.channels import Repos
 from openqabot.types.submissions import Submissions
-from openqabot.types.types import ArchVer, Repos
+from openqabot.types.types import ArchVer
 
 from .fixtures.submissions import MockSubmission
 

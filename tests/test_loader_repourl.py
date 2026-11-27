@@ -14,7 +14,7 @@ import pytest
 import requests
 
 from openqabot.loader import repourl
-from openqabot.types.types import Repos
+from openqabot.types.channels import Repos
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture

@@ -22,7 +22,7 @@ from openqabot.types.channels import channel_kind
 from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
-    from openqabot.types.types import Repos
+    from openqabot.types.channels import Repos
 
 log = getLogger("bot.loader.repourl")
 

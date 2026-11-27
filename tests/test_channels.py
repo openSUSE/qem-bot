@@ -144,6 +144,29 @@ def test_families_that_select_their_repositories_by_product(channel: str, *, exp
     assert filters_by_product(channel) is expected
 
 
+def test_slfo_repo_url_of_a_published_product() -> None:
+    repo = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES", "aarch64", "16.1")
+
+    assert repo.compute_url("base", "SLES", path="repomd.xml") == (
+        "base/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES/product/repo/SLES-16.1-aarch64/repomd.xml"
+    )
+
+
+def test_slfo_repo_url_of_a_subproject_without_a_product() -> None:
+    repo = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES", "aarch64")
+
+    assert repo.compute_url("base", path="repomd.xml") == (
+        "base/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES/product/repomd.xml"
+    )
+
+
+def test_slfo_repo_url_of_a_product_without_a_version() -> None:
+    repo = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES", "aarch64")
+
+    with pytest.raises(ValueError, match="Product version must be provided for SLES"):
+        repo.compute_url("base", "SLES")
+
+
 def test_slfo_family_reports_the_product_of_a_subproject() -> None:
     kind = channel_kind("SUSE:SLFO:1.3:PullRequest:10936:SLES")
 

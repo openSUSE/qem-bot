@@ -18,7 +18,7 @@ import openqabot.loader.repohash as rp
 from openqabot.config import settings
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
-from openqabot.types.types import Repos
+from openqabot.types.channels import Repos
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -184,7 +184,7 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
 
     mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
-    mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
+    mock_compute_url = mocker.patch("openqabot.types.channels.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "123")
 
     # Call with product_version
@@ -213,7 +213,7 @@ def test_get_max_revision_slfo_with_repo_version(mocker: MockerFixture) -> None:
 
     mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
-    mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
+    mock_compute_url = mocker.patch("openqabot.types.channels.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "456")
 
     # Call without product_version in options, should take it from repo.product_version
