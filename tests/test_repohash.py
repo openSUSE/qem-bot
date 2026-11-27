@@ -178,11 +178,11 @@ def test_merge_repohash() -> None:
 
 @responses.activate
 def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
-    repos = [Repos("SLFO-Module", "1.1.99", arch)]
+    repos = [Repos("SLFO-Module", "1.1.99:PullRequest:1:SLES", arch)]
     project = "SLFO"
     product_version = "15.99"
 
-    mocker.patch("openqabot.loader.repohash.repourl.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
     mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "123")
@@ -208,10 +208,10 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
 @responses.activate
 def test_get_max_revision_slfo_with_repo_version(mocker: MockerFixture) -> None:
     # repo with 4 elements: (product, version, arch, product_version)
-    repos = [Repos("SLFO-Module", "1.1.99", arch, "15.99")]
+    repos = [Repos("SLFO-Module", "1.1.99:PullRequest:1:SLES", arch, "15.99")]
     project = "SLFO"
 
-    mocker.patch("openqabot.loader.repohash.repourl.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
     mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "456")

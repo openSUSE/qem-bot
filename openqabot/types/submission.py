@@ -14,14 +14,11 @@ from openqabot import config
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions, get_max_revision
 
-from .channels.slfo import get_product_name
-from .types import ArchVer, ChannelType, Repos, get_channel_type
+from .channels import channel_kind
+from .types import ArchVer, Repos
 
 log = getLogger("bot.types.submission")
 version_pattern = re.compile(r"(\d+(?:[.-](?:SP)?\d+)?)")
-
-EXPECTED_PART_LENGTH_WITH_ARCH = 3
-EXPECTED_PART_LENGTH_NO_ARCH = 2
 
 # Structural, package-agnostic suffixes marking arch-specific builds or
 # subpackages/flavors. Packages matching these are demoted when picking a
@@ -129,34 +126,22 @@ class Submission:
 
     @staticmethod
     def _parse_channels(raw_channels: list[str]) -> tuple[list[Repos], set[str]]:
-        updates_3, updates_2, slfo = [], [], []
-        skipped = set()
+        parsed, skipped = [], set()
 
-        for r in raw_channels:
-            if r.startswith("SUSE:Updates"):
-                val = r.split(":")[2:]
-                if len(val) == EXPECTED_PART_LENGTH_WITH_ARCH and val[0] != "SLE-Module-Development-Tools-OBS":
-                    updates_3.append(Repos(val[0], val[1], val[2]))
-                elif len(val) == EXPECTED_PART_LENGTH_NO_ARCH:
-                    updates_2.append(Repos(val[0], val[1], "x86_64"))
-            elif r.startswith("SUSE:SLFO"):
-                val = r.split(":")
-                if len(val) > EXPECTED_PART_LENGTH_WITH_ARCH:
-                    obs_project = ":".join(val[2:-1])
-                    product = get_product_name(obs_project)
-                    if config.settings.is_obs_product_enabled(product):
-                        slfo.append(Repos(":".join(val[0:2]), obs_project, *(val[-1].split("#"))))
-                    else:
-                        skipped.add(product)
+        for channel in raw_channels:
+            kind = channel_kind(channel)
+            if (repo := kind.parse(channel)) is None:
+                continue
+            product = kind.product_of(repo.version)
+            if kind.filters_by_product and not config.settings.is_obs_product_enabled(product):
+                skipped.add(product)
+                continue
+            parsed.append(repo)
 
         # remove Manager-Server on aarch64 from channels
-        filtered_channels = [
-            chan
-            for chan in (updates_3 + updates_2 + slfo)
-            if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
-        ]
-
-        return filtered_channels, skipped
+        return [
+            chan for chan in parsed if not (chan.product == "SLE-Module-SUSE-Manager-Server" and chan.arch == "aarch64")
+        ], skipped
 
     def log_skipped(self) -> None:
         """Log products that were skipped during channel initialization."""
@@ -251,6 +236,20 @@ class Submission:
         return tmpdict
 
     @staticmethod
+    def _select_repos_by_product(repos: list[Repos], options: RepoOptions) -> list[Repos] | None:
+        """Keep the channels that read the configured product; None when none is left."""
+        if not options.product_name:
+            return repos
+        kinds = {repo.product: channel_kind(repo.product) for repo in repos}
+        kept = [
+            repo
+            for repo in repos
+            if not kinds[repo.product].filters_by_product
+            or options.product_name.startswith(kinds[repo.product].product_of(repo.version))
+        ]
+        return kept or None
+
+    @staticmethod
     def rev(
         channels: list[Repos],
         project: str,
@@ -262,12 +261,8 @@ class Submission:
         tmpdict = Submission._group_repos_by_archver(channels, options, limit_archs)
 
         for archver, lrepos in tmpdict.items():
-            repos_to_check = lrepos
-            if get_channel_type(project) == ChannelType.SLFO and options.product_name:
-                filtered_repos = [r for r in lrepos if options.product_name.startswith(get_product_name(r.version))]
-                if not filtered_repos:
-                    continue
-                repos_to_check = filtered_repos
+            if (repos_to_check := Submission._select_repos_by_product(lrepos, options)) is None:
+                continue
 
             max_rev = get_max_revision(repos_to_check, archver.arch, project, options)
             if max_rev > 0:

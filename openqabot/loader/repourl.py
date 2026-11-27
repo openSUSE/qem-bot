@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING
 import requests
 
 from openqabot import config
-from openqabot.types.channels.slfo import get_product_name
-from openqabot.types.types import ChannelType, get_channel_type
+from openqabot.types.channels import channel_kind
 from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
@@ -68,7 +67,8 @@ def product_names_for_channel(repo: Repos, product_repo: list[str] | str | None)
     `SL-Micro-6.1`. The previous names stay when the listing is unreadable.
     """
     configured = [product_repo] if isinstance(product_repo, str) else list(product_repo or [])
-    own = get_product_name(repo.version) if get_channel_type(repo.product) == ChannelType.SLFO else ""
+    kind = channel_kind(repo.product)
+    own = kind.product_of(repo.version) if kind.filters_by_product else ""
     if not own or own in configured:
         return configured or [own]
     if not (published := published_products(f"{repo.product}:{repo.version}", repo.arch)):
