@@ -2,16 +2,12 @@
 # SPDX-License-Identifier: MIT
 """Test OBS build results."""
 
-import json
 import logging
 import urllib.error
-from http import HTTPStatus
 from io import BytesIO
 from typing import Any, cast
-from unittest.mock import MagicMock
 
 import pytest
-import requests
 from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
@@ -162,92 +158,16 @@ def test_obs_project_regex_robust() -> None:
     assert match.group(1) == "PROJ1"
 
 
-def test_get_product_version_from_repo_listing_json_error(mocker: MockerFixture) -> None:
-    mock_log = mocker.patch("openqabot.loader.obs.log")
-    mock_response = MagicMock()
-    mock_response.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
-    mocker.patch.object(obs.retried_requests, "get", return_value=mock_response)
-    res = obs.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    assert mock_log.info.called
+def test_product_version_from_repo_listing(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.obs.repo_listing", return_value=("SLES-15-SP4-x86_64", "other-pkg"))
+
+    assert obs.get_product_version_from_repo_listing("project", "SLES", "repo") == "15"
 
 
-@pytest.mark.parametrize(
-    ("response", "expected_log_level"),
-    [
-        (None, "warning"),
-        (MagicMock(status_code=HTTPStatus.NOT_FOUND), "info"),
-        (MagicMock(status_code=HTTPStatus.INTERNAL_SERVER_ERROR), "warning"),
-    ],
-)
-def test_get_product_version_from_repo_listing_http_error(
-    mocker: MockerFixture, response: MagicMock | None, expected_log_level: str
-) -> None:
-    obs.repo_listing.cache_clear()
-    mock_log = mocker.patch("openqabot.loader.obs.log")
-    mock_response = MagicMock()
-    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error", response=response)
-    mocker.patch.object(obs.retried_requests, "get", return_value=mock_response)
-    res = obs.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    if expected_log_level == "info":
-        assert mock_log.info.called
-        assert not mock_log.warning.called
-    else:
-        assert mock_log.warning.called
-        assert not mock_log.info.called
+def test_product_version_from_repo_listing_of_an_unreadable_listing(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.obs.repo_listing", return_value=None)
 
-
-def test_get_product_version_from_repo_listing_request_exception(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    obs.repo_listing.cache_clear()
-    caplog.set_level(logging.WARNING, logger="bot.loader.obs")
-    mocker.patch("openqabot.loader.obs.retried_requests.get", side_effect=requests.RequestException("error"))
-    res = obs.get_product_version_from_repo_listing("project", "product", "repo")
-    assert not res
-    assert "Product version unresolved" in caplog.text
-
-
-def test_get_product_version_from_repo_listing_success(mocker: MockerFixture) -> None:
-    obs.repo_listing.cache_clear()
-    mock_response = MagicMock()
-    mock_response.json.return_value = {
-        "data": [
-            {"name": "SLES-15-SP4-x86_64"},
-            {"name": "other-pkg"},
-        ]
-    }
-    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mock_response)
-    # product name 'SLES', prefix 'SLES-'
-    # _extract_version will be called with name 'SLES-15-SP4-x86_64' and prefix 'SLES-'
-    # remainder '15-SP4-x86_64', next(...) returns '15'
-    res = obs.get_product_version_from_repo_listing("project", "SLES", "repo")
-    assert res == "15"
-
-
-def test_get_product_version_from_repo_listing_requests_json_error(
-    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    obs.repo_listing.cache_clear()
-    caplog.set_level(logging.INFO, logger="bot.loader.obs")
-    mock_response = MagicMock()
-    # Use a dummy exception that mimics requests.exceptions.JSONDecodeError if needed,
-    # but requests.exceptions.JSONDecodeError should work.
-    mock_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
-    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mock_response)
-    res = obs.get_product_version_from_repo_listing("project_json", "product_json", "repo_json")
-    assert not res
-    assert "Invalid JSON document" in caplog.text
-
-
-def test_get_product_version_from_repo_listing_without_a_data_field(mocker: MockerFixture) -> None:
-    obs.repo_listing.cache_clear()
-    mocked_response = MagicMock()
-    mocked_response.json.return_value = {"rows": []}
-    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
-
-    assert not obs.get_product_version_from_repo_listing("project", "product", "repo")
+    assert not obs.get_product_version_from_repo_listing("project", "SLES", "repo")
 
 
 def test_add_channel_for_build_result_local() -> None:

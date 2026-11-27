@@ -7,18 +7,14 @@ Emits the channels and packages a submission builds; knows nothing about a forge
 
 from __future__ import annotations
 
-import json
 import re
 import urllib.error
 from dataclasses import dataclass, field
-from functools import lru_cache
-from http import HTTPStatus
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, cast
 
 import osc.core
 import osc.util.xml
-import requests
 from osc.connection import http_GET
 from osc.core import MultibuildFlavorResolver
 
@@ -30,16 +26,14 @@ from openqabot.loader.productcompose import (
     productcompose_package,
     safe_fake_project,
 )
+from openqabot.loader.repourl import repo_listing, split_repo_dir_name
 from openqabot.types.channels.slfo import get_product_name, get_product_name_and_version_from_scmsync
 from openqabot.types.submission_key import SubmissionKey
-from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
     from lxml import etree  # ty: ignore[unresolved-import]
 
 log = getLogger("bot.loader.obs")
-
-VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 
 
 @dataclass
@@ -56,39 +50,10 @@ class BuildResults:
 OBS_PROJECT_SHOW_REGEX = re.compile(r".*/project/show/([^/\s\?\#\)]+)")
 
 
-def _extract_version(name: str) -> str:
-    """Extract the first version token from a repo directory name, including one embedded in the product name."""
-    return next((part for part in name.rstrip("/").split("-") if VERSION_TOKEN_REGEX.fullmatch(part)), "")
-
-
-@lru_cache(maxsize=2048)
-def repo_listing(project: str, repository: str) -> tuple[str, ...] | None:
-    """Read the directory names of an OBS repository; None when the listing is unreadable."""
-    url = f"{config.settings.obs_download_url}/{project.replace(':', ':/')}/{repository}/repo/"
-    try:
-        r = retried_requests.get(url, params={"jsontable": 1})
-        r.raise_for_status()
-        return tuple(entry["name"] for entry in r.json()["data"])
-    except requests.exceptions.HTTPError as e:
-        message = f"Repo ignored: Could not query repository '{repository}' of {project}: {e}"
-        if e.response is not None and e.response.status_code == HTTPStatus.NOT_FOUND:
-            log.info(message)
-        else:
-            log.warning(message)
-    # Catching both because requests' JSONDecodeError might not inherit from json's
-    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
-        log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
-    except requests.exceptions.RequestException as e:
-        log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
-    except (KeyError, TypeError) as e:
-        log.debug("Unexpected repository listing at '%s': %s", url, e)
-    return None
-
-
 def get_product_version_from_repo_listing(project: str, product_name: str, repository: str) -> str:
     """Determine the product version by inspecting an OBS repository listing."""
     names = repo_listing(project, repository) or ()
-    versions = (_extract_version(name) for name in names if name.startswith(f"{product_name}-"))
+    versions = (split_repo_dir_name(name)[1] for name in names if name.startswith(f"{product_name}-"))
     return next(filter(None, versions), "")
 
 

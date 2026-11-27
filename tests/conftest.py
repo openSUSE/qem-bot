@@ -20,8 +20,8 @@ from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
-from openqabot.loader.obs import repo_listing
 from openqabot.loader.qem import JobAggr
+from openqabot.loader.repourl import repo_listing
 from openqabot.openqa import OpenQAInterface
 from openqabot.repodiff import Package
 from openqabot.requests import find_request_on_obs, get_obs_request_list

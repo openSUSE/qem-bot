@@ -4,13 +4,16 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from http import HTTPStatus
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
 import requests
 
-from openqabot.loader import obs, repourl
+from openqabot.loader import repourl
 from openqabot.types.types import Repos
 
 if TYPE_CHECKING:
@@ -94,7 +97,7 @@ def test_product_names_for_channel(
 
 
 def test_published_products_of_a_project(mocker: MockerFixture) -> None:
-    obs.repo_listing.cache_clear()
+    repourl.repo_listing.cache_clear()
     mocked_response = mocker.Mock()
     mocked_response.json.return_value = {
         "data": [
@@ -105,15 +108,72 @@ def test_published_products_of_a_project(mocker: MockerFixture) -> None:
             {"name": "repodata"},
         ]
     }
-    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
+    mocker.patch("openqabot.loader.repourl.retried_requests.get", return_value=mocked_response)
 
     assert repourl.published_products("SUSE:SLFO:1.3:PullRequest:10936:SLES", "ppc64le") == frozenset({"SLES-SAP"})
 
 
 def test_published_products_of_unreadable_project(mocker: MockerFixture) -> None:
-    obs.repo_listing.cache_clear()
+    repourl.repo_listing.cache_clear()
     mocked_response = mocker.Mock()
     mocked_response.raise_for_status.side_effect = requests.exceptions.HTTPError
-    mocker.patch("openqabot.loader.obs.retried_requests.get", return_value=mocked_response)
+    mocker.patch("openqabot.loader.repourl.retried_requests.get", return_value=mocked_response)
 
     assert repourl.published_products("SUSE:SLFO:1.3:PullRequest:10936:SLES", "ppc64le") == frozenset()
+
+
+def test_repo_listing_of_invalid_json(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.repourl")
+    mocked_response = MagicMock()
+    mocked_response.json.side_effect = json.JSONDecodeError("msg", "doc", 0)
+    mocker.patch.object(repourl.retried_requests, "get", return_value=mocked_response)
+
+    assert repourl.repo_listing("project", "repo") is None
+    assert "Invalid JSON document" in caplog.text
+
+
+def test_repo_listing_of_requests_json_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="bot.loader.repourl")
+    mocked_response = MagicMock()
+    mocked_response.json.side_effect = requests.exceptions.JSONDecodeError("msg", "doc", 0)
+    mocker.patch.object(repourl.retried_requests, "get", return_value=mocked_response)
+
+    assert repourl.repo_listing("project", "repo") is None
+    assert "Invalid JSON document" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("response", "expected_log_level"),
+    [
+        pytest.param(None, "warning"),
+        pytest.param(MagicMock(status_code=HTTPStatus.NOT_FOUND), "info"),
+        pytest.param(MagicMock(status_code=HTTPStatus.INTERNAL_SERVER_ERROR), "warning"),
+    ],
+)
+def test_repo_listing_of_an_unreadable_repository(
+    mocker: MockerFixture, response: MagicMock | None, *, expected_log_level: str
+) -> None:
+    mock_log = mocker.patch("openqabot.loader.repourl.log")
+    mocked_response = MagicMock()
+    mocked_response.raise_for_status.side_effect = requests.exceptions.HTTPError("error", response=response)
+    mocker.patch.object(repourl.retried_requests, "get", return_value=mocked_response)
+
+    assert repourl.repo_listing("project", "repo") is None
+    assert mock_log.info.called is (expected_log_level == "info")
+    assert mock_log.warning.called is (expected_log_level == "warning")
+
+
+def test_repo_listing_on_request_error(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.repourl")
+    mocker.patch("openqabot.loader.repourl.retried_requests.get", side_effect=requests.RequestException("error"))
+
+    assert repourl.repo_listing("project", "repo") is None
+    assert "Product version unresolved" in caplog.text
+
+
+def test_repo_listing_without_a_data_field(mocker: MockerFixture) -> None:
+    mocked_response = MagicMock()
+    mocked_response.json.return_value = {"rows": []}
+    mocker.patch.object(repourl.retried_requests, "get", return_value=mocked_response)
+
+    assert repourl.repo_listing("project", "repo") is None

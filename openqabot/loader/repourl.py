@@ -8,27 +8,59 @@ the repository URLs and product names openQA jobs read.
 
 from __future__ import annotations
 
+import json
+import re
+from functools import lru_cache
+from http import HTTPStatus
 from logging import getLogger
 from typing import TYPE_CHECKING
 
+import requests
+
 from openqabot import config
-from openqabot.loader.obs import VERSION_TOKEN_REGEX, repo_listing
 from openqabot.types.channels import channel_kind
+from openqabot.utils import retry10_gitea as retried_requests
 
 if TYPE_CHECKING:
     from openqabot.types.types import Repos
 
 log = getLogger("bot.loader.repourl")
 
+VERSION_TOKEN_REGEX = re.compile(r"\d+(?:\.\d+)*")
 
-def _split_repo_dir_name(name: str) -> tuple[str, str]:
-    """Split a repository directory name such as `SLES-SAP-16.1-ppc64le` into product and arch."""
+
+@lru_cache(maxsize=2048)
+def repo_listing(project: str, repository: str) -> tuple[str, ...] | None:
+    """Read the directory names of an OBS repository; None when the listing is unreadable."""
+    url = f"{config.settings.obs_download_url}/{project.replace(':', ':/')}/{repository}/repo/"
+    try:
+        r = retried_requests.get(url, params={"jsontable": 1})
+        r.raise_for_status()
+        return tuple(entry["name"] for entry in r.json()["data"])
+    except requests.exceptions.HTTPError as e:
+        message = f"Repo ignored: Could not query repository '{repository}' of {project}: {e}"
+        if e.response is not None and e.response.status_code == HTTPStatus.NOT_FOUND:
+            log.info(message)
+        else:
+            log.warning(message)
+    # Catching both because requests' JSONDecodeError might not inherit from json's
+    except (json.JSONDecodeError, requests.exceptions.JSONDecodeError) as e:
+        log.info("Invalid JSON document at '%s', ignoring: %s", url, e)
+    except requests.exceptions.RequestException as e:
+        log.warning("Product version unresolved: Could not read from '%s': %s", url, e)
+    except (KeyError, TypeError) as e:
+        log.debug("Unexpected repository listing at '%s': %s", url, e)
+    return None
+
+
+def split_repo_dir_name(name: str) -> tuple[str, str, str]:
+    """Split a repository directory name such as `SLES-SAP-16.1-ppc64le` into product, version and arch."""
     name = name.rstrip("/")
     for suffix in ("-Debug", "-Source"):
         name = name.removesuffix(suffix)
     parts = name.split("-")
     version_index = next((index for index, part in enumerate(parts) if VERSION_TOKEN_REGEX.fullmatch(part)), None)
-    return ("-".join(parts[:version_index]), parts[-1]) if version_index else ("", "")
+    return ("-".join(parts[:version_index]), parts[version_index], parts[-1]) if version_index else ("", "", "")
 
 
 def published_products(obs_project: str, arch: str) -> frozenset[str]:
@@ -38,7 +70,7 @@ def published_products(obs_project: str, arch: str) -> frozenset[str]:
     """
     names = repo_listing(obs_project, config.settings.obs_repo_type or "product") or ()
     return frozenset(
-        product for product, entry_arch in map(_split_repo_dir_name, names) if product and entry_arch == arch
+        product for product, _version, entry_arch in map(split_repo_dir_name, names) if product and entry_arch == arch
     )
 
 
