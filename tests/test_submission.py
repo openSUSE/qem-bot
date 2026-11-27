@@ -254,8 +254,11 @@ def test_sub_rev_multiple_repos(mocker: MockerFixture) -> None:
     sub = Submission(data)
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
     sub.compute_revisions_for_product_repo(None, None)
-    repos_per_archver = [call.args[0] for call in mock_get_max.call_args_list]
-    grouped = next(repos for repos in repos_per_archver if len(repos) > 1)
+    grouped = next(
+        call.args[0]
+        for call in mock_get_max.call_args_list
+        if call.args[1] == "x86_64" and call.args[0][0].version == "15-SP4"
+    )
     assert [repo.product for repo in grouped] == ["SLE-Module-Public-Cloud", "SLE-Module-Basesystem"]
 
 

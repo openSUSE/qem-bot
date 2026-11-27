@@ -20,6 +20,7 @@ from openqabot.config import Settings, settings
 from openqabot.dashboard import clear_cache
 from openqabot.errors import NoResultsError
 from openqabot.loader.gitea import read_json_file
+from openqabot.loader.productcompose import productcompose_package
 from openqabot.loader.qem import JobAggr
 from openqabot.loader.repourl import repo_listing
 from openqabot.openqa import OpenQAInterface
@@ -43,9 +44,10 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
-def _clear_repo_listing_cache() -> None:
-    """Keep a cached OBS repository listing from one test out of the next."""
+def _clear_obs_response_caches() -> None:
+    """Keep a cached OBS response of one test out of the next."""
     repo_listing.cache_clear()
+    productcompose_package.cache_clear()
 
 
 @pytest.fixture

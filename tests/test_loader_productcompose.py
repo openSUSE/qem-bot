@@ -16,12 +16,24 @@ FIXTURE_PROJECT = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
 
 
 def test_productcompose_package_of_a_flavored_project(mocker: MockerFixture) -> None:
-    mocker.patch("osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia", "kernel-default"])
-
-    assert (
-        productcompose.productcompose_package("SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA")
-        == "000productcompose-nvidia"
+    mock_packagelist = mocker.patch(
+        "osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia", "kernel-default"]
     )
+
+    package = productcompose.productcompose_package("SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA")
+    assert package == "000productcompose-nvidia"
+    assert productcompose.productcompose_package("SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA") == package
+    mock_packagelist.assert_called_once()
+
+
+def test_productcompose_package_defaults_when_the_package_list_fails(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.productcompose")
+    mocker.patch("osc.core.meta_get_packagelist", side_effect=OSError("boom"))
+
+    assert productcompose.productcompose_package("proj") == "000productcompose"
+    assert "Could not list the packages of proj: boom" in caplog.text
 
 
 def test_productcompose_package_defaults_without_a_discovered_package(mocker: MockerFixture) -> None:

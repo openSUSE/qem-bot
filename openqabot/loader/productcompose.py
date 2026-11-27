@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from logging import getLogger
 
 import osc.core
@@ -31,19 +32,22 @@ def safe_fake_project(obs_project: str, *, fake_data: bool) -> bool:
     return False
 
 
+@lru_cache(maxsize=512)
 def productcompose_package(obs_project: str) -> str:
     """Return the package that carries the productcompose of a project, e.g. `000productcompose-nvidia`."""
-    packages = [
-        package
-        for package in osc.core.meta_get_packagelist(config.settings.obs_url, obs_project, expand=True)
-        if package.startswith(PRODUCTCOMPOSE_PACKAGE)
-    ]
+    try:
+        packages = sorted(
+            package
+            for package in osc.core.meta_get_packagelist(config.settings.obs_url, obs_project, expand=True)
+            if package.startswith(PRODUCTCOMPOSE_PACKAGE)
+        )
+    except OSError as e:
+        log.warning("Could not list the packages of %s: %s", obs_project, e)
+        return PRODUCTCOMPOSE_PACKAGE
     if not packages:
         return PRODUCTCOMPOSE_PACKAGE
     if len(packages) > 1:
-        log.warning(
-            "Project %s has several productcompose packages %s, using %s", obs_project, sorted(packages), packages[0]
-        )
+        log.warning("Project %s has several productcompose packages %s, using %s", obs_project, packages, packages[0])
     return packages[0]
 
 
