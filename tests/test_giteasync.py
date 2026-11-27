@@ -300,7 +300,8 @@ def test_reviewing_pr() -> None:
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
 
 
-def test_computing_repo_url() -> None:
+def test_computing_repo_url(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"Foo", "Foo-Bar"}))
     repos = Repos("product", "1.2", "x86_64")
 
     url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")
@@ -315,6 +316,15 @@ def test_computing_repo_url() -> None:
     repos_no_ver = Repos("product", "1.2", "x86_64", "")
     with pytest.raises(ValueError, match="Product version must be provided for Foo"):
         compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
+
+
+def test_computing_repo_url_of_product_not_in_product_repo(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    repos = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", "aarch64", "16.1")
+
+    url = compute_repo_url_for_job_setting("base", repos, ["SLES"], "16.1")
+
+    assert url == "base/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA/product/repo/SLES-NVIDIA-16.1-aarch64/"
 
 
 def test_computing_repo_url_empty_product() -> None:
