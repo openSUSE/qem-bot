@@ -27,6 +27,7 @@ dependencies = [
     "typer",
     "urllib3",
     "responses",
+    "yamlcore>=0.1.1",
 ]
 
 [project.urls]
