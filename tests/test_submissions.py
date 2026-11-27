@@ -5,8 +5,8 @@
 import pytest
 
 from openqabot.types.baseconf import JobConfig
+from openqabot.types.channels import Repos
 from openqabot.types.submissions import Submissions
-from openqabot.types.types import Repos
 
 from .fixtures.submissions import MockSubmission
 

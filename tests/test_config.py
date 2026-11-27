@@ -120,6 +120,29 @@ def test_load_config_yml_applies_aliases_and_names(tmp_path: Path) -> None:
     assert settings.retry == 5
 
 
+def test_channel_kinds_default_to_the_deployed_prefixes() -> None:
+    """An unchanged configuration keeps today's channel string prefixes."""
+    assert Settings().channel_kinds == {
+        "SLFO": ("SUSE:SLFO", "SLFO"),
+        "OPENSUSE": ("openSUSE",),
+    }
+
+
+def test_channel_kinds_accept_a_single_prefix_per_family() -> None:
+    """A family configured with one prefix instead of a list is normalized to a tuple."""
+    settings = Settings(CHANNEL_KINDS={"SLFO": "SUSE:SLFO"})
+
+    assert settings.channel_kinds == {"SLFO": ("SUSE:SLFO",)}
+
+
+def test_load_config_yml_applies_channel_kinds(tmp_path: Path) -> None:
+    """config.yml overrides the channel family prefixes."""
+    (tmp_path / "config.yml").write_text("channel_kinds:\n  SLFO:\n    - SUSE:SLFO2\n")
+    settings = Settings()
+    settings.load_config_yml(tmp_path)
+    assert settings.channel_kinds == {"SLFO": ("SUSE:SLFO2",)}
+
+
 def test_load_config_yml_missing_file_is_noop(tmp_path: Path) -> None:
     """A missing config.yml leaves defaults untouched."""
     settings = Settings()

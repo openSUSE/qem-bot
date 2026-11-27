@@ -16,8 +16,9 @@ from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import SameBuildExistsError
 from openqabot.types.aggregate import Aggregate, PostData
 from openqabot.types.baseconf import JobConfig
+from openqabot.types.channels import Repos
 from openqabot.types.submission import Submission
-from openqabot.types.types import ProdVer, Repos
+from openqabot.types.types import ProdVer
 
 if TYPE_CHECKING:
     from unittest.mock import MagicMock

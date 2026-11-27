@@ -13,12 +13,13 @@ import requests
 
 from openqabot.config import OBSOLETE_PARAMS, settings
 from openqabot.errors import DashboardError
-from openqabot.loader import gitea
+from openqabot.loader import repourl
 from openqabot.pc_helper import apply_pc_tools_image, apply_publiccloud_pint_image
 from openqabot.utils import retry3 as retried_requests
 
 from .baseconf import BaseConf, JobConfig
-from .types import ChannelType, ProdVer, Repos, get_channel_type
+from .channels import Repos, filters_by_product
+from .types import ProdVer
 
 if TYPE_CHECKING:
     from .submission import Submission
@@ -146,17 +147,17 @@ class Submissions(BaseConf):
     def make_repo_url(self, sub: Submission, chan: Repos) -> str:
         """Construct the repository URL for a submission channel."""
         return (
-            gitea.compute_repo_url_for_job_setting(
+            repourl.compute_repo_url_for_job_setting(
                 settings.download_base_url, chan, self.product_repo, self.product_version
             )
-            if get_channel_type(chan.product) == ChannelType.SLFO
+            if filters_by_product(chan.product)
             else f"{settings.download_maintenance}{sub.id}/SUSE_Updates_{'_'.join(self.repo_osuse(chan))}"
         )
 
     @staticmethod
     def get_matching_channels(sub: Submission, channel: ProdVer, arch: str) -> list[Repos]:
         """Find channels in a submission matching the given product and architecture."""
-        if get_channel_type(channel.product) == ChannelType.SLFO:
+        if filters_by_product(channel.product):
             return [
                 ic
                 for ic in sub.channels

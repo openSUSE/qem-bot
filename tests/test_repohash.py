@@ -18,7 +18,7 @@ import openqabot.loader.repohash as rp
 from openqabot.config import settings
 from openqabot.errors import NoRepoFoundError
 from openqabot.loader.repohash import RepoOptions
-from openqabot.types.types import Repos
+from openqabot.types.channels import Repos
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -143,6 +143,23 @@ def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
+def test_get_max_revision_of_other_product_channel(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    repos = [Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", arch, "16.1")]
+    url = (
+        f"{settings.obs_download_url}/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA"
+        f"/product/repo/SLES-NVIDIA-16.1-{arch}/repodata/repomd.xml"
+    )
+    responses.add(responses.GET, url=url, body=BASE_XML % "987")
+
+    ret = rp.get_max_revision(
+        repos, arch, "products/SLFO", options=RepoOptions(product_name="SLES", product_version="16.1")
+    )
+
+    assert ret == 987
+
+
+@responses.activate
 def test_get_max_revision_with_submission_id_not_ok(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     repos = [Repos("SLES", "15SP3", arch)]
@@ -161,13 +178,13 @@ def test_merge_repohash() -> None:
 
 @responses.activate
 def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
-    repos = [Repos("SLFO-Module", "1.1.99", arch)]
+    repos = [Repos("SLFO-Module", "1.1.99:PullRequest:1:SLES", arch)]
     project = "SLFO"
     product_version = "15.99"
 
-    mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
-    mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
+    mock_compute_url = mocker.patch("openqabot.types.channels.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "123")
 
     # Call with product_version
@@ -191,12 +208,12 @@ def test_get_max_revision_slfo(mocker: MockerFixture) -> None:
 @responses.activate
 def test_get_max_revision_slfo_with_repo_version(mocker: MockerFixture) -> None:
     # repo with 4 elements: (product, version, arch, product_version)
-    repos = [Repos("SLFO-Module", "1.1.99", arch, "15.99")]
+    repos = [Repos("SLFO-Module", "1.1.99:PullRequest:1:SLES", arch, "15.99")]
     project = "SLFO"
 
-    mocker.patch("openqabot.loader.repohash.gitea.get_product_name", return_value="SLES")
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES"}))
     url = f"{settings.obs_download_url}/SLFO/repo/repodata/repomd.xml"
-    mock_compute_url = mocker.patch("openqabot.types.types.Repos.compute_url", return_value=url)
+    mock_compute_url = mocker.patch("openqabot.types.channels.Repos.compute_url", return_value=url)
     responses.add(responses.GET, url=url, body=BASE_XML % "456")
 
     # Call without product_version in options, should take it from repo.product_version

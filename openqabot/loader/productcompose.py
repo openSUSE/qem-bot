@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from logging import getLogger
 
 import osc.core
@@ -15,6 +16,7 @@ from openqabot import config
 from openqabot.loader.fixtures import read_utf8
 
 ARCHS = {"x86_64", "aarch64", "ppc64le", "s390x"}
+PRODUCTCOMPOSE_PACKAGE = "000productcompose"
 SAFE_PROJECT_REGEX = re.compile(r"[A-Za-z0-9_:.+-]+")
 
 log = getLogger("bot.loader.productcompose")
@@ -30,15 +32,35 @@ def safe_fake_project(obs_project: str, *, fake_data: bool) -> bool:
     return False
 
 
+@lru_cache(maxsize=512)
+def productcompose_package(obs_project: str) -> str:
+    """Return the package that carries the productcompose of a project, e.g. `000productcompose-nvidia`."""
+    try:
+        packages = sorted(
+            package
+            for package in osc.core.meta_get_packagelist(config.settings.obs_url, obs_project, expand=True)
+            if package.startswith(PRODUCTCOMPOSE_PACKAGE)
+        )
+    except OSError as e:
+        log.warning("Could not list the packages of %s: %s", obs_project, e)
+        return PRODUCTCOMPOSE_PACKAGE
+    if not packages:
+        return PRODUCTCOMPOSE_PACKAGE
+    if len(packages) > 1:
+        log.warning("Project %s has several productcompose packages %s, using %s", obs_project, packages, packages[0])
+    return packages[0]
+
+
 def get_productcompose_contents(obs_project: str) -> list[str]:
-    """Fetch the contents of every productcompose file of an OBS project."""
-    file_list = osc.core.meta_get_filelist(config.settings.obs_url, obs_project, "000productcompose", expand=True)
+    """Fetch the contents of every productcompose file of a project's productcompose package."""
+    package = productcompose_package(obs_project)
+    file_list = osc.core.meta_get_filelist(config.settings.obs_url, obs_project, package, expand=True)
     pc_files = sorted(f for f in file_list if f.endswith(".productcompose"))
     if len(pc_files) > 1:
         log.info("Merging productcompose files of %s: %s", obs_project, pc_files)
     contents = []
     for pc_file in pc_files:
-        url = osc.core.makeurl(config.settings.obs_url, ["source", obs_project, "000productcompose", pc_file])
+        url = osc.core.makeurl(config.settings.obs_url, ["source", obs_project, package, pc_file])
         contents.append(http_GET(url).read().decode("utf-8"))
     return contents
 

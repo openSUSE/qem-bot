@@ -14,9 +14,10 @@ import requests
 from openqabot.config import DEFAULT_SUBMISSION_TYPE
 from openqabot.errors import NoRepoFoundError
 from openqabot.types.baseconf import JobConfig
+from openqabot.types.channels import Repos
 from openqabot.types.submission import Submission
 from openqabot.types.submissions import SubConfig, SubContext, Submissions
-from openqabot.types.types import ArchVer, Repos
+from openqabot.types.types import ArchVer
 
 from .fixtures.submissions import MockSubmission
 

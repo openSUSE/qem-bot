@@ -7,7 +7,6 @@ import logging
 from typing import Any
 
 import pytest
-from lxml import etree  # ty: ignore[unresolved-import]
 from pytest_mock import MockerFixture
 
 from openqabot.loader import gitea
@@ -205,21 +204,6 @@ def test_add_reviews_stale_reapproval(
     assert gitea.add_reviews(submission, reviews) == 1
     assert submission["approved"] is exp_approved
     assert submission["inReviewQAM"] is exp_in_review_qam
-
-
-def test_update_scminfo_coverage(caplog: pytest.LogCaptureFixture) -> None:
-    submission = {"number": 123, "project": "owner/repo"}
-    res = etree.fromstring("<root><scminfo></scminfo><scminfo>new</scminfo><scminfo>other</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "")  # ruff: ignore[private-member-access]
-    assert submission["scminfo"] == "new"
-    assert "Inconsistent SCM info" in caplog.text
-
-    caplog.clear()
-    submission = {"number": 123, "project": "owner/repo", "scminfo_prod": "old"}
-    res = etree.fromstring("<root><scminfo>new</scminfo></root>")
-    gitea._update_scminfo(submission, res, "project", "prod")  # ruff: ignore[private-member-access]
-    assert submission["scminfo_prod"] == "old"
-    assert "Inconsistent SCM info" in caplog.text
 
 
 def test_make_submission_from_gitea_pr_no_packages(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:

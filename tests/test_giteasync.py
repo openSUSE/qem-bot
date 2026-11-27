@@ -19,18 +19,16 @@ from responses import GET, matchers
 
 from openqabot.config import settings
 from openqabot.giteasync import GiteaSync
+from openqabot.loader.fixtures import read_utf8, read_xml
 from openqabot.loader.gitea import (
-    add_build_results,
     add_packages_from_files,
-    compute_repo_url_for_job_setting,
-    get_product_name,
-    get_product_name_and_version_from_scmsync,
     read_json_file,
-    read_utf8,
-    read_xml,
     review_pr,
 )
-from openqabot.types.types import ProdVer, Repos
+from openqabot.loader.obs import add_build_results
+from openqabot.loader.repourl import compute_repo_url_for_job_setting
+from openqabot.types.channels import Repos
+from openqabot.types.channels.slfo import get_product_name, get_product_name_and_version_from_scmsync
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -153,10 +151,10 @@ def args() -> SimpleNamespace:
 
 @pytest.fixture
 def gitea_sync_mocks(mocker: MockerFixture) -> None:
-    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_osc_http_get)
+    mocker.patch("openqabot.loader.obs.http_GET", side_effect=fake_osc_http_get)
     mocker.patch("osc.util.xml.xml_parse", side_effect=fake_osc_xml_parse)
     mocker.patch("osc.conf.get_config", side_effect=fake_osc_get_config)
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_get_multibuild_data)
+    mocker.patch("openqabot.loader.obs.get_multibuild_data", side_effect=fake_get_multibuild_data)
     mocker.patch(
         "openqabot.loader.productcompose.get_productcompose_contents", side_effect=fake_get_productcompose_contents
     )
@@ -171,9 +169,10 @@ def run_gitea_sync(
 ) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.giteasync")
     caplog.set_level(logging.DEBUG, logger="bot.loader.gitea")
+    caplog.set_level(logging.DEBUG, logger="bot.loader.obs")
 
     if no_build_results:
-        mocker.patch("openqabot.loader.gitea.http_GET", side_effect=noop_osc_http_get)
+        mocker.patch("openqabot.loader.obs.http_GET", side_effect=noop_osc_http_get)
 
     assert GiteaSync(args)() == 0
 
@@ -282,9 +281,9 @@ def test_extracting_product_name_and_version() -> None:
 
 
 def test_handling_unavailable_build_info(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
-    caplog.set_level(logging.INFO, logger="bot.loader.gitea")
-    mocker.patch("openqabot.loader.gitea.http_GET", side_effect=fake_urllib_http_error)
-    mocker.patch("openqabot.loader.gitea.get_multibuild_data", side_effect=fake_urllib_http_error)
+    caplog.set_level(logging.INFO, logger="bot.loader.obs")
+    mocker.patch("openqabot.loader.obs.http_GET", side_effect=fake_urllib_http_error)
+    mocker.patch("openqabot.loader.obs.get_multibuild_data", side_effect=fake_urllib_http_error)
     submission = {"packages": []}
     add_build_results(submission, ["https://foo/project/show/bar"], fake_data=False)
     assert submission["successful_packages"] == []
@@ -300,27 +299,31 @@ def test_reviewing_pr() -> None:
     review_pr({"token": "foo"}, "orga/repo", 42, "accepted", "12345", approve=True)
 
 
-def test_computing_repo_url() -> None:
-    repos = Repos("product", "1.2", "x86_64")
+def test_computing_repo_url(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"Foo", "Foo-Bar"}))
+    repos = Repos("SUSE:SLFO", "1.2", "x86_64")
 
     url = compute_repo_url_for_job_setting("base", repos, "Foo", "16.0")
-    expected_url = "base/product:/1.2/product/repo/Foo-16.0-x86_64/"
+    expected_url = "base/SUSE:/SLFO:/1.2/product/repo/Foo-16.0-x86_64/"
     assert url == expected_url
 
     url = compute_repo_url_for_job_setting("base", repos, ["Foo", "Foo-Bar"], "16.0")
-    expected_url += ",base/product:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
+    expected_url += ",base/SUSE:/SLFO:/1.2/product/repo/Foo-Bar-16.0-x86_64/"
     assert url == expected_url
 
     # Test with empty product_version should now raise ValueError
-    repos_no_ver = Repos("product", "1.2", "x86_64", "")
+    repos_no_ver = Repos("SUSE:SLFO", "1.2", "x86_64", "")
     with pytest.raises(ValueError, match="Product version must be provided for Foo"):
         compute_repo_url_for_job_setting("base", repos_no_ver, "Foo", None)
 
 
-def test_computing_repo_url_empty_product() -> None:
-    repo = ProdVer("product", "1.2")
-    url = repo.compute_url("base", "", "x86_64")
-    assert url == "base/product:/1.2/product/repodata/repomd.xml"
+def test_computing_repo_url_of_product_not_in_product_repo(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.repourl.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    repos = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", "aarch64", "16.1")
+
+    url = compute_repo_url_for_job_setting("base", repos, ["SLES"], "16.1")
+
+    assert url == "base/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA/product/repo/SLES-NVIDIA-16.1-aarch64/"
 
 
 def test_adding_packages_from_files() -> None:

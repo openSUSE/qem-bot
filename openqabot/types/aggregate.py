@@ -19,7 +19,8 @@ from openqabot.loader.repohash import merge_repohash
 from openqabot.pc_helper import apply_public_cloud_settings
 
 from .baseconf import BaseConf, JobConfig
-from .types import ChannelType, ProdVer, Repos, get_channel_type
+from .channels import ChannelType, Repos, get_channel_type
+from .types import ProdVer
 
 if TYPE_CHECKING:
     from .submission import Submission

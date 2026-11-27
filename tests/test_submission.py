@@ -12,8 +12,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from openqabot.errors import EmptyChannelsError, EmptyPackagesError, NoRepoFoundError
+from openqabot.types.channels import Repos
 from openqabot.types.submission import Submission, sort_packages
-from openqabot.types.types import ArchVer, Repos
+from openqabot.types.types import ArchVer
 
 from .fixtures.submissions import MockSubmission
 
@@ -117,9 +118,9 @@ def test_sub_normal() -> None:
     assert sub_git.format_link("Label", "http://url") == "[Label](http://url)"
     assert sub_git.format_link("Label", "http://url?a=1&b=2") == "[Label](http://url?a=1&b=2)"
     assert sub.channels == [
+        Repos(product="openSUSE-SLE", version="15.4", arch="x86_64"),
         Repos(product="SLE-Module-Public-Cloud", version="15-SP4", arch="x86_64"),
         Repos(product="SLE-Module-Public-Cloud", version="15-SP4", arch="aarch64"),
-        Repos(product="openSUSE-SLE", version="15.4", arch="x86_64"),
     ]
     assert sub.contains_package(["foo", "bar", "some"])
     assert not sub.contains_package(["foo", "bar"])
@@ -152,6 +153,18 @@ def test_sub_nopackage() -> None:
 def test_sub_nochannels() -> None:
     bad_data = deepcopy(test_data)
     bad_data["channels"] = []
+    with pytest.raises(EmptyChannelsError):
+        Submission(bad_data)
+
+
+@pytest.mark.usefixtures("mock_good")
+def test_sub_channels_of_no_known_family_are_ignored() -> None:
+    bad_data = deepcopy(test_data)
+    bad_data["channels"] = [
+        "SUSE:SLE-15-SP4:Update:x86_64",
+        "home:okurz:branches:SLES:15-SP4:x86_64",
+    ]
+
     with pytest.raises(EmptyChannelsError):
         Submission(bad_data)
 
@@ -242,9 +255,12 @@ def test_sub_rev_multiple_repos(mocker: MockerFixture) -> None:
     sub = Submission(data)
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
     sub.compute_revisions_for_product_repo(None, None)
-    # verify get_max_revision was called with both repos for x86_64
-    args = mock_get_max.call_args_list[0][0]
-    assert len(args[0]) == 2
+    grouped = next(
+        call.args[0]
+        for call in mock_get_max.call_args_list
+        if call.args[1] == "x86_64" and call.args[0][0].version == "15-SP4"
+    )
+    assert [repo.product for repo in grouped] == ["SLE-Module-Public-Cloud", "SLE-Module-Basesystem"]
 
 
 def test_sub_rev_no_repo_found(mocker: MockerFixture) -> None:
@@ -314,10 +330,6 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
         "SUSE:SLFO:1.1.99:PullRequest:166:UNKNOWN:x86_64#15.99",  # unknown product, line 64
     ]
 
-    def mock_product_name(p: str) -> str:
-        return "SLES" if "SLES" in p else "UNKNOWN"
-
-    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=mock_product_name)
     mocker.patch("openqabot.config.settings.obs_products", "SLES")
 
     submission = Submission(slfo_data)
@@ -336,7 +348,6 @@ def test_slfo_channels_edge_cases(caplog: pytest.LogCaptureFixture, mocker: Mock
     # Need a channel with no product name
     slfo_data_no_prod = deepcopy(test_data)
     slfo_data_no_prod["channels"] = ["SUSE:SLFO:1.1.99:PullRequest:166:x86_64#15.99"]
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="")
     submission = Submission(slfo_data_no_prod)
     assert len(submission.channels) == 1
     assert submission.channels[0].product == "SUSE:SLFO"
@@ -438,7 +449,6 @@ def test_rev_filtering_non_sensible_combinations(mocker: MockerFixture) -> None:
     sub = Submission(data)
 
     mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
-    mocker.patch("openqabot.loader.gitea.get_product_name", side_effect=lambda p: "SLES" if "SLES" in p else "SL-Micro")
 
     # If we request SLES 16.0, SL-Micro 6.2 should be filtered out
     assert sub.compute_revisions_for_product_repo("SLES", "16.0")
@@ -461,6 +471,22 @@ def test_rev_filtering_non_sensible_combinations(mocker: MockerFixture) -> None:
     assert "SL-Micro" in lrepos[0][1]
 
 
+def test_rev_excludes_foreign_channels_of_a_gitea_submission(mocker: MockerFixture) -> None:
+    data = deepcopy(test_data)
+    data["project"] = "products/SLFO"
+    data["channels"] = [
+        "SUSE:SLFO:1.2:PullRequest:1696:SLES:x86_64#16.0",
+        "SUSE:SLFO:1.2:PullRequest:1697:SL-Micro:x86_64#16.0",
+    ]
+    sub = Submission(data)
+    mock_get_max = mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
+
+    assert sub.compute_revisions_for_product_repo("SLES", "16.0")
+
+    assert mock_get_max.call_count == 1
+    assert [repo.version for repo in mock_get_max.call_args.args[0]] == ["1.2:PullRequest:1696:SLES"]
+
+
 def test_rev_filtering_slfo_no_compatible_repos(mocker: MockerFixture) -> None:
     data = deepcopy(test_data)
     data["project"] = "SLFO"
@@ -470,8 +496,6 @@ def test_rev_filtering_slfo_no_compatible_repos(mocker: MockerFixture) -> None:
     sub = Submission(data)
 
     mocker.patch("openqabot.types.submission.get_max_revision", return_value=123)
-    # Requested product is SL-Micro, which doesn't start with SLES
-    mocker.patch("openqabot.loader.gitea.get_product_name", return_value="SLES")
 
     # Should raise NoRepoFoundError (caught by compute_revisions_for_product_repo returning False)
     # because the only repo is SLES but we want SL-Micro

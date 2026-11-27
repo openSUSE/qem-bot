@@ -86,6 +86,20 @@ class Settings(BaseSettings):
 
     # App-specific settings
     qem_dashboard_url: str = Field(default="http://dashboard.qam.suse.de/", alias="QEM_DASHBOARD_URL")
+    # Channel family name -> channel string prefixes; families absent here keep their built-in prefixes
+    channel_kinds: dict[str, tuple[str, ...]] = Field(
+        default_factory=lambda: {"SLFO": ("SUSE:SLFO", "SLFO"), "OPENSUSE": ("openSUSE",)},
+        alias="CHANNEL_KINDS",
+    )
+
+    @field_validator("channel_kinds", mode="before")
+    @classmethod
+    def _normalize_channel_kinds(cls, value: Any) -> dict[str, tuple[str, ...]]:  # ruff: ignore[any-type]
+        """Accept a single prefix or a list of prefixes per channel family."""
+        return {
+            name: (prefixes,) if isinstance(prefixes, str) else tuple(prefixes)
+            for name, prefixes in (value or {}).items()
+        }
 
     @field_validator("qem_dashboard_url")
     @classmethod

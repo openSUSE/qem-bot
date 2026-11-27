@@ -16,12 +16,12 @@ from openqabot import config
 from openqabot.errors import NoRepoFoundError
 from openqabot.utils import retry5 as retried_requests
 
-from . import gitea
+from . import repourl
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from openqabot.types.types import Repos
+    from openqabot.types.channels import Repos
 
 log = getLogger("bot.loader.repohash")
 
@@ -50,7 +50,8 @@ def get_max_revision(
     )
 
     for repo in repos:
-        product_name = options.product_name or gitea.get_product_name(repo.version)
+        # a single configured product is passed, so exactly one product applies per channel
+        product_name = repourl.product_names_for_channel(repo, options.product_name)[0]
         product_version = options.product_version or repo.product_version
         repo_with_opts = repo._replace(product_version=product_version)
         url = repo_with_opts.compute_url(config.settings.obs_download_url, product_name, arch, project=project)

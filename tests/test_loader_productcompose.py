@@ -15,7 +15,60 @@ from openqabot.loader import productcompose
 FIXTURE_PROJECT = "SUSE:SLFO:1.1.99:PullRequest:124:SLES"
 
 
+def test_productcompose_package_of_a_flavored_project(mocker: MockerFixture) -> None:
+    mock_packagelist = mocker.patch(
+        "osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia", "kernel-default"]
+    )
+
+    package = productcompose.productcompose_package("SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA")
+    assert package == "000productcompose-nvidia"
+    assert productcompose.productcompose_package("SUSE:SLFO:1.3:PullRequest:10936:SLES-NVIDIA") == package
+    mock_packagelist.assert_called_once()
+
+
+def test_productcompose_package_defaults_when_the_package_list_fails(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.productcompose")
+    mocker.patch("osc.core.meta_get_packagelist", side_effect=OSError("boom"))
+
+    assert productcompose.productcompose_package("proj") == "000productcompose"
+    assert "Could not list the packages of proj: boom" in caplog.text
+
+
+def test_productcompose_package_defaults_without_a_discovered_package(mocker: MockerFixture) -> None:
+    mocker.patch("osc.core.meta_get_packagelist", return_value=["kernel-default"])
+
+    assert productcompose.productcompose_package("proj") == "000productcompose"
+
+
+def test_productcompose_package_of_a_project_with_several_packages(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger="bot.loader.productcompose")
+    mocker.patch("osc.core.meta_get_packagelist", return_value=["000productcompose", "000productcompose-nvidia"])
+
+    assert productcompose.productcompose_package("proj") == "000productcompose"
+    assert "has several productcompose packages ['000productcompose', '000productcompose-nvidia']" in caplog.text
+
+
+def test_get_productcompose_contents_of_a_flavored_package(mocker: MockerFixture) -> None:
+    mocker.patch("osc.core.meta_get_packagelist", return_value=["000productcompose-nvidia"])
+    mock_filelist = mocker.patch("osc.core.meta_get_filelist", return_value=["nvidia.productcompose"])
+    mock_makeurl = mocker.patch("osc.core.makeurl", return_value="https://some-obs-url/nvidia.productcompose")
+    mocker.patch(
+        "openqabot.loader.productcompose.http_GET",
+        return_value=mocker.Mock(read=mocker.Mock(return_value=b"yaml-content")),
+    )
+
+    assert productcompose.get_productcompose_contents("proj") == ["yaml-content"]
+
+    mock_filelist.assert_called_with(settings.obs_url, "proj", "000productcompose-nvidia", expand=True)
+    assert mock_makeurl.call_args.args[1][:3] == ["source", "proj", "000productcompose-nvidia"]
+
+
 def test_get_productcompose_contents(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.productcompose.productcompose_package", return_value="000productcompose")
     mock_filelist = mocker.patch("osc.core.meta_get_filelist", return_value=["default.productcompose"])
     mocker.patch("osc.core.makeurl", return_value="https://some-obs-url/default.productcompose")
     mocker.patch(
@@ -28,6 +81,7 @@ def test_get_productcompose_contents(mocker: MockerFixture) -> None:
 
 def test_get_productcompose_contents_merges_all_files(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.INFO, logger="bot.loader.productcompose")
+    mocker.patch("openqabot.loader.productcompose.productcompose_package", return_value="000productcompose")
     mocker.patch("osc.core.meta_get_filelist", return_value=["z.productcompose", "skip.txt", "a.productcompose"])
     mocker.patch("osc.core.makeurl", side_effect=lambda _url, parts: parts[-1])
     mocker.patch(
@@ -39,6 +93,7 @@ def test_get_productcompose_contents_merges_all_files(mocker: MockerFixture, cap
 
 
 def test_get_productcompose_contents_without_productcompose(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.productcompose.productcompose_package", return_value="000productcompose")
     mocker.patch("osc.core.meta_get_filelist", return_value=["other.file"])
     assert productcompose.get_productcompose_contents("proj") == []
 
@@ -131,6 +186,7 @@ def test_get_productcompose_packages_per_arch_fixture(caplog: pytest.LogCaptureF
 def test_get_productcompose_packages_per_arch_fetch_error(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
+    mocker.patch("openqabot.loader.productcompose.productcompose_package", return_value="000productcompose")
     mocker.patch("osc.core.meta_get_filelist", return_value=["default.productcompose"])
     mocker.patch("osc.core.makeurl", return_value="https://some-obs-url/default.productcompose")
     mocker.patch("openqabot.loader.productcompose.http_GET", side_effect=OSError("boom"))
