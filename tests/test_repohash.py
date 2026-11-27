@@ -143,6 +143,23 @@ def test_get_max_revision_not_ok(caplog: pytest.LogCaptureFixture) -> None:
 
 
 @responses.activate
+def test_get_max_revision_of_other_product_channel(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    repos = [Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", arch, "16.1")]
+    url = (
+        f"{settings.obs_download_url}/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA"
+        f"/product/repo/SLES-NVIDIA-16.1-{arch}/repodata/repomd.xml"
+    )
+    responses.add(responses.GET, url=url, body=BASE_XML % "987")
+
+    ret = rp.get_max_revision(
+        repos, arch, "products/SLFO", options=RepoOptions(product_name="SLES", product_version="16.1")
+    )
+
+    assert ret == 987
+
+
+@responses.activate
 def test_get_max_revision_with_submission_id_not_ok(caplog: pytest.LogCaptureFixture) -> None:
     caplog.set_level(logging.DEBUG, logger="bot.loader.repohash")
     repos = [Repos("SLES", "15SP3", arch)]

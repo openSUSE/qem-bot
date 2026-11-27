@@ -50,7 +50,8 @@ def get_max_revision(
     )
 
     for repo in repos:
-        product_name = options.product_name or gitea.get_product_name(repo.version)
+        # a single configured product is passed, so exactly one product applies per channel
+        product_name = gitea.product_names_for_channel(repo, options.product_name)[0]
         product_version = options.product_version or repo.product_version
         repo_with_opts = repo._replace(product_version=product_version)
         url = repo_with_opts.compute_url(config.settings.obs_download_url, product_name, arch, project=project)

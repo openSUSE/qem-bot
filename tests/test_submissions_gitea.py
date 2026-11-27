@@ -2,6 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Test Submissions Gitea."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import responses
 
 from openqabot.config import settings as global_settings
@@ -10,6 +14,9 @@ from openqabot.types.submissions import Submissions
 from openqabot.types.types import ArchVer, Repos
 
 from .fixtures.submissions import MockSubmission
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 
 def _assert_gitea_settings(
@@ -91,3 +98,18 @@ def test_gitea_submissions() -> None:
             expected_repo=expected_repo,
             distri=settings["DISTRI"],
         )
+
+
+def test_gitea_repo_url_of_other_product_channel(mocker: MockerFixture) -> None:
+    mocker.patch("openqabot.loader.gitea.published_products", return_value=frozenset({"SLES-NVIDIA"}))
+    subs = Submissions(JobConfig("SLFO", ["SLES"], "16.1", {}, {"FLAVOR": {}}), set())
+    sub = MockSubmission(type="git")
+    channel = Repos("SUSE:SLFO", "1.3:PullRequest:10936:SLES-NVIDIA", "aarch64", "16.1")
+
+    url = subs.make_repo_url(sub, channel)
+
+    expected_repo = (
+        f"{global_settings.download_base_url}/SUSE:/SLFO:/1.3:/PullRequest:/10936:/SLES-NVIDIA"
+        "/product/repo/SLES-NVIDIA-16.1-aarch64/"
+    )
+    assert url == expected_repo
