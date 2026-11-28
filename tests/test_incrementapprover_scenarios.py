@@ -349,7 +349,6 @@ def test_skipping_with_mismatching_package(mocker: MockerFixture, caplog: pytest
                 fake_data=True,
                 schedule=False,
                 reschedule=False,
-                increment_config=None,
                 distri="any",
                 version="any",
                 flavor="any",

@@ -132,12 +132,10 @@ class IncrementConfig:
 
     @staticmethod
     def from_args(args: Namespace) -> list[IncrementConfig]:
-        """Create increment configurations from command line arguments."""
-        source = args.increment_config or (
-            args.configs if getattr(args, "configs", None) and args.configs.exists() else None
-        )
+        """Create increment configurations from the global configs or, if those define none, from CLI arguments."""
+        source = getattr(args, "configs", None)
 
-        if source:
+        if source and source.exists():
             configs = get_configs_from_path(source, "product_increments", IncrementConfig.from_config_entry)
             if configs:
                 return IncrementConfig._apply_cli_overrides(configs, args)

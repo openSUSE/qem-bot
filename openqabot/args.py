@@ -761,13 +761,6 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
         str,
         typer.Option("--product-regex", help="The regex used to determine what products are relevant"),
     ] = "^SLE.*",
-    increment_config: Annotated[
-        Path | None,
-        typer.Option(
-            "--increment-config",
-            help="Use configuration from the specified YAML document instead of arguments",
-        ),
-    ] = None,
     comment: comment_option = True,
     enable_detailed_comments: enable_detailed_comments_option = None,
     fallback_contact: fallback_contact_option = None,
@@ -790,7 +783,6 @@ def increment_approve(  # ruff: ignore[too-many-arguments]
     args.build_listing_sub_path = build_listing_sub_path
     args.build_regex = build_regex
     args.product_regex = product_regex
-    args.increment_config = increment_config
     args.comment = comment
 
     _apply_detailed_comment_options(

@@ -241,7 +241,6 @@ def prepare_approver(
         build_regex=BUILD_REGEX,
         product_regex=".*",
         fake_data=True,
-        increment_config=None,
         packages=[] if config is None else config.packages,
         archs=set() if config is None else config.archs,
         settings={} if config is None else config.settings,
