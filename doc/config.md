@@ -180,10 +180,12 @@ incidents:
 
 ## Structure of product definitions for product increments
 The `increment-approve` command uses a different configuration format than
-described above. The `increment-approve` can be run with its configuration
-specified in the form of CLI arguments, see `qem-bot increment-approve -h` for
-details. Alternatively, a config file (or directory) can be specified via
-`qem-bot increment-approve --increment-config /path/to/config.yaml`. This config
+described above. It reads its increment definitions from the
+`product_increments` key of the config file (or directory) specified via the
+global `--configs` option, so they can be kept together with the product
+metadata, e.g. `qem-bot --configs /path/to/config.yaml increment-approve`. If no
+increment definitions are found there, the configuration is taken from CLI
+arguments instead, see `qem-bot increment-approve -h` for details. A config
 file can contain one or more increment definitions, e.g.:
 
 ```

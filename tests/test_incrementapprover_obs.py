@@ -134,7 +134,6 @@ def testhandle_approval_dry(caplog: pytest.LogCaptureFixture, mocker: MockerFixt
         build_regex=BUILD_REGEX,
         product_regex=".*",
         fake_data=True,
-        increment_config=None,
         packages=[],
         archs=set(),
         settings={},

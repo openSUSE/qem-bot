@@ -217,7 +217,7 @@ You can also test the increment approval, e.g.:
 python3 ./qem-bot.py --debug --dry -t not-secret -i 'http://[::1]:9526' increment-approve --accepted --request-id 391430 --flavor Online-Increments --schedule --diff-project-suffix none
 ```
 
-In production you should specify the config via `--config`, though. Check out
+In production you should specify the config via `--configs`, though. Check out
 [the config documentation](config.md) for details. It also explains what
 this command does step by step.
 

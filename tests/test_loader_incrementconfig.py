@@ -48,9 +48,7 @@ def test_config_parsing(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_config_parsing_from_args() -> None:
-    config = IncrementConfig.from_args(
-        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments")
-    )
+    config = IncrementConfig.from_args(Namespace(distri="sle", version="16.0", flavor="Online-Increments"))
     assert len(config) == 1
     assert config[0].distri == "sle"
     assert config[0].version == "16.0"
@@ -64,7 +62,7 @@ def test_config_parsing_from_args() -> None:
 def test_config_parsing_from_args_with_path(config_index: int, expected_distri: str) -> None:
     path = Path("tests/fixtures/config-increment-approver")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments")
+        Namespace(configs=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 2
     config = configs[config_index]
@@ -76,20 +74,10 @@ def test_config_parsing_from_args_with_path(config_index: int, expected_distri: 
     assert additional_settings.items() <= config.settings.items()
 
 
-def test_config_parsing_from_args_with_auto_discovery() -> None:
-    path = Path("tests/fixtures/config-increment-approver")
-    configs = IncrementConfig.from_args(
-        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
-    )
-    assert len(configs) == 2
-    assert configs[0].distri == "foo"
-    assert configs[1].distri == "bar"
-
-
 def test_config_parsing_from_args_fallback_to_cli() -> None:
     path = Path("tests/fixtures/config")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=None, configs=path, distri="sle", version="16.0", flavor="Online-Increments")
+        Namespace(configs=path, distri="sle", version="16.0", flavor="Online-Increments")
     )
     assert len(configs) == 1
     assert configs[0].distri == "sle"
@@ -177,7 +165,7 @@ def test_config_parsing_with_arch_and_archs() -> None:
 def test_config_parsing_from_args_with_arch_override() -> None:
     path = Path("tests/fixtures/config-increment-approver")
     configs = IncrementConfig.from_args(
-        Namespace(increment_config=path, distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
+        Namespace(configs=path, distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
     )
     assert len(configs) == 2
     assert configs[0].archs == {"s390x"}
@@ -186,7 +174,7 @@ def test_config_parsing_from_args_with_arch_override() -> None:
 
 def test_config_parsing_from_args_direct_with_arch() -> None:
     config = IncrementConfig.from_args(
-        Namespace(increment_config=None, distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
+        Namespace(distri="sle", version="16.0", flavor="Online-Increments", arch="s390x")
     )
     assert len(config) == 1
     assert config[0].archs == {"s390x"}

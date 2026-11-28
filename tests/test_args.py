@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 from openqabot.args import GiteaSyncOptions, app, main
 from openqabot.config import settings
+from openqabot.loader.incrementconfig import IncrementConfig
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -192,6 +193,16 @@ def test_increment_approve_with_detailed_args(mocker: MockerFixture, tmp_path: P
     assert args.fallback_contact == "Test Contact"
     assert args.generic_tool_issues_contact == "@test"
     assert args.max_detailed_comment_entries == 5
+
+
+def test_increment_approve_reads_increment_definitions_from_configs(mocker: MockerFixture) -> None:
+    approve = mocker.patch("openqabot.args.IncrementApprover")
+    approve.return_value.return_value = 0
+    path = Path("tests/fixtures/config-increment-approver/increment-definitions.yaml")
+    result = runner.invoke(app, ["--token", "foo", "--configs", str(path), "increment-approve"])
+    assert result.exit_code == 0
+    configs = IncrementConfig.from_args(approve.call_args[0][0])
+    assert [config.distri for config in configs] == ["foo", "bar"]
 
 
 def test_amqp(mocker: MockerFixture, tmp_path: Path) -> None:
